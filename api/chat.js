@@ -31,28 +31,30 @@ export default async function handler(req) {
 - Use Markdown beautifully.
 
 **DATA & UI RULES:**
-1. <sources>: If you use search data OR analyze uploaded files/images, append a JSON array of sources at the VERY END. (e.g., <sources>[{"title":"Site", "url":"https://..."}]</sources>)
+1. <sources>: If you use search data OR analyze uploaded files, append a JSON array of sources at the VERY END. (e.g., <sources>[{"title":"Site", "url":"https://..."}]</sources>)
 2. <chart>: If comparing data or asked for a chart, output a JSON array. (e.g., <chart>[{"label":"Cat A", "value":85}]</chart>)
-3. <artifact>: CRITICAL UI RULE. If you generate a long document, an essay, a deep report, or comprehensive code, YOU MUST wrap it entirely in artifact tags with a title. 
-   Example: <artifact title="Q3 Financial Report">\n# Report Data...\n</artifact>
+3. <artifact>: CRITICAL UI RULE. If you generate a long document, an essay, a deep report, or code, YOU MUST wrap it entirely in artifact tags. Example: <artifact title="Q3 Report">\n# Report Data...\n</artifact>
    
 CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSIONS. REMEMBER EVERY MINOR DETAIL. COMPLETE YOUR ANALYSIS IN FULL. DO NOT STOP EARLY.`;
 
         let contextData = "";
 
-        // If Deep Research (api/research.js) was used, inject its massive context.
-        // Otherwise, use basic Tavily fallback for Flux.
+        // ---------------------------------------------------------
+        // RESEARCH CONTEXT & EXPANSION TRIGGER
+        // ---------------------------------------------------------
         if (researchContext) {
-            contextData = `\n\n--- ORACLE AUTONOMOUS RESEARCH CONTEXT ---\n${researchContext}\n\n[SYSTEM: Synthesize this research. Cite sources using <sources>.]`;
+            // Pass 2 Expansion Triggered
+            systemPrompt += `\n\n[CRITICAL DIRECTIVE: You are executing PASS 2 of an autonomous research loop. I have provided a massive MASTER DRAFT generated in Pass 1. You MUST expand this draft by 3x to 4x its length. Make it the absolute ultimate, exhaustive, hyper-detailed final document. You MUST wrap your entire final document inside an <artifact title="...">...</artifact> tag.]`;
+            contextData = `\n\n${researchContext}`;
         } else {
+            // Standard search for Flux if Deep Research is off
             const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
             const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
 
             if (shouldSearch) {
                 try {
                     const tavilyRes = await fetch('https://api.tavily.com/search', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ api_key: TAVILY_KEY, query: userQuery, search_depth: "advanced", max_results: modelId === 'oracle' ? 20 : 5, include_answer: true })
                     });
                     if (tavilyRes.ok) {
