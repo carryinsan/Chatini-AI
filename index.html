@@ -2,57 +2,37 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <!-- CRITICAL: maximum-scale=1.0 and user-scalable=no prevent iOS zoom bugs on input focus -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chatini Premium</title>
-    
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: { background: '#050505', surface: '#0a0a0a', surface2: '#121212', surface3: '#1a1a1a' },
-                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
-                }
-            }
-        }
+        tailwind.config = { darkMode: 'class', theme: { extend: { colors: { background: '#050505', surface: '#0a0a0a', surface2: '#121212', surface3: '#1a1a1a' }, animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' } } } }
     </script>
     <style>
-        /* Custom Scrollbars */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
-        
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
         .glass-header { background: rgba(10, 10, 10, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
         .chart-bar { transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
         .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; color: #6ee7b7; margin-left: 2px;}
         @keyframes blink { 50% { opacity: 0; } }
-        
-        /* Markdown Responsiveness Overrides */
         .prose { max-width: 100% !important; overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; }
         .prose pre { background-color: #121212 !important; border: 1px solid rgba(255,255,255,0.1); overflow-x: auto; max-width: 100%; padding: 1rem; border-radius: 0.5rem; }
         .prose code { color: #a5b4fc !important; background: rgba(255,255,255,0.05); padding: 2px 4px; border-radius: 4px; font-weight: normal; word-break: break-all; }
         .prose code::before, .prose code::after { content: "" !important; }
         .prose strong { color: #fff !important; }
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
-        .prose img { max-width: 100%; height: auto; border-radius: 0.5rem; }
     </style>
 </head>
-<!-- h-[100dvh] ensures mobile browser UI doesn't hide the footer -->
 <body class="bg-background text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30">
 
-    <!-- SIDEBAR OVERLAY -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
     
-    <!-- SIDEBAR -->
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-[80vw] max-w-xs glass-header transform -translate-x-full transition-transform duration-300 z-50 flex flex-col border-r border-white/10 shadow-2xl">
         <div class="p-4 border-b border-white/10 flex justify-between items-center mt-safe">
             <h2 class="text-xs font-bold tracking-widest text-gray-400 uppercase">Chat History</h2>
@@ -63,12 +43,9 @@
                 <i class="ph-bold ph-plus"></i> New Conversation
             </button>
         </div>
-        <div id="history-list" class="flex-1 overflow-y-auto px-2 space-y-1 pb-safe">
-            <!-- Populated by JS -->
-        </div>
+        <div id="history-list" class="flex-1 overflow-y-auto px-2 space-y-1 pb-safe"></div>
     </aside>
 
-    <!-- MAIN HEADER -->
     <header class="glass-header w-full flex flex-col sm:flex-row items-center justify-between px-3 sm:px-6 py-3 border-b border-white/5 z-20 flex-shrink-0 gap-3 sm:gap-0 pt-safe">
         <div class="flex items-center justify-between w-full sm:w-auto">
             <div class="flex items-center gap-3 sm:gap-4">
@@ -81,18 +58,13 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Mobile scrollable model selector -->
         <div class="w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
             <div id="model-selector" class="flex bg-black/50 sm:bg-black p-1 rounded-full border border-white/10 shadow-inner w-max mx-auto sm:mx-0"></div>
         </div>
     </header>
 
-    <!-- CHAT CANVAS -->
-    <!-- overflow-x-hidden ensures no horizontal scrolling from long text -->
     <main id="chat-canvas" class="flex-1 w-full overflow-y-auto overflow-x-hidden px-2 sm:px-6 md:px-12 lg:px-32 xl:px-48 py-6 scroll-smooth z-10 relative">
         <div id="message-container" class="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-10"></div>
-        
         <div id="processing-indicator" class="hidden max-w-4xl mx-auto flex gap-3 sm:gap-4 w-full justify-start animate-pulse mt-6 sm:mt-8 px-2">
             <div id="processing-icon-container" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#111] border border-white/10 flex items-center justify-center flex-shrink-0">
                 <i id="processing-icon" class="ph-bold text-base sm:text-lg"></i>
@@ -104,19 +76,21 @@
         </div>
     </main>
 
-    <!-- INPUT AREA -->
     <footer class="w-full p-3 sm:p-4 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent z-20 flex-shrink-0 pb-safe">
-        <div class="max-w-4xl mx-auto relative group">
-            <div id="input-glow" class="absolute -inset-0.5 rounded-2xl sm:rounded-3xl blur-md opacity-30 transition duration-1000 bg-purple-500/10"></div>
+        <div class="max-w-4xl mx-auto relative group flex flex-col gap-2">
+            
+            <!-- STAGING AREA FOR FILES -->
+            <div id="staging-area" class="flex flex-wrap gap-2 empty:hidden"></div>
+
+            <div id="input-glow" class="absolute -inset-0.5 rounded-2xl sm:rounded-3xl blur-md opacity-30 transition duration-1000 bg-purple-500/10 -z-10"></div>
             <div class="relative flex items-end bg-[#0f0f0f] border border-white/10 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-2xl focus-within:border-white/30 transition-colors">
                 
-                <!-- text-base (16px) is mandatory here to prevent iOS auto-zoom on focus -->
-                <textarea 
-                    id="chat-input" 
-                    placeholder="Message Chatini..." 
-                    class="flex-1 max-h-[150px] sm:max-h-48 min-h-[40px] sm:min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-2.5 sm:py-3 px-3 sm:px-4 text-base leading-relaxed" 
-                    rows="1"
-                ></textarea>
+                <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx">
+                <button onclick="document.getElementById('file-upload').click()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0" title="Attach Files (Images max 5, Docs max 3)">
+                    <i class="ph-bold ph-paperclip text-lg sm:text-xl"></i>
+                </button>
+
+                <textarea id="chat-input" placeholder="Message Chatini..." class="flex-1 max-h-[150px] sm:max-h-48 min-h-[40px] sm:min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-2.5 sm:py-3 px-1 sm:px-2 text-base leading-relaxed" rows="1"></textarea>
                 
                 <button id="send-btn" class="p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0">
                     <i id="send-icon" class="ph-bold ph-paper-plane-right text-lg sm:text-xl transition-transform"></i>
@@ -141,6 +115,7 @@
         let currentChatId = Date.now().toString();
         let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
         let messages = [];
+        let pendingFiles = []; // Stores Base64 files
 
         const els = {
             selector: document.getElementById('model-selector'),
@@ -155,19 +130,63 @@
             inputGlow: document.getElementById('input-glow'),
             sidebar: document.getElementById('sidebar'),
             sidebarOverlay: document.getElementById('sidebar-overlay'),
-            historyList: document.getElementById('history-list')
+            historyList: document.getElementById('history-list'),
+            fileInput: document.getElementById('file-upload'),
+            stagingArea: document.getElementById('staging-area')
         };
 
+        // --- FILE HANDLING LOGIC ---
+        els.fileInput.addEventListener('change', async (e) => {
+            const files = Array.from(e.target.files);
+            let imgCount = pendingFiles.filter(f => f.type.startsWith('image/')).length;
+            let docCount = pendingFiles.filter(f => !f.type.startsWith('image/')).length;
+
+            for (const file of files) {
+                const isImg = file.type.startsWith('image/');
+                if (isImg && imgCount >= 5) { alert('Max 5 images allowed per message.'); continue; }
+                if (!isImg && docCount >= 3) { alert('Max 3 documents allowed per message.'); continue; }
+                if (file.size > 2 * 1024 * 1024 && !isImg) { alert(`File ${file.name} is too large. Max 2MB.`); continue; }
+
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    // Extract base64 data (remove data:image/png;base64, prefix)
+                    const base64Data = ev.target.result.split(',')[1]; 
+                    pendingFiles.push({ name: file.name, type: file.type, base64: base64Data });
+                    renderStagingArea();
+                };
+                reader.readAsDataURL(file);
+
+                if (isImg) imgCount++; else docCount++;
+            }
+            els.fileInput.value = ''; // Reset
+            updateUIState();
+        });
+
+        function renderStagingArea() {
+            els.stagingArea.innerHTML = '';
+            pendingFiles.forEach((file, index) => {
+                const isImg = file.type.startsWith('image/');
+                const icon = isImg ? 'ph-image' : 'ph-file-text';
+                els.stagingArea.innerHTML += `
+                    <div class="flex items-center gap-2 bg-surface2 border border-white/10 px-3 py-1.5 rounded-lg text-xs">
+                        <i class="ph-bold ${icon} text-cyan-400"></i>
+                        <span class="truncate max-w-[100px] text-gray-300">${file.name}</span>
+                        <button onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 ml-1"><i class="ph-bold ph-x"></i></button>
+                    </div>`;
+            });
+        }
+
+        function removeFile(index) {
+            pendingFiles.splice(index, 1);
+            renderStagingArea();
+            updateUIState();
+        }
+
+        // --- SIDEBAR LOGIC ---
         function toggleSidebar() {
             const isClosed = els.sidebar.classList.contains('-translate-x-full');
-            if (isClosed) {
-                els.sidebar.classList.remove('-translate-x-full');
-                els.sidebarOverlay.classList.remove('hidden');
-                renderHistoryList();
-            } else {
-                els.sidebar.classList.add('-translate-x-full');
-                els.sidebarOverlay.classList.add('hidden');
-            }
+            if (isClosed) { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); } 
+            else { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); }
         }
 
         function saveCurrentChat() {
@@ -178,48 +197,41 @@
             const firstUserMsg = messages.find(m => m.role === 'user');
             if (firstUserMsg) title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
 
-            const chatData = { id: currentChatId, title: chatIndex > -1 ? chats[chatIndex].title : title, messages: messages, date: Date.now() };
-            if (chatIndex > -1) chats[chatIndex] = chatData;
-            else chats.unshift(chatData);
+            // Strip actual Base64 data before saving to localStorage to prevent QuotaExceededError
+            // We only keep `meta` for UI rendering in history
+            const safeMessages = messages.map(m => ({
+                id: m.id, role: m.role, content: m.content, modelId: m.modelId,
+                attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || [])
+            }));
 
-            localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+            const chatData = { id: currentChatId, title: chatIndex > -1 ? chats[chatIndex].title : title, messages: safeMessages, date: Date.now() };
+            if (chatIndex > -1) chats[chatIndex] = chatData; else chats.unshift(chatData);
+
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } 
+            catch (e) { console.warn("Storage limit reached. Cleaning up older chats."); }
         }
 
         function createNewChat() {
-            currentChatId = Date.now().toString();
-            messages = [];
-            renderMessagesToUI();
-            toggleSidebar();
+            currentChatId = Date.now().toString(); messages = []; pendingFiles = []; renderStagingArea();
+            renderMessagesToUI(); toggleSidebar();
             appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init');
         }
 
         function loadChat(id) {
             const chat = chats.find(c => c.id === id);
-            if (chat) {
-                currentChatId = chat.id;
-                messages = chat.messages;
-                renderMessagesToUI();
-                toggleSidebar();
-            }
+            if (chat) { currentChatId = chat.id; messages = chat.messages; renderMessagesToUI(); toggleSidebar(); }
         }
 
         function deleteChat(id, e) {
-            e.stopPropagation();
-            chats = chats.filter(c => c.id !== id);
+            e.stopPropagation(); chats = chats.filter(c => c.id !== id);
             localStorage.setItem('chatini_sessions', JSON.stringify(chats));
-            if (currentChatId === id) createNewChat();
-            else renderHistoryList();
+            if (currentChatId === id) createNewChat(); else renderHistoryList();
         }
 
         function renameChat(id, e) {
-            e.stopPropagation();
-            const chat = chats.find(c => c.id === id);
+            e.stopPropagation(); const chat = chats.find(c => c.id === id);
             const newName = prompt("Rename chat:", chat.title);
-            if (newName && newName.trim()) {
-                chat.title = newName.trim();
-                localStorage.setItem('chatini_sessions', JSON.stringify(chats));
-                renderHistoryList();
-            }
+            if (newName && newName.trim()) { chat.title = newName.trim(); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); renderHistoryList(); }
         }
 
         function renderHistoryList() {
@@ -229,15 +241,11 @@
                 div.className = `group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}`;
                 div.onclick = () => loadChat(chat.id);
                 div.innerHTML = `
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i>
-                        <span class="text-sm text-gray-300 truncate">${chat.title}</span>
-                    </div>
+                    <div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><span class="text-sm text-gray-300 truncate">${chat.title}</span></div>
                     <div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button>
                         <button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button>
-                    </div>
-                `;
+                    </div>`;
                 els.historyList.appendChild(div);
             });
         }
@@ -250,14 +258,11 @@
             els.input.value = messages[msgIndex].content;
             messages = messages.slice(0, msgIndex);
             
-            renderMessagesToUI();
-            els.input.focus();
-            
-            els.input.style.height = 'auto';
-            els.input.style.height = (els.input.scrollHeight) + 'px';
-            updateUIState();
+            renderMessagesToUI(); els.input.focus();
+            els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState();
         }
 
+        // --- UI CORE ---
         function renderModelSelector() {
             els.selector.innerHTML = '';
             Object.values(CONFIG.models).forEach(model => {
@@ -277,7 +282,7 @@
             els.input.placeholder = `Message Chatini (${model.name})...`;
             
             const text = els.input.value.trim();
-            if (text && !isProcessing) {
+            if ((text || pendingFiles.length > 0) && !isProcessing) {
                 els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white text-black hover:scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)] flex-shrink-0';
                 els.sendIcon.classList.add('translate-x-0.5', '-translate-y-0.5');
             } else {
@@ -287,20 +292,19 @@
         }
 
         function parseRichText(content, isStreaming = false) {
-            let extractedHtml = '';
-            let markdownContent = content;
-
+            let extractedHtml = ''; let markdownContent = content;
+            
             markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
-                if (!closeTag) return `<div class="animate-pulse text-purple-400 text-[10px] sm:text-xs mt-2"><i class="ph ph-circle-notch animate-spin"></i> Digging into sources...</div>`;
+                if (!closeTag) return `<div class="animate-pulse text-purple-400 text-[10px] sm:text-xs mt-2"><i class="ph ph-circle-notch animate-spin"></i> Analyzing Sources...</div>`;
                 try {
                     const cleanJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
                     const sources = JSON.parse(cleanJson);
                     const chipsHtml = sources.map(s => `
                         <a href="${s.url}" target="_blank" class="inline-flex items-center gap-1.5 sm:gap-2 bg-surface2 hover:bg-surface3 border border-white/5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg transition-colors group text-decoration-none max-w-full">
-                            <i class="ph-bold ph-globe text-gray-500 group-hover:text-cyan-400 flex-shrink-0"></i>
+                            <i class="ph-bold ${s.url === '#' ? 'ph-file' : 'ph-globe'} text-gray-500 group-hover:text-cyan-400 flex-shrink-0"></i>
                             <span class="text-[10px] sm:text-xs text-gray-300 group-hover:text-white truncate">${s.title}</span>
                         </a>`).join('');
-                    extractedHtml += `<div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5"><div class="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-widest"><i class="ph-bold ph-link text-purple-400"></i> Sources</div><div class="flex flex-wrap gap-2">${chipsHtml}</div></div>`;
+                    extractedHtml += `<div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5"><div class="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-widest"><i class="ph-bold ph-link text-purple-400"></i> Sources & Files</div><div class="flex flex-wrap gap-2">${chipsHtml}</div></div>`;
                 } catch (e) { } return '';
             });
 
@@ -325,25 +329,28 @@
                 } catch (e) { } return '';
             });
 
-            const renderedMarkdown = marked.parse(markdownContent);
-            return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${renderedMarkdown}</div>${extractedHtml}${!isStreaming && markdownContent.trim().length > 0 ? `<div class="mt-2 text-emerald-500 text-[9px] sm:text-[10px] flex items-center justify-end gap-1 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini Completed</div>` : ''}`;
+            return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${marked.parse(markdownContent)}</div>${extractedHtml}${!isStreaming && markdownContent.trim().length > 0 ? `<div class="mt-2 text-emerald-500 text-[9px] sm:text-[10px] flex items-center justify-end gap-1 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini Completed</div>` : ''}`;
         }
 
-        function appendMessage(role, content, modelId, specificId = null) {
+        function appendMessage(role, content, modelId, specificId = null, attachmentsMeta = []) {
             const isUser = role === 'user';
             const msgId = specificId || Date.now().toString();
-            
             const div = document.createElement('div');
-            // Full width, adaptive flex alignment
             div.className = `flex w-full mb-6 sm:mb-8 ${isUser ? 'justify-end' : 'justify-start'}`;
             
             if (isUser) {
+                // Render file chips for user message
+                let attachmentsHtml = '';
+                if (attachmentsMeta && attachmentsMeta.length > 0) {
+                    attachmentsHtml = `<div class="flex flex-wrap gap-2 mb-2">` + attachmentsMeta.map(a => `<span class="bg-black/50 text-gray-300 text-[10px] px-2 py-1 rounded border border-white/10"><i class="ph-bold ${a.type && a.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'}"></i> ${a.name}</span>`).join('') + `</div>`;
+                }
+
                 div.innerHTML = `
                     <div class="group flex gap-2 sm:gap-3 w-fit max-w-[90%] sm:max-w-[85%] md:max-w-[80%] items-center justify-end">
                         <button onclick="editMessage('${msgId}')" class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-2 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-all flex-shrink-0" title="Edit">
                             <i class="ph-bold ph-pencil-simple text-xs sm:text-sm"></i>
                         </button>
-                        <div class="bg-surface3 border border-white/10 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap break-words text-sm sm:text-base">${content}</div>
+                        <div class="bg-surface3 border border-white/10 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap break-words text-sm sm:text-base">${attachmentsHtml}${content}</div>
                     </div>`;
             } else {
                 const model = CONFIG.models[modelId] || CONFIG.models.oracle;
@@ -362,32 +369,40 @@
 
         function renderMessagesToUI() {
             els.container.innerHTML = '';
-            messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id));
+            messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta));
         }
 
         async function handleSend() {
             const text = els.input.value.trim();
-            if (!text || isProcessing) return;
+            if ((!text && pendingFiles.length === 0) || isProcessing) return;
 
-            const userMsgObj = appendMessage('user', text);
-            messages.push({ role: 'user', content: text, id: userMsgObj.id });
+            // Save meta for UI, keep actual base64 for API call
+            const attachmentsMeta = pendingFiles.map(f => ({ name: f.name, type: f.type }));
+            const userMsgObj = appendMessage('user', text, null, null, attachmentsMeta);
             
-            els.input.value = '';
-            els.input.style.height = 'auto';
-            isProcessing = true;
-            updateUIState();
+            // Push actual message to local state
+            const currentMessage = { role: 'user', content: text, id: userMsgObj.id, attachments: [...pendingFiles], attachmentsMeta: attachmentsMeta };
+            messages.push(currentMessage);
+            
+            els.input.value = ''; els.input.style.height = 'auto'; pendingFiles = []; renderStagingArea();
+            isProcessing = true; updateUIState();
 
             const currentModel = CONFIG.models[activeModelId];
             els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
-            els.indicatorText.textContent = `Chatini is typing...`;
-            els.indicator.classList.remove('hidden');
-            els.canvas.scrollTop = els.canvas.scrollHeight;
+            els.indicatorText.textContent = `Chatini is analyzing...`;
+            els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
 
             try {
-                const contextMessages = messages.map(m => ({role: m.role, content: m.content}));
+                // Strip large attachments from older messages in context window to save payload size. 
+                // ONLY send attachments in the CURRENT turn.
+                const contextMessages = messages.map(m => ({
+                    role: m.role, 
+                    content: m.content, 
+                    attachments: m.id === currentMessage.id ? m.attachments : undefined 
+                }));
+
                 const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messages: contextMessages.slice(-20), modelId: activeModelId }) 
                 });
 
@@ -398,65 +413,51 @@
 
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
-                let fullResponse = "";
-                let buffer = "";
+                let fullResponse = ""; let buffer = "";
 
                 while (true) {
                     const { done, value } = await reader.read();
                     if (value) {
                         buffer += decoder.decode(value, { stream: true });
-                        let lines = buffer.split('\n');
-                        buffer = lines.pop(); 
-
+                        let lines = buffer.split('\n'); buffer = lines.pop(); 
                         for (const line of lines) {
                             if (line.startsWith('data: ')) {
                                 const dataStr = line.slice(6).trim();
                                 if (dataStr === '[DONE]') continue;
                                 try {
                                     const data = JSON.parse(dataStr);
-                                    if (data.ui_error) {
-                                        fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`;
-                                        contentContainer.innerHTML = fullResponse;
-                                        break;
-                                    }
+                                    if (data.ui_error) { fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`; contentContainer.innerHTML = fullResponse; break; }
 
                                     let textChunk = "";
                                     if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content;
                                     else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
                                     
                                     fullResponse += textChunk;
-                                    contentContainer.innerHTML = parseRichText(fullResponse, true);
-                                    els.canvas.scrollTop = els.canvas.scrollHeight;
+                                    contentContainer.innerHTML = parseRichText(fullResponse, true); els.canvas.scrollTop = els.canvas.scrollHeight;
                                 } catch (e) { }
                             }
                         }
                     }
                     if (done) break;
                 }
-                
-                contentContainer.classList.remove('typing-cursor');
-                contentContainer.innerHTML = parseRichText(fullResponse, false); 
+                contentContainer.classList.remove('typing-cursor'); contentContainer.innerHTML = parseRichText(fullResponse, false); 
                 messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat(); 
 
             } catch (error) {
                 els.indicator.classList.add('hidden');
-                appendMessage('assistant', `<span class="text-red-400 text-sm">Network Error. Check your connection.</span>`, activeModelId);
+                appendMessage('assistant', `<span class="text-red-400 text-sm">Network Error. Failed to upload and process files.</span>`, activeModelId);
             }
 
-            isProcessing = false;
-            updateUIState();
+            isProcessing = false; updateUIState();
         }
 
         els.input.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; updateUIState(); });
         els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
         els.sendBtn.addEventListener('click', handleSend);
         
-        // Initial setup
         updateUIState();
-        if(chats.length > 0) loadChat(chats[0].id);
-        else createNewChat();
-
+        if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
     </script>
 </body>
 </html>
