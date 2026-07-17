@@ -5,8 +5,17 @@ export const config = {
 export default async function handler(req) {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
+    let body;
     try {
-        const { messages, modelId } = await req.json();
+        // Vercel Edge has a 4.5MB body limit. Catch if the user uploads too many raw files at once.
+        body = await req.json();
+    } catch (e) {
+        const errorStream = `data: ${JSON.stringify({ ui_error: `[Payload Too Large] You uploaded too much raw data at once. Please reduce the number of documents.` })}\n\n`;
+        return new Response(errorStream, { headers: { 'Content-Type': 'text/event-stream' } });
+    }
+
+    try {
+        const { messages, modelId } = body;
         const latestMessage = messages[messages.length - 1];
         const userQuery = latestMessage.content;
         const attachments = latestMessage.attachments || [];
@@ -19,20 +28,24 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY_1,
             process.env.GEMINI_API_KEY_2,
             process.env.GEMINI_API_KEY_3
-        ].filter(Boolean); // Filters out any undefined keys
+        ].filter(Boolean);
 
         let contextData = "";
         
-        let systemPrompt = `You are Chatini, a premium, hyper-intelligent conversational AI.
+        let systemPrompt = `You are Chatini, a premium, hyper-intelligent, and highly engaging conversational AI. 
 **IDENTITY & TONE:**
-- Strictly "Chatini". Witty, conversational, motivating, and highly engaging. 
-- Use Markdown beautifully (## headers, **bold**, bullet points).
+- Strictly "Chatini". Witty, conversational, motivating, and highly engaging. Never mention other AI models.
+- Use Markdown beautifully.
+
+**STRICT ANALYSIS MANDATE:**
+- You have been provided with EXTENSIVE context (documents, links). You MUST thoroughly analyze the ENTIRE provided text.
+- DO NOT give short, incomplete answers. Provide a comprehensive, deep, and exhaustive output based strictly on the uploaded knowledge.
+- NEVER stop prematurely. Extract all requested data carefully.
 
 **DATA & UI RULES:**
-1. If you use search data OR analyze uploaded files/images, you MUST append a JSON array of sources at the VERY END wrapped in <sources> tags. 
-   Format: <sources>[{"title":"File: image.jpg", "url":"#"}, {"title":"Site Name", "url":"https://example.com"}]</sources>
-2. If comparing data or asked for a chart, output a JSON array wrapped in <chart> tags.
-   Format: <chart>[{"label":"Cat A", "value":85}]</chart>`;
+1. If you use search data or files, you MUST append a JSON array of sources at the VERY END wrapped in <sources> tags. 
+   Format: <sources>[{"title":"File Name", "url":"#"}]</sources>
+2. Output interactive charts in <chart> tags if applicable.`;
 
         // ---------------------------------------------------------
         // PASS 1: SMART TAVILY SEARCH
@@ -69,21 +82,34 @@ export default async function handler(req) {
         }
 
         // ---------------------------------------------------------
-        // PASS 2: LLM STREAMING WITH KEY ROTATION & DOCUMENT FIX
+        // PASS 2: LLM STREAMING WITH KEY ROTATION & FAILSAFES
         // ---------------------------------------------------------
         let llmRes = null;
         let finalErrorText = "";
 
         if (modelId === 'spark') {
+            // SPARK (GROQ) PROTECTION: Llama 3.1 8b crashes at 8k tokens. 
+            // We must truncate massive document/link context so the API doesn't throw a 400 error.
             if (attachments.length > 0) {
-                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: The user attached files, but you (Spark/Llama) do not have vision/file capabilities. Politely ask them to switch to Flux or Oracle to analyze files.]`;
+                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User attached files, but Spark has no vision. Advise user to use Flux/Oracle.]`;
             }
+
+            let totalChars = 0;
+            const safeSparkMessages = processedMessages.map(m => {
+                let safeContent = m.content;
+                if (totalChars > 25000) safeContent = ""; // Cut off beyond 8k tokens
+                else if (totalChars + safeContent.length > 25000) {
+                    safeContent = safeContent.substring(0, 25000 - totalChars) + "\n\n[SYSTEM: Context truncated due to Spark speed limits. Use Oracle for deep analysis.]";
+                }
+                totalChars += safeContent.length;
+                return { role: m.role, content: safeContent };
+            }).filter(m => m.content !== "");
 
             const streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
             const headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
             const payload = {
                 model: 'llama-3.1-8b-instant',
-                messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.map(m => ({role: m.role, content: m.content}))],
+                messages: [{ role: 'system', content: systemPrompt }, ...safeSparkMessages],
                 stream: true,
                 temperature: 0.6 
             };
@@ -92,12 +118,15 @@ export default async function handler(req) {
             if (!llmRes.ok) finalErrorText = await llmRes.text();
             
         } else {
-            // Gemini Document & Multimodal Setup
+            // GEMINI PROTECTION
             const geminiMessages = processedMessages.map(m => {
                 const parts = [{ text: m.content }];
                 if (m.attachments && m.attachments.length > 0) {
                     m.attachments.forEach(att => {
-                        const safeMimeType = att.type && att.type.trim() !== "" ? att.type : "text/plain";
+                        // FIX: Strict MIME Coercion to prevent 400 Bad Request on .docx / .ppt
+                        const supportedMimes = ['application/pdf', 'text/plain', 'text/html', 'text/csv', 'text/markdown', 'image/png', 'image/jpeg', 'image/webp'];
+                        let safeMimeType = supportedMimes.includes(att.type) ? att.type : (att.type.startsWith('image/') ? 'image/jpeg' : 'text/plain');
+                        
                         parts.push({
                             inlineData: { mimeType: safeMimeType, data: att.base64 }
                         });
@@ -109,11 +138,17 @@ export default async function handler(req) {
             const payload = {
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 contents: geminiMessages,
-                // CRITICAL FIX: Forces Gemini to finish parsing large PDFs without aborting early
-                generationConfig: { maxOutputTokens: 8192 }
+                generationConfig: { maxOutputTokens: 8192 },
+                // FIX: Disable safety filters that prematurely block large document parsing
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+                ]
             };
 
-            // CRITICAL FIX: Key Rotation Loop
+            // GEMINI KEY ROTATION LOOP
             for (let i = 0; i < GEMINI_KEYS.length; i++) {
                 const currentKey = GEMINI_KEYS[i];
                 const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
@@ -125,24 +160,21 @@ export default async function handler(req) {
                 });
 
                 if (llmRes.ok) {
-                    break; // Request succeeded, exit the rotation loop
+                    break; // Request succeeded, exit rotation
                 } else {
                     finalErrorText = await llmRes.text();
-                    
-                    // If Error is 400 (Bad Request / Bad Payload), rotating the key won't fix it.
-                    if (llmRes.status === 400) {
-                        break;
-                    }
-                    // Otherwise (429 Rate Limit, 503 Overloaded), loop tries the next key automatically.
-                    console.warn(`[Key Failover] Gemini Key ${i + 1} failed. Attempting next key if available.`);
+                    // 400 = Bad Request (Invalid payload). Rotating keys won't fix bad formatting.
+                    if (llmRes.status === 400) break;
+                    // 429 = Rate Limit. Loop will automatically try the next key.
+                    console.warn(`[Key Failover] Gemini Key ${i + 1} failed. Attempting next key.`);
                 }
             }
         }
 
-        // Final fail-safe if all keys exhaust or fail
+        // Final interceptor if all keys exhaust or payload is fundamentally rejected
         if (!llmRes || !llmRes.ok) {
-            const errorStatus = llmRes ? llmRes.status : 'No Keys Configured';
-            const errorStream = `data: ${JSON.stringify({ ui_error: `[API Blocked: ${errorStatus}] ${finalErrorText.substring(0, 150)}` })}\n\n`;
+            const errorStatus = llmRes ? llmRes.status : 'No Keys';
+            const errorStream = `data: ${JSON.stringify({ ui_error: `[API Blocked: ${errorStatus}] Request failed. Ensure files are valid or reduce context size.` })}\n\n`;
             return new Response(errorStream, { headers: { 'Content-Type': 'text/event-stream' } });
         }
 
@@ -159,5 +191,3 @@ export default async function handler(req) {
         return new Response(errorStream, { headers: { 'Content-Type': 'text/event-stream' } });
     }
 }
-
-
