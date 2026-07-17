@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chatini Premium</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind with Typography Plugin for beautiful Markdown -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Marked.js for parsing Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -27,6 +30,12 @@
         .chart-bar { transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
         .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; color: #6ee7b7; margin-left: 2px;}
         @keyframes blink { 50% { opacity: 0; } }
+        
+        /* Premium Markdown Overrides */
+        .prose pre { background-color: #121212 !important; border: 1px solid rgba(255,255,255,0.1); }
+        .prose code { color: #a5b4fc !important; background: rgba(255,255,255,0.05); padding: 2px 4px; border-radius: 4px; font-weight: normal; }
+        .prose code::before, .prose code::after { content: "" !important; }
+        .prose strong { color: #fff !important; }
     </style>
 </head>
 <body class="bg-background text-white font-sans h-screen flex flex-col overflow-hidden selection:bg-cyan-500/30">
@@ -68,6 +77,9 @@
     </footer>
 
     <script>
+        // Configure Marked for security and styling
+        marked.setOptions({ breaks: true, gfm: true });
+
         const CONFIG = {
             models: {
                 spark: { id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-400', bg: 'bg-amber-400/10', glow: 'bg-amber-400/20' },
@@ -122,18 +134,39 @@
         }
 
         function parseRichText(content, isStreaming = false) {
-            let html = content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
-            
-            if (isStreaming && html.includes('<chart>') && !html.includes('</chart>')) {
-                html = html.substring(0, html.indexOf('<chart>'));
-                html += `<div class="mt-4 p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-lg text-cyan-400 text-xs flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin"></i> Rendering Live Data Visualization...</div>`;
-                return html;
-            }
+            let extractedHtml = '';
+            let markdownContent = content;
 
-            html = html.replace(/<chart>([\s\S]*?)<\/chart>/g, (match, jsonStr) => {
+            // --- 1. EXTRACT SOURCES ---
+            markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
+                if (!closeTag) return `<div class="animate-pulse text-purple-400 text-xs mt-2"><i class="ph ph-circle-notch animate-spin"></i> Fetching Sources...</div>`;
                 try {
-                    const data = JSON.parse(jsonStr);
+                    // Clean LLM markdown artifacts
+                    const cleanJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    const sources = JSON.parse(cleanJson);
+                    
+                    const chipsHtml = sources.map(s => {
+                        const domain = new URL(s.url).hostname;
+                        return `
+                        <a href="${s.url}" target="_blank" class="inline-flex items-center gap-2 bg-surface2 hover:bg-surface3 border border-white/5 px-3 py-1.5 rounded-lg transition-colors group text-decoration-none">
+                            <img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" class="w-4 h-4 rounded-full opacity-80 group-hover:opacity-100" />
+                            <span class="text-xs text-gray-300 group-hover:text-white truncate max-w-[150px]">${s.title}</span>
+                        </a>`;
+                    }).join('');
+                    
+                    extractedHtml += `<div class="mt-4 pt-4 border-t border-white/5"><div class="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-widest"><i class="ph-bold ph-link text-purple-400"></i> Grounded Sources</div><div class="flex flex-wrap gap-2">${chipsHtml}</div></div>`;
+                } catch (e) { console.error("Source Parse Error", e); }
+                return ''; // Remove JSON from markdown rendering
+            });
+
+            // --- 2. EXTRACT CHARTS ---
+            markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|$)/g, (match, jsonStr, closeTag) => {
+                if (!closeTag) return `<div class="mt-4 p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-lg text-cyan-400 text-xs flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin"></i> Rendering Data Visualization...</div>`;
+                try {
+                    const cleanJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    const data = JSON.parse(cleanJson);
                     const maxVal = Math.max(...data.map(d => d.value));
+                    
                     const barsHtml = data.map(item => `
                         <div class="flex-1 flex flex-col items-center gap-2 group">
                             <div class="w-full bg-gradient-to-t from-cyan-900/40 to-cyan-400 rounded-t-sm transition-all duration-1000 ease-out group-hover:to-cyan-300 relative chart-bar" style="height: ${(item.value / maxVal) * 100}%">
@@ -145,17 +178,27 @@
                         </div>
                     `).join('');
 
-                    return `<div class="w-full mt-4 p-5 bg-surface2 border border-white/5 rounded-xl shadow-2xl overflow-hidden">
+                    extractedHtml += `<div class="w-full mt-4 mb-4 p-5 bg-surface2 border border-white/5 rounded-xl shadow-2xl overflow-hidden">
                         <div class="flex items-center gap-2 mb-6 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                             <i class="ph-bold ph-chart-bar text-cyan-400 text-sm"></i> Live AI Analysis
                         </div>
                         <div class="flex items-end h-32 gap-2 chart-container">${barsHtml}</div>
                     </div>`;
-                } catch (e) {
-                    return ``; 
-                }
+                } catch (e) { console.error("Chart Parse Error", e); }
+                return '';
             });
-            return html;
+
+            // --- 3. PARSE MARKDOWN ---
+            const renderedMarkdown = marked.parse(markdownContent);
+            
+            // Wrap in Tailwind Prose for beautiful typography, append charts/sources, and add completion checkmark if not streaming
+            return `
+                <div class="prose prose-invert prose-sm md:prose-base max-w-none leading-relaxed text-gray-200">
+                    ${renderedMarkdown}
+                </div>
+                ${extractedHtml}
+                ${!isStreaming && markdownContent.trim().length > 0 ? `<div class="mt-2 text-emerald-500 text-[10px] flex items-center justify-end gap-1 opacity-50"><i class="ph-bold ph-check-circle"></i> AI Completion</div>` : ''}
+            `;
         }
 
         function appendMessage(role, content, modelId) {
@@ -172,8 +215,8 @@
                         <div class="w-8 h-8 flex-shrink-0 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1 shadow-[0_0_10px_rgba(255,255,255,0.05)]">
                             <i class="${model.icon} ph-fill ${model.color} text-base"></i>
                         </div>
-                        <div class="msg-content flex flex-col pt-1.5 w-full space-y-2 leading-relaxed text-gray-200 text-[15px]">
-                            ${parseRichText(content)}
+                        <div class="msg-content flex flex-col pt-1.5 w-full min-w-0">
+                            ${parseRichText(content, false)}
                         </div>
                     </div>
                 `;
@@ -205,7 +248,7 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: messages.slice(-5), modelId: activeModelId }) // Keep context short to save free tier tokens
+                    body: JSON.stringify({ messages: messages.slice(-5), modelId: activeModelId }) 
                 });
 
                 els.indicator.classList.add('hidden');
@@ -215,38 +258,40 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let fullResponse = "";
+                let buffer = ""; // Fixes the missing words bug
 
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
-                    
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n');
-                    
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const dataStr = line.slice(6);
-                            if (dataStr === '[DONE]') continue;
-                            try {
-                                const data = JSON.parse(dataStr);
-                                
-                                // Intercept explicit API errors passed from Edge function
-                                if (data.ui_error) {
-                                    fullResponse = `<span class="text-red-400"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`;
-                                    contentContainer.innerHTML = fullResponse;
-                                    break;
-                                }
+                    if (value) {
+                        buffer += decoder.decode(value, { stream: true });
+                        let lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete lines in buffer
 
-                                let textChunk = "";
-                                if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content;
-                                else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
-                                
-                                fullResponse += textChunk;
-                                contentContainer.innerHTML = parseRichText(fullResponse, true);
-                                els.canvas.scrollTop = els.canvas.scrollHeight;
-                            } catch (e) { }
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                const dataStr = line.slice(6).trim();
+                                if (dataStr === '[DONE]') continue;
+                                try {
+                                    const data = JSON.parse(dataStr);
+                                    
+                                    if (data.ui_error) {
+                                        fullResponse = `<span class="text-red-400"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`;
+                                        contentContainer.innerHTML = fullResponse;
+                                        break;
+                                    }
+
+                                    let textChunk = "";
+                                    if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content;
+                                    else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
+                                    
+                                    fullResponse += textChunk;
+                                    contentContainer.innerHTML = parseRichText(fullResponse, true);
+                                    els.canvas.scrollTop = els.canvas.scrollHeight;
+                                } catch (e) { }
+                            }
                         }
                     }
+                    if (done) break;
                 }
                 
                 contentContainer.classList.remove('typing-cursor');
