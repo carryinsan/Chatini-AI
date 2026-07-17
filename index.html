@@ -121,11 +121,9 @@
             }
         }
 
-        // The Fail-Safe Parser
         function parseRichText(content, isStreaming = false) {
             let html = content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
             
-            // Handle incomplete chart streaming safely
             if (isStreaming && html.includes('<chart>') && !html.includes('</chart>')) {
                 html = html.substring(0, html.indexOf('<chart>'));
                 html += `<div class="mt-4 p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-lg text-cyan-400 text-xs flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin"></i> Rendering Live Data Visualization...</div>`;
@@ -154,7 +152,7 @@
                         <div class="flex items-end h-32 gap-2 chart-container">${barsHtml}</div>
                     </div>`;
                 } catch (e) {
-                    return ``; // Fail-safe: if AI hallucinated bad JSON, hide it entirely rather than showing error
+                    return ``; 
                 }
             });
             return html;
@@ -204,11 +202,10 @@
             els.canvas.scrollTop = els.canvas.scrollHeight;
 
             try {
-                // Fetch to our secure Vercel Edge function
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: messages.slice(-10), modelId: activeModelId })
+                    body: JSON.stringify({ messages: messages.slice(-5), modelId: activeModelId }) // Keep context short to save free tier tokens
                 });
 
                 els.indicator.classList.add('hidden');
@@ -219,7 +216,6 @@
                 const decoder = new TextDecoder();
                 let fullResponse = "";
 
-                // Live Streaming Loop
                 while (true) {
                     const { done, value } = await reader.read();
                     if (done) break;
@@ -233,7 +229,14 @@
                             if (dataStr === '[DONE]') continue;
                             try {
                                 const data = JSON.parse(dataStr);
-                                // Support both Groq (OpenAI format) and Gemini SSE formats safely
+                                
+                                // Intercept explicit API errors passed from Edge function
+                                if (data.ui_error) {
+                                    fullResponse = `<span class="text-red-400"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`;
+                                    contentContainer.innerHTML = fullResponse;
+                                    break;
+                                }
+
                                 let textChunk = "";
                                 if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content;
                                 else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
@@ -241,18 +244,18 @@
                                 fullResponse += textChunk;
                                 contentContainer.innerHTML = parseRichText(fullResponse, true);
                                 els.canvas.scrollTop = els.canvas.scrollHeight;
-                            } catch (e) { /* Ignore partial JSON chunks */ }
+                            } catch (e) { }
                         }
                     }
                 }
                 
                 contentContainer.classList.remove('typing-cursor');
-                contentContainer.innerHTML = parseRichText(fullResponse, false); // Final render for charts
+                contentContainer.innerHTML = parseRichText(fullResponse, false); 
                 messages.push({ role: 'assistant', content: fullResponse });
 
             } catch (error) {
                 els.indicator.classList.add('hidden');
-                appendMessage('assistant', "Connection Error. Ensure Vercel Environment Variables are set.", activeModelId);
+                appendMessage('assistant', `<span class="text-red-400">Network Error: Failed to connect to server.</span>`, activeModelId);
             }
 
             isProcessing = false;
