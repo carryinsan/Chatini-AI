@@ -37,7 +37,7 @@ export default async function handler(req) {
 2. If comparing data or asked for a chart, output a JSON array wrapped in <chart> tags.
    Format: <chart>[{"label":"Cat A", "value":85}]</chart>
    
-CRITICAL: READ ALL PROVIDED DOCUMENTS AND LINKS. COMPLETE YOUR ANALYSIS IN FULL. DO NOT STOP EARLY.`;
+CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSIONS. REMEMBER EVERY MINOR DETAIL. COMPLETE YOUR ANALYSIS IN FULL. DO NOT STOP EARLY.`;
 
         let contextData = "";
         const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
@@ -54,19 +54,17 @@ CRITICAL: READ ALL PROVIDED DOCUMENTS AND LINKS. COMPLETE YOUR ANALYSIS IN FULL.
                     const tavData = await tavilyRes.json();
                     const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
                     contextData = `\n\n--- REAL-TIME SEARCH CONTEXT ---\n${searchResults}`;
-                    systemPrompt += `\n\nCite search context using <sources>.`;
                 }
             } catch (e) { console.error("Tavily Search Failed."); }
         }
 
-        // Clean up messages array for clean payload transmission
         const processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
         if (contextData) {
             processedMessages[processedMessages.length - 1].content += contextData;
         }
 
         // ---------------------------------------------------------
-        // 2. THE DOCUMENT COMPRESSION & DECODING ENGINE
+        // 2. THE DOCUMENT DECODING ENGINE
         // ---------------------------------------------------------
         let textDocumentContext = "";
         const geminiInlineParts = [];
@@ -74,69 +72,95 @@ CRITICAL: READ ALL PROVIDED DOCUMENTS AND LINKS. COMPLETE YOUR ANALYSIS IN FULL.
 
         allAttachments.forEach(att => {
             const mime = att.type ? att.type.toLowerCase() : 'text/plain';
-            // Determine if the file is text-based to save payload size
             const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv') || att.name.endsWith('.txt') || att.name.endsWith('.md') || att.name.endsWith('.py');
             
             if (isText) {
                 try {
-                    // Magically decode Base64 back into raw string text
                     const decodedStr = decodeURIComponent(escape(atob(att.base64)));
-                    // Cap at 15k chars per text file to prevent API payload explosion
-                    textDocumentContext += `\n--- DOCUMENT: ${att.name} ---\n${decodedStr.substring(0, 15000)}\n`;
+                    textDocumentContext += `\n--- DOC: ${att.name} ---\n${decodedStr.substring(0, modelId === 'spark' ? 5000 : 35000)}\n`;
                 } catch (e) {
                     try {
                         const fallbackStr = atob(att.base64);
-                        textDocumentContext += `\n--- DOCUMENT: ${att.name} ---\n${fallbackStr.substring(0, 15000)}\n`;
-                    } catch (err) {
-                        textDocumentContext += `\n--- DOCUMENT: ${att.name} (Error decoding) ---\n`;
-                    }
+                        textDocumentContext += `\n--- DOC: ${att.name} ---\n${fallbackStr.substring(0, modelId === 'spark' ? 5000 : 35000)}\n`;
+                    } catch (err) { }
                 }
             } else if (modelId !== 'spark') {
-                // If it's a binary file (PDF/Image) supported by Gemini, prep it for native vision.
                 if (geminiSupportedMimes.includes(mime)) {
                     geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
                 } else {
-                    // Fallback to prevent 400 errors if user uploads unsupported binaries like .docx
                     textDocumentContext += `\n[System Note: User attached '${att.name}' (${mime}). Not readable natively. Ask user to copy-paste or convert to PDF.]\n`;
                 }
             }
         });
 
-        // Inject decoded text context invisibly into the first message
         if (textDocumentContext) {
-            // Spark Token Overflow Protector
-            if (modelId === 'spark') textDocumentContext = textDocumentContext.substring(0, 25000); 
-            processedMessages[0].content = `[PROVIDED DOCUMENTS/LINKS INJECTION:]\n${textDocumentContext}\n\n${processedMessages[0].content}`;
+            systemPrompt += `\n\n[KNOWLEDGE BASE & UPLOADED DOCUMENTS:]\n${textDocumentContext}`;
         }
 
         // ---------------------------------------------------------
-        // 3. LLM STREAMING & SAFETY OVERRIDE
+        // 3. SMART 200-MESSAGE MEMORY COMPRESSOR (SPARK SAFEGUARD)
+        // ---------------------------------------------------------
+        let finalMessages = [];
+        
+        if (modelId === 'spark') {
+            // Groq 8k Limit = ~32,000 chars. We safely cap system + history to 28,000 chars.
+            const sparkCharLimit = 28000;
+            let currentChars = systemPrompt.length;
+            
+            if (allAttachments.length > 0 && geminiInlineParts.length === 0) {
+                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User uploaded Images/PDFs. You (Spark) cannot see them. Ask them to switch to Flux/Oracle.]`;
+            }
+
+            // Loop backwards to prioritize newest context
+            for (let i = processedMessages.length - 1; i >= 0; i--) {
+                const msg = processedMessages[i];
+                if (currentChars + msg.content.length < sparkCharLimit) {
+                    finalMessages.unshift(msg);
+                    currentChars += msg.content.length;
+                } else {
+                    // Out of pristine token space. Apply heavy compression to keep memory intact without crashing.
+                    let compressedMsg = msg.content.replace(/\s+/g, ' ').substring(0, 500); 
+                    if (currentChars + compressedMsg.length < sparkCharLimit) {
+                        finalMessages.unshift({ role: msg.role, content: compressedMsg });
+                        currentChars += compressedMsg.length;
+                    } else {
+                        // Extreme micro-compression for oldest overflow messages
+                        const remnants = processedMessages.slice(0, i + 1).map(m => m.content.replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 50)).join('|');
+                        if (finalMessages.length > 0) {
+                            finalMessages[0].content = `[DEEP_MEMORY:${remnants.substring(0, sparkCharLimit - currentChars)}]\n` + finalMessages[0].content;
+                        }
+                        break;
+                    }
+                }
+            }
+            if (finalMessages.length === 0) finalMessages = processedMessages.slice(-1);
+        } else {
+            // Gemini natively handles the entire 200 message array effortlessly
+            finalMessages = processedMessages;
+        }
+
+        // ---------------------------------------------------------
+        // 4. LLM STREAMING & KEY ROTATION
         // ---------------------------------------------------------
         let llmRes = null;
         let finalErrorText = "";
 
         if (modelId === 'spark') {
-            if (allAttachments.length > 0 && !textDocumentContext) {
-                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User uploaded Images/PDFs, but you (Spark) cannot see them. Ask them to switch to Flux/Oracle.]`;
-            }
-
             const streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
             const headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
             const payload = {
                 model: 'llama-3.1-8b-instant',
-                messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
+                messages: [{ role: 'system', content: systemPrompt }, ...finalMessages],
                 stream: true,
                 temperature: 0.6 
             };
-            
             llmRes = await fetch(streamUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
             if (!llmRes.ok) finalErrorText = await llmRes.text();
             
         } else {
-            // Reconstruct Gemini payload attaching PDFs/Images to the latest message
-            const geminiMessages = processedMessages.map((m, i) => {
+            const geminiMessages = finalMessages.map((m, i) => {
                 const parts = [{ text: m.content }];
-                if (i === processedMessages.length - 1 && geminiInlineParts.length > 0) {
+                if (i === finalMessages.length - 1 && geminiInlineParts.length > 0) {
                     parts.push(...geminiInlineParts);
                 }
                 return { role: m.role === 'user' ? 'user' : 'model', parts };
@@ -146,7 +170,6 @@ CRITICAL: READ ALL PROVIDED DOCUMENTS AND LINKS. COMPLETE YOUR ANALYSIS IN FULL.
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 contents: geminiMessages,
                 generationConfig: { maxOutputTokens: 8192 },
-                // CRITICAL SAFETY FIX: Preempts "Short incomplete output" by disabling filters on massive documents
                 safetySettings: [
                     { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
                     { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -155,18 +178,15 @@ CRITICAL: READ ALL PROVIDED DOCUMENTS AND LINKS. COMPLETE YOUR ANALYSIS IN FULL.
                 ]
             };
 
-            // Rotating Fallback execution
             for (let i = 0; i < GEMINI_KEYS.length; i++) {
                 const currentKey = GEMINI_KEYS[i];
                 const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
-                
                 llmRes = await fetch(streamUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
 
-                if (llmRes.ok) { break; } 
+                if (llmRes.ok) break; 
                 else {
                     finalErrorText = await llmRes.text();
-                    if (llmRes.status === 400) break; // Bad Request won't fix with rotation
-                    console.warn(`[Key Failover] Gemini Key ${i + 1} failed.`);
+                    if (llmRes.status === 400) break;
                 }
             }
         }
