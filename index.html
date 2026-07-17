@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chatini</title>
-    <!-- Tailwind CSS -->
+    <title>Chatini Premium</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Phosphor Icons for Premium Look -->
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     
     <script>
@@ -14,44 +12,25 @@
             darkMode: 'class',
             theme: {
                 extend: {
-                    colors: {
-                        background: '#050505',
-                        surface: '#0a0a0a',
-                        surface2: '#121212',
-                        surface3: '#1a1a1a',
-                    },
-                    animation: {
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    }
+                    colors: { background: '#050505', surface: '#0a0a0a', surface2: '#121212', surface3: '#1a1a1a' },
+                    animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' }
                 }
             }
         }
     </script>
     <style>
-        /* Custom Scrollbar for Premium Feel */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
-        
-        .glass-header {
-            background: rgba(10, 10, 10, 0.8);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-        }
-        
-        .glow-effect {
-            transition: all 0.5s ease;
-        }
-        
-        .chart-bar {
-            transition: height 1s cubic-bezier(0.4, 0, 0.2, 1);
-        }
+        .glass-header { background: rgba(10, 10, 10, 0.8); backdrop-filter: blur(12px); }
+        .chart-bar { transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .typing-cursor::after { content: '▋'; animation: blink 1s step-start infinite; color: #6ee7b7; margin-left: 2px;}
+        @keyframes blink { 50% { opacity: 0; } }
     </style>
 </head>
 <body class="bg-background text-white font-sans h-screen flex flex-col overflow-hidden selection:bg-cyan-500/30">
 
-    <!-- HEADER -->
     <header class="glass-header flex items-center justify-between px-4 md:px-6 py-4 border-b border-white/5 z-20 flex-shrink-0">
         <div class="flex items-center gap-3">
             <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.3)]">
@@ -59,119 +38,48 @@
             </div>
             <h1 class="text-xl font-bold tracking-tight text-white/90">Chatini</h1>
         </div>
-
-        <!-- Dynamic Model Selector Rendered by JS -->
-        <div id="model-selector" class="flex bg-black p-1 rounded-full border border-white/10 shadow-inner">
-            <!-- Populated by JS -->
-        </div>
+        <div id="model-selector" class="flex bg-black p-1 rounded-full border border-white/10 shadow-inner"></div>
     </header>
 
-    <!-- CHAT CANVAS -->
     <main id="chat-canvas" class="flex-1 overflow-y-auto px-4 md:px-20 lg:px-48 py-8 scroll-smooth z-10">
-        <div id="message-container" class="max-w-4xl mx-auto space-y-8 pb-20">
-            <!-- Messages go here -->
-        </div>
+        <div id="message-container" class="max-w-4xl mx-auto space-y-8 pb-20"></div>
         
-        <!-- Processing Indicator (Hidden by default) -->
         <div id="processing-indicator" class="hidden max-w-4xl mx-auto flex gap-4 w-full justify-start animate-pulse mt-8">
             <div id="processing-icon-container" class="w-8 h-8 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1">
                 <i id="processing-icon" class="ph-bold text-lg"></i>
             </div>
             <div class="pt-1.5 flex items-center gap-3 text-sm text-gray-500">
                 <i class="ph ph-spinner animate-spin text-lg"></i>
-                <span id="processing-text">Processing...</span>
+                <span id="processing-text">Connecting to Oracle...</span>
             </div>
         </div>
     </main>
 
-    <!-- INPUT AREA -->
     <footer class="p-4 bg-gradient-to-t from-background via-background to-transparent z-20 flex-shrink-0">
         <div class="max-w-3xl mx-auto relative group">
-            <div id="input-glow" class="absolute -inset-0.5 rounded-2xl blur opacity-30 transition duration-1000 group-hover:opacity-60 bg-purple-500/10 glow-effect"></div>
+            <div id="input-glow" class="absolute -inset-0.5 rounded-2xl blur opacity-30 transition duration-1000 bg-purple-500/10"></div>
             <div class="relative flex items-end bg-[#0f0f0f] border border-white/10 rounded-2xl p-2 shadow-2xl focus-within:border-white/30 transition-colors">
-                
-                <textarea
-                    id="chat-input"
-                    placeholder="Message Chatini (Oracle Engine)..."
-                    class="flex-1 max-h-48 min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-3 px-4 text-sm leading-relaxed"
-                    rows="1"
-                ></textarea>
-                
-                <button
-                    id="send-btn"
-                    class="p-3 m-1 rounded-xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed"
-                >
+                <textarea id="chat-input" placeholder="Message Chatini..." class="flex-1 max-h-48 min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-3 px-4 text-sm leading-relaxed" rows="1"></textarea>
+                <button id="send-btn" class="p-3 m-1 rounded-xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed">
                     <i id="send-icon" class="ph-bold ph-paper-plane-right text-lg transition-transform"></i>
                 </button>
-            </div>
-            <div id="model-description" class="text-center mt-3 text-[10px] font-medium text-gray-600 uppercase tracking-widest">
-                Deep monolithic triple-pass reasoning & web-search.
             </div>
         </div>
     </footer>
 
-    <!-- ========================================== -->
-    <!-- APPLICATION LOGIC (Vanilla JS)             -->
-    <!-- ========================================== -->
     <script>
-        // --- 1. CONFIGURATION LAYER ---
         const CONFIG = {
-            keys: {
-                GROQ: '', 
-                OPENROUTER: '',
-                GEMINI_1: '',
-                TAVILY: ''
-            },
             models: {
-                spark: {
-                    id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-400',
-                    bg: 'bg-amber-400/10', glow: 'bg-amber-400/20',
-                    maxTokens: 3000, description: 'Instant, single-pass ultra-fast execution.'
-                },
-                flux: {
-                    id: 'flux', name: 'Flux', icon: 'ph-drop', color: 'text-cyan-400',
-                    bg: 'bg-cyan-400/10', glow: 'bg-cyan-400/20',
-                    maxTokens: 7000, description: 'Balanced dual-pass logic with contextual grounding.'
-                },
-                oracle: {
-                    id: 'oracle', name: 'Oracle', icon: 'ph-hexagon', color: 'text-purple-500',
-                    bg: 'bg-purple-500/10', glow: 'bg-purple-500/20',
-                    maxTokens: 12000, description: 'Deep monolithic triple-pass reasoning & web-search.'
-                }
+                spark: { id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-400', bg: 'bg-amber-400/10', glow: 'bg-amber-400/20' },
+                flux: { id: 'flux', name: 'Flux', icon: 'ph-drop', color: 'text-cyan-400', bg: 'bg-cyan-400/10', glow: 'bg-cyan-400/20' },
+                oracle: { id: 'oracle', name: 'Oracle', icon: 'ph-hexagon', color: 'text-purple-500', bg: 'bg-purple-500/10', glow: 'bg-purple-500/20' }
             }
         };
 
-        // --- 2. STATE ---
         let activeModelId = 'oracle';
         let isProcessing = false;
-        let messages = [
-            { role: 'assistant', content: 'System Initialized. Accessing premium model tiers. How may I assist you today?', id: 'init', model: 'oracle' }
-        ];
-
-        // --- 3. ENGINE LAYER ---
-        const Engine = {
-            async execute(modelId, contextWindow) {
-                const model = CONFIG.models[modelId];
-                console.log(`[${model.name} Engine] Executing. Max Tokens: ${model.maxTokens}`);
-                
-                // --- INSERT YOUR REAL API FETCH LOGIC HERE LATER ---
-                // Example: await fetch('https://api.groq.com/openai/v1/chat/completions', { ... })
-                
-                // Simulated Delay & Responses for UI preview
-                if (modelId === 'spark') {
-                    await new Promise(r => setTimeout(r, 800));
-                    return "This is a lightning-fast response from **Spark** via single-pass processing. I've analyzed your input instantly and accurately.";
-                } else if (modelId === 'flux') {
-                    await new Promise(r => setTimeout(r, 1500));
-                    return "Flux processing complete.\n\n<logs>Tavily Search: Active\nContext Grounding: Successful</logs>\n\nBased on synthesized data, the optimal pathway is established.";
-                } else {
-                    await new Promise(r => setTimeout(r, 2500));
-                    return `Oracle Deep Synthesis Complete. \n\n<logs>Pass 1 (Planning): Complete\nPass 2 (Grounding): 4 sources analyzed\nPass 3 (Synthesis): 100%</logs>\n\nHere is the data visualization you requested:\n\n<chart>[{"label":"Q1","value":45},{"label":"Q2","value":80},{"label":"Q3","value":35},{"label":"Q4","value":95}]</chart>\n\nThe projections show a massive upward trend in Q4 based on the latest context logic.`;
-                }
-            }
-        };
-
-        // --- 4. DOM ELEMENTS & UI LOGIC ---
+        let messages = [];
+        
         const els = {
             selector: document.getElementById('model-selector'),
             container: document.getElementById('message-container'),
@@ -181,10 +89,8 @@
             sendIcon: document.getElementById('send-icon'),
             indicator: document.getElementById('processing-indicator'),
             indicatorIcon: document.getElementById('processing-icon'),
-            indicatorIconContainer: document.getElementById('processing-icon-container'),
             indicatorText: document.getElementById('processing-text'),
-            inputGlow: document.getElementById('input-glow'),
-            description: document.getElementById('model-description')
+            inputGlow: document.getElementById('input-glow')
         };
 
         function renderModelSelector() {
@@ -194,10 +100,7 @@
                 const btn = document.createElement('button');
                 btn.className = `flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-300 ${isActive ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}`;
                 btn.innerHTML = `<i class="${model.icon} ${isActive ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-base"></i> ${model.name}`;
-                btn.onclick = () => {
-                    activeModelId = model.id;
-                    updateUIState();
-                };
+                btn.onclick = () => { if(!isProcessing) { activeModelId = model.id; updateUIState(); } };
                 els.selector.appendChild(btn);
             });
         }
@@ -205,9 +108,8 @@
         function updateUIState() {
             renderModelSelector();
             const model = CONFIG.models[activeModelId];
-            els.inputGlow.className = `absolute -inset-0.5 rounded-2xl blur opacity-30 transition duration-1000 group-hover:opacity-60 glow-effect ${model.glow}`;
+            els.inputGlow.className = `absolute -inset-0.5 rounded-2xl blur opacity-30 transition duration-1000 ${model.glow}`;
             els.input.placeholder = `Message Chatini (${model.name} Engine)...`;
-            els.description.textContent = model.description;
             
             const text = els.input.value.trim();
             if (text && !isProcessing) {
@@ -219,145 +121,152 @@
             }
         }
 
-        // Output Parser (Turns text tags into HTML UI elements)
-        function parseRichText(content) {
+        // The Fail-Safe Parser
+        function parseRichText(content, isStreaming = false) {
             let html = content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
             
-            // Parse <logs>
-            html = html.replace(/<logs>([\s\S]*?)<\/logs>/g, (match, logs) => {
-                const logLines = logs.trim().split('\n').map(line => 
-                    `<div class="flex items-center gap-2 py-0.5"><i class="ph-fill ph-check-circle text-emerald-500 text-[10px]"></i>${line}</div>`
-                ).join('');
-                return `<div class="mt-4 mb-4 bg-black border border-white/10 rounded-lg p-3 font-mono text-xs text-gray-400 shadow-inner">
-                    <div class="flex items-center gap-2 mb-2 text-gray-500 border-b border-white/5 pb-2">
-                        <i class="ph-bold ph-terminal-window text-sm"></i> System Diagnostics
-                    </div>
-                    ${logLines}
-                </div>`;
-            });
+            // Handle incomplete chart streaming safely
+            if (isStreaming && html.includes('<chart>') && !html.includes('</chart>')) {
+                html = html.substring(0, html.indexOf('<chart>'));
+                html += `<div class="mt-4 p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-lg text-cyan-400 text-xs flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin"></i> Rendering Live Data Visualization...</div>`;
+                return html;
+            }
 
-            // Parse <chart>
             html = html.replace(/<chart>([\s\S]*?)<\/chart>/g, (match, jsonStr) => {
                 try {
                     const data = JSON.parse(jsonStr);
                     const maxVal = Math.max(...data.map(d => d.value));
                     const barsHtml = data.map(item => `
                         <div class="flex-1 flex flex-col items-center gap-2 group">
-                            <div class="w-full bg-gradient-to-t from-cyan-900/40 to-cyan-400 rounded-t-sm transition-all duration-1000 ease-out group-hover:to-cyan-300 relative cursor-pointer chart-bar" style="height: 0px;" data-height="${(item.value / maxVal) * 100}%">
+                            <div class="w-full bg-gradient-to-t from-cyan-900/40 to-cyan-400 rounded-t-sm transition-all duration-1000 ease-out group-hover:to-cyan-300 relative chart-bar" style="height: ${(item.value / maxVal) * 100}%">
                                 <div class="opacity-0 group-hover:opacity-100 absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-black text-xs font-bold py-1 px-2 rounded transition-opacity">
                                     ${item.value}
                                 </div>
                             </div>
-                            <span class="text-xs text-gray-500 font-medium">${item.label}</span>
+                            <span class="text-[10px] text-gray-500 font-medium truncate w-full text-center">${item.label}</span>
                         </div>
                     `).join('');
 
                     return `<div class="w-full mt-4 p-5 bg-surface2 border border-white/5 rounded-xl shadow-2xl overflow-hidden">
                         <div class="flex items-center gap-2 mb-6 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
-                            <i class="ph-bold ph-chart-bar text-cyan-400 text-sm"></i> Interactive Analysis
+                            <i class="ph-bold ph-chart-bar text-cyan-400 text-sm"></i> Live AI Analysis
                         </div>
-                        <div class="flex items-end h-32 gap-3 chart-container">${barsHtml}</div>
+                        <div class="flex items-end h-32 gap-2 chart-container">${barsHtml}</div>
                     </div>`;
                 } catch (e) {
-                    return `<div class="text-red-500 text-xs">Error parsing chart</div>`;
+                    return ``; // Fail-safe: if AI hallucinated bad JSON, hide it entirely rather than showing error
                 }
             });
-
             return html;
         }
 
-        function renderMessages() {
-            els.container.innerHTML = '';
-            messages.forEach(msg => {
-                const isUser = msg.role === 'user';
-                const div = document.createElement('div');
-                div.className = `flex w-full ${isUser ? 'justify-end' : 'justify-start'}`;
-                
-                if (isUser) {
-                    div.innerHTML = `<div class="max-w-[80%] bg-surface3 border border-white/10 px-5 py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap">${msg.content}</div>`;
-                } else {
-                    const model = msg.id === 'init' ? CONFIG.models.oracle : CONFIG.models[msg.model];
-                    div.innerHTML = `
-                        <div class="flex gap-4 max-w-[90%] w-full">
-                            <div class="w-8 h-8 flex-shrink-0 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1">
-                                <i class="${model.icon} ph-fill ${model.color} text-base"></i>
-                            </div>
-                            <div class="flex flex-col pt-1.5 w-full space-y-2 leading-relaxed text-gray-200">
-                                ${parseRichText(msg.content)}
-                            </div>
+        function appendMessage(role, content, modelId) {
+            const isUser = role === 'user';
+            const div = document.createElement('div');
+            div.className = `flex w-full mb-8 ${isUser ? 'justify-end' : 'justify-start'}`;
+            
+            if (isUser) {
+                div.innerHTML = `<div class="max-w-[80%] bg-surface3 border border-white/10 px-5 py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap">${content}</div>`;
+            } else {
+                const model = CONFIG.models[modelId];
+                div.innerHTML = `
+                    <div class="flex gap-4 max-w-[90%] w-full">
+                        <div class="w-8 h-8 flex-shrink-0 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1 shadow-[0_0_10px_rgba(255,255,255,0.05)]">
+                            <i class="${model.icon} ph-fill ${model.color} text-base"></i>
                         </div>
-                    `;
-                }
-                els.container.appendChild(div);
-            });
-
-            // Trigger chart animations after render
-            setTimeout(() => {
-                document.querySelectorAll('.chart-bar').forEach(bar => {
-                    bar.style.height = bar.getAttribute('data-height');
-                });
-            }, 50);
-
+                        <div class="msg-content flex flex-col pt-1.5 w-full space-y-2 leading-relaxed text-gray-200 text-[15px]">
+                            ${parseRichText(content)}
+                        </div>
+                    </div>
+                `;
+            }
+            els.container.appendChild(div);
             els.canvas.scrollTop = els.canvas.scrollHeight;
+            return div.querySelector('.msg-content');
         }
 
         async function handleSend() {
             const text = els.input.value.trim();
             if (!text || isProcessing) return;
 
-            // Add User Message
-            messages.push({ role: 'user', content: text, id: Date.now().toString() });
+            messages.push({ role: 'user', content: text });
+            appendMessage('user', text);
+            
             els.input.value = '';
-            els.input.style.height = 'auto'; // Reset textarea height
+            els.input.style.height = 'auto';
             isProcessing = true;
             updateUIState();
-            renderMessages();
 
-            // Show indicator
             const currentModel = CONFIG.models[activeModelId];
             els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
-            els.indicatorText.textContent = `Processing ${currentModel.name} Pass... (${currentModel.maxTokens} max tokens)`;
+            els.indicatorText.textContent = `Orchestrating ${currentModel.name}...`;
             els.indicator.classList.remove('hidden');
             els.canvas.scrollTop = els.canvas.scrollHeight;
 
-            // Engine Execution (Slicing last 10 for memory)
-            const contextWindow = messages.slice(-10);
-            let response = "";
             try {
-                response = await Engine.execute(activeModelId, contextWindow);
-            } catch (e) {
-                response = "System Error: Engine execution failed.";
+                // Fetch to our secure Vercel Edge function
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: messages.slice(-10), modelId: activeModelId })
+                });
+
+                els.indicator.classList.add('hidden');
+                const contentContainer = appendMessage('assistant', '', activeModelId);
+                contentContainer.classList.add('typing-cursor');
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let fullResponse = "";
+
+                // Live Streaming Loop
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const dataStr = line.slice(6);
+                            if (dataStr === '[DONE]') continue;
+                            try {
+                                const data = JSON.parse(dataStr);
+                                // Support both Groq (OpenAI format) and Gemini SSE formats safely
+                                let textChunk = "";
+                                if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content;
+                                else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
+                                
+                                fullResponse += textChunk;
+                                contentContainer.innerHTML = parseRichText(fullResponse, true);
+                                els.canvas.scrollTop = els.canvas.scrollHeight;
+                            } catch (e) { /* Ignore partial JSON chunks */ }
+                        }
+                    }
+                }
+                
+                contentContainer.classList.remove('typing-cursor');
+                contentContainer.innerHTML = parseRichText(fullResponse, false); // Final render for charts
+                messages.push({ role: 'assistant', content: fullResponse });
+
+            } catch (error) {
+                els.indicator.classList.add('hidden');
+                appendMessage('assistant', "Connection Error. Ensure Vercel Environment Variables are set.", activeModelId);
             }
 
-            // Add Assistant Message
-            els.indicator.classList.add('hidden');
-            messages.push({ role: 'assistant', content: response, id: Date.now().toString(), model: activeModelId });
             isProcessing = false;
             updateUIState();
-            renderMessages();
         }
 
-        // --- 5. EVENT LISTENERS ---
-        els.input.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-            updateUIState();
-        });
-
-        els.input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-            }
-        });
-
+        els.input.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; updateUIState(); });
+        els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
         els.sendBtn.addEventListener('click', handleSend);
-
-        // Init
+        
         updateUIState();
-        renderMessages();
-
+        appendMessage('assistant', 'System Initialized securely via Edge. How may I assist you today?', 'oracle');
     </script>
 </body>
 </html>
+
 
