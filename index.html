@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chatini Workspace v2</title>
+    <title>Chatini Workspace</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -30,11 +30,7 @@
         .prose code::before, .prose code::after { content: "" !important; }
         .prose strong { color: #fff !important; }
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
-        
-        /* Terminal styles */
         .terminal-text { font-family: 'Courier New', Courier, monospace; }
-        
-        /* Canvas Slide Animation */
         #workspace-canvas { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease; }
     </style>
 </head>
@@ -44,7 +40,7 @@
         <i class="ph-bold ph-check"></i> <span id="toast-msg">Copied!</span>
     </div>
 
-    <!-- Export Response Modal -->
+    <!-- Modals -->
     <div id="pdf-modal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center backdrop-blur-sm px-4">
         <div class="bg-[#0a0a0a] border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
             <h3 class="text-white font-bold mb-5 flex items-center gap-2 text-lg"><i class="ph-fill ph-file-pdf text-red-400 text-xl"></i> Export Response</h3>
@@ -56,7 +52,6 @@
         </div>
     </div>
 
-    <!-- Knowledge Extensions Modal -->
     <div id="ext-modal" class="fixed inset-0 bg-black/90 z-[70] hidden flex flex-col backdrop-blur-md">
         <div class="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 glass-header pt-safe">
             <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2"><i class="ph-fill ph-brain text-purple-400 text-2xl"></i> Knowledge Extensions</h2>
@@ -120,16 +115,22 @@
                 </div>
             </div>
         </div>
-        <div class="w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0">
-            <div id="model-selector" class="flex bg-black/50 sm:bg-black p-1 rounded-full border border-white/10 shadow-inner w-max mx-auto sm:mx-0"></div>
+        
+        <div class="w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0 flex items-center">
+            <div class="flex items-center gap-2 w-max mx-auto sm:mx-0">
+                <button id="deep-research-btn" onclick="toggleDeepResearch()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-cyan-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Auto-Pilot Deep Research">
+                    <i id="deep-research-icon" class="ph-bold ph-radar text-sm sm:text-base"></i> <span class="">Deep Research</span>
+                </button>
+                <div id="model-selector" class="flex bg-black/50 sm:bg-black p-1 rounded-full border border-white/10 shadow-inner"></div>
+            </div>
         </div>
     </header>
 
     <!-- SPLIT SCREEN LAYOUT CONTAINER -->
-    <div class="flex-1 flex w-full overflow-hidden relative">
+    <div class="flex-1 flex w-full overflow-hidden relative min-h-0">
         
         <!-- CHAT AREA -->
-        <main id="chat-canvas" class="flex-1 h-full overflow-y-auto overflow-x-hidden px-2 sm:px-6 md:px-12 lg:px-24 xl:px-48 py-6 scroll-smooth z-10">
+        <main id="chat-canvas" class="flex-1 h-full overflow-y-auto overflow-x-hidden px-2 sm:px-6 md:px-12 lg:px-24 xl:px-48 py-6 scroll-smooth z-10 min-h-0">
             <div id="message-container" class="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-10"></div>
             <div id="processing-indicator" class="hidden max-w-4xl mx-auto flex gap-3 sm:gap-4 w-full justify-start animate-pulse mt-6 sm:mt-8 px-2">
                 <div id="processing-icon-container" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#111] border border-white/10 flex items-center justify-center flex-shrink-0">
@@ -143,8 +144,8 @@
         </main>
 
         <!-- CANVAS WORKSPACE (RIGHT PANEL) -->
-        <aside id="workspace-canvas" class="absolute inset-y-0 right-0 w-full lg:static lg:w-1/2 bg-[#0a0a0a] border-l border-white/10 transform translate-x-full lg:translate-x-0 hidden flex-col shadow-2xl z-40 transition-transform">
-            <div class="flex items-center justify-between p-4 border-b border-white/10 bg-[#111]">
+        <aside id="workspace-canvas" class="absolute inset-y-0 right-0 h-full min-h-0 w-full lg:static lg:w-1/2 bg-[#0a0a0a] border-l border-white/10 transform translate-x-full lg:translate-x-0 hidden flex-col shadow-2xl z-40 transition-transform">
+            <div class="flex items-center justify-between p-4 border-b border-white/10 bg-[#111] flex-shrink-0">
                 <div class="flex items-center gap-2">
                     <i class="ph-fill ph-layout text-cyan-400 text-lg"></i>
                     <h2 id="canvas-title" class="text-sm font-bold text-white truncate max-w-[200px]">Artifact</h2>
@@ -154,7 +155,7 @@
                     <button onclick="closeCanvas()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded"><i class="ph-bold ph-x"></i></button>
                 </div>
             </div>
-            <div id="canvas-content" class="flex-1 overflow-y-auto p-6 lg:p-10 prose prose-invert max-w-none text-sm md:text-base selection:bg-cyan-500/30"></div>
+            <div id="canvas-content" class="flex-1 overflow-y-auto min-h-0 h-full p-6 lg:p-10 prose prose-invert max-w-none text-sm md:text-base selection:bg-cyan-500/30 pb-24"></div>
         </aside>
     </div>
 
@@ -165,13 +166,8 @@
             <div class="relative flex items-end bg-[#0f0f0f] border border-white/10 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-2xl focus-within:border-white/30 transition-colors">
                 
                 <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx">
-                <button onclick="document.getElementById('file-upload').click()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0" title="Attach Files">
+                <button onclick="document.getElementById('file-upload').click()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0" title="Attach Files (For current message)">
                     <i class="ph-bold ph-paperclip text-lg sm:text-xl"></i>
-                </button>
-
-                <!-- DEEP RESEARCH TOGGLE -->
-                <button id="deep-research-btn" onclick="toggleDeepResearch()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-500 hover:text-cyan-400 transition-colors flex-shrink-0 border border-transparent" title="Toggle Auto-Pilot Deep Research">
-                    <i id="deep-research-icon" class="ph-bold ph-radar text-lg sm:text-xl"></i>
                 </button>
 
                 <textarea id="chat-input" placeholder="Message Chatini..." class="flex-1 max-h-[150px] sm:max-h-48 min-h-[40px] sm:min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-2.5 sm:py-3 px-1 sm:px-2 text-base leading-relaxed" rows="1"></textarea>
@@ -222,7 +218,6 @@
         let currentChatExtId = null; 
         let extForm = { id: '', name: '', links: [], files: [] };
         
-        // Global Artifact Store for the Canvas Workspace
         window.ARTIFACT_STORE = {};
 
         const els = {
@@ -254,7 +249,6 @@
             if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
         };
 
-        // --- TOGGLE DEEP RESEARCH ---
         function toggleDeepResearch() {
             isDeepResearchOn = !isDeepResearchOn;
             if (isDeepResearchOn) {
@@ -271,10 +265,8 @@
             }
         }
 
-        // --- CANVAS WORKSPACE LOGIC ---
         function openCanvas(artifactId, title) {
             els.workspace.classList.remove('hidden');
-            // Mobile slide-in logic
             setTimeout(() => els.workspace.classList.remove('translate-x-full'), 10);
             els.canvasTitle.innerText = title || "Document Artifact";
             const rawMarkdown = window.ARTIFACT_STORE[artifactId] || "";
@@ -283,7 +275,7 @@
 
         function closeCanvas() {
             els.workspace.classList.add('translate-x-full');
-            setTimeout(() => els.workspace.classList.add('hidden'), 400); // Wait for transition
+            setTimeout(() => els.workspace.classList.add('hidden'), 400); 
         }
 
         async function copyCanvasContent() {
@@ -295,7 +287,6 @@
             } catch (e) { showToast("Failed"); }
         }
 
-        // Modals & Storage logic
         function openExtModal() { document.getElementById('ext-modal').classList.remove('hidden'); renderExtList(); closeExtForm(); }
         function closeExtModal() { document.getElementById('ext-modal').classList.add('hidden'); refreshExtSelectors(); }
         function openCreateExtForm() { extForm = { id: Date.now().toString(), name: '', links: [], files: [] }; renderExtForm(); }
@@ -341,7 +332,7 @@
             if (!currentPdfMsgId) return; const btn = document.getElementById('pdf-dl-btn'); const origHtml = btn.innerHTML; btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
             const filename = document.getElementById('pdf-filename').value.trim() || 'Chatini_Analysis'; const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId); if (!wrapper) { closePdfModal(); return; }
             const clone = wrapper.querySelector('.msg-content').cloneNode(true); const actionBar = clone.querySelector('.action-bar'); if (actionBar) actionBar.remove(); if (!document.getElementById('pdf-include-sources').checked) clone.querySelectorAll('.extra-data-block').forEach(el => el.remove());
-            clone.querySelectorAll('.artifact-card').forEach(el => el.innerHTML = `<em>[Interactive Artifact Removed for PDF Export]</em>`);
+            clone.querySelectorAll('.artifact-card').forEach(el => el.innerHTML = `<em>[Interactive Workspace Block Removed for PDF Export]</em>`);
             clone.style.padding = '20px'; clone.style.background = '#0a0a0a'; clone.style.color = '#e5e7eb'; clone.style.fontFamily = 'system-ui, sans-serif'; clone.prepend(Object.assign(document.createElement('div'), {innerHTML:`<h2 style="color:#22d3ee; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">Chatini Premium Analysis</h2>`}));
             try { await html2pdf().set({ margin:15, filename:`${filename}.pdf`, html2canvas:{scale:2, backgroundColor:'#0a0a0a'}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'} }).from(clone).save(); showToast("Downloaded!"); } catch (e) { showToast("Failed"); } btn.innerHTML = origHtml; btn.disabled = false; closePdfModal();
         }
@@ -375,6 +366,7 @@
 
         function renderHistoryList() { els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join(''); }
         function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id === msgId); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); }
+
         function renderModelSelector() { els.selector.innerHTML = Object.values(CONFIG.models).map(model => `<button onclick="if(!isProcessing){activeModelId='${model.id}';updateUIState();}" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}"><i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm sm:text-base"></i> ${model.name}</button>`).join(''); }
 
         function updateUIState() {
@@ -385,24 +377,15 @@
             else { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0'; els.sendIcon.classList.remove('translate-x-0.5', '-translate-y-0.5'); }
         }
 
-        // --- ARTIFACT & UI PARSER ---
         function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
 
             // 1. Extract Artifacts (Canvas Workspace)
             markdownContent = markdownContent.replace(/<artifact(?: title="([^"]+)")?>([\s\S]*?)(<\/artifact>|$)/g, (match, title, artifactContent, closeTag) => {
-                if (!closeTag) return `<div class="mt-4 p-4 border border-purple-500/30 bg-purple-500/5 rounded-xl flex items-center justify-between animate-pulse"><div class="flex items-center gap-3"><i class="ph-bold ph-layout text-purple-400 text-xl"></i><div><p class="text-xs text-purple-400 font-bold uppercase tracking-wider">Generating Document</p><p class="text-sm text-white font-medium">${title || 'Untitled'}</p></div></div><i class="ph-bold ph-spinner animate-spin text-gray-400"></i></div>`;
-                
+                if (!closeTag) return `<div class="mt-4 p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-xl flex items-center justify-between animate-pulse"><div class="flex items-center gap-3"><i class="ph-bold ph-layout text-cyan-400 text-xl"></i><div><p class="text-xs text-cyan-400 font-bold uppercase tracking-wider">Generating Workspace...</p></div></div><i class="ph-bold ph-spinner animate-spin text-cyan-400"></i></div>`;
                 const artId = 'art_' + Math.random().toString(36).substr(2, 9);
                 window.ARTIFACT_STORE[artId] = artifactContent.trim();
-                
-                extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${(title || 'Document').replace(/'/g, "\\'")}')">
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:border-cyan-500/50 transition-colors"><i class="ph-fill ph-layout text-cyan-400 text-xl"></i></div>
-                        <div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Interactive Workspace</p><p class="text-sm text-white font-medium group-hover:text-cyan-400 transition-colors">${title || 'Untitled Artifact'}</p></div>
-                    </div>
-                    <i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i>
-                </div>`;
+                extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${(title || 'Document').replace(/'/g, "\\'")}')"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:border-cyan-500/50 transition-colors"><i class="ph-fill ph-layout text-cyan-400 text-xl"></i></div><div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Interactive Workspace</p><p class="text-sm text-white font-medium group-hover:text-cyan-400 transition-colors">${title || 'Untitled Artifact'}</p></div></div><i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i></div>`;
                 return ''; 
             });
 
@@ -447,14 +430,10 @@
             els.container.appendChild(div); els.canvas.scrollTop = els.canvas.scrollHeight; return { container: div.querySelector('.msg-content'), id: msgId };
         }
 
-        // --- RESEARCH TERMINAL BLOCK ---
         function appendResearchTerminal() {
-            const div = document.createElement('div');
-            div.className = `flex w-full mb-6 sm:mb-8 justify-start`;
-            div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"> <div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(6,182,212,0.3)] animate-pulse"> <i class="ph-bold ph-radar text-cyan-400 text-sm sm:text-base"></i> </div> <div class="bg-black border border-cyan-500/30 rounded-xl p-4 w-full md:w-2/3 shadow-inner terminal-text text-xs sm:text-sm text-cyan-400 flex flex-col gap-2" id="research-logs"> <div class="opacity-70"><i class="ph-bold ph-terminal-window"></i> Initializing Auto-Pilot Agent...</div> </div> </div>`;
-            els.container.appendChild(div);
-            els.canvas.scrollTop = els.canvas.scrollHeight;
-            return document.getElementById('research-logs');
+            const div = document.createElement('div'); div.className = `flex w-full mb-6 sm:mb-8 justify-start`;
+            div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"><div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(6,182,212,0.3)] animate-pulse"><i class="ph-bold ph-radar text-cyan-400 text-sm sm:text-base"></i></div><div class="bg-black border border-cyan-500/30 rounded-xl p-4 w-full md:w-2/3 shadow-inner terminal-text text-xs sm:text-sm text-cyan-400 flex flex-col gap-2" id="research-logs"><div class="opacity-70"><i class="ph-bold ph-terminal-window"></i> Initializing Auto-Pilot...</div></div></div>`;
+            els.container.appendChild(div); els.canvas.scrollTop = els.canvas.scrollHeight; return document.getElementById('research-logs');
         }
 
         function renderMessagesToUI() { els.container.innerHTML = ''; window.ARTIFACT_STORE = {}; messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta)); }
@@ -476,7 +455,6 @@
             let compiledResearchContext = "";
             let contextMessages = messages.map(m => ({ role: m.role, content: m.content, attachments: m.id === currentMessage.id ? m.attachments : undefined }));
             
-            // --- DEEP RESEARCH LOOP ---
             if (isDeepResearchOn) {
                 els.indicator.classList.add('hidden');
                 const logContainer = appendResearchTerminal();
@@ -507,11 +485,10 @@
                 } catch (err) { logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
             }
 
-            // Normal UI indicator for standard processing
             if (!isDeepResearchOn) {
                 const currentModel = CONFIG.models[activeModelId];
                 els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
-                els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension Knowledge..." : "Chatini is analyzing...";
+                els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension..." : "Chatini is analyzing...";
                 els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
             }
             try {
@@ -522,11 +499,7 @@
                         if (compiledLinksText) contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
                     }
                 }
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: contextMessages.slice(-200), modelId: activeModelId, researchContext: compiledResearchContext })
-                });
+                const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: contextMessages.slice(-200), modelId: activeModelId, researchContext: compiledResearchContext }) });
                 els.indicator.classList.add('hidden');
                 const assistantMsgObj = appendMessage('assistant', '', activeModelId);
                 const contentContainer = assistantMsgObj.container;
