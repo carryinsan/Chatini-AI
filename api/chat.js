@@ -13,7 +13,13 @@ export default async function handler(req) {
 
         const GROQ_KEY = process.env.GROQ_API_KEY;
         const TAVILY_KEY = process.env.TAVILY_API_KEY;
-        const GEMINI_KEY = process.env.GEMINI_API_KEY_3 || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_1;
+        
+        // Priority Rotation Array (1 -> 2 -> 3)
+        const GEMINI_KEYS = [
+            process.env.GEMINI_API_KEY_1,
+            process.env.GEMINI_API_KEY_2,
+            process.env.GEMINI_API_KEY_3
+        ].filter(Boolean); // Filters out any undefined keys
 
         let contextData = "";
         
@@ -63,32 +69,34 @@ export default async function handler(req) {
         }
 
         // ---------------------------------------------------------
-        // PASS 2: LLM STREAMING
+        // PASS 2: LLM STREAMING WITH KEY ROTATION & DOCUMENT FIX
         // ---------------------------------------------------------
-        let streamUrl, headers, payload;
+        let llmRes = null;
+        let finalErrorText = "";
 
         if (modelId === 'spark') {
             if (attachments.length > 0) {
                 processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: The user attached files, but you (Spark/Llama) do not have vision/file capabilities. Politely ask them to switch to Flux or Oracle to analyze files.]`;
             }
 
-            streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
-            headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
-            payload = {
+            const streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
+            const headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
+            const payload = {
                 model: 'llama-3.1-8b-instant',
                 messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.map(m => ({role: m.role, content: m.content}))],
                 stream: true,
                 temperature: 0.6 
             };
-        } else {
-            streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEY}`;
-            headers = { 'Content-Type': 'application/json' };
             
+            llmRes = await fetch(streamUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
+            if (!llmRes.ok) finalErrorText = await llmRes.text();
+            
+        } else {
+            // Gemini Document & Multimodal Setup
             const geminiMessages = processedMessages.map(m => {
                 const parts = [{ text: m.content }];
                 if (m.attachments && m.attachments.length > 0) {
                     m.attachments.forEach(att => {
-                        // CRITICAL FIX: Ensure mimeType is NEVER empty
                         const safeMimeType = att.type && att.type.trim() !== "" ? att.type : "text/plain";
                         parts.push({
                             inlineData: { mimeType: safeMimeType, data: att.base64 }
@@ -98,17 +106,43 @@ export default async function handler(req) {
                 return { role: m.role === 'user' ? 'user' : 'model', parts };
             });
 
-            payload = {
+            const payload = {
                 systemInstruction: { parts: [{ text: systemPrompt }] },
-                contents: geminiMessages
+                contents: geminiMessages,
+                // CRITICAL FIX: Forces Gemini to finish parsing large PDFs without aborting early
+                generationConfig: { maxOutputTokens: 8192 }
             };
+
+            // CRITICAL FIX: Key Rotation Loop
+            for (let i = 0; i < GEMINI_KEYS.length; i++) {
+                const currentKey = GEMINI_KEYS[i];
+                const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
+                
+                llmRes = await fetch(streamUrl, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+
+                if (llmRes.ok) {
+                    break; // Request succeeded, exit the rotation loop
+                } else {
+                    finalErrorText = await llmRes.text();
+                    
+                    // If Error is 400 (Bad Request / Bad Payload), rotating the key won't fix it.
+                    if (llmRes.status === 400) {
+                        break;
+                    }
+                    // Otherwise (429 Rate Limit, 503 Overloaded), loop tries the next key automatically.
+                    console.warn(`[Key Failover] Gemini Key ${i + 1} failed. Attempting next key if available.`);
+                }
+            }
         }
 
-        const llmRes = await fetch(streamUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
-
-        if (!llmRes.ok) {
-            const errorText = await llmRes.text();
-            const errorStream = `data: ${JSON.stringify({ ui_error: `[API Blocked: ${llmRes.status}] ${errorText.substring(0, 150)}` })}\n\n`;
+        // Final fail-safe if all keys exhaust or fail
+        if (!llmRes || !llmRes.ok) {
+            const errorStatus = llmRes ? llmRes.status : 'No Keys Configured';
+            const errorStream = `data: ${JSON.stringify({ ui_error: `[API Blocked: ${errorStatus}] ${finalErrorText.substring(0, 150)}` })}\n\n`;
             return new Response(errorStream, { headers: { 'Content-Type': 'text/event-stream' } });
         }
 
