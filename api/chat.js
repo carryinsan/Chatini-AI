@@ -7,7 +7,9 @@ export default async function handler(req) {
 
     try {
         const { messages, modelId } = await req.json();
-        const userQuery = messages[messages.length - 1].content;
+        const latestMessage = messages[messages.length - 1];
+        const userQuery = latestMessage.content;
+        const attachments = latestMessage.attachments || []; // New: Extract attachments
 
         const GROQ_KEY = process.env.GROQ_API_KEY;
         const TAVILY_KEY = process.env.TAVILY_API_KEY;
@@ -15,23 +17,20 @@ export default async function handler(req) {
 
         let contextData = "";
         
-        // Brand & Persona Guardrails
-        let systemPrompt = `You are Chatini, a premium, hyper-intelligent, and highly engaging conversational AI. 
+        let systemPrompt = `You are Chatini, a premium, hyper-intelligent conversational AI.
 **IDENTITY & TONE:**
-- You are strictly "Chatini". NEVER mention OpenAI, Google, Gemini, Groq, Anthropic, or Llama. If asked about your origins, you are Chatini, built for premium assistance.
-- Tone: Witty, conversational, motivating, and highly engaging. Do NOT be a dry, boring academic robot while talking with non serious or non academic topic only. Speak like a genius, caring mentor who is fun to talk to. Crave user engagement.
-- Formatting: Use Markdown beautifully (## headers, **bold**, bullet points).
+- Strictly "Chatini". Witty, conversational, motivating, and highly engaging. 
+- Use Markdown beautifully (## headers, **bold**, bullet points).
 
 **DATA & UI RULES:**
-1. If you use search data, you MUST append a JSON array of sources at the VERY END wrapped in <sources> tags. 
-   Format: <sources>[{"title":"Site Name", "url":"https://example.com"}]</sources>
-2. If comparing data, showing stats, or asked for a chart, you MUST output a JSON array wrapped in <chart> tags. DO NOT wrap the JSON in markdown code blocks inside the tags.
-   Format: <chart>[{"label":"Category A", "value":85}, {"label":"Category B", "value":42}]</chart>`;
+1. If you use search data OR analyze uploaded files/images, you MUST append a JSON array of sources at the VERY END wrapped in <sources> tags. 
+   Format: <sources>[{"title":"File: image.jpg", "url":"#"}, {"title":"Site Name", "url":"https://example.com"}]</sources>
+2. If comparing data or asked for a chart, output a JSON array wrapped in <chart> tags.
+   Format: <chart>[{"label":"Cat A", "value":85}]</chart>`;
 
         // ---------------------------------------------------------
-        // PASS 1: SMART TAVILY SEARCH (Oracle = Always, Flux = Smart, Spark = Never)
+        // PASS 1: SMART TAVILY SEARCH
         // ---------------------------------------------------------
-        // Flux Regex: Only triggers search if it detects knowledge-seeking keywords
         const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
         const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
 
@@ -53,11 +52,9 @@ export default async function handler(req) {
                     const tavData = await tavilyRes.json();
                     const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
                     contextData = `\n\n--- REAL-TIME SEARCH CONTEXT ---\n${searchResults}`;
-                    systemPrompt += `\n\nSearch Context provided. You MUST cite these using the <sources> tag as instructed.`;
+                    systemPrompt += `\n\nSearch Context provided. Cite these using the <sources> tag.`;
                 }
-            } catch (e) {
-                console.error("Tavily Search Failed.");
-            }
+            } catch (e) { console.error("Tavily Search Failed."); }
         }
 
         const processedMessages = [...messages];
@@ -71,22 +68,36 @@ export default async function handler(req) {
         let streamUrl, headers, payload;
 
         if (modelId === 'spark') {
+            // Spark (Llama) does not support multimodal native files in this API format
+            if (attachments.length > 0) {
+                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: The user attached files, but you (Spark/Llama) do not have vision/file capabilities. Politely ask them to switch to Flux or Oracle to analyze files.]`;
+            }
+
             streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
             headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
             payload = {
                 model: 'llama-3.1-8b-instant',
-                messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
+                messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.map(m => ({role: m.role, content: m.content}))],
                 stream: true,
-                temperature: 0.6 // Slightly higher temp for more witty/creative tone
+                temperature: 0.6 
             };
         } else {
+            // Gemini natively handles files via inlineData
             streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEY}`;
             headers = { 'Content-Type': 'application/json' };
             
-            const geminiMessages = processedMessages.map(m => ({
-                role: m.role === 'user' ? 'user' : 'model',
-                parts: [{ text: m.content }]
-            }));
+            const geminiMessages = processedMessages.map(m => {
+                const parts = [{ text: m.content }];
+                // Map base64 attachments directly into Gemini's engine
+                if (m.attachments && m.attachments.length > 0) {
+                    m.attachments.forEach(att => {
+                        parts.push({
+                            inlineData: { mimeType: att.mimeType, data: att.base64 }
+                        });
+                    });
+                }
+                return { role: m.role === 'user' ? 'user' : 'model', parts };
+            });
 
             payload = {
                 systemInstruction: { parts: [{ text: systemPrompt }] },
