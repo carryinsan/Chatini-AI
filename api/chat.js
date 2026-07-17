@@ -6,11 +6,10 @@ export default async function handler(req) {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
     try {
-        const { messages, modelId } = await req.json();
+        const { messages, modelId, researchContext } = await req.json();
         const latestMessage = messages[messages.length - 1];
         const userQuery = latestMessage.content;
         
-        // 1. EXTRACT ALL ATTACHMENTS (Combines Extension files + Current Message files)
         const allAttachments = [];
         messages.forEach(m => {
             if (m.attachments && Array.isArray(m.attachments)) {
@@ -32,30 +31,37 @@ export default async function handler(req) {
 - Use Markdown beautifully.
 
 **DATA & UI RULES:**
-1. If you use search data OR analyze uploaded files/images, you MUST append a JSON array of sources at the VERY END wrapped in <sources> tags. 
-   Format: <sources>[{"title":"File: image.jpg", "url":"#"}, {"title":"Site Name", "url":"https://example.com"}]</sources>
-2. If comparing data or asked for a chart, output a JSON array wrapped in <chart> tags.
-   Format: <chart>[{"label":"Cat A", "value":85}]</chart>
+1. <sources>: If you use search data OR analyze uploaded files/images, append a JSON array of sources at the VERY END. (e.g., <sources>[{"title":"Site", "url":"https://..."}]</sources>)
+2. <chart>: If comparing data or asked for a chart, output a JSON array. (e.g., <chart>[{"label":"Cat A", "value":85}]</chart>)
+3. <artifact>: CRITICAL UI RULE. If you generate a long document, an essay, a deep report, or comprehensive code, YOU MUST wrap it entirely in artifact tags with a title. 
+   Example: <artifact title="Q3 Financial Report">\n# Report Data...\n</artifact>
    
 CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSIONS. REMEMBER EVERY MINOR DETAIL. COMPLETE YOUR ANALYSIS IN FULL. DO NOT STOP EARLY.`;
 
         let contextData = "";
-        const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
-        const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
 
-        if (shouldSearch) {
-            try {
-                const tavilyRes = await fetch('https://api.tavily.com/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ api_key: TAVILY_KEY, query: userQuery, search_depth: "advanced", max_results: modelId === 'oracle' ? 20 : 5, include_answer: true })
-                });
-                if (tavilyRes.ok) {
-                    const tavData = await tavilyRes.json();
-                    const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
-                    contextData = `\n\n--- REAL-TIME SEARCH CONTEXT ---\n${searchResults}`;
-                }
-            } catch (e) { console.error("Tavily Search Failed."); }
+        // If Deep Research (api/research.js) was used, inject its massive context.
+        // Otherwise, use basic Tavily fallback for Flux.
+        if (researchContext) {
+            contextData = `\n\n--- ORACLE AUTONOMOUS RESEARCH CONTEXT ---\n${researchContext}\n\n[SYSTEM: Synthesize this research. Cite sources using <sources>.]`;
+        } else {
+            const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
+            const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
+
+            if (shouldSearch) {
+                try {
+                    const tavilyRes = await fetch('https://api.tavily.com/search', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ api_key: TAVILY_KEY, query: userQuery, search_depth: "advanced", max_results: modelId === 'oracle' ? 20 : 5, include_answer: true })
+                    });
+                    if (tavilyRes.ok) {
+                        const tavData = await tavilyRes.json();
+                        const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
+                        contextData = `\n\n--- REAL-TIME SEARCH CONTEXT ---\n${searchResults}\n\nCite search context using <sources>.`;
+                    }
+                } catch (e) { console.error("Tavily Search Failed."); }
+            }
         }
 
         const processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
@@ -64,7 +70,7 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         }
 
         // ---------------------------------------------------------
-        // 2. THE DOCUMENT DECODING ENGINE
+        // DECODING ENGINE
         // ---------------------------------------------------------
         let textDocumentContext = "";
         const geminiInlineParts = [];
@@ -98,12 +104,11 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         }
 
         // ---------------------------------------------------------
-        // 3. SMART 200-MESSAGE MEMORY COMPRESSOR (SPARK SAFEGUARD)
+        // SPARK MEMORY COMPRESSION
         // ---------------------------------------------------------
         let finalMessages = [];
         
         if (modelId === 'spark') {
-            // Groq 8k Limit = ~32,000 chars. We safely cap system + history to 28,000 chars.
             const sparkCharLimit = 28000;
             let currentChars = systemPrompt.length;
             
@@ -111,20 +116,17 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
                 processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User uploaded Images/PDFs. You (Spark) cannot see them. Ask them to switch to Flux/Oracle.]`;
             }
 
-            // Loop backwards to prioritize newest context
             for (let i = processedMessages.length - 1; i >= 0; i--) {
                 const msg = processedMessages[i];
                 if (currentChars + msg.content.length < sparkCharLimit) {
                     finalMessages.unshift(msg);
                     currentChars += msg.content.length;
                 } else {
-                    // Out of pristine token space. Apply heavy compression to keep memory intact without crashing.
                     let compressedMsg = msg.content.replace(/\s+/g, ' ').substring(0, 500); 
                     if (currentChars + compressedMsg.length < sparkCharLimit) {
                         finalMessages.unshift({ role: msg.role, content: compressedMsg });
                         currentChars += compressedMsg.length;
                     } else {
-                        // Extreme micro-compression for oldest overflow messages
                         const remnants = processedMessages.slice(0, i + 1).map(m => m.content.replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 50)).join('|');
                         if (finalMessages.length > 0) {
                             finalMessages[0].content = `[DEEP_MEMORY:${remnants.substring(0, sparkCharLimit - currentChars)}]\n` + finalMessages[0].content;
@@ -135,12 +137,11 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
             }
             if (finalMessages.length === 0) finalMessages = processedMessages.slice(-1);
         } else {
-            // Gemini natively handles the entire 200 message array effortlessly
             finalMessages = processedMessages;
         }
 
         // ---------------------------------------------------------
-        // 4. LLM STREAMING & KEY ROTATION
+        // LLM STREAMING
         // ---------------------------------------------------------
         let llmRes = null;
         let finalErrorText = "";
@@ -148,21 +149,14 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         if (modelId === 'spark') {
             const streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
             const headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
-            const payload = {
-                model: 'llama-3.1-8b-instant',
-                messages: [{ role: 'system', content: systemPrompt }, ...finalMessages],
-                stream: true,
-                temperature: 0.6 
-            };
+            const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...finalMessages], stream: true, temperature: 0.6 };
             llmRes = await fetch(streamUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
             if (!llmRes.ok) finalErrorText = await llmRes.text();
             
         } else {
             const geminiMessages = finalMessages.map((m, i) => {
                 const parts = [{ text: m.content }];
-                if (i === finalMessages.length - 1 && geminiInlineParts.length > 0) {
-                    parts.push(...geminiInlineParts);
-                }
+                if (i === finalMessages.length - 1 && geminiInlineParts.length > 0) parts.push(...geminiInlineParts);
                 return { role: m.role === 'user' ? 'user' : 'model', parts };
             });
 
@@ -182,12 +176,8 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
                 const currentKey = GEMINI_KEYS[i];
                 const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
                 llmRes = await fetch(streamUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-
                 if (llmRes.ok) break; 
-                else {
-                    finalErrorText = await llmRes.text();
-                    if (llmRes.status === 400) break;
-                }
+                else { finalErrorText = await llmRes.text(); if (llmRes.status === 400) break; }
             }
         }
 
