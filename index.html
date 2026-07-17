@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chatini Workspace</title>
+    <title>Chatini Workspace v2</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -129,7 +129,6 @@
     <!-- SPLIT SCREEN LAYOUT CONTAINER -->
     <div class="flex-1 flex w-full overflow-hidden relative min-h-0">
         
-        <!-- CHAT AREA -->
         <main id="chat-canvas" class="flex-1 h-full overflow-y-auto overflow-x-hidden px-2 sm:px-6 md:px-12 lg:px-24 xl:px-48 py-6 scroll-smooth z-10 min-h-0">
             <div id="message-container" class="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-10"></div>
             <div id="processing-indicator" class="hidden max-w-4xl mx-auto flex gap-3 sm:gap-4 w-full justify-start animate-pulse mt-6 sm:mt-8 px-2">
@@ -143,7 +142,6 @@
             </div>
         </main>
 
-        <!-- CANVAS WORKSPACE (RIGHT PANEL) -->
         <aside id="workspace-canvas" class="absolute inset-y-0 right-0 h-full min-h-0 w-full lg:static lg:w-1/2 bg-[#0a0a0a] border-l border-white/10 transform translate-x-full lg:translate-x-0 hidden flex-col shadow-2xl z-40 transition-transform">
             <div class="flex items-center justify-between p-4 border-b border-white/10 bg-[#111] flex-shrink-0">
                 <div class="flex items-center gap-2">
@@ -164,14 +162,11 @@
             <div id="staging-area" class="flex flex-wrap gap-2 empty:hidden"></div>
             <div id="input-glow" class="absolute -inset-0.5 rounded-2xl sm:rounded-3xl blur-md opacity-30 transition duration-1000 bg-purple-500/10 -z-10"></div>
             <div class="relative flex items-end bg-[#0f0f0f] border border-white/10 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-2xl focus-within:border-white/30 transition-colors">
-                
                 <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx">
                 <button onclick="document.getElementById('file-upload').click()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0" title="Attach Files (For current message)">
                     <i class="ph-bold ph-paperclip text-lg sm:text-xl"></i>
                 </button>
-
                 <textarea id="chat-input" placeholder="Message Chatini..." class="flex-1 max-h-[150px] sm:max-h-48 min-h-[40px] sm:min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-2.5 sm:py-3 px-1 sm:px-2 text-base leading-relaxed" rows="1"></textarea>
-                
                 <button id="send-btn" class="p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0">
                     <i id="send-icon" class="ph-bold ph-paper-plane-right text-lg sm:text-xl transition-transform"></i>
                 </button>
@@ -219,6 +214,7 @@
         let extForm = { id: '', name: '', links: [], files: [] };
         
         window.ARTIFACT_STORE = {};
+        window.CURRENT_CANVAS_ID = null;
 
         const els = {
             selector: document.getElementById('model-selector'),
@@ -266,6 +262,7 @@
         }
 
         function openCanvas(artifactId, title) {
+            window.CURRENT_CANVAS_ID = artifactId;
             els.workspace.classList.remove('hidden');
             setTimeout(() => els.workspace.classList.remove('translate-x-full'), 10);
             els.canvasTitle.innerText = title || "Document Artifact";
@@ -274,6 +271,7 @@
         }
 
         function closeCanvas() {
+            window.CURRENT_CANVAS_ID = null;
             els.workspace.classList.add('translate-x-full');
             setTimeout(() => els.workspace.classList.add('hidden'), 400); 
         }
@@ -365,7 +363,7 @@
         function renameChat(id, e) { e.stopPropagation(); const chat = chats.find(c => c.id === id); const newName = prompt("Rename chat:", chat.title); if (newName && newName.trim()) { chat.title = newName.trim(); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); renderHistoryList(); } }
 
         function renderHistoryList() { els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join(''); }
-        function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id === msgId); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); }
+        function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id === msgId); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); closeCanvas(); }
 
         function renderModelSelector() { els.selector.innerHTML = Object.values(CONFIG.models).map(model => `<button onclick="if(!isProcessing){activeModelId='${model.id}';updateUIState();}" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}"><i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm sm:text-base"></i> ${model.name}</button>`).join(''); }
 
@@ -377,14 +375,37 @@
             else { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0'; els.sendIcon.classList.remove('translate-x-0.5', '-translate-y-0.5'); }
         }
 
+        // --- THE UPGRADED LIVE PARSER ---
         function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
 
-            // 1. Extract Artifacts (Canvas Workspace)
+            // 1. Live Interactive Artifacts
             markdownContent = markdownContent.replace(/<artifact(?: title="([^"]+)")?>([\s\S]*?)(<\/artifact>|$)/g, (match, title, artifactContent, closeTag) => {
-                if (!closeTag) return `<div class="mt-4 p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-xl flex items-center justify-between animate-pulse"><div class="flex items-center gap-3"><i class="ph-bold ph-layout text-cyan-400 text-xl"></i><div><p class="text-xs text-cyan-400 font-bold uppercase tracking-wider">Generating Workspace...</p></div></div><i class="ph-bold ph-spinner animate-spin text-cyan-400"></i></div>`;
-                const artId = 'art_' + Math.random().toString(36).substr(2, 9);
+                const artId = msgId ? 'art_' + msgId : 'art_' + Math.random().toString(36).substr(2, 9);
                 window.ARTIFACT_STORE[artId] = artifactContent.trim();
+                
+                // LIVE DOM UPDATE: If canvas is open to this artifact, update text while streaming!
+                if (window.CURRENT_CANVAS_ID === artId) {
+                    els.canvasContent.innerHTML = marked.parse(artifactContent.trim());
+                    els.canvasTitle.innerText = title || "Document Artifact";
+                }
+
+                if (!closeTag) {
+                    // Clickable Live Card
+                    extractedHtml += `<div class="artifact-card mt-4 p-4 border border-cyan-500/50 bg-cyan-500/10 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-[0_0_15px_rgba(6,182,212,0.2)] group animate-pulse" onclick="openCanvas('${artId}', '${(title || 'Generating Document...').replace(/'/g, "\\'")}')">
+                        <div class="flex items-center gap-3">
+                            <i class="ph-bold ph-layout text-cyan-400 text-xl"></i>
+                            <div>
+                                <p class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-0.5">Live Workspace (Click to Open)</p>
+                                <p class="text-sm text-white font-medium">${title || 'Drafting Document...'}</p>
+                            </div>
+                        </div>
+                        <i class="ph-bold ph-spinner animate-spin text-cyan-400"></i>
+                    </div>`;
+                    return ''; 
+                }
+
+                // Closed Static Card
                 extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${(title || 'Document').replace(/'/g, "\\'")}')"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:border-cyan-500/50 transition-colors"><i class="ph-fill ph-layout text-cyan-400 text-xl"></i></div><div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Interactive Workspace</p><p class="text-sm text-white font-medium group-hover:text-cyan-400 transition-colors">${title || 'Untitled Artifact'}</p></div></div><i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i></div>`;
                 return ''; 
             });
@@ -458,6 +479,7 @@
             if (isDeepResearchOn) {
                 els.indicator.classList.add('hidden');
                 const logContainer = appendResearchTerminal();
+                let thoughtBox = null;
                 try {
                     const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) });
                     const reader = res.body.getReader(); const decoder = new TextDecoder();
@@ -472,7 +494,15 @@
                                     try {
                                         const data = JSON.parse(dataStr);
                                         if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
-                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Agent task finished. Compiling payload...</div>`; break; }
+                                        if (data.thought) {
+                                            if (!thoughtBox) {
+                                                logContainer.innerHTML += `<div class="mt-2 p-2 bg-black/80 border border-white/5 rounded text-[10px] text-gray-500 h-24 overflow-y-auto no-scrollbar" id="research-thought-box"></div>`;
+                                                thoughtBox = document.getElementById('research-thought-box');
+                                            }
+                                            thoughtBox.innerHTML += data.thought.replace(/\n/g, '<br>');
+                                            thoughtBox.scrollTop = thoughtBox.scrollHeight;
+                                        }
+                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Pass 1 Draft Complete. Executing Core Pass 2...</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; break; }
                                         if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
                                     } catch (e) { }
                                 }
@@ -517,7 +547,7 @@
                                     const data = JSON.parse(dataStr);
                                     if (data.ui_error) { fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`; contentContainer.innerHTML = fullResponse; break; }
                                     let textChunk = ""; if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content; else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
-                                    fullResponse += textChunk; contentContainer.innerHTML = parseRichText(fullResponse, true); els.canvas.scrollTop = els.canvas.scrollHeight;
+                                    fullResponse += textChunk; contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id); els.canvas.scrollTop = els.canvas.scrollHeight;
                                 } catch (e) { }
                             }
                         }
