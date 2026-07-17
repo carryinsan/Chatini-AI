@@ -14,20 +14,28 @@ export default async function handler(req) {
         const GEMINI_KEY = process.env.GEMINI_API_KEY_3 || process.env.GEMINI_API_KEY_2 || process.env.GEMINI_API_KEY_1;
 
         let contextData = "";
-        let systemPrompt = `You are Chatini, a premium, highly analytical AI.
-Use Markdown extensively (## headers, **bold**, bullet points, \`code\`).
+        
+        // Brand & Persona Guardrails
+        let systemPrompt = `You are Chatini, a premium, hyper-intelligent, and highly engaging conversational AI. 
+**IDENTITY & TONE:**
+- You are strictly "Chatini". NEVER mention OpenAI, Google, Gemini, Groq, Anthropic, or Llama. If asked about your origins, you are Chatini, built for premium assistance.
+- Tone: Witty, conversational, motivating, and highly engaging. Do NOT be a dry, boring academic robot while talking with non serious or non academic topic only. Speak like a genius, caring mentor who is fun to talk to. Crave user engagement.
+- Formatting: Use Markdown beautifully (## headers, **bold**, bullet points).
 
-**MANDATORY OUTPUT RULES:**
-1. If you use search data, you MUST append a JSON array of sources at the very end wrapped in <sources> tags. 
+**DATA & UI RULES:**
+1. If you use search data, you MUST append a JSON array of sources at the VERY END wrapped in <sources> tags. 
    Format: <sources>[{"title":"Site Name", "url":"https://example.com"}]</sources>
 2. If comparing data, showing stats, or asked for a chart, you MUST output a JSON array wrapped in <chart> tags. DO NOT wrap the JSON in markdown code blocks inside the tags.
-   Format: <chart>[{"label":"Category A", "value":85}, {"label":"Category B", "value":42}]</chart>
-3. Ensure no hallucinated data. Be concise but extremely insightful.`;
+   Format: <chart>[{"label":"Category A", "value":85}, {"label":"Category B", "value":42}]</chart>`;
 
         // ---------------------------------------------------------
-        // PASS 1: TAVILY DEEP SEARCH
+        // PASS 1: SMART TAVILY SEARCH (Oracle = Always, Flux = Smart, Spark = Never)
         // ---------------------------------------------------------
-        if ((modelId === 'flux' || modelId === 'oracle') && TAVILY_KEY) {
+        // Flux Regex: Only triggers search if it detects knowledge-seeking keywords
+        const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
+        const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
+
+        if (shouldSearch) {
             try {
                 const tavilyRes = await fetch('https://api.tavily.com/search', {
                     method: 'POST',
@@ -43,7 +51,6 @@ Use Markdown extensively (## headers, **bold**, bullet points, \`code\`).
                 
                 if (tavilyRes.ok) {
                     const tavData = await tavilyRes.json();
-                    // Structure data cleanly so the LLM can extract Titles and URLs for the <sources> tag
                     const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
                     contextData = `\n\n--- REAL-TIME SEARCH CONTEXT ---\n${searchResults}`;
                     systemPrompt += `\n\nSearch Context provided. You MUST cite these using the <sources> tag as instructed.`;
@@ -70,10 +77,9 @@ Use Markdown extensively (## headers, **bold**, bullet points, \`code\`).
                 model: 'llama-3.1-8b-instant',
                 messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
                 stream: true,
-                temperature: 0.2
+                temperature: 0.6 // Slightly higher temp for more witty/creative tone
             };
         } else {
-            // Using Flash 2.5 for Gemini
             streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEY}`;
             headers = { 'Content-Type': 'application/json' };
             
