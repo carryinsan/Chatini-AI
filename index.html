@@ -4,9 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Chatini Premium</title>
+    
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- ADDED: html2pdf bundle for native device PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { background: '#050505', surface: '#0a0a0a', surface2: '#121212', surface3: '#1a1a1a' }, animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' } } } }
     </script>
@@ -29,7 +33,35 @@
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
     </style>
 </head>
-<body class="bg-background text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30">
+<body class="bg-background text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30 relative">
+
+    <!-- ADDED: Toast Notification -->
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-black px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300 opacity-0 -translate-y-10 z-[70] pointer-events-none flex items-center gap-2">
+        <i class="ph-bold ph-check"></i> <span id="toast-msg">Copied!</span>
+    </div>
+
+    <!-- ADDED: PDF Export Modal -->
+    <div id="pdf-modal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center backdrop-blur-sm px-4">
+        <div class="bg-[#0a0a0a] border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl transform transition-all">
+            <h3 class="text-white font-bold mb-5 flex items-center gap-2 text-lg"><i class="ph-fill ph-file-pdf text-red-400 text-xl"></i> Export Response</h3>
+            <div class="space-y-5">
+                <div>
+                    <label class="text-xs text-gray-400 mb-1.5 block uppercase tracking-wider font-semibold">File Name</label>
+                    <input type="text" id="pdf-filename" value="Chatini_Analysis" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500 transition-colors shadow-inner">
+                </div>
+                <label class="flex items-center gap-3 cursor-pointer p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
+                    <input type="checkbox" id="pdf-include-sources" checked class="w-4 h-4 rounded bg-black border-white/20 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-gray-900 accent-cyan-500">
+                    <span class="text-sm text-gray-300 font-medium">Include Sources & Charts</span>
+                </label>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closePdfModal()" class="flex-1 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                    <button onclick="generatePdf()" id="pdf-dl-btn" class="flex-1 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-lg hover:shadow-cyan-500/25 transition-all flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-download-simple"></i> Download
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
     
@@ -107,7 +139,6 @@
             }
         };
 
-        // MIME Type Mapping Fallback
         const EXTENSION_MAP = {
             'txt': 'text/plain', 'md': 'text/markdown', 'csv': 'text/csv', 'html': 'text/html',
             'pdf': 'application/pdf', 'doc': 'application/msword', 'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -139,14 +170,108 @@
             stagingArea: document.getElementById('staging-area')
         };
 
-        // --- FILE HANDLING LOGIC WITH MIME FIX ---
+        // --- NEW: PDF & COPY EXPORT LOGIC ---
+        let currentPdfMsgId = null;
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0', '-translate-y-10');
+            setTimeout(() => { toast.classList.add('opacity-0', '-translate-y-10'); }, 2500);
+        }
+
+        async function copyToClipboard(msgId) {
+            const msg = messages.find(m => m.id === msgId);
+            if (!msg) return;
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(msg.content);
+                } else {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = msg.content;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand("copy");
+                    textArea.remove();
+                }
+                showToast("Response Copied!");
+            } catch (err) { console.error("Copy failed", err); showToast("Copy failed!"); }
+        }
+
+        function openPdfModal(msgId) {
+            currentPdfMsgId = msgId;
+            document.getElementById('pdf-modal').classList.remove('hidden');
+        }
+
+        function closePdfModal() {
+            document.getElementById('pdf-modal').classList.add('hidden');
+            currentPdfMsgId = null;
+        }
+
+        async function generatePdf() {
+            if (!currentPdfMsgId) return;
+            
+            const btn = document.getElementById('pdf-dl-btn');
+            const originalBtnHtml = btn.innerHTML;
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Generating...`;
+            btn.disabled = true;
+
+            const filename = document.getElementById('pdf-filename').value.trim() || 'Chatini_Response';
+            const includeSources = document.getElementById('pdf-include-sources').checked;
+
+            const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId);
+            if (!wrapper) { closePdfModal(); return; }
+
+            // Clone container to avoid mutating DOM visually
+            const contentClone = wrapper.querySelector('.msg-content').cloneNode(true);
+            
+            // Remove Action Bar from PDF
+            const actionBar = contentClone.querySelector('.action-bar');
+            if (actionBar) actionBar.remove();
+
+            // Handle Sources/Charts exclusion
+            if (!includeSources) {
+                contentClone.querySelectorAll('.extra-data-block').forEach(el => el.remove());
+            }
+
+            // Apply PDF-specific styles to clone
+            contentClone.style.padding = '20px';
+            contentClone.style.background = '#0a0a0a';
+            contentClone.style.color = '#e5e7eb';
+            contentClone.style.fontFamily = 'system-ui, -apple-system, sans-serif';
+            
+            const header = document.createElement('div');
+            header.innerHTML = `<h2 style="color: #22d3ee; margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 10px; font-size: 24px; font-weight: bold;">Chatini Premium Analysis</h2>`;
+            contentClone.prepend(header);
+
+            const opt = {
+                margin:       15,
+                filename:     `${filename}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false, backgroundColor: '#0a0a0a' },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(contentClone).save();
+                showToast("PDF Downloaded!");
+            } catch (error) {
+                console.error("PDF Gen Error:", error);
+                showToast("PDF Generation Failed");
+            }
+
+            btn.innerHTML = originalBtnHtml;
+            btn.disabled = false;
+            closePdfModal();
+        }
+
+        // --- FILE HANDLING ---
         els.fileInput.addEventListener('change', async (e) => {
             const files = Array.from(e.target.files);
             let imgCount = pendingFiles.filter(f => f.type.startsWith('image/')).length;
             let docCount = pendingFiles.filter(f => !f.type.startsWith('image/')).length;
 
             for (const file of files) {
-                // Infer MIME type if browser leaves it empty
                 let fileType = file.type;
                 if (!fileType) {
                     const ext = file.name.split('.').pop().toLowerCase();
@@ -165,7 +290,6 @@
                     renderStagingArea();
                 };
                 reader.readAsDataURL(file);
-
                 if (isImg) imgCount++; else docCount++;
             }
             els.fileInput.value = ''; 
@@ -186,11 +310,7 @@
             });
         }
 
-        function removeFile(index) {
-            pendingFiles.splice(index, 1);
-            renderStagingArea();
-            updateUIState();
-        }
+        function removeFile(index) { pendingFiles.splice(index, 1); renderStagingArea(); updateUIState(); }
 
         // --- SIDEBAR & LOCAL STORAGE ---
         function toggleSidebar() {
@@ -262,10 +382,8 @@
             if(isProcessing) return;
             const msgIndex = messages.findIndex(m => m.id === msgId);
             if (msgIndex === -1) return;
-            
             els.input.value = messages[msgIndex].content;
             messages = messages.slice(0, msgIndex);
-            
             renderMessagesToUI(); els.input.focus();
             els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState();
         }
@@ -299,7 +417,8 @@
             }
         }
 
-        function parseRichText(content, isStreaming = false) {
+        // MODIFIED: Accepts msgId to render Action Bar
+        function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
             
             markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
@@ -312,7 +431,8 @@
                             <i class="ph-bold ${s.url === '#' ? 'ph-file' : 'ph-globe'} text-gray-500 group-hover:text-cyan-400 flex-shrink-0"></i>
                             <span class="text-[10px] sm:text-xs text-gray-300 group-hover:text-white truncate">${s.title}</span>
                         </a>`).join('');
-                    extractedHtml += `<div class="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5"><div class="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-widest"><i class="ph-bold ph-link text-purple-400"></i> Sources & Files</div><div class="flex flex-wrap gap-2">${chipsHtml}</div></div>`;
+                    // Added extra-data-block class for PDF exclusion
+                    extractedHtml += `<div class="extra-data-block mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5"><div class="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-widest"><i class="ph-bold ph-link text-purple-400"></i> Sources & Files</div><div class="flex flex-wrap gap-2">${chipsHtml}</div></div>`;
                 } catch (e) { } return '';
             });
 
@@ -330,14 +450,23 @@
                             <span class="text-[8px] sm:text-[10px] text-gray-500 font-medium truncate w-full text-center px-0.5">${item.label}</span>
                         </div>
                     `).join('');
-                    extractedHtml += `<div class="w-full mt-3 sm:mt-4 mb-3 sm:mb-4 p-3 sm:p-5 bg-surface2 border border-white/5 rounded-xl shadow-xl overflow-hidden overflow-x-auto no-scrollbar">
+                    // Added extra-data-block class for PDF exclusion
+                    extractedHtml += `<div class="extra-data-block w-full mt-3 sm:mt-4 mb-3 sm:mb-4 p-3 sm:p-5 bg-surface2 border border-white/5 rounded-xl shadow-xl overflow-hidden overflow-x-auto no-scrollbar">
                         <div class="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-6 text-[9px] sm:text-[10px] font-semibold tracking-widest text-gray-400 uppercase min-w-[200px]"><i class="ph-bold ph-chart-bar text-cyan-400 text-xs sm:text-sm"></i> Live Analysis</div>
                         <div class="flex items-end h-24 sm:h-32 gap-1 sm:gap-2 min-w-[200px]">${barsHtml}</div>
                     </div>`;
                 } catch (e) { } return '';
             });
 
-            return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${marked.parse(markdownContent)}</div>${extractedHtml}${!isStreaming && markdownContent.trim().length > 0 ? `<div class="mt-2 text-emerald-500 text-[9px] sm:text-[10px] flex items-center justify-end gap-1 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini Completed</div>` : ''}`;
+            // ADDED: Action Bar (Copy / PDF) replacing the plain text completed tag
+            const actionBarHtml = (!isStreaming && markdownContent.trim().length > 0 && msgId) ? `
+                <div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3">
+                    <button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-copy text-sm"></i> Copy</button>
+                    <button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-download-simple text-sm"></i> Save PDF</button>
+                    <span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini</span>
+                </div>` : '';
+
+            return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${marked.parse(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
         }
 
         function appendMessage(role, content, modelId, specificId = null, attachmentsMeta = []) {
@@ -345,13 +474,14 @@
             const msgId = specificId || Date.now().toString();
             const div = document.createElement('div');
             div.className = `flex w-full mb-6 sm:mb-8 ${isUser ? 'justify-end' : 'justify-start'}`;
+            // Added ID for PDF targeting
+            div.id = 'msg-wrapper-' + msgId; 
             
             if (isUser) {
                 let attachmentsHtml = '';
                 if (attachmentsMeta && attachmentsMeta.length > 0) {
                     attachmentsHtml = `<div class="flex flex-wrap gap-2 mb-2">` + attachmentsMeta.map(a => `<span class="bg-black/50 text-gray-300 text-[10px] px-2 py-1 rounded border border-white/10"><i class="ph-bold ${a.type && a.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'}"></i> ${a.name}</span>`).join('') + `</div>`;
                 }
-
                 div.innerHTML = `
                     <div class="group flex gap-2 sm:gap-3 w-fit max-w-[90%] sm:max-w-[85%] md:max-w-[80%] items-center justify-end">
                         <button onclick="editMessage('${msgId}')" class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-2 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-all flex-shrink-0" title="Edit">
@@ -366,7 +496,7 @@
                         <div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1 shadow-[0_0_10px_rgba(255,255,255,0.05)]">
                             <i class="${model.icon} ph-fill ${model.color} text-sm sm:text-base"></i>
                         </div>
-                        <div class="msg-content flex flex-col pt-1 w-full min-w-0 overflow-hidden">${parseRichText(content, false)}</div>
+                        <div class="msg-content flex flex-col pt-1 w-full min-w-0 overflow-hidden">${parseRichText(content, false, msgId)}</div>
                     </div>`;
             }
             els.container.appendChild(div);
@@ -443,7 +573,9 @@
                     }
                     if (done) break;
                 }
-                contentContainer.classList.remove('typing-cursor'); contentContainer.innerHTML = parseRichText(fullResponse, false); 
+                contentContainer.classList.remove('typing-cursor'); 
+                // Passed ID here to trigger Action Bar render on completion
+                contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id); 
                 messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat(); 
 
