@@ -9,7 +9,7 @@ export default async function handler(req) {
         const { messages, modelId } = await req.json();
         const latestMessage = messages[messages.length - 1];
         const userQuery = latestMessage.content;
-        const attachments = latestMessage.attachments || []; // New: Extract attachments
+        const attachments = latestMessage.attachments || [];
 
         const GROQ_KEY = process.env.GROQ_API_KEY;
         const TAVILY_KEY = process.env.TAVILY_API_KEY;
@@ -68,7 +68,6 @@ export default async function handler(req) {
         let streamUrl, headers, payload;
 
         if (modelId === 'spark') {
-            // Spark (Llama) does not support multimodal native files in this API format
             if (attachments.length > 0) {
                 processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: The user attached files, but you (Spark/Llama) do not have vision/file capabilities. Politely ask them to switch to Flux or Oracle to analyze files.]`;
             }
@@ -82,17 +81,17 @@ export default async function handler(req) {
                 temperature: 0.6 
             };
         } else {
-            // Gemini natively handles files via inlineData
             streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEY}`;
             headers = { 'Content-Type': 'application/json' };
             
             const geminiMessages = processedMessages.map(m => {
                 const parts = [{ text: m.content }];
-                // Map base64 attachments directly into Gemini's engine
                 if (m.attachments && m.attachments.length > 0) {
                     m.attachments.forEach(att => {
+                        // CRITICAL FIX: Ensure mimeType is NEVER empty
+                        const safeMimeType = att.type && att.type.trim() !== "" ? att.type : "text/plain";
                         parts.push({
-                            inlineData: { mimeType: att.mimeType, data: att.base64 }
+                            inlineData: { mimeType: safeMimeType, data: att.base64 }
                         });
                     });
                 }
