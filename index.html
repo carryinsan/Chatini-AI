@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chatini Premium</title>
+    <title>Chatini:The future of AI</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -34,12 +34,10 @@
 </head>
 <body class="bg-background text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30 relative">
 
-    <!-- TOAST -->
     <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-black px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300 opacity-0 -translate-y-10 z-[70] pointer-events-none flex items-center gap-2">
         <i class="ph-bold ph-check"></i> <span id="toast-msg">Copied!</span>
     </div>
 
-    <!-- PDF MODAL -->
     <div id="pdf-modal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center backdrop-blur-sm px-4">
         <div class="bg-[#0a0a0a] border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl transform transition-all">
             <h3 class="text-white font-bold mb-5 flex items-center gap-2 text-lg"><i class="ph-fill ph-file-pdf text-red-400 text-xl"></i> Export Response</h3>
@@ -62,7 +60,6 @@
         </div>
     </div>
 
-    <!-- EXTENSION MANAGER MODAL -->
     <div id="ext-modal" class="fixed inset-0 bg-black/90 z-[70] hidden flex flex-col backdrop-blur-md">
         <div class="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 glass-header pt-safe">
             <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2"><i class="ph-fill ph-brain text-purple-400 text-2xl"></i> Knowledge Extensions</h2>
@@ -70,7 +67,6 @@
         </div>
         <div class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 max-w-7xl mx-auto w-full">
             
-            <!-- List of Extensions -->
             <div class="w-full md:w-1/3 flex flex-col gap-4 border-b md:border-b-0 md:border-r border-white/10 pb-6 md:pb-0 md:pr-6">
                 <button onclick="openCreateExtForm()" class="w-full py-4 rounded-2xl border border-dashed border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500 transition-all font-bold flex items-center justify-center gap-2">
                     <i class="ph-bold ph-plus"></i> Create New Extension
@@ -78,7 +74,6 @@
                 <div id="ext-list" class="flex flex-col gap-2 overflow-y-auto"></div>
             </div>
 
-            <!-- Create/Edit Form -->
             <div id="ext-form-area" class="w-full md:w-2/3 hidden flex-col gap-6">
                 <input type="hidden" id="ext-id">
                 <div>
@@ -87,7 +82,6 @@
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Links -->
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
                         <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Public Links</span> <span class="text-cyan-400 text-[10px]">Max 200</span></label>
                         <div class="flex gap-2 mb-3">
@@ -97,7 +91,6 @@
                         <div id="ext-link-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1"></div>
                     </div>
                     
-                    <!-- Docs -->
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
                         <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Documents</span> <span class="text-purple-400 text-[10px]">Max 20</span></label>
                         <input type="file" id="ext-file-input" multiple class="hidden" accept=".pdf,.doc,.docx,.txt,.html,.py,.csv">
@@ -116,7 +109,6 @@
         </div>
     </div>
 
-    <!-- SIDEBAR -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-[80vw] max-w-xs glass-header transform -translate-x-full transition-transform duration-300 z-50 flex flex-col border-r border-white/10 shadow-2xl">
         <div class="p-4 border-b border-white/10 flex justify-between items-center mt-safe">
@@ -130,7 +122,6 @@
             <button onclick="openExtModal()" class="w-full flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2.5 rounded-xl text-sm font-medium transition-colors">
                 <i class="ph-bold ph-brain"></i> Manage Extensions
             </button>
-            <!-- Extension Selector for Active Chat -->
             <div class="relative w-full">
                 <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none appearance-none cursor-pointer hover:border-white/20 transition-colors">
                     <option value="">No Extension Active</option>
@@ -208,48 +199,39 @@
             'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp', 'py': 'text/plain'
         };
 
-        // --- NATIVE INDEXED_DB WRAPPER FOR EXTENSIONS ---
         const DB = {
             db: null,
             init: () => new Promise((resolve, reject) => {
                 const req = indexedDB.open('ChatiniDB', 1);
                 req.onupgradeneeded = e => {
                     const db = e.target.result;
-                    if (!db.objectStoreNames.contains('extensions')) {
-                        db.createObjectStore('extensions', { keyPath: 'id' });
-                    }
+                    if (!db.objectStoreNames.contains('extensions')) { db.createObjectStore('extensions', { keyPath: 'id' }); }
                 };
                 req.onsuccess = e => { DB.db = e.target.result; resolve(); };
                 req.onerror = e => reject(e);
             }),
             getAll: () => new Promise(resolve => {
                 const tx = DB.db.transaction('extensions', 'readonly');
-                const store = tx.objectStore('extensions');
-                const req = store.getAll();
+                const req = tx.objectStore('extensions').getAll();
                 req.onsuccess = () => resolve(req.result || []);
             }),
             put: (ext) => new Promise(resolve => {
                 const tx = DB.db.transaction('extensions', 'readwrite');
-                tx.objectStore('extensions').put(ext);
-                tx.oncomplete = () => resolve();
+                tx.objectStore('extensions').put(ext); tx.oncomplete = () => resolve();
             }),
             delete: (id) => new Promise(resolve => {
                 const tx = DB.db.transaction('extensions', 'readwrite');
-                tx.objectStore('extensions').delete(id);
-                tx.oncomplete = () => resolve();
+                tx.objectStore('extensions').delete(id); tx.oncomplete = () => resolve();
             })
         };
 
-        // STATE
         let activeModelId = 'oracle';
         let isProcessing = false;
         let currentChatId = Date.now().toString();
         let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
         let messages = [];
         let pendingFiles = [];
-        let currentChatExtId = null;
-
-        // Extension Form State
+        let currentChatExtId = null; 
         let extForm = { id: '', name: '', links: [], files: [] };
 
         const els = {
@@ -271,158 +253,81 @@
             extSelector: document.getElementById('chat-ext-selector')
         };
 
-        // Initialize Database & UI on Load
         window.onload = async () => {
             await DB.init();
-            updateUIState();
-            refreshExtSelectors();
+            updateUIState(); refreshExtSelectors();
             if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
         };
 
-        // --- EXTENSION MANAGER UI LOGIC ---
         function openExtModal() { document.getElementById('ext-modal').classList.remove('hidden'); renderExtList(); closeExtForm(); }
         function closeExtModal() { document.getElementById('ext-modal').classList.add('hidden'); refreshExtSelectors(); }
         function openCreateExtForm() { extForm = { id: Date.now().toString(), name: '', links: [], files: [] }; renderExtForm(); }
         function closeExtForm() { document.getElementById('ext-form-area').classList.add('hidden'); document.getElementById('ext-form-area').classList.remove('flex'); }
 
         async function renderExtList() {
-            const list = document.getElementById('ext-list');
-            list.innerHTML = '';
+            const list = document.getElementById('ext-list'); list.innerHTML = '';
             const extensions = await DB.getAll();
             extensions.forEach(ext => {
                 const div = document.createElement('div');
                 div.className = "bg-surface2 border border-white/10 p-3 rounded-xl flex items-center justify-between group";
-                div.innerHTML = `
-                    <div class="flex-1 truncate"><div class="text-sm text-gray-200 font-bold truncate">${ext.name}</div><div class="text-[10px] text-gray-500">${ext.links.length} Links • ${ext.files.length} Docs</div></div>
-                    <div class="flex gap-2">
-                        <button onclick="editExt('${ext.id}')" class="text-gray-500 hover:text-white p-1 bg-white/5 rounded"><i class="ph-bold ph-pencil-simple"></i></button>
-                        <button onclick="deleteExt('${ext.id}')" class="text-red-500 hover:text-red-400 p-1 bg-white/5 rounded"><i class="ph-bold ph-trash"></i></button>
-                    </div>`;
+                div.innerHTML = `<div class="flex-1 truncate"><div class="text-sm text-gray-200 font-bold truncate">${ext.name}</div><div class="text-[10px] text-gray-500">${ext.links.length} Links • ${ext.files.length} Docs</div></div>
+                    <div class="flex gap-2"><button onclick="editExt('${ext.id}')" class="text-gray-500 hover:text-white p-1 bg-white/5 rounded"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteExt('${ext.id}')" class="text-red-500 hover:text-red-400 p-1 bg-white/5 rounded"><i class="ph-bold ph-trash"></i></button></div>`;
                 list.appendChild(div);
             });
         }
 
-        async function editExt(id) {
-            const exts = await DB.getAll();
-            extForm = exts.find(e => e.id === id);
-            renderExtForm();
-        }
-
-        async function deleteExt(id) {
-            if(confirm("Delete this Extension?")) {
-                await DB.delete(id);
-                renderExtList();
-                if (currentChatExtId === id) { currentChatExtId = null; saveCurrentChat(); }
-                refreshExtSelectors();
-            }
-        }
+        async function editExt(id) { const exts = await DB.getAll(); extForm = exts.find(e => e.id === id); renderExtForm(); }
+        async function deleteExt(id) { if(confirm("Delete this Extension?")) { await DB.delete(id); renderExtList(); if (currentChatExtId === id) { currentChatExtId = null; saveCurrentChat(); } refreshExtSelectors(); } }
 
         function renderExtForm() {
-            document.getElementById('ext-form-area').classList.remove('hidden');
-            document.getElementById('ext-form-area').classList.add('flex');
-            document.getElementById('ext-name').value = extForm.name;
-            renderExtLinks();
-            renderExtFiles();
+            document.getElementById('ext-form-area').classList.remove('hidden'); document.getElementById('ext-form-area').classList.add('flex');
+            document.getElementById('ext-name').value = extForm.name; renderExtLinks(); renderExtFiles();
         }
 
         async function addExtLink() {
             if (extForm.links.length >= 200) return alert("Max 200 links allowed.");
-            const input = document.getElementById('ext-link-input');
-            const url = input.value.trim();
-            if (!url) return;
-            
-            const btn = document.getElementById('ext-link-btn');
-            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`;
-            btn.disabled = true;
-
+            const input = document.getElementById('ext-link-input'); const url = input.value.trim(); if (!url) return;
+            const btn = document.getElementById('ext-link-btn'); btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
             try {
                 const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) });
                 const data = await res.json();
-                
-                if (data.success) {
-                    extForm.links.push({ url, status: 'Loaded ✅', text: data.text });
-                    input.value = '';
-                } else {
-                    extForm.links.push({ url, status: 'Failed ❌', text: '' });
-                    alert(`Failed to scrape ${url}: ${data.error}`);
-                }
-            } catch (e) {
-                extForm.links.push({ url, status: 'Network Err ❌', text: '' });
-            }
-
-            btn.innerHTML = `<i class="ph-bold ph-plus"></i>`;
-            btn.disabled = false;
-            renderExtLinks();
+                if (data.success) { extForm.links.push({ url, status: 'Loaded ✅', text: data.text }); input.value = ''; } 
+                else { extForm.links.push({ url, status: 'Failed ❌', text: '' }); alert(`Scrape Failed: ${data.error}`); }
+            } catch (e) { extForm.links.push({ url, status: 'Network Err ❌', text: '' }); }
+            btn.innerHTML = `<i class="ph-bold ph-plus"></i>`; btn.disabled = false; renderExtLinks();
         }
 
         function removeExtLink(index) { extForm.links.splice(index, 1); renderExtLinks(); }
         function renderExtLinks() {
-            const list = document.getElementById('ext-link-list');
-            list.innerHTML = extForm.links.map((l, i) => `
-                <div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5">
-                    <span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span>
-                    <span class="${l.status.includes('✅') ? 'text-emerald-400' : 'text-red-400'} whitespace-nowrap">${l.status}</span>
-                    <button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button>
-                </div>`).join('');
+            document.getElementById('ext-link-list').innerHTML = extForm.links.map((l, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span><span class="${l.status.includes('✅') ? 'text-emerald-400' : 'text-red-400'} whitespace-nowrap">${l.status}</span><button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join('');
         }
 
         document.getElementById('ext-file-input').addEventListener('change', (e) => {
             const files = Array.from(e.target.files);
             if (extForm.files.length + files.length > 20) return alert("Max 20 documents allowed.");
-            
             files.forEach(file => {
                 let fileType = file.type || EXTENSION_MAP[file.name.split('.').pop().toLowerCase()] || 'text/plain';
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const base64Data = ev.target.result.split(',')[1];
-                    extForm.files.push({ name: file.name, type: fileType, base64: base64Data });
-                    renderExtFiles();
-                };
+                reader.onload = (ev) => { extForm.files.push({ name: file.name, type: fileType, base64: ev.target.result.split(',')[1] }); renderExtFiles(); };
                 reader.readAsDataURL(file);
             });
         });
 
         function removeExtFile(index) { extForm.files.splice(index, 1); renderExtFiles(); }
         function renderExtFiles() {
-            const list = document.getElementById('ext-file-list');
-            list.innerHTML = extForm.files.map((f, i) => `
-                <div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5">
-                    <span class="truncate flex-1 text-gray-300 pr-2">${f.name}</span>
-                    <span class="text-purple-400">Loaded ✅</span>
-                    <button onclick="removeExtFile(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button>
-                </div>`).join('');
+            document.getElementById('ext-file-list').innerHTML = extForm.files.map((f, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${f.name}</span><span class="text-purple-400">Loaded ✅</span><button onclick="removeExtFile(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join('');
         }
 
-        async function saveExtension() {
-            extForm.name = document.getElementById('ext-name').value.trim() || 'Untitled Extension';
-            await DB.put(extForm);
-            closeExtForm();
-            renderExtList();
-            showToast("Extension Saved!");
-        }
-
+        async function saveExtension() { extForm.name = document.getElementById('ext-name').value.trim() || 'Untitled Extension'; await DB.put(extForm); closeExtForm(); renderExtList(); showToast("Extension Saved!"); }
         async function refreshExtSelectors() {
             const exts = await DB.getAll();
-            const selector = els.extSelector;
-            selector.innerHTML = `<option value="">No Extension Active</option>` + 
-                exts.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-            selector.value = currentChatExtId || "";
+            els.extSelector.innerHTML = `<option value="">No Extension Active</option>` + exts.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+            els.extSelector.value = currentChatExtId || "";
         }
-
-        function assignExtToCurrentChat() {
-            currentChatExtId = els.extSelector.value || null;
-            saveCurrentChat();
-            showToast(currentChatExtId ? "Extension Linked!" : "Extension Removed");
-        }
+        function assignExtToCurrentChat() { currentChatExtId = els.extSelector.value || null; saveCurrentChat(); showToast(currentChatExtId ? "Extension Linked!" : "Extension Removed"); }
 
         let currentPdfMsgId = null;
-        function showToast(msg) {
-            const toast = document.getElementById('toast');
-            document.getElementById('toast-msg').innerText = msg;
-            toast.classList.remove('opacity-0', '-translate-y-10');
-            setTimeout(() => { toast.classList.add('opacity-0', '-translate-y-10'); }, 2500);
-        }
-
+        function showToast(msg) { const toast = document.getElementById('toast'); document.getElementById('toast-msg').innerText = msg; toast.classList.remove('opacity-0', '-translate-y-10'); setTimeout(() => toast.classList.add('opacity-0', '-translate-y-10'), 2500); }
         async function copyToClipboard(msgId) {
             const msg = messages.find(m => m.id === msgId); if (!msg) return;
             try {
@@ -431,118 +336,72 @@
                 showToast("Copied!");
             } catch (err) { showToast("Copy failed!"); }
         }
-
         function openPdfModal(msgId) { currentPdfMsgId = msgId; document.getElementById('pdf-modal').classList.remove('hidden'); }
         function closePdfModal() { document.getElementById('pdf-modal').classList.add('hidden'); currentPdfMsgId = null; }
-
+        
         async function generatePdf() {
             if (!currentPdfMsgId) return;
             const btn = document.getElementById('pdf-dl-btn'); const origHtml = btn.innerHTML;
             btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
-
             const filename = document.getElementById('pdf-filename').value.trim() || 'Chatini_Analysis';
-            const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId);
-            if (!wrapper) { closePdfModal(); return; }
-
+            const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId); if (!wrapper) { closePdfModal(); return; }
+            
             const clone = wrapper.querySelector('.msg-content').cloneNode(true);
             const actionBar = clone.querySelector('.action-bar'); if (actionBar) actionBar.remove();
             if (!document.getElementById('pdf-include-sources').checked) clone.querySelectorAll('.extra-data-block').forEach(el => el.remove());
-
+            
             clone.style.padding = '20px'; clone.style.background = '#0a0a0a'; clone.style.color = '#e5e7eb'; clone.style.fontFamily = 'system-ui, sans-serif';
             clone.prepend(Object.assign(document.createElement('div'), {innerHTML:`<h2 style="color:#22d3ee; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">Chatini Premium Analysis</h2>`}));
-
+            
             try { await html2pdf().set({ margin:15, filename:`${filename}.pdf`, html2canvas:{scale:2, backgroundColor:'#0a0a0a'}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'} }).from(clone).save(); showToast("Downloaded!"); } 
             catch (e) { showToast("Failed"); }
             btn.innerHTML = origHtml; btn.disabled = false; closePdfModal();
         }
 
         els.fileInput.addEventListener('change', async (e) => {
-            const files = Array.from(e.target.files);
-            let imgCount = pendingFiles.filter(f => f.type.startsWith('image/')).length;
-            let docCount = pendingFiles.filter(f => !f.type.startsWith('image/')).length;
-
+            const files = Array.from(e.target.files); let imgCount = pendingFiles.filter(f => f.type.startsWith('image/')).length; let docCount = pendingFiles.filter(f => !f.type.startsWith('image/')).length;
             for (const file of files) {
-                let fileType = file.type || EXTENSION_MAP[file.name.split('.').pop().toLowerCase()] || 'text/plain';
-                const isImg = fileType.startsWith('image/');
-                if (isImg && imgCount >= 5) { alert('Max 5 images per msg.'); continue; }
-                if (!isImg && docCount >= 3) { alert('Max 3 docs per msg.'); continue; }
-                if (file.size > 2 * 1024 * 1024 && !isImg) { alert(`File too large. Max 2MB.`); continue; }
-
+                let fileType = file.type || EXTENSION_MAP[file.name.split('.').pop().toLowerCase()] || 'text/plain'; const isImg = fileType.startsWith('image/');
+                if (isImg && imgCount >= 5) { alert('Max 5 images per msg.'); continue; } if (!isImg && docCount >= 3) { alert('Max 3 docs per msg.'); continue; } if (file.size > 2 * 1024 * 1024 && !isImg) { alert(`File too large. Max 2MB.`); continue; }
                 const reader = new FileReader();
-                reader.onload = (ev) => {
-                    pendingFiles.push({ name: file.name, type: fileType, base64: ev.target.result.split(',')[1] });
-                    renderStagingArea();
-                };
-                reader.readAsDataURL(file);
-                if (isImg) imgCount++; else docCount++;
+                reader.onload = (ev) => { pendingFiles.push({ name: file.name, type: fileType, base64: ev.target.result.split(',')[1] }); renderStagingArea(); };
+                reader.readAsDataURL(file); if (isImg) imgCount++; else docCount++;
             }
             els.fileInput.value = ''; updateUIState();
         });
 
-        function renderStagingArea() {
-            els.stagingArea.innerHTML = pendingFiles.map((file, index) => `<div class="flex items-center gap-2 bg-surface2 border border-white/10 px-3 py-1.5 rounded-lg text-xs"><i class="ph-bold ${file.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-cyan-400"></i><span class="truncate max-w-[100px] text-gray-300">${file.name}</span><button onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 ml-1"><i class="ph-bold ph-x"></i></button></div>`).join('');
-        }
+        function renderStagingArea() { els.stagingArea.innerHTML = pendingFiles.map((file, index) => `<div class="flex items-center gap-2 bg-surface2 border border-white/10 px-3 py-1.5 rounded-lg text-xs"><i class="ph-bold ${file.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-cyan-400"></i><span class="truncate max-w-[100px] text-gray-300">${file.name}</span><button onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 ml-1"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
         function removeFile(index) { pendingFiles.splice(index, 1); renderStagingArea(); updateUIState(); }
 
-        function toggleSidebar() {
-            if (els.sidebar.classList.contains('-translate-x-full')) { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); } 
-            else { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); }
-        }
+        function toggleSidebar() { if (els.sidebar.classList.contains('-translate-x-full')) { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); } else { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); } }
 
         function saveCurrentChat() {
-            if (messages.length === 0) return;
-            const chatIndex = chats.findIndex(c => c.id === currentChatId);
-            let title = "New Conversation";
-            const firstUserMsg = messages.find(m => m.role === 'user');
-            if (firstUserMsg) title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
-
+            if (messages.length === 0) return; const chatIndex = chats.findIndex(c => c.id === currentChatId);
+            let title = "New Conversation"; const firstUserMsg = messages.find(m => m.role === 'user'); if (firstUserMsg) title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
             const safeMessages = messages.map(m => ({ id: m.id, role: m.role, content: m.content, modelId: m.modelId, attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) }));
             const chatData = { id: currentChatId, title: chatIndex > -1 ? chats[chatIndex].title : title, messages: safeMessages, extId: currentChatExtId, date: Date.now() };
             if (chatIndex > -1) chats[chatIndex] = chatData; else chats.unshift(chatData);
             try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) { }
         }
 
-        function createNewChat() {
-            currentChatId = Date.now().toString(); messages = []; pendingFiles = []; currentChatExtId = null;
-            els.extSelector.value = ""; renderStagingArea(); renderMessagesToUI(); toggleSidebar();
-            appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init');
-        }
-
-        function loadChat(id) {
-            const chat = chats.find(c => c.id === id);
-            if (chat) { currentChatId = chat.id; messages = chat.messages; currentChatExtId = chat.extId || null; els.extSelector.value = currentChatExtId || ""; renderMessagesToUI(); toggleSidebar(); }
-        }
-
+        function createNewChat() { currentChatId = Date.now().toString(); messages = []; pendingFiles = []; currentChatExtId = null; els.extSelector.value = ""; renderStagingArea(); renderMessagesToUI(); toggleSidebar(); appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init'); }
+        function loadChat(id) { const chat = chats.find(c => c.id === id); if (chat) { currentChatId = chat.id; messages = chat.messages; currentChatExtId = chat.extId || null; els.extSelector.value = currentChatExtId || ""; renderMessagesToUI(); toggleSidebar(); } }
         function deleteChat(id, e) { e.stopPropagation(); chats = chats.filter(c => c.id !== id); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); if (currentChatId === id) createNewChat(); else renderHistoryList(); }
         function renameChat(id, e) { e.stopPropagation(); const chat = chats.find(c => c.id === id); const newName = prompt("Rename chat:", chat.title); if (newName && newName.trim()) { chat.title = newName.trim(); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); renderHistoryList(); } }
 
         function renderHistoryList() {
-            els.historyList.innerHTML = chats.map(chat => `
-                <div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')">
-                    <div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div>
-                    <div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        <button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button>
-                        <button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button>
-                    </div>
-                </div>`).join('');
+            els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join('');
         }
 
-        function editMessage(msgId) {
-            if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id === msgId); if (msgIndex === -1) return;
-            els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex);
-            renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState();
-        }
+        function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id === msgId); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); }
 
-        function renderModelSelector() {
-            els.selector.innerHTML = Object.values(CONFIG.models).map(model => `<button onclick="if(!isProcessing){activeModelId='${model.id}';updateUIState();}" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}"><i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm sm:text-base"></i> ${model.name}</button>`).join('');
-        }
+        function renderModelSelector() { els.selector.innerHTML = Object.values(CONFIG.models).map(model => `<button onclick="if(!isProcessing){activeModelId='${model.id}';updateUIState();}" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}"><i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm sm:text-base"></i> ${model.name}</button>`).join(''); }
 
         function updateUIState() {
             renderModelSelector(); const model = CONFIG.models[activeModelId];
             els.inputGlow.className = `absolute -inset-0.5 rounded-2xl sm:rounded-3xl blur-md opacity-30 transition duration-1000 ${model.glow}`;
             els.input.placeholder = `Message Chatini (${model.name})...`;
-            const text = els.input.value.trim();
-            if ((text || pendingFiles.length > 0) && !isProcessing) { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white text-black hover:scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)] flex-shrink-0'; els.sendIcon.classList.add('translate-x-0.5', '-translate-y-0.5'); } 
+            if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white text-black hover:scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)] flex-shrink-0'; els.sendIcon.classList.add('translate-x-0.5', '-translate-y-0.5'); } 
             else { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0'; els.sendIcon.classList.remove('translate-x-0.5', '-translate-y-0.5'); }
         }
 
@@ -588,20 +447,16 @@
         }
 
         function renderMessagesToUI() { els.container.innerHTML = ''; messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta)); }
-        
+
         async function handleSend() {
             const text = els.input.value.trim();
             if ((!text && pendingFiles.length === 0) || isProcessing) return;
             const attachmentsMeta = pendingFiles.map(f => ({ name: f.name, type: f.type }));
             const userMsgObj = appendMessage('user', text, null, null, attachmentsMeta);
-
             let payloadFiles = [...pendingFiles];
             if (messages.length === 0 && currentChatExtId) {
-                const exts = await DB.getAll();
-                const activeExt = exts.find(e => e.id === currentChatExtId);
-                if (activeExt && activeExt.files) {
-                    payloadFiles = [...payloadFiles, ...activeExt.files];
-                }
+                const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
+                if (activeExt && activeExt.files) payloadFiles = [...payloadFiles, ...activeExt.files];
             }
             const currentMessage = { role: 'user', content: text, id: userMsgObj.id, attachments: payloadFiles, attachmentsMeta: attachmentsMeta };
             messages.push(currentMessage);
@@ -611,20 +466,16 @@
             els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
             els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension Knowledge..." : "Chatini is analyzing...";
             els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
-            
             try {
                 let contextMessages = messages.map(m => ({ role: m.role, content: m.content, attachments: m.id === currentMessage.id ? m.attachments : undefined }));
                 if (currentChatExtId) {
-                    const exts = await DB.getAll();
-                    const activeExt = exts.find(e => e.id === currentChatExtId);
+                    const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
                     if (activeExt && activeExt.links && activeExt.links.length > 0) {
                         const compiledLinksText = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
-                        if (compiledLinksText) {
-                            contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE TO ANSWER:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
-                        }
+                        if (compiledLinksText) contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE TO ANSWER:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
                     }
                 }
-                const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: contextMessages.slice(-20), modelId: activeModelId }) });
+                const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: contextMessages.slice(-200), modelId: activeModelId }) });
                 els.indicator.classList.add('hidden');
                 const assistantMsgObj = appendMessage('assistant', '', activeModelId);
                 const contentContainer = assistantMsgObj.container;
@@ -658,7 +509,6 @@
             }
             isProcessing = false; updateUIState();
         }
-
         els.input.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; updateUIState(); });
         els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
         els.sendBtn.addEventListener('click', handleSend);
