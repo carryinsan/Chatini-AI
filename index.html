@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chatini:The future of AI</title>
+    <title>Chatini Workspace v2</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -30,67 +30,52 @@
         .prose code::before, .prose code::after { content: "" !important; }
         .prose strong { color: #fff !important; }
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
+        
+        /* Terminal styles */
+        .terminal-text { font-family: 'Courier New', Courier, monospace; }
+        
+        /* Canvas Slide Animation */
+        #workspace-canvas { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease; }
     </style>
 </head>
 <body class="bg-background text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30 relative">
 
-    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-black px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300 opacity-0 -translate-y-10 z-[70] pointer-events-none flex items-center gap-2">
+    <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-black px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300 opacity-0 -translate-y-10 z-[80] pointer-events-none flex items-center gap-2">
         <i class="ph-bold ph-check"></i> <span id="toast-msg">Copied!</span>
     </div>
 
+    <!-- Export Response Modal -->
     <div id="pdf-modal" class="fixed inset-0 bg-black/80 z-[60] hidden flex items-center justify-center backdrop-blur-sm px-4">
-        <div class="bg-[#0a0a0a] border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl transform transition-all">
+        <div class="bg-[#0a0a0a] border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
             <h3 class="text-white font-bold mb-5 flex items-center gap-2 text-lg"><i class="ph-fill ph-file-pdf text-red-400 text-xl"></i> Export Response</h3>
             <div class="space-y-5">
-                <div>
-                    <label class="text-xs text-gray-400 mb-1.5 block uppercase tracking-wider font-semibold">File Name</label>
-                    <input type="text" id="pdf-filename" value="Chatini_Analysis" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500 transition-colors shadow-inner">
-                </div>
-                <label class="flex items-center gap-3 cursor-pointer p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10 transition-colors">
-                    <input type="checkbox" id="pdf-include-sources" checked class="w-4 h-4 rounded bg-black border-white/20 text-cyan-500 focus:ring-cyan-500 accent-cyan-500">
-                    <span class="text-sm text-gray-300 font-medium">Include Sources & Charts</span>
-                </label>
-                <div class="flex gap-3 pt-2">
-                    <button onclick="closePdfModal()" class="flex-1 py-3 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                    <button onclick="generatePdf()" id="pdf-dl-btn" class="flex-1 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-lg hover:shadow-cyan-500/25 transition-all flex items-center justify-center gap-2">
-                        <i class="ph-bold ph-download-simple"></i> Download
-                    </button>
-                </div>
+                <div><label class="text-xs text-gray-400 mb-1.5 block uppercase tracking-wider font-semibold">File Name</label><input type="text" id="pdf-filename" value="Chatini_Analysis" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"></div>
+                <label class="flex items-center gap-3 cursor-pointer p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10"><input type="checkbox" id="pdf-include-sources" checked class="w-4 h-4 rounded bg-black border-white/20 text-cyan-500 accent-cyan-500"><span class="text-sm text-gray-300 font-medium">Include Sources & Charts</span></label>
+                <div class="flex gap-3 pt-2"><button onclick="closePdfModal()" class="flex-1 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5">Cancel</button><button onclick="generatePdf()" id="pdf-dl-btn" class="flex-1 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-lg flex items-center justify-center gap-2"><i class="ph-bold ph-download-simple"></i> Download</button></div>
             </div>
         </div>
     </div>
 
+    <!-- Knowledge Extensions Modal -->
     <div id="ext-modal" class="fixed inset-0 bg-black/90 z-[70] hidden flex flex-col backdrop-blur-md">
         <div class="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 glass-header pt-safe">
             <h2 class="text-lg sm:text-xl font-bold flex items-center gap-2"><i class="ph-fill ph-brain text-purple-400 text-2xl"></i> Knowledge Extensions</h2>
             <button onclick="closeExtModal()" class="text-gray-400 hover:text-white bg-white/5 p-2 rounded-full"><i class="ph-bold ph-x"></i></button>
         </div>
         <div class="flex-1 overflow-y-auto p-4 sm:p-6 flex flex-col md:flex-row gap-6 max-w-7xl mx-auto w-full">
-            
             <div class="w-full md:w-1/3 flex flex-col gap-4 border-b md:border-b-0 md:border-r border-white/10 pb-6 md:pb-0 md:pr-6">
-                <button onclick="openCreateExtForm()" class="w-full py-4 rounded-2xl border border-dashed border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500 transition-all font-bold flex items-center justify-center gap-2">
-                    <i class="ph-bold ph-plus"></i> Create New Extension
-                </button>
+                <button onclick="openCreateExtForm()" class="w-full py-4 rounded-2xl border border-dashed border-purple-500/50 text-purple-400 hover:bg-purple-500/10 hover:border-purple-500 transition-all font-bold flex items-center justify-center gap-2"><i class="ph-bold ph-plus"></i> Create New Extension</button>
                 <div id="ext-list" class="flex flex-col gap-2 overflow-y-auto"></div>
             </div>
-
             <div id="ext-form-area" class="w-full md:w-2/3 hidden flex-col gap-6">
                 <input type="hidden" id="ext-id">
-                <div>
-                    <label class="text-xs text-gray-400 mb-2 block uppercase tracking-wider font-semibold">Extension Name</label>
-                    <input type="text" id="ext-name" placeholder="e.g., Q3 Financial Reports" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500 transition-colors">
-                </div>
-                
+                <div><label class="text-xs text-gray-400 mb-2 block uppercase tracking-wider font-semibold">Extension Name</label><input type="text" id="ext-name" placeholder="e.g., Q3 Financial Reports" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500"></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
                         <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Public Links</span> <span class="text-cyan-400 text-[10px]">Max 200</span></label>
-                        <div class="flex gap-2 mb-3">
-                            <input type="url" id="ext-link-input" placeholder="https://..." class="flex-1 bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-500">
-                            <button onclick="addExtLink()" id="ext-link-btn" class="bg-cyan-500/20 text-cyan-400 px-3 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center justify-center min-w-[40px]"><i class="ph-bold ph-plus"></i></button>
-                        </div>
+                        <div class="flex gap-2 mb-3"><input type="url" id="ext-link-input" placeholder="https://..." class="flex-1 bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"><button onclick="addExtLink()" id="ext-link-btn" class="bg-cyan-500/20 text-cyan-400 px-3 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center justify-center min-w-[40px]"><i class="ph-bold ph-plus"></i></button></div>
                         <div id="ext-link-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1"></div>
                     </div>
-                    
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
                         <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Documents</span> <span class="text-purple-400 text-[10px]">Max 20</span></label>
                         <input type="file" id="ext-file-input" multiple class="hidden" accept=".pdf,.doc,.docx,.txt,.html,.py,.csv">
@@ -98,17 +83,12 @@
                         <div id="ext-file-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1"></div>
                     </div>
                 </div>
-                
-                <div class="flex justify-end gap-3 pt-4 border-t border-white/10">
-                    <button onclick="closeExtForm()" class="px-6 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5">Cancel</button>
-                    <button onclick="saveExtension()" class="px-8 py-3 rounded-xl text-sm font-bold bg-purple-600 text-white hover:bg-purple-500 shadow-lg transition-all flex items-center gap-2">
-                        <i class="ph-bold ph-floppy-disk"></i> Save Extension
-                    </button>
-                </div>
+                <div class="flex justify-end gap-3 pt-4 border-t border-white/10"><button onclick="closeExtForm()" class="px-6 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5">Cancel</button><button onclick="saveExtension()" class="px-8 py-3 rounded-xl text-sm font-bold bg-purple-600 text-white hover:bg-purple-500 shadow-lg flex items-center gap-2"><i class="ph-bold ph-floppy-disk"></i> Save Extension</button></div>
             </div>
         </div>
     </div>
 
+    <!-- SIDEBAR -->
     <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-[80vw] max-w-xs glass-header transform -translate-x-full transition-transform duration-300 z-50 flex flex-col border-r border-white/10 shadow-2xl">
         <div class="p-4 border-b border-white/10 flex justify-between items-center mt-safe">
@@ -116,12 +96,8 @@
             <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-2"><i class="ph-bold ph-x text-lg"></i></button>
         </div>
         <div class="p-4 space-y-3 border-b border-white/10">
-            <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                <i class="ph-bold ph-plus"></i> New Conversation
-            </button>
-            <button onclick="openExtModal()" class="w-full flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                <i class="ph-bold ph-brain"></i> Manage Extensions
-            </button>
+            <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-plus"></i> New Conversation</button>
+            <button onclick="openExtModal()" class="w-full flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-brain"></i> Manage Extensions</button>
             <div class="relative w-full">
                 <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none appearance-none cursor-pointer hover:border-white/20 transition-colors">
                     <option value="">No Extension Active</option>
@@ -149,18 +125,38 @@
         </div>
     </header>
 
-    <main id="chat-canvas" class="flex-1 w-full overflow-y-auto overflow-x-hidden px-2 sm:px-6 md:px-12 lg:px-32 xl:px-48 py-6 scroll-smooth z-10 relative">
-        <div id="message-container" class="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-10"></div>
-        <div id="processing-indicator" class="hidden max-w-4xl mx-auto flex gap-3 sm:gap-4 w-full justify-start animate-pulse mt-6 sm:mt-8 px-2">
-            <div id="processing-icon-container" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#111] border border-white/10 flex items-center justify-center flex-shrink-0">
-                <i id="processing-icon" class="ph-bold text-base sm:text-lg"></i>
+    <!-- SPLIT SCREEN LAYOUT CONTAINER -->
+    <div class="flex-1 flex w-full overflow-hidden relative">
+        
+        <!-- CHAT AREA -->
+        <main id="chat-canvas" class="flex-1 h-full overflow-y-auto overflow-x-hidden px-2 sm:px-6 md:px-12 lg:px-24 xl:px-48 py-6 scroll-smooth z-10">
+            <div id="message-container" class="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-10"></div>
+            <div id="processing-indicator" class="hidden max-w-4xl mx-auto flex gap-3 sm:gap-4 w-full justify-start animate-pulse mt-6 sm:mt-8 px-2">
+                <div id="processing-icon-container" class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#111] border border-white/10 flex items-center justify-center flex-shrink-0">
+                    <i id="processing-icon" class="ph-bold text-base sm:text-lg"></i>
+                </div>
+                <div class="pt-1 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-500">
+                    <i class="ph ph-spinner animate-spin text-base sm:text-lg"></i>
+                    <span id="processing-text">Orchestrating...</span>
+                </div>
             </div>
-            <div class="pt-1 flex items-center gap-2 sm:gap-3 text-xs sm:text-sm text-gray-500">
-                <i class="ph ph-spinner animate-spin text-base sm:text-lg"></i>
-                <span id="processing-text">Orchestrating...</span>
+        </main>
+
+        <!-- CANVAS WORKSPACE (RIGHT PANEL) -->
+        <aside id="workspace-canvas" class="absolute inset-y-0 right-0 w-full lg:static lg:w-1/2 bg-[#0a0a0a] border-l border-white/10 transform translate-x-full lg:translate-x-0 hidden flex-col shadow-2xl z-40 transition-transform">
+            <div class="flex items-center justify-between p-4 border-b border-white/10 bg-[#111]">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-layout text-cyan-400 text-lg"></i>
+                    <h2 id="canvas-title" class="text-sm font-bold text-white truncate max-w-[200px]">Artifact</h2>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="copyCanvasContent()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded text-xs flex items-center gap-1"><i class="ph-bold ph-copy"></i> Copy</button>
+                    <button onclick="closeCanvas()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded"><i class="ph-bold ph-x"></i></button>
+                </div>
             </div>
-        </div>
-    </main>
+            <div id="canvas-content" class="flex-1 overflow-y-auto p-6 lg:p-10 prose prose-invert max-w-none text-sm md:text-base selection:bg-cyan-500/30"></div>
+        </aside>
+    </div>
 
     <footer class="w-full p-3 sm:p-4 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent z-20 flex-shrink-0 pb-safe">
         <div class="max-w-4xl mx-auto relative group flex flex-col gap-2">
@@ -169,8 +165,13 @@
             <div class="relative flex items-end bg-[#0f0f0f] border border-white/10 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2 shadow-2xl focus-within:border-white/30 transition-colors">
                 
                 <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx">
-                <button onclick="document.getElementById('file-upload').click()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0" title="Attach Files (For current message)">
+                <button onclick="document.getElementById('file-upload').click()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0" title="Attach Files">
                     <i class="ph-bold ph-paperclip text-lg sm:text-xl"></i>
+                </button>
+
+                <!-- DEEP RESEARCH TOGGLE -->
+                <button id="deep-research-btn" onclick="toggleDeepResearch()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-500 hover:text-cyan-400 transition-colors flex-shrink-0 border border-transparent" title="Toggle Auto-Pilot Deep Research">
+                    <i id="deep-research-icon" class="ph-bold ph-radar text-lg sm:text-xl"></i>
                 </button>
 
                 <textarea id="chat-input" placeholder="Message Chatini..." class="flex-1 max-h-[150px] sm:max-h-48 min-h-[40px] sm:min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-2.5 sm:py-3 px-1 sm:px-2 text-base leading-relaxed" rows="1"></textarea>
@@ -203,36 +204,26 @@
             db: null,
             init: () => new Promise((resolve, reject) => {
                 const req = indexedDB.open('ChatiniDB', 1);
-                req.onupgradeneeded = e => {
-                    const db = e.target.result;
-                    if (!db.objectStoreNames.contains('extensions')) { db.createObjectStore('extensions', { keyPath: 'id' }); }
-                };
-                req.onsuccess = e => { DB.db = e.target.result; resolve(); };
-                req.onerror = e => reject(e);
+                req.onupgradeneeded = e => { const db = e.target.result; if (!db.objectStoreNames.contains('extensions')) db.createObjectStore('extensions', { keyPath: 'id' }); };
+                req.onsuccess = e => { DB.db = e.target.result; resolve(); }; req.onerror = e => reject(e);
             }),
-            getAll: () => new Promise(resolve => {
-                const tx = DB.db.transaction('extensions', 'readonly');
-                const req = tx.objectStore('extensions').getAll();
-                req.onsuccess = () => resolve(req.result || []);
-            }),
-            put: (ext) => new Promise(resolve => {
-                const tx = DB.db.transaction('extensions', 'readwrite');
-                tx.objectStore('extensions').put(ext); tx.oncomplete = () => resolve();
-            }),
-            delete: (id) => new Promise(resolve => {
-                const tx = DB.db.transaction('extensions', 'readwrite');
-                tx.objectStore('extensions').delete(id); tx.oncomplete = () => resolve();
-            })
+            getAll: () => new Promise(resolve => { const tx = DB.db.transaction('extensions', 'readonly'); const req = tx.objectStore('extensions').getAll(); req.onsuccess = () => resolve(req.result || []); }),
+            put: (ext) => new Promise(resolve => { const tx = DB.db.transaction('extensions', 'readwrite'); tx.objectStore('extensions').put(ext); tx.oncomplete = () => resolve(); }),
+            delete: (id) => new Promise(resolve => { const tx = DB.db.transaction('extensions', 'readwrite'); tx.objectStore('extensions').delete(id); tx.oncomplete = () => resolve(); })
         };
 
         let activeModelId = 'oracle';
         let isProcessing = false;
+        let isDeepResearchOn = false;
         let currentChatId = Date.now().toString();
         let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
         let messages = [];
         let pendingFiles = [];
         let currentChatExtId = null; 
         let extForm = { id: '', name: '', links: [], files: [] };
+        
+        // Global Artifact Store for the Canvas Workspace
+        window.ARTIFACT_STORE = {};
 
         const els = {
             selector: document.getElementById('model-selector'),
@@ -250,112 +241,109 @@
             historyList: document.getElementById('history-list'),
             fileInput: document.getElementById('file-upload'),
             stagingArea: document.getElementById('staging-area'),
-            extSelector: document.getElementById('chat-ext-selector')
+            extSelector: document.getElementById('chat-ext-selector'),
+            workspace: document.getElementById('workspace-canvas'),
+            canvasContent: document.getElementById('canvas-content'),
+            canvasTitle: document.getElementById('canvas-title'),
+            researchBtn: document.getElementById('deep-research-btn'),
+            researchIcon: document.getElementById('deep-research-icon')
         };
 
         window.onload = async () => {
-            await DB.init();
-            updateUIState(); refreshExtSelectors();
+            await DB.init(); updateUIState(); refreshExtSelectors();
             if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
         };
 
+        // --- TOGGLE DEEP RESEARCH ---
+        function toggleDeepResearch() {
+            isDeepResearchOn = !isDeepResearchOn;
+            if (isDeepResearchOn) {
+                els.researchBtn.classList.replace('text-gray-500', 'text-cyan-400');
+                els.researchBtn.classList.replace('border-transparent', 'border-cyan-500/50');
+                els.researchBtn.classList.add('bg-cyan-500/10');
+                els.researchIcon.classList.add('animate-pulse');
+                showToast("Auto-Pilot Engaged");
+            } else {
+                els.researchBtn.classList.replace('text-cyan-400', 'text-gray-500');
+                els.researchBtn.classList.replace('border-cyan-500/50', 'border-transparent');
+                els.researchBtn.classList.remove('bg-cyan-500/10');
+                els.researchIcon.classList.remove('animate-pulse');
+            }
+        }
+
+        // --- CANVAS WORKSPACE LOGIC ---
+        function openCanvas(artifactId, title) {
+            els.workspace.classList.remove('hidden');
+            // Mobile slide-in logic
+            setTimeout(() => els.workspace.classList.remove('translate-x-full'), 10);
+            els.canvasTitle.innerText = title || "Document Artifact";
+            const rawMarkdown = window.ARTIFACT_STORE[artifactId] || "";
+            els.canvasContent.innerHTML = marked.parse(rawMarkdown);
+        }
+
+        function closeCanvas() {
+            els.workspace.classList.add('translate-x-full');
+            setTimeout(() => els.workspace.classList.add('hidden'), 400); // Wait for transition
+        }
+
+        async function copyCanvasContent() {
+            try {
+                const text = els.canvasContent.innerText;
+                if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(text);
+                else { const t = document.createElement("textarea"); t.value = text; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+                showToast("Artifact Copied!");
+            } catch (e) { showToast("Failed"); }
+        }
+
+        // Modals & Storage logic
         function openExtModal() { document.getElementById('ext-modal').classList.remove('hidden'); renderExtList(); closeExtForm(); }
         function closeExtModal() { document.getElementById('ext-modal').classList.add('hidden'); refreshExtSelectors(); }
         function openCreateExtForm() { extForm = { id: Date.now().toString(), name: '', links: [], files: [] }; renderExtForm(); }
         function closeExtForm() { document.getElementById('ext-form-area').classList.add('hidden'); document.getElementById('ext-form-area').classList.remove('flex'); }
 
         async function renderExtList() {
-            const list = document.getElementById('ext-list'); list.innerHTML = '';
-            const extensions = await DB.getAll();
-            extensions.forEach(ext => {
-                const div = document.createElement('div');
-                div.className = "bg-surface2 border border-white/10 p-3 rounded-xl flex items-center justify-between group";
-                div.innerHTML = `<div class="flex-1 truncate"><div class="text-sm text-gray-200 font-bold truncate">${ext.name}</div><div class="text-[10px] text-gray-500">${ext.links.length} Links • ${ext.files.length} Docs</div></div>
-                    <div class="flex gap-2"><button onclick="editExt('${ext.id}')" class="text-gray-500 hover:text-white p-1 bg-white/5 rounded"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteExt('${ext.id}')" class="text-red-500 hover:text-red-400 p-1 bg-white/5 rounded"><i class="ph-bold ph-trash"></i></button></div>`;
-                list.appendChild(div);
-            });
+            const list = document.getElementById('ext-list'); list.innerHTML = ''; const extensions = await DB.getAll();
+            extensions.forEach(ext => { list.innerHTML += `<div class="bg-surface2 border border-white/10 p-3 rounded-xl flex items-center justify-between group"><div class="flex-1 truncate"><div class="text-sm text-gray-200 font-bold truncate">${ext.name}</div><div class="text-[10px] text-gray-500">${ext.links.length} Links • ${ext.files.length} Docs</div></div><div class="flex gap-2"><button onclick="editExt('${ext.id}')" class="text-gray-500 hover:text-white p-1 bg-white/5 rounded"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteExt('${ext.id}')" class="text-red-500 hover:text-red-400 p-1 bg-white/5 rounded"><i class="ph-bold ph-trash"></i></button></div></div>`; });
         }
-
         async function editExt(id) { const exts = await DB.getAll(); extForm = exts.find(e => e.id === id); renderExtForm(); }
-        async function deleteExt(id) { if(confirm("Delete this Extension?")) { await DB.delete(id); renderExtList(); if (currentChatExtId === id) { currentChatExtId = null; saveCurrentChat(); } refreshExtSelectors(); } }
-
-        function renderExtForm() {
-            document.getElementById('ext-form-area').classList.remove('hidden'); document.getElementById('ext-form-area').classList.add('flex');
-            document.getElementById('ext-name').value = extForm.name; renderExtLinks(); renderExtFiles();
-        }
-
+        async function deleteExt(id) { if(confirm("Delete Extension?")) { await DB.delete(id); renderExtList(); if (currentChatExtId === id) { currentChatExtId = null; saveCurrentChat(); } refreshExtSelectors(); } }
+        function renderExtForm() { document.getElementById('ext-form-area').classList.remove('hidden'); document.getElementById('ext-form-area').classList.add('flex'); document.getElementById('ext-name').value = extForm.name; renderExtLinks(); renderExtFiles(); }
+        
         async function addExtLink() {
             if (extForm.links.length >= 200) return alert("Max 200 links allowed.");
             const input = document.getElementById('ext-link-input'); const url = input.value.trim(); if (!url) return;
             const btn = document.getElementById('ext-link-btn'); btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
-            try {
-                const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) });
-                const data = await res.json();
-                if (data.success) { extForm.links.push({ url, status: 'Loaded ✅', text: data.text }); input.value = ''; } 
-                else { extForm.links.push({ url, status: 'Failed ❌', text: '' }); alert(`Scrape Failed: ${data.error}`); }
+            try { const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) }); const data = await res.json();
+                if (data.success) { extForm.links.push({ url, status: 'Loaded ✅', text: data.text }); input.value = ''; } else { extForm.links.push({ url, status: 'Failed ❌', text: '' }); alert(`Scrape Failed: ${data.error}`); }
             } catch (e) { extForm.links.push({ url, status: 'Network Err ❌', text: '' }); }
             btn.innerHTML = `<i class="ph-bold ph-plus"></i>`; btn.disabled = false; renderExtLinks();
         }
-
         function removeExtLink(index) { extForm.links.splice(index, 1); renderExtLinks(); }
-        function renderExtLinks() {
-            document.getElementById('ext-link-list').innerHTML = extForm.links.map((l, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span><span class="${l.status.includes('✅') ? 'text-emerald-400' : 'text-red-400'} whitespace-nowrap">${l.status}</span><button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join('');
-        }
+        function renderExtLinks() { document.getElementById('ext-link-list').innerHTML = extForm.links.map((l, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span><span class="${l.status.includes('✅') ? 'text-emerald-400' : 'text-red-400'} whitespace-nowrap">${l.status}</span><button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
 
         document.getElementById('ext-file-input').addEventListener('change', (e) => {
-            const files = Array.from(e.target.files);
-            if (extForm.files.length + files.length > 20) return alert("Max 20 documents allowed.");
-            files.forEach(file => {
-                let fileType = file.type || EXTENSION_MAP[file.name.split('.').pop().toLowerCase()] || 'text/plain';
-                const reader = new FileReader();
-                reader.onload = (ev) => { extForm.files.push({ name: file.name, type: fileType, base64: ev.target.result.split(',')[1] }); renderExtFiles(); };
-                reader.readAsDataURL(file);
-            });
+            const files = Array.from(e.target.files); if (extForm.files.length + files.length > 20) return alert("Max 20 docs.");
+            files.forEach(file => { let fileType = file.type || EXTENSION_MAP[file.name.split('.').pop().toLowerCase()] || 'text/plain'; const reader = new FileReader(); reader.onload = (ev) => { extForm.files.push({ name: file.name, type: fileType, base64: ev.target.result.split(',')[1] }); renderExtFiles(); }; reader.readAsDataURL(file); });
         });
-
         function removeExtFile(index) { extForm.files.splice(index, 1); renderExtFiles(); }
-        function renderExtFiles() {
-            document.getElementById('ext-file-list').innerHTML = extForm.files.map((f, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${f.name}</span><span class="text-purple-400">Loaded ✅</span><button onclick="removeExtFile(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join('');
-        }
-
-        async function saveExtension() { extForm.name = document.getElementById('ext-name').value.trim() || 'Untitled Extension'; await DB.put(extForm); closeExtForm(); renderExtList(); showToast("Extension Saved!"); }
-        async function refreshExtSelectors() {
-            const exts = await DB.getAll();
-            els.extSelector.innerHTML = `<option value="">No Extension Active</option>` + exts.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
-            els.extSelector.value = currentChatExtId || "";
-        }
+        function renderExtFiles() { document.getElementById('ext-file-list').innerHTML = extForm.files.map((f, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${f.name}</span><span class="text-purple-400">Loaded ✅</span><button onclick="removeExtFile(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
+        async function saveExtension() { extForm.name = document.getElementById('ext-name').value.trim() || 'Untitled Ext'; await DB.put(extForm); closeExtForm(); renderExtList(); showToast("Saved!"); }
+        async function refreshExtSelectors() { const exts = await DB.getAll(); els.extSelector.innerHTML = `<option value="">No Extension Active</option>` + exts.map(e => `<option value="${e.id}">${e.name}</option>`).join(''); els.extSelector.value = currentChatExtId || ""; }
         function assignExtToCurrentChat() { currentChatExtId = els.extSelector.value || null; saveCurrentChat(); showToast(currentChatExtId ? "Extension Linked!" : "Extension Removed"); }
 
         let currentPdfMsgId = null;
         function showToast(msg) { const toast = document.getElementById('toast'); document.getElementById('toast-msg').innerText = msg; toast.classList.remove('opacity-0', '-translate-y-10'); setTimeout(() => toast.classList.add('opacity-0', '-translate-y-10'), 2500); }
-        async function copyToClipboard(msgId) {
-            const msg = messages.find(m => m.id === msgId); if (!msg) return;
-            try {
-                if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(msg.content);
-                else { const t = document.createElement("textarea"); t.value = msg.content; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
-                showToast("Copied!");
-            } catch (err) { showToast("Copy failed!"); }
-        }
+        async function copyToClipboard(msgId) { const msg = messages.find(m => m.id === msgId); if (!msg) return; try { if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(msg.content); else { const t = document.createElement("textarea"); t.value = msg.content; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); } showToast("Copied!"); } catch (err) { showToast("Copy failed!"); } }
         function openPdfModal(msgId) { currentPdfMsgId = msgId; document.getElementById('pdf-modal').classList.remove('hidden'); }
         function closePdfModal() { document.getElementById('pdf-modal').classList.add('hidden'); currentPdfMsgId = null; }
         
         async function generatePdf() {
-            if (!currentPdfMsgId) return;
-            const btn = document.getElementById('pdf-dl-btn'); const origHtml = btn.innerHTML;
-            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
-            const filename = document.getElementById('pdf-filename').value.trim() || 'Chatini_Analysis';
-            const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId); if (!wrapper) { closePdfModal(); return; }
-            
-            const clone = wrapper.querySelector('.msg-content').cloneNode(true);
-            const actionBar = clone.querySelector('.action-bar'); if (actionBar) actionBar.remove();
-            if (!document.getElementById('pdf-include-sources').checked) clone.querySelectorAll('.extra-data-block').forEach(el => el.remove());
-            
-            clone.style.padding = '20px'; clone.style.background = '#0a0a0a'; clone.style.color = '#e5e7eb'; clone.style.fontFamily = 'system-ui, sans-serif';
-            clone.prepend(Object.assign(document.createElement('div'), {innerHTML:`<h2 style="color:#22d3ee; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">Chatini Premium Analysis</h2>`}));
-            
-            try { await html2pdf().set({ margin:15, filename:`${filename}.pdf`, html2canvas:{scale:2, backgroundColor:'#0a0a0a'}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'} }).from(clone).save(); showToast("Downloaded!"); } 
-            catch (e) { showToast("Failed"); }
-            btn.innerHTML = origHtml; btn.disabled = false; closePdfModal();
+            if (!currentPdfMsgId) return; const btn = document.getElementById('pdf-dl-btn'); const origHtml = btn.innerHTML; btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
+            const filename = document.getElementById('pdf-filename').value.trim() || 'Chatini_Analysis'; const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId); if (!wrapper) { closePdfModal(); return; }
+            const clone = wrapper.querySelector('.msg-content').cloneNode(true); const actionBar = clone.querySelector('.action-bar'); if (actionBar) actionBar.remove(); if (!document.getElementById('pdf-include-sources').checked) clone.querySelectorAll('.extra-data-block').forEach(el => el.remove());
+            clone.querySelectorAll('.artifact-card').forEach(el => el.innerHTML = `<em>[Interactive Artifact Removed for PDF Export]</em>`);
+            clone.style.padding = '20px'; clone.style.background = '#0a0a0a'; clone.style.color = '#e5e7eb'; clone.style.fontFamily = 'system-ui, sans-serif'; clone.prepend(Object.assign(document.createElement('div'), {innerHTML:`<h2 style="color:#22d3ee; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">Chatini Premium Analysis</h2>`}));
+            try { await html2pdf().set({ margin:15, filename:`${filename}.pdf`, html2canvas:{scale:2, backgroundColor:'#0a0a0a'}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'} }).from(clone).save(); showToast("Downloaded!"); } catch (e) { showToast("Failed"); } btn.innerHTML = origHtml; btn.disabled = false; closePdfModal();
         }
 
         els.fileInput.addEventListener('change', async (e) => {
@@ -363,16 +351,12 @@
             for (const file of files) {
                 let fileType = file.type || EXTENSION_MAP[file.name.split('.').pop().toLowerCase()] || 'text/plain'; const isImg = fileType.startsWith('image/');
                 if (isImg && imgCount >= 5) { alert('Max 5 images per msg.'); continue; } if (!isImg && docCount >= 3) { alert('Max 3 docs per msg.'); continue; } if (file.size > 2 * 1024 * 1024 && !isImg) { alert(`File too large. Max 2MB.`); continue; }
-                const reader = new FileReader();
-                reader.onload = (ev) => { pendingFiles.push({ name: file.name, type: fileType, base64: ev.target.result.split(',')[1] }); renderStagingArea(); };
-                reader.readAsDataURL(file); if (isImg) imgCount++; else docCount++;
-            }
-            els.fileInput.value = ''; updateUIState();
+                const reader = new FileReader(); reader.onload = (ev) => { pendingFiles.push({ name: file.name, type: fileType, base64: ev.target.result.split(',')[1] }); renderStagingArea(); }; reader.readAsDataURL(file); if (isImg) imgCount++; else docCount++;
+            } els.fileInput.value = ''; updateUIState();
         });
 
         function renderStagingArea() { els.stagingArea.innerHTML = pendingFiles.map((file, index) => `<div class="flex items-center gap-2 bg-surface2 border border-white/10 px-3 py-1.5 rounded-lg text-xs"><i class="ph-bold ${file.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-cyan-400"></i><span class="truncate max-w-[100px] text-gray-300">${file.name}</span><button onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 ml-1"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
         function removeFile(index) { pendingFiles.splice(index, 1); renderStagingArea(); updateUIState(); }
-
         function toggleSidebar() { if (els.sidebar.classList.contains('-translate-x-full')) { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); } else { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); } }
 
         function saveCurrentChat() {
@@ -384,17 +368,13 @@
             try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) { }
         }
 
-        function createNewChat() { currentChatId = Date.now().toString(); messages = []; pendingFiles = []; currentChatExtId = null; els.extSelector.value = ""; renderStagingArea(); renderMessagesToUI(); toggleSidebar(); appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init'); }
-        function loadChat(id) { const chat = chats.find(c => c.id === id); if (chat) { currentChatId = chat.id; messages = chat.messages; currentChatExtId = chat.extId || null; els.extSelector.value = currentChatExtId || ""; renderMessagesToUI(); toggleSidebar(); } }
+        function createNewChat() { currentChatId = Date.now().toString(); messages = []; pendingFiles = []; currentChatExtId = null; els.extSelector.value = ""; renderStagingArea(); renderMessagesToUI(); toggleSidebar(); appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init'); closeCanvas(); }
+        function loadChat(id) { const chat = chats.find(c => c.id === id); if (chat) { currentChatId = chat.id; messages = chat.messages; currentChatExtId = chat.extId || null; els.extSelector.value = currentChatExtId || ""; renderMessagesToUI(); toggleSidebar(); closeCanvas(); } }
         function deleteChat(id, e) { e.stopPropagation(); chats = chats.filter(c => c.id !== id); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); if (currentChatId === id) createNewChat(); else renderHistoryList(); }
         function renameChat(id, e) { e.stopPropagation(); const chat = chats.find(c => c.id === id); const newName = prompt("Rename chat:", chat.title); if (newName && newName.trim()) { chat.title = newName.trim(); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); renderHistoryList(); } }
 
-        function renderHistoryList() {
-            els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join('');
-        }
-
+        function renderHistoryList() { els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join(''); }
         function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id === msgId); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); }
-
         function renderModelSelector() { els.selector.innerHTML = Object.values(CONFIG.models).map(model => `<button onclick="if(!isProcessing){activeModelId='${model.id}';updateUIState();}" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}"><i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm sm:text-base"></i> ${model.name}</button>`).join(''); }
 
         function updateUIState() {
@@ -405,8 +385,28 @@
             else { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0'; els.sendIcon.classList.remove('translate-x-0.5', '-translate-y-0.5'); }
         }
 
+        // --- ARTIFACT & UI PARSER ---
         function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
+
+            // 1. Extract Artifacts (Canvas Workspace)
+            markdownContent = markdownContent.replace(/<artifact(?: title="([^"]+)")?>([\s\S]*?)(<\/artifact>|$)/g, (match, title, artifactContent, closeTag) => {
+                if (!closeTag) return `<div class="mt-4 p-4 border border-purple-500/30 bg-purple-500/5 rounded-xl flex items-center justify-between animate-pulse"><div class="flex items-center gap-3"><i class="ph-bold ph-layout text-purple-400 text-xl"></i><div><p class="text-xs text-purple-400 font-bold uppercase tracking-wider">Generating Document</p><p class="text-sm text-white font-medium">${title || 'Untitled'}</p></div></div><i class="ph-bold ph-spinner animate-spin text-gray-400"></i></div>`;
+                
+                const artId = 'art_' + Math.random().toString(36).substr(2, 9);
+                window.ARTIFACT_STORE[artId] = artifactContent.trim();
+                
+                extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${(title || 'Document').replace(/'/g, "\\'")}')">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:border-cyan-500/50 transition-colors"><i class="ph-fill ph-layout text-cyan-400 text-xl"></i></div>
+                        <div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Interactive Workspace</p><p class="text-sm text-white font-medium group-hover:text-cyan-400 transition-colors">${title || 'Untitled Artifact'}</p></div>
+                    </div>
+                    <i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i>
+                </div>`;
+                return ''; 
+            });
+
+            // 2. Extract Sources
             markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
                 if (!closeTag) return `<div class="animate-pulse text-purple-400 text-[10px] sm:text-xs mt-2"><i class="ph ph-circle-notch animate-spin"></i> Analyzing Sources...</div>`;
                 try {
@@ -417,6 +417,7 @@
                 return '';
             });
 
+            // 3. Extract Charts
             markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|$)/g, (match, jsonStr, closeTag) => {
                 if (!closeTag) return `<div class="mt-3 sm:mt-4 p-3 sm:p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-lg text-cyan-400 text-[10px] sm:text-xs flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin"></i> Rendering Data...</div>`;
                 try {
@@ -429,7 +430,7 @@
                 return '';
             });
 
-            const actionBarHtml = (!isStreaming && markdownContent.trim().length > 0 && msgId) ? `<div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3"><button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-copy text-sm"></i> Copy</button><button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-download-simple text-sm"></i> Save PDF</button><span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini</span></div>` : '';
+            const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? `<div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3"><button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-copy text-sm"></i> Copy</button><button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-download-simple text-sm"></i> Save PDF</button><span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini</span></div>` : '';
             return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${marked.parse(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
         }
 
@@ -446,7 +447,17 @@
             els.container.appendChild(div); els.canvas.scrollTop = els.canvas.scrollHeight; return { container: div.querySelector('.msg-content'), id: msgId };
         }
 
-        function renderMessagesToUI() { els.container.innerHTML = ''; messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta)); }
+        // --- RESEARCH TERMINAL BLOCK ---
+        function appendResearchTerminal() {
+            const div = document.createElement('div');
+            div.className = `flex w-full mb-6 sm:mb-8 justify-start`;
+            div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"> <div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(6,182,212,0.3)] animate-pulse"> <i class="ph-bold ph-radar text-cyan-400 text-sm sm:text-base"></i> </div> <div class="bg-black border border-cyan-500/30 rounded-xl p-4 w-full md:w-2/3 shadow-inner terminal-text text-xs sm:text-sm text-cyan-400 flex flex-col gap-2" id="research-logs"> <div class="opacity-70"><i class="ph-bold ph-terminal-window"></i> Initializing Auto-Pilot Agent...</div> </div> </div>`;
+            els.container.appendChild(div);
+            els.canvas.scrollTop = els.canvas.scrollHeight;
+            return document.getElementById('research-logs');
+        }
+
+        function renderMessagesToUI() { els.container.innerHTML = ''; window.ARTIFACT_STORE = {}; messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta)); }
 
         async function handleSend() {
             const text = els.input.value.trim();
@@ -462,20 +473,60 @@
             messages.push(currentMessage);
             els.input.value = ''; els.input.style.height = 'auto'; pendingFiles = []; renderStagingArea();
             isProcessing = true; updateUIState();
-            const currentModel = CONFIG.models[activeModelId];
-            els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
-            els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension Knowledge..." : "Chatini is analyzing...";
-            els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
+            let compiledResearchContext = "";
+            let contextMessages = messages.map(m => ({ role: m.role, content: m.content, attachments: m.id === currentMessage.id ? m.attachments : undefined }));
+            
+            // --- DEEP RESEARCH LOOP ---
+            if (isDeepResearchOn) {
+                els.indicator.classList.add('hidden');
+                const logContainer = appendResearchTerminal();
+                try {
+                    const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) });
+                    const reader = res.body.getReader(); const decoder = new TextDecoder();
+                    let buffer = "";
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (value) {
+                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    const dataStr = line.slice(6).trim(); if (!dataStr) continue;
+                                    try {
+                                        const data = JSON.parse(dataStr);
+                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
+                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Agent task finished. Compiling payload...</div>`; break; }
+                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
+                                    } catch (e) { }
+                                }
+                            }
+                        }
+                        if (done) break;
+                    }
+                    await new Promise(r => setTimeout(r, 1000));
+                    logContainer.parentElement.parentElement.remove();
+                } catch (err) { logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
+            }
+
+            // Normal UI indicator for standard processing
+            if (!isDeepResearchOn) {
+                const currentModel = CONFIG.models[activeModelId];
+                els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
+                els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension Knowledge..." : "Chatini is analyzing...";
+                els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
+            }
             try {
-                let contextMessages = messages.map(m => ({ role: m.role, content: m.content, attachments: m.id === currentMessage.id ? m.attachments : undefined }));
                 if (currentChatExtId) {
                     const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
                     if (activeExt && activeExt.links && activeExt.links.length > 0) {
                         const compiledLinksText = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
-                        if (compiledLinksText) contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE TO ANSWER:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
+                        if (compiledLinksText) contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
                     }
                 }
-                const response = await fetch('/api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ messages: contextMessages.slice(-200), modelId: activeModelId }) });
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ messages: contextMessages.slice(-200), modelId: activeModelId, researchContext: compiledResearchContext })
+                });
                 els.indicator.classList.add('hidden');
                 const assistantMsgObj = appendMessage('assistant', '', activeModelId);
                 const contentContainer = assistantMsgObj.container;
@@ -505,7 +556,7 @@
                 saveCurrentChat();
             } catch (error) {
                 els.indicator.classList.add('hidden');
-                appendMessage('assistant', `<span class="text-red-400 text-sm">Network Error. Vercel payload limit exceeded or connection failed.</span>`, activeModelId);
+                appendMessage('assistant', `<span class="text-red-400 text-sm">Network Error. Failed.</span>`, activeModelId);
             }
             isProcessing = false; updateUIState();
         }
