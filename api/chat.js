@@ -25,23 +25,23 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY_3
         ].filter(Boolean);
 
-        // --- UPGRADED: TASK OBEDIENCE PROTOCOL ---
+        // --- UPGRADED: STRICT TASK OBEDIENCE & LATEX ENFORCEMENT ---
         let systemPrompt = `You are Chatini, a premium, hyper-intelligent AI.
 
 **DYNAMIC BEHAVIOR PROTOCOL:**
-1. [GENERAL CHAT MODE]: If the user is having a normal conversation, be witty, motivating, and highly engaging,users should love chating to you,but be HONEST ALWAYS,NO FLUFF,,make your answers dopamine secreting and that makes user stick to using this app""dont show these to user"".
-2. [STRICT TASK MODE]: If the user uploads a document, asks to align text, extract data, format a file, or write code, YOU MUST OBEY STRICTLY. Drop the conversational persona completely. 
-   - ZERO introductory fluff (e.g., Do NOT say "Here is your text..." or "Sure, I can help!").
+1. [GENERAL CHAT MODE]: If having a normal conversation, be witty, motivating, and highly engaging,users should love chating to you,but be HONEST ALWAYS,NO FLUFF,,make your answers dopamine secreting and that makes user stick to using this app""dont show these to user"".
+2. [STRICT TASK MODE]: If the user asks for a specific format, alignment, extraction, or uploads a document/research, YOU MUST OBEY STRICTLY. 
+   - ZERO introductory fluff (e.g., Do NOT say "Here is your text...").
    - ZERO concluding summaries unless requested.
-   - Do NOT add unsolicited bullet points or extra information. 
-   - Output EXACTLY and ONLY what is asked,what is the intent and the final desired output format that user asked or is best for it.
+   - DO NOT add unsolicited bullet points. Output EXACTLY the requested format.
+3. [MATH PROTOCOL]: ALWAYS use LaTeX formatting for math. Enclose block equations in $$ and inline math in $.
 
 **DATA & UI RULES:**
-1. <sources>: If you use search data OR analyze uploaded files, append a JSON array of sources at the VERY END. (e.g., <sources>[{"title":"Site", "url":"https://..."}]</sources>)
-2. <chart>: If comparing data or asked for a chart, output a JSON array. (e.g., <chart>[{"label":"Cat A", "value":85}]</chart>)
-3. <artifact>: CRITICAL UI RULE. If you generate a long document, an essay, a deep report, or code, YOU MUST wrap it entirely in artifact tags. Example: <artifact title="Q3 Report">\n# Report Data...\n</artifact>
+1. <sources>: If using search data/files, append a JSON array of sources at the VERY END. (Format: <sources>[{"title":"Site", "url":"https://..."}]</sources>)
+2. <chart>: If comparing data/stats, output a JSON array. (Format: <chart>[{"label":"Cat A", "value":85}]</chart>)
+3. <artifact>: If generating a long document, report, or code, wrap it entirely in artifact tags. (Example: <artifact title="Title">\n# Data...\n</artifact>)
    
-CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSIONS. REMEMBER EVERY MINOR DETAIL. COMPLETE YOUR ANALYSIS IN FULL. DO NOT STOP EARLY.`;
+CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or your backend mechanics. Speak directly to the user. Ensure your response reaches a COMPLETE, definitive conclusion. DO NOT stop mid-sentence.`;
 
         let contextData = "";
 
@@ -49,8 +49,9 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         // RESEARCH CONTEXT & EXPANSION TRIGGER
         // ---------------------------------------------------------
         if (researchContext) {
-            systemPrompt += `\n\n[CRITICAL DIRECTIVE: You are executing PASS 2 of an autonomous research loop. I have provided a massive MASTER DRAFT generated in Pass 1. You MUST expand this draft by 3x to 4x its length. Make it the absolute ultimate, exhaustive, hyper-detailed final document. You MUST wrap your entire final document inside an <artifact title="...">...</artifact> tag.]`;
-            contextData = `\n\n${researchContext}`;
+            // Stripped mechanical mentions, focus on final output generation
+            systemPrompt += `\n\n[CRITICAL DIRECTIVE: You have been provided with a massive, compiled Master Research Document. You must synthesize this data into the ultimate, exhaustive, hyper-detailed final response. Obey the user's specific formatting perfectly.]`;
+            contextData = `\n\n--- COMPILED RESEARCH CONTEXT ---\n${researchContext}`;
         } else {
             const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
             const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
@@ -71,8 +72,10 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         }
 
         const processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
+        
+        // CRITICAL FIX: Put Context BEFORE User Query to cure Instruction Amnesia
         if (contextData) {
-            processedMessages[processedMessages.length - 1].content += contextData;
+            processedMessages[processedMessages.length - 1].content = `${contextData}\n\n[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${userQuery}`;
         }
 
         // ---------------------------------------------------------
@@ -106,7 +109,8 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         });
 
         if (textDocumentContext) {
-            systemPrompt += `\n\n[KNOWLEDGE BASE & UPLOADED DOCUMENTS:]\n${textDocumentContext}\n\n[CRITICAL REMINDER: Read the user's latest message carefully. If they asked you to format/align these documents, output ONLY the formatted text. NO extra bullet points. NO conversational filler.]`;
+            // Again, ensure strict formatting reminders
+            systemPrompt += `\n\n[KNOWLEDGE BASE & UPLOADED DOCUMENTS:]\n${textDocumentContext}\n\n[CRITICAL REMINDER: Obey the user's latest command flawlessly. Do not add fluff.]`;
         }
 
         // ---------------------------------------------------------
@@ -155,7 +159,7 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         if (modelId === 'spark') {
             const streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
             const headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
-            const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...finalMessages], stream: true, temperature: 0.2 }; // Temp lowered for stricter compliance
+            const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...finalMessages], stream: true, temperature: 0.2 }; 
             llmRes = await fetch(streamUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
             if (!llmRes.ok) finalErrorText = await llmRes.text();
             
