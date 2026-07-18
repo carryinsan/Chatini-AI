@@ -3,12 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Chatini Workspace</title>
+    <title>LexisAI Workspace</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <!-- KaTeX Math Rendering Engine -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { background: '#050505', surface: '#0a0a0a', surface2: '#121212', surface3: '#1a1a1a' }, animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' } } } }
@@ -32,9 +36,13 @@
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
         .terminal-text { font-family: 'Courier New', Courier, monospace; }
         #workspace-canvas { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease; }
+        
+        /* Math Overflow Protection for Mobile */
+        .katex-display { overflow-x: auto; overflow-y: hidden; padding-bottom: 0.5rem; margin: 1em 0; }
+        .katex { font-size: 1.1em; }
     </style>
 </head>
-<body class="bg-background text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30 relative">
+<body class="bg-[#050505] text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30 relative">
 
     <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-black px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300 opacity-0 -translate-y-10 z-[80] pointer-events-none flex items-center gap-2">
         <i class="ph-bold ph-check"></i> <span id="toast-msg">Copied!</span>
@@ -260,13 +268,38 @@
             }
         }
 
+        // FAIL-SAFE MATH RENDERING ENGINE
+        function renderMathAndMarkdown(text) {
+            if (!text) return "";
+            let processedText = text;
+            
+            // Protect and pre-render Block Math ($$ or \[ \])
+            processedText = processedText.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, p1, math) => {
+                try { return katex.renderToString(math, { displayMode: true, throwOnError: false }); } 
+                catch(e) { return match; }
+            });
+            
+            // Protect and pre-render Inline Math ($ or \( \)) 
+            processedText = processedText.replace(/\\\(([\s\S]*?)\\\)/g, (match, math) => {
+                try { return katex.renderToString(math, { displayMode: false, throwOnError: false }); } 
+                catch(e) { return match; }
+            });
+            processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
+                try { return prefix + katex.renderToString(math, { displayMode: false, throwOnError: false }); } 
+                catch(e) { return match; }
+            });
+
+            // Parse Markdown safely, ignoring the pre-rendered KaTeX HTML
+            return marked.parse(processedText);
+        }
+
         function openCanvas(artifactId, title) {
             window.CURRENT_CANVAS_ID = artifactId;
             els.workspace.classList.remove('hidden');
             setTimeout(() => els.workspace.classList.remove('translate-x-full'), 10);
             els.canvasTitle.innerText = title || "Document Artifact";
             const rawMarkdown = window.ARTIFACT_STORE[artifactId] || "";
-            els.canvasContent.innerHTML = marked.parse(rawMarkdown);
+            els.canvasContent.innerHTML = renderMathAndMarkdown(rawMarkdown);
         }
 
         function closeCanvas() {
@@ -303,23 +336,15 @@
             const btn = document.getElementById('ext-link-btn'); btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
             
             const isYT = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
-            
             try { 
                 if (isYT) {
                     const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                    const res = await fetch(proxyUrl);
-                    const data = await res.json();
-                    const html = data.contents;
-                    const match = html.match(/"captionTracks":\[\{"baseUrl":"([^"]+)"/);
+                    const res = await fetch(proxyUrl); const data = await res.json();
+                    const html = data.contents; const match = html.match(/"captionTracks":\[\{"baseUrl":"([^"]+)"/);
                     if (match) {
-                        const captionUrl = match[1].replace(/\\u0026/g, '&');
-                        const capRes = await fetch(captionUrl);
-                        const capXml = await capRes.text();
-                        const transcript = capXml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
-                        extForm.links.push({ url, status: 'YT Loaded ✅', text: transcript.substring(0, 30000) });
-                    } else {
-                        extForm.links.push({ url, status: 'No Captions ⚠️', text: "No captions available." });
-                    }
+                        const capRes = await fetch(match[1].replace(/\\u0026/g, '&')); const capXml = await capRes.text();
+                        extForm.links.push({ url, status: 'YT Loaded ✅', text: capXml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').substring(0, 30000) });
+                    } else extForm.links.push({ url, status: 'No Captions ⚠️', text: "No captions available." });
                 } else {
                     const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) }); 
                     const data = await res.json();
@@ -364,14 +389,10 @@
                     const onclickAttr = el.getAttribute('onclick');
                     const matchId = onclickAttr ? onclickAttr.match(/openCanvas\('([^']+)'/) : null;
                     const matchTitle = onclickAttr ? onclickAttr.match(/openCanvas\('[^']+',\s*'([^']+)'/) : null;
-                    
                     if (matchId && window.ARTIFACT_STORE[matchId[1]]) {
                         const title = matchTitle ? matchTitle[1] : 'Artifact';
                         const content = window.ARTIFACT_STORE[matchId[1]];
-                        el.outerHTML = `<div style="border: 1px solid #333; padding: 15px; border-radius: 8px; margin: 15px 0; background-color: #111;">
-                            <h3 style="color: #22d3ee; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 8px; font-size: 16px;">📄 ${title}</h3>
-                            <div style="font-size: 13px; color: #ccc;">${marked.parse(content)}</div>
-                        </div>`;
+                        el.outerHTML = `<div style="border: 1px solid #333; padding: 15px; border-radius: 8px; margin: 15px 0; background-color: #111;"><h3 style="color: #22d3ee; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 8px; font-size: 16px;">📄 ${title}</h3><div style="font-size: 13px; color: #ccc;">${renderMathAndMarkdown(content)}</div></div>`;
                     } else { el.outerHTML = `<em>[Artifact Unavailable]</em>`; }
                 });
             }
@@ -425,14 +446,18 @@
         function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
 
-            // 1. Live Interactive Artifacts
+            // Auto-complete unclosed artifact tags if the stream was forcefully halted
+            if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) {
+                markdownContent += '\n</artifact>';
+            }
+
             markdownContent = markdownContent.replace(/<artifact(?: title="([^"]+)")?>([\s\S]*?)(<\/artifact>|$)/g, (match, title, artifactContent, closeTag) => {
                 const artId = msgId ? 'art_' + msgId : 'art_' + Math.random().toString(36).substr(2, 9);
                 window.ARTIFACT_STORE[artId] = artifactContent.trim();
                 
                 // LIVE DOM UPDATE: If canvas is open to this artifact, update text while streaming
                 if (window.CURRENT_CANVAS_ID === artId) {
-                    els.canvasContent.innerHTML = marked.parse(artifactContent.trim());
+                    els.canvasContent.innerHTML = renderMathAndMarkdown(artifactContent.trim());
                     els.canvasTitle.innerText = title || "Document Artifact";
                 }
 
@@ -441,12 +466,11 @@
                     return ''; 
                 }
 
-                // If not streaming, or tag is closed, seal it as a static card
                 extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${(title || 'Document').replace(/'/g, "\\'")}')"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:border-cyan-500/50 transition-colors"><i class="ph-fill ph-layout text-cyan-400 text-xl"></i></div><div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Interactive Workspace</p><p class="text-sm text-white font-medium group-hover:text-cyan-400 transition-colors">${title || 'Untitled Artifact'}</p></div></div><i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i></div>`;
                 return ''; 
             });
 
-            // 2. Extract Sources
+            // Extract Sources
             markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
                 if (!closeTag) return `<div class="animate-pulse text-purple-400 text-[10px] sm:text-xs mt-2"><i class="ph ph-circle-notch animate-spin"></i> Analyzing Sources...</div>`;
                 try {
@@ -457,7 +481,7 @@
                 return '';
             });
 
-            // 3. Extract Charts
+            // Extract Charts
             markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|$)/g, (match, jsonStr, closeTag) => {
                 if (!closeTag) return `<div class="mt-3 sm:mt-4 p-3 sm:p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-lg text-cyan-400 text-[10px] sm:text-xs flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin"></i> Rendering Data...</div>`;
                 try {
@@ -471,7 +495,7 @@
             });
 
             const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? `<div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3"><button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-copy text-sm"></i> Copy</button><button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-download-simple text-sm"></i> Save PDF</button><span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini</span></div>` : '';
-            return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${marked.parse(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
+            return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${renderMathAndMarkdown(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
         }
 
         function appendMessage(role, content, modelId, specificId = null, attachmentsMeta = []) {
@@ -518,8 +542,7 @@
                 let thoughtBox = null;
                 try {
                     const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) });
-                    const reader = res.body.getReader(); const decoder = new TextDecoder();
-                    let buffer = "";
+                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
                     while (true) {
                         const { done, value } = await reader.read();
                         if (value) {
@@ -542,8 +565,7 @@
                         }
                         if (done) break;
                     }
-                    await new Promise(r => setTimeout(r, 1000));
-                    logContainer.parentElement.parentElement.remove();
+                    await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
                 } catch (err) { logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
             }
 
@@ -573,17 +595,18 @@
                 const reader = response.body.getReader(); const decoder = new TextDecoder();
                 let fullResponse = ""; let buffer = "";
                 
+                // WATCHDOG TIMER FOR ARTIFACTS
                 let streamTimeout;
                 const startWatchdog = () => {
                     clearTimeout(streamTimeout);
-                    streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000);
+                    streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000); // Wait max 20s if frozen
                 };
                 
                 try {
                     startWatchdog();
                     while (true) {
                         const { done, value } = await reader.read();
-                        startWatchdog(); 
+                        startWatchdog();
                         if (value) {
                             buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
                             for (const line of lines) {
@@ -603,12 +626,9 @@
                         if (done) break;
                     }
                 } catch (streamErr) {
-                    if (streamErr === "Stream Timeout" || (streamErr && streamErr.message === "Stream Timeout")) {
-                        console.warn("Artifact Stream Auto-Completed (20s Watchdog)");
-                    } else throw streamErr;
-                } finally {
-                    clearTimeout(streamTimeout);
-                }
+                    if (streamErr === "Stream Timeout" || (streamErr && streamErr.message === "Stream Timeout")) console.warn("Stream Auto-Completed (Watchdog)");
+                    else throw streamErr;
+                } finally { clearTimeout(streamTimeout); }
                 
                 contentContainer.classList.remove('typing-cursor');
                 contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
