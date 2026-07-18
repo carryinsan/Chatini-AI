@@ -10,27 +10,21 @@ export const config = {
 function hyperCondense(text, maxChars) {
     if (!text || text.length <= maxChars) return text;
     
-    // Split the massive text dump by document/link boundaries
     const blocks = text.split(/(?=--- DOC: |--- REAL-TIME SEARCH CONTEXT ---|URL: |\[Title: )/g).filter(b => b.trim());
-    
     if (blocks.length === 0) return text.substring(0, maxChars);
     if (blocks.length === 1) {
-        // If it's just one massive block, take the head and tail
         return text.substring(0, Math.floor(maxChars * 0.6)) + 
                "\n\n...[DATA COMPRESSED]...\n\n" + 
                text.substring(text.length - Math.floor(maxChars * 0.4));
     }
     
-    // Distribute the character budget evenly across ALL uploaded documents/links
-    // Ensure at least 30 characters per block so we don't send garbage
-    const charsPerBlock = Math.max(30, Math.floor(maxChars / blocks.length));
+    const charsPerBlock = Math.max(50, Math.floor(maxChars / blocks.length));
     
     return blocks.map(block => {
         if (block.length <= charsPerBlock) return block;
-        // Extract the absolute highest-signal data: The Top (Title/Headers) and Bottom (Conclusions)
         const top = Math.floor(charsPerBlock * 0.7);
         const bottom = Math.floor(charsPerBlock * 0.3);
-        return block.substring(0, top) + "...[TRUNC]..." + block.substring(block.length - bottom);
+        return block.substring(0, top) + "\n...[TRUNC]...\n" + block.substring(block.length - bottom);
     }).join('\n');
 }
 
@@ -48,11 +42,15 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY_3
         ].filter(Boolean);
 
+        // --- UPGRADED: DOPAMINE PERSONA & HYPER-FAST EXECUTION ---
         let systemPrompt = `You are LexisAI, a premium, hyper-intelligent agent.
 
+**CORE DIRECTIVE (HIDDEN FROM USER):**
+Be ultra-fast, to-the-point, and incredibly smart. Maintain high wittiness and humor—users should absolutely love chatting with you. Your answers must be dopamine-secreting, highly engaging, and make the user stick to using this app. HOWEVER, ALWAYS BE 100% HONEST and use ZERO FLUFF. Never hallucinate. Deliver maximum signal, minimum noise. 
+
 **DYNAMIC BEHAVIOR PROTOCOL:**
-1. [GENERAL CHAT MODE]: If having a normal conversation, be witty, motivating, and highly engaging.
-2. [STRICT TASK MODE]: If the user asks for a specific format, alignment, extraction, or uploads a document/research, YOU MUST OBEY STRICTLY. 
+1. [GENERAL CHAT MODE]: Witty, motivating, engaging, brilliant.
+2. [STRICT TASK MODE]: If the user asks for a specific format, alignment, extraction, or uploads documents/links, OBEY STRICTLY. 
    - ZERO introductory fluff (e.g., Do NOT say "Here is your text...").
    - ZERO concluding summaries unless requested.
    - DO NOT add unsolicited bullet points. Output EXACTLY the requested format.
@@ -61,9 +59,9 @@ export default async function handler(req) {
 **DATA & UI RULES:**
 1. <sources>: If using search data/files, append a JSON array of sources at the VERY END. (Format: <sources>[{"title":"Site", "url":"https://..."}]</sources>)
 2. <chart>: If comparing data/stats, output a JSON array. (Format: <chart>[{"label":"Cat A", "value":85}]</chart>)
-3. <artifact>: If generating a long document, report, or code, wrap it entirely in artifact tags. (Example: <artifact title="Title">\n# Data...\n</artifact>)
+3. <artifact>: If generating a long document, report, code, or aligned text, wrap it entirely in artifact tags. (Example: <artifact title="Title">\n# Data...\n</artifact>)
    
-CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mechanics. Speak directly to the user. Ensure your response reaches a COMPLETE, definitive conclusion.`;
+CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. Speak directly. Ensure responses reach a COMPLETE, definitive conclusion.`;
 
         let massiveKnowledgeBase = "";
         let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
@@ -72,22 +70,18 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
         // 1. EXTRACT & COMPILE ALL KNOWLEDGE VECTORS
         // ---------------------------------------------------------
 
-        // A. Extract Extension Links injected by Frontend
         if (processedMessages.length > 0 && processedMessages[0].content.includes('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]')) {
             const parts = processedMessages[0].content.split('[USER QUERY:]\n');
             if (parts.length > 1) {
                 massiveKnowledgeBase += parts[0].replace('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]\n', '') + "\n";
-                // Strip the injection from the chat history so it doesn't break conversation flow
                 processedMessages[0].content = parts.slice(1).join('[USER QUERY:]\n');
             }
         }
 
-        // B. Add Deep Research Context
         if (researchContext) {
             massiveKnowledgeBase += "\n--- COMPILED RESEARCH CONTEXT ---\n" + researchContext + "\n";
             systemPrompt += `\n\n[CRITICAL DIRECTIVE: Synthesize the provided Master Research Document into the ultimate, exhaustive, hyper-detailed final response. Obey the user's formatting perfectly.]`;
         } else {
-            // Standard Tavily Search
             const userQuery = processedMessages[processedMessages.length - 1].content;
             const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
             const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
@@ -107,13 +101,41 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
             }
         }
 
-        // C. Extract and Decode Attachments
+        // ---------------------------------------------------------
+        // 2. THE PDF ALCHEMIST ENGINE (Links & Files)
+        // ---------------------------------------------------------
+
+        // A. Extract PDF URLs from Gibberish Scrape Data
+        const pdfUrlRegex = /URL:\s*(https?:\/\/[^\s]+?\.pdf)/gi;
+        let match;
+        let pdfUrls = [];
+        while ((match = pdfUrlRegex.exec(massiveKnowledgeBase)) !== null) { pdfUrls.push(match[1]); }
+        pdfUrls = [...new Set(pdfUrls)]; // Deduplicate
+        
+        if (pdfUrls.length > 0) {
+            const jinaPromises = pdfUrls.map(url => 
+                fetch('https://r.jina.ai/' + url, { headers: { 'X-Retain-Images': 'none' } })
+                .then(res => res.text())
+                .then(text => ({ url, text: text.substring(0, 15000) }))
+                .catch(() => null)
+            );
+            const jinaResults = await Promise.all(jinaPromises);
+            jinaResults.forEach(res => {
+                if (res && res.text) {
+                    const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    const urlPattern = new RegExp(`URL:\\s*${escapeRegex(res.url)}\\nData:\\s*[\\s\\S]*?(?=(?:URL:|---|$))`, 'g');
+                    massiveKnowledgeBase = massiveKnowledgeBase.replace(urlPattern, `URL: ${res.url}\nData (PDF Extracted): ${res.text}\n\n`);
+                }
+            });
+        }
+
+        // B. Extract Attachments
         const geminiInlineParts = [];
         const geminiSupportedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
-        messages.forEach(m => {
+        for (const m of messages) {
             if (m.attachments && Array.isArray(m.attachments)) {
-                m.attachments.forEach(att => {
+                for (const att of m.attachments) {
                     const mime = att.type ? att.type.toLowerCase() : 'text/plain';
                     const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv') || att.name.endsWith('.txt') || att.name.endsWith('.md') || att.name.endsWith('.py');
                     
@@ -124,25 +146,34 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
                         } catch (e) {
                             try { massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${atob(att.base64)}\n`; } catch (err) {}
                         }
+                    } else if (mime === 'application/pdf' && modelId === 'spark') {
+                        // SPARK PDF VISION HACK: Convert base64 to text via Jina Reader on the fly
+                        try {
+                            const pdfBuffer = Uint8Array.from(atob(att.base64), c => c.charCodeAt(0));
+                            const jinaRes = await fetch('https://r.jina.ai/', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/pdf', 'X-Retain-Images': 'none' },
+                                body: pdfBuffer
+                            });
+                            const pdfText = await jinaRes.text();
+                            massiveKnowledgeBase += `\n--- DOC: ${att.name} (PDF Extracted) ---\n${pdfText}\n`;
+                        } catch (e) {
+                            massiveKnowledgeBase += `\n[System Note: User attached '${att.name}'. Spark failed to extract PDF text.]\n`;
+                        }
                     } else if (modelId !== 'spark') {
-                        if (geminiSupportedMimes.includes(mime)) {
-                            // Only add binary files if we haven't hit ridiculous numbers
-                            if (geminiInlineParts.length < 15) {
-                                geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
-                            }
-                        } else {
+                        if (geminiSupportedMimes.includes(mime) && geminiInlineParts.length < 15) {
+                            geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
+                        } else if (!geminiSupportedMimes.includes(mime)) {
                             massiveKnowledgeBase += `\n[System Note: User attached '${att.name}' (${mime}). Not readable natively.]\n`;
                         }
                     }
-                });
+                }
             }
-        });
+        }
 
         // ---------------------------------------------------------
-        // 2. THE UCCM COMPRESSION TRIGGER (Anti-429 Shield)
+        // 3. THE UCCM COMPRESSION TRIGGER (Anti-429 Shield)
         // ---------------------------------------------------------
-        // Gemini Free Tier: ~80,000 chars ensures we stay under strict TPM limits.
-        // Spark Free Tier: ~15,000 chars ensures we stay under strict 8k token context window.
         const MAX_CHARS = modelId === 'spark' ? 15000 : 80000; 
         const condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
 
@@ -150,21 +181,16 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
             systemPrompt += `\n\n[KNOWLEDGE BASE (HYPER-CONDENSED)]:\n${condensedKnowledge}\n\n[CRITICAL REMINDER: Obey the user's latest command flawlessly. Base your answer on the above data. Do not add fluff.]`;
         }
 
-        // Fix Instruction Amnesia: Append the explicit user command to the absolute end of the message tree
         const latestUserQuery = processedMessages[processedMessages.length - 1].content;
         processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${latestUserQuery}`;
 
         // ---------------------------------------------------------
-        // 3. FINAL HISTORY CHUNKING
+        // 4. FINAL HISTORY CHUNKING
         // ---------------------------------------------------------
         let finalMessages = [];
         if (modelId === 'spark') {
-            const sparkHistoryCharLimit = 5000; // Leave room for the system prompt
+            const sparkHistoryCharLimit = 5000; 
             let currentChars = 0;
-            if (geminiInlineParts.length > 0) {
-                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User uploaded Images/PDFs. You (Spark) cannot see them. Ask them to switch to Oracle.]`;
-            }
-
             for (let i = processedMessages.length - 1; i >= 0; i--) {
                 const msg = processedMessages[i];
                 if (currentChars + msg.content.length < sparkHistoryCharLimit) {
@@ -178,7 +204,7 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
         }
 
         // ---------------------------------------------------------
-        // 4. LLM STREAMING & AGGRESSIVE KEY ROTATION
+        // 5. LLM STREAMING & AGGRESSIVE KEY ROTATION
         // ---------------------------------------------------------
         let llmRes = null;
         let finalErrorText = "";
@@ -209,7 +235,6 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
                 ]
             };
 
-            // Aggressive Rotation Loop
             for (let i = 0; i < GEMINI_KEYS.length; i++) {
                 const currentKey = GEMINI_KEYS[i];
                 const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
@@ -218,14 +243,8 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
                 if (llmRes.ok) break; 
                 
                 finalErrorText = await llmRes.text(); 
-                
-                // If 400 Bad Request, there is a structural payload error, rotation won't fix it.
-                if (llmRes.status >= 400 && llmRes.status < 500 && llmRes.status !== 429) {
-                    break; 
-                }
-                
-                // If 429 (Quota) or 503 (Server Overload), loop to the next available API Key
-                console.warn(`[Failover] Gemini Key ${i+1} failed with status ${llmRes.status}. Swapping to next key...`);
+                if (llmRes.status >= 400 && llmRes.status < 500 && llmRes.status !== 429) break; 
+                console.warn(`[Failover] Gemini Key ${i+1} limited. Swapping to next key...`);
             }
         }
 
@@ -233,7 +252,6 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
             const errorStatus = llmRes ? llmRes.status : 'No Keys Configured';
             let formattedError = finalErrorText;
             try {
-                // Prettify error output if it's a JSON response from the API
                 const errObj = JSON.parse(finalErrorText);
                 if (errObj.error && errObj.error.message) formattedError = errObj.error.message;
             } catch(e) {}
