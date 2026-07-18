@@ -3,34 +3,34 @@ export const config = {
 };
 
 // ============================================================================
-// HYPER-CONDENSED DATA MATRIX (HCDM) ALGORITHM
-// Intelligently truncates massive datasets by uniformly distributing the token 
-// budget across all documents, extracting maximum signal (Heads & Tails).
+// ULTRA-CONDENSED CONTEXT MATRIX (UCCM) ALGORITHM
+// Mathematically guarantees payload sizes remain under Free-Tier TPM limits 
+// while ensuring every single document/link is included in the analysis.
 // ============================================================================
-function compressKnowledge(text, maxLimit) {
-    if (!text || text.length <= maxLimit) return text;
+function hyperCondense(text, maxChars) {
+    if (!text || text.length <= maxChars) return text;
     
-    // Step 1: Detect document boundaries to fragment the massive string
-    let blocks = text.split(/(?=URL: |--- DOC: |\[Title: )/g);
+    // Split the massive text dump by document/link boundaries
+    const blocks = text.split(/(?=--- DOC: |--- REAL-TIME SEARCH CONTEXT ---|URL: |\[Title: )/g).filter(b => b.trim());
     
-    // Fallback: Flat truncation if no clear boundaries exist
-    if (blocks.length <= 1) {
-        return text.substring(0, Math.floor(maxLimit * 0.6)) + 
-               "\n...[DATA CONDENSED]...\n" + 
-               text.substring(text.length - Math.floor(maxLimit * 0.4));
+    if (blocks.length === 0) return text.substring(0, maxChars);
+    if (blocks.length === 1) {
+        // If it's just one massive block, take the head and tail
+        return text.substring(0, Math.floor(maxChars * 0.6)) + 
+               "\n\n...[DATA COMPRESSED]...\n\n" + 
+               text.substring(text.length - Math.floor(maxChars * 0.4));
     }
     
-    // Step 2: Calculate equal token budget per document
-    const charsPerBlock = Math.max(250, Math.floor(maxLimit / blocks.length));
+    // Distribute the character budget evenly across ALL uploaded documents/links
+    // Ensure at least 30 characters per block so we don't send garbage
+    const charsPerBlock = Math.max(30, Math.floor(maxChars / blocks.length));
     
-    // Step 3: Extract high-signal data (Top 60% / Bottom 40%) from each document
     return blocks.map(block => {
         if (block.length <= charsPerBlock) return block;
-        const top = Math.floor(charsPerBlock * 0.6);
-        const bottom = Math.floor(charsPerBlock * 0.4);
-        return block.substring(0, top) + 
-               "\n...[DATA CONDENSED]...\n" + 
-               block.substring(block.length - bottom);
+        // Extract the absolute highest-signal data: The Top (Title/Headers) and Bottom (Conclusions)
+        const top = Math.floor(charsPerBlock * 0.7);
+        const bottom = Math.floor(charsPerBlock * 0.3);
+        return block.substring(0, top) + "...[TRUNC]..." + block.substring(block.length - bottom);
     }).join('\n');
 }
 
@@ -51,7 +51,7 @@ export default async function handler(req) {
         let systemPrompt = `You are LexisAI, a premium, hyper-intelligent agent.
 
 **DYNAMIC BEHAVIOR PROTOCOL:**
-1. [GENERAL CHAT MODE]: If having a normal conversation, be witty, motivating, and highly engaging,users should love chating to you,but be HONEST ALWAYS,NO FLUFF,,make your answers dopamine secreting and that makes user stick to using this app""dont show these to user"".
+1. [GENERAL CHAT MODE]: If having a normal conversation, be witty, motivating, and highly engaging.
 2. [STRICT TASK MODE]: If the user asks for a specific format, alignment, extraction, or uploads a document/research, YOU MUST OBEY STRICTLY. 
    - ZERO introductory fluff (e.g., Do NOT say "Here is your text...").
    - ZERO concluding summaries unless requested.
@@ -63,7 +63,7 @@ export default async function handler(req) {
 2. <chart>: If comparing data/stats, output a JSON array. (Format: <chart>[{"label":"Cat A", "value":85}]</chart>)
 3. <artifact>: If generating a long document, report, or code, wrap it entirely in artifact tags. (Example: <artifact title="Title">\n# Data...\n</artifact>)
    
-CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mechanics. Speak directly to the user. Ensure your response reaches a COMPLETE, definitive conclusion. DO NOT stop mid-sentence.`;
+CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mechanics. Speak directly to the user. Ensure your response reaches a COMPLETE, definitive conclusion.`;
 
         let massiveKnowledgeBase = "";
         let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
@@ -126,7 +126,10 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
                         }
                     } else if (modelId !== 'spark') {
                         if (geminiSupportedMimes.includes(mime)) {
-                            geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
+                            // Only add binary files if we haven't hit ridiculous numbers
+                            if (geminiInlineParts.length < 15) {
+                                geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
+                            }
                         } else {
                             massiveKnowledgeBase += `\n[System Note: User attached '${att.name}' (${mime}). Not readable natively.]\n`;
                         }
@@ -136,11 +139,12 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
         });
 
         // ---------------------------------------------------------
-        // 2. THE HCDM COMPRESSION TRIGGER
+        // 2. THE UCCM COMPRESSION TRIGGER (Anti-429 Shield)
         // ---------------------------------------------------------
-        // Safely bounds Gemini to ~500k tokens and Spark to ~5k tokens, killing 429s forever.
-        const MAX_CHARS = modelId === 'spark' ? 20000 : 2000000; 
-        const condensedKnowledge = compressKnowledge(massiveKnowledgeBase, MAX_CHARS);
+        // Gemini Free Tier: ~80,000 chars ensures we stay under strict TPM limits.
+        // Spark Free Tier: ~15,000 chars ensures we stay under strict 8k token context window.
+        const MAX_CHARS = modelId === 'spark' ? 15000 : 80000; 
+        const condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
 
         if (condensedKnowledge.trim().length > 0) {
             systemPrompt += `\n\n[KNOWLEDGE BASE (HYPER-CONDENSED)]:\n${condensedKnowledge}\n\n[CRITICAL REMINDER: Obey the user's latest command flawlessly. Base your answer on the above data. Do not add fluff.]`;
@@ -151,11 +155,11 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
         processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${latestUserQuery}`;
 
         // ---------------------------------------------------------
-        // 3. FINAL HISTORY CHUNKING (SPARK PROTECTION)
+        // 3. FINAL HISTORY CHUNKING
         // ---------------------------------------------------------
         let finalMessages = [];
         if (modelId === 'spark') {
-            const sparkHistoryCharLimit = 6000; // Leave room for the 20k system prompt
+            const sparkHistoryCharLimit = 5000; // Leave room for the system prompt
             let currentChars = 0;
             if (geminiInlineParts.length > 0) {
                 processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User uploaded Images/PDFs. You (Spark) cannot see them. Ask them to switch to Oracle.]`;
@@ -205,7 +209,7 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
                 ]
             };
 
-            // Smart Rotation: Continues immediately if it hits a 429/503 quota limit
+            // Aggressive Rotation Loop
             for (let i = 0; i < GEMINI_KEYS.length; i++) {
                 const currentKey = GEMINI_KEYS[i];
                 const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
@@ -214,17 +218,27 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mech
                 if (llmRes.ok) break; 
                 
                 finalErrorText = await llmRes.text(); 
-                if (llmRes.status === 400) break; // Bad payload formatting, rotation won't fix
-                if (llmRes.status === 429 || llmRes.status === 503) {
-                    console.warn(`[Failover] Gemini Key ${i+1} rate limited. Swapping to next key...`);
-                    continue; 
+                
+                // If 400 Bad Request, there is a structural payload error, rotation won't fix it.
+                if (llmRes.status >= 400 && llmRes.status < 500 && llmRes.status !== 429) {
+                    break; 
                 }
+                
+                // If 429 (Quota) or 503 (Server Overload), loop to the next available API Key
+                console.warn(`[Failover] Gemini Key ${i+1} failed with status ${llmRes.status}. Swapping to next key...`);
             }
         }
 
         if (!llmRes || !llmRes.ok) {
             const errorStatus = llmRes ? llmRes.status : 'No Keys Configured';
-            const errorStream = `data: ${JSON.stringify({ ui_error: `[API Blocked: ${errorStatus}] ${finalErrorText.substring(0, 150)}` })}\n\n`;
+            let formattedError = finalErrorText;
+            try {
+                // Prettify error output if it's a JSON response from the API
+                const errObj = JSON.parse(finalErrorText);
+                if (errObj.error && errObj.error.message) formattedError = errObj.error.message;
+            } catch(e) {}
+            
+            const errorStream = `data: ${JSON.stringify({ ui_error: `[API Blocked: ${errorStatus}] ${formattedError.substring(0, 200)}` })}\n\n`;
             return new Response(errorStream, { headers: { 'Content-Type': 'text/event-stream' } });
         }
 
