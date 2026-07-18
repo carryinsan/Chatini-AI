@@ -25,10 +25,16 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY_3
         ].filter(Boolean);
 
-        let systemPrompt = `You are Chatini, a premium, hyper-intelligent conversational AI.
-**IDENTITY & TONE:**
-- Strictly "Chatini". Witty, conversational, motivating, and highly engaging. 
-- Use Markdown beautifully.
+        // --- UPGRADED: TASK OBEDIENCE PROTOCOL ---
+        let systemPrompt = `You are Chatini, a premium, hyper-intelligent AI.
+
+**DYNAMIC BEHAVIOR PROTOCOL:**
+1. [GENERAL CHAT MODE]: If the user is having a normal conversation, be witty, motivating, and highly engaging.
+2. [STRICT TASK MODE]: If the user uploads a document, asks to align text, extract data, format a file, or write code, YOU MUST OBEY STRICTLY. Drop the conversational persona completely. 
+   - ZERO introductory fluff (e.g., Do NOT say "Here is your text..." or "Sure, I can help!").
+   - ZERO concluding summaries unless requested.
+   - Do NOT add unsolicited bullet points or extra information. 
+   - Output EXACTLY and ONLY what is asked,what is the intent and the final desired output format that user asked or is best for it.
 
 **DATA & UI RULES:**
 1. <sources>: If you use search data OR analyze uploaded files, append a JSON array of sources at the VERY END. (e.g., <sources>[{"title":"Site", "url":"https://..."}]</sources>)
@@ -43,11 +49,9 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         // RESEARCH CONTEXT & EXPANSION TRIGGER
         // ---------------------------------------------------------
         if (researchContext) {
-            // Pass 2 Expansion Triggered
             systemPrompt += `\n\n[CRITICAL DIRECTIVE: You are executing PASS 2 of an autonomous research loop. I have provided a massive MASTER DRAFT generated in Pass 1. You MUST expand this draft by 3x to 4x its length. Make it the absolute ultimate, exhaustive, hyper-detailed final document. You MUST wrap your entire final document inside an <artifact title="...">...</artifact> tag.]`;
             contextData = `\n\n${researchContext}`;
         } else {
-            // Standard search for Flux if Deep Research is off
             const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
             const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
 
@@ -102,7 +106,7 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         });
 
         if (textDocumentContext) {
-            systemPrompt += `\n\n[KNOWLEDGE BASE & UPLOADED DOCUMENTS:]\n${textDocumentContext}`;
+            systemPrompt += `\n\n[KNOWLEDGE BASE & UPLOADED DOCUMENTS:]\n${textDocumentContext}\n\n[CRITICAL REMINDER: Read the user's latest message carefully. If they asked you to format/align these documents, output ONLY the formatted text. NO extra bullet points. NO conversational filler.]`;
         }
 
         // ---------------------------------------------------------
@@ -151,7 +155,7 @@ CRITICAL: YOU HAVE ACCESS TO UP TO 200 MESSAGES OF HISTORY AND KNOWLEDGE EXTENSI
         if (modelId === 'spark') {
             const streamUrl = 'https://api.groq.com/openai/v1/chat/completions';
             const headers = { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' };
-            const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...finalMessages], stream: true, temperature: 0.6 };
+            const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...finalMessages], stream: true, temperature: 0.2 }; // Temp lowered for stricter compliance
             llmRes = await fetch(streamUrl, { method: 'POST', headers, body: JSON.stringify(payload) });
             if (!llmRes.ok) finalErrorText = await llmRes.text();
             
