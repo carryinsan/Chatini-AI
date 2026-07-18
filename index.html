@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LexisAI Workspace</title>
+    <title>LexisAI</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -42,7 +42,7 @@
         .katex { font-size: 1.1em; }
     </style>
 </head>
-<body class="bg-[#050505] text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30 relative">
+<body class="bg-background text-white font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-cyan-500/30 relative">
 
     <div id="toast" class="fixed top-5 left-1/2 transform -translate-x-1/2 bg-cyan-500 text-black px-6 py-2.5 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300 opacity-0 -translate-y-10 z-[80] pointer-events-none flex items-center gap-2">
         <i class="ph-bold ph-check"></i> <span id="toast-msg">Copied!</span>
@@ -75,8 +75,11 @@
                 <div><label class="text-xs text-gray-400 mb-2 block uppercase tracking-wider font-semibold">Extension Name</label><input type="text" id="ext-name" placeholder="e.g., Q3 Financial Reports" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500"></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
-                        <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Public Links / YouTube</span> <span class="text-cyan-400 text-[10px]">Max 200</span></label>
-                        <div class="flex gap-2 mb-3"><input type="url" id="ext-link-input" placeholder="https://..." class="flex-1 bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"><button onclick="addExtLink()" id="ext-link-btn" class="bg-cyan-500/20 text-cyan-400 px-3 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center justify-center min-w-[40px]"><i class="ph-bold ph-plus"></i></button></div>
+                        <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Bulk URLs / YouTube</span> <span class="text-cyan-400 text-[10px]">Max 200</span></label>
+                        <div class="flex flex-col gap-2 mb-3">
+                            <textarea id="ext-link-input" rows="3" placeholder="Paste multiple links separated by commas or spaces..." class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-500 resize-y"></textarea>
+                            <button onclick="addExtLink()" id="ext-link-btn" class="w-full bg-cyan-500/20 text-cyan-400 py-2 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center justify-center font-bold text-sm"><i class="ph-bold ph-plus mr-1"></i> Extract & Load Links</button>
+                        </div>
                         <div id="ext-link-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1"></div>
                     </div>
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
@@ -273,23 +276,18 @@
             if (!text) return "";
             let processedText = text;
             
-            // Protect and pre-render Block Math ($$ or \[ \])
             processedText = processedText.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, p1, math) => {
-                try { return katex.renderToString(math, { displayMode: true, throwOnError: false }); } 
-                catch(e) { return match; }
+                try { return katex.renderToString(math, { displayMode: true, throwOnError: false }); } catch(e) { return match; }
             });
             
-            // Protect and pre-render Inline Math ($ or \( \)) 
             processedText = processedText.replace(/\\\(([\s\S]*?)\\\)/g, (match, math) => {
-                try { return katex.renderToString(math, { displayMode: false, throwOnError: false }); } 
-                catch(e) { return match; }
+                try { return katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
             });
-            processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
-                try { return prefix + katex.renderToString(math, { displayMode: false, throwOnError: false }); } 
-                catch(e) { return match; }
+            
+            processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\/g, (match, prefix, math) => {
+                try { return prefix + katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
             });
 
-            // Parse Markdown safely, ignoring the pre-rendered KaTeX HTML
             return marked.parse(processedText);
         }
 
@@ -330,34 +328,61 @@
         async function deleteExt(id) { if(confirm("Delete Extension?")) { await DB.delete(id); renderExtList(); if (currentChatExtId === id) { currentChatExtId = null; saveCurrentChat(); } refreshExtSelectors(); } }
         function renderExtForm() { document.getElementById('ext-form-area').classList.remove('hidden'); document.getElementById('ext-form-area').classList.add('flex'); document.getElementById('ext-name').value = extForm.name; renderExtLinks(); renderExtFiles(); }
         
+        // --- BULK URL PARSER ENGINE ---
         async function addExtLink() {
-            if (extForm.links.length >= 200) return alert("Max 200 links allowed.");
-            const input = document.getElementById('ext-link-input'); const url = input.value.trim(); if (!url) return;
-            const btn = document.getElementById('ext-link-btn'); btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
+            const input = document.getElementById('ext-link-input'); 
+            const rawText = input.value.trim(); 
+            if (!rawText) return;
+
+            const urlRegex = /(https?:\/\/[^\s,]+)/g;
+            let matchedUrls = rawText.match(urlRegex) || [];
+            let urls = [...new Set(matchedUrls)]; 
+
+            if (urls.length === 0) return alert("No valid URLs found. Please ensure they start with http:// or https://");
             
-            const isYT = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
-            try { 
-                if (isYT) {
-                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-                    const res = await fetch(proxyUrl); const data = await res.json();
-                    const html = data.contents; const match = html.match(/"captionTracks":\[\{"baseUrl":"([^"]+)"/);
-                    if (match) {
-                        const capRes = await fetch(match[1].replace(/\\u0026/g, '&')); const capXml = await capRes.text();
-                        extForm.links.push({ url, status: 'YT Loaded ✅', text: capXml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').substring(0, 30000) });
-                    } else extForm.links.push({ url, status: 'No Captions ⚠️', text: "No captions available." });
-                } else {
-                    const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) }); 
-                    const data = await res.json();
-                    if (data.success) { extForm.links.push({ url, status: 'Loaded ✅', text: data.text }); } 
-                    else { extForm.links.push({ url, status: 'Failed ❌', text: '' }); alert(`Scrape Failed: ${data.error}`); }
-                }
-                input.value = ''; 
-            } catch (e) { extForm.links.push({ url, status: 'Network Err ❌', text: '' }); }
-            btn.innerHTML = `<i class="ph-bold ph-plus"></i>`; btn.disabled = false; renderExtLinks();
+            const remainingSpace = 200 - extForm.links.length;
+            if (urls.length > remainingSpace) {
+                alert(`You pasted ${urls.length} links, but only have space for ${remainingSpace}. Truncating the list.`);
+                urls = urls.slice(0, remainingSpace);
+            }
+
+            const btn = document.getElementById('ext-link-btn'); 
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin mr-1"></i> Processing...`; 
+            btn.disabled = true;
+            
+            for (const url of urls) {
+                const tempIndex = extForm.links.length;
+                extForm.links.push({ url, status: '⏳ Loading...', text: '' });
+                renderExtLinks();
+                
+                const isYT = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
+                try { 
+                    if (isYT) {
+                        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                        const res = await fetch(proxyUrl); const data = await res.json();
+                        const html = data.contents; const match = html.match(/"captionTracks":\[\{"baseUrl":"([^"]+)"/);
+                        if (match) {
+                            const capRes = await fetch(match[1].replace(/\\u0026/g, '&')); const capXml = await capRes.text();
+                            const transcript = capXml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+                            extForm.links[tempIndex] = { url, status: 'YT Loaded ✅', text: transcript.substring(0, 150000) };
+                        } else extForm.links[tempIndex] = { url, status: 'No Captions ⚠️', text: "No captions available." };
+                    } else {
+                        const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) }); 
+                        const data = await res.json();
+                        if (data.success) { extForm.links[tempIndex] = { url, status: 'Loaded ✅', text: data.text }; } 
+                        else { extForm.links[tempIndex] = { url, status: 'Failed ❌', text: '' }; }
+                    }
+                } catch (e) { extForm.links[tempIndex] = { url, status: 'Network Err ❌', text: '' }; }
+                renderExtLinks();
+            }
+            
+            input.value = ''; 
+            btn.innerHTML = `<i class="ph-bold ph-plus mr-1"></i> Extract & Load Links`; 
+            btn.disabled = false;
         }
 
         function removeExtLink(index) { extForm.links.splice(index, 1); renderExtLinks(); }
-        function renderExtLinks() { document.getElementById('ext-link-list').innerHTML = extForm.links.map((l, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span><span class="${l.status.includes('✅') ? 'text-emerald-400' : 'text-red-400'} whitespace-nowrap">${l.status}</span><button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
+        function renderExtLinks() { document.getElementById('ext-link-list').innerHTML = extForm.links.map((l, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span><span class="${l.status.includes('✅') ? 'text-emerald-400' : (l.status.includes('⏳') ? 'text-amber-400' : 'text-red-400')} whitespace-nowrap">${l.status}</span><button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
 
         document.getElementById('ext-file-input').addEventListener('change', (e) => {
             const files = Array.from(e.target.files); if (extForm.files.length + files.length > 20) return alert("Max 20 docs.");
@@ -595,11 +620,10 @@
                 const reader = response.body.getReader(); const decoder = new TextDecoder();
                 let fullResponse = ""; let buffer = "";
                 
-                // WATCHDOG TIMER FOR ARTIFACTS
                 let streamTimeout;
                 const startWatchdog = () => {
                     clearTimeout(streamTimeout);
-                    streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000); // Wait max 20s if frozen
+                    streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000); 
                 };
                 
                 try {
