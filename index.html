@@ -36,8 +36,6 @@
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
         .terminal-text { font-family: 'Courier New', Courier, monospace; }
         #workspace-canvas { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease; }
-        
-        /* Math Overflow Protection for Mobile */
         .katex-display { overflow-x: auto; overflow-y: hidden; padding-bottom: 0.5rem; margin: 1em 0; }
         .katex { font-size: 1.1em; }
     </style>
@@ -53,7 +51,7 @@
         <div class="bg-[#0a0a0a] border border-white/10 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
             <h3 class="text-white font-bold mb-5 flex items-center gap-2 text-lg"><i class="ph-fill ph-file-pdf text-red-400 text-xl"></i> Export Response</h3>
             <div class="space-y-5">
-                <div><label class="text-xs text-gray-400 mb-1.5 block uppercase tracking-wider font-semibold">File Name</label><input type="text" id="pdf-filename" value="Chatini_Analysis" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"></div>
+                <div><label class="text-xs text-gray-400 mb-1.5 block uppercase tracking-wider font-semibold">File Name</label><input type="text" id="pdf-filename" value="LexisAI_Analysis" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-cyan-500"></div>
                 <label class="flex items-center gap-3 cursor-pointer p-3 bg-white/5 rounded-xl border border-white/5 hover:bg-white/10"><input type="checkbox" id="pdf-include-sources" checked class="w-4 h-4 rounded bg-black border-white/20 text-cyan-500 accent-cyan-500"><span class="text-sm text-gray-300 font-medium">Include Sources, Charts & Artifacts</span></label>
                 <div class="flex gap-3 pt-2"><button onclick="closePdfModal()" class="flex-1 py-3 rounded-xl text-sm font-medium text-gray-400 hover:bg-white/5">Cancel</button><button onclick="generatePdf()" id="pdf-dl-btn" class="flex-1 py-3 rounded-xl text-sm font-bold bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-lg flex items-center justify-center gap-2"><i class="ph-bold ph-download-simple"></i> Download</button></div>
             </div>
@@ -75,7 +73,7 @@
                 <div><label class="text-xs text-gray-400 mb-2 block uppercase tracking-wider font-semibold">Extension Name</label><input type="text" id="ext-name" placeholder="e.g., Q3 Financial Reports" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-purple-500"></div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
-                        <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Bulk URLs / YouTube</span> <span class="text-cyan-400 text-[10px]">Max 200</span></label>
+                        <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Public Links / YouTube</span> <span class="text-cyan-400 text-[10px]">Max 200</span></label>
                         <div class="flex flex-col gap-2 mb-3">
                             <textarea id="ext-link-input" rows="3" placeholder="Paste multiple links separated by commas or spaces..." class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-500 resize-y"></textarea>
                             <button onclick="addExtLink()" id="ext-link-btn" class="w-full bg-cyan-500/20 text-cyan-400 py-2 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center justify-center font-bold text-sm"><i class="ph-bold ph-plus mr-1"></i> Extract & Load Links</button>
@@ -122,7 +120,7 @@
                     <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.3)]">
                         <i class="ph-fill ph-hexagon text-white text-base sm:text-lg"></i>
                     </div>
-                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white/90">Chatini</h1>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white/90">LexisAI</h1>
                 </div>
             </div>
         </div>
@@ -176,7 +174,7 @@
                 <button onclick="document.getElementById('file-upload').click()" class="p-2.5 sm:p-3 m-1 rounded-xl text-gray-400 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0" title="Attach Files (For current message)">
                     <i class="ph-bold ph-paperclip text-lg sm:text-xl"></i>
                 </button>
-                <textarea id="chat-input" placeholder="Message Chatini..." class="flex-1 max-h-[150px] sm:max-h-48 min-h-[40px] sm:min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-2.5 sm:py-3 px-1 sm:px-2 text-base leading-relaxed" rows="1"></textarea>
+                <textarea id="chat-input" placeholder="Message LexisAI..." class="flex-1 max-h-[150px] sm:max-h-48 min-h-[40px] sm:min-h-[44px] bg-transparent text-white placeholder-gray-600 resize-none outline-none py-2.5 sm:py-3 px-1 sm:px-2 text-base leading-relaxed" rows="1"></textarea>
                 <button id="send-btn" class="p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0">
                     <i id="send-icon" class="ph-bold ph-paper-plane-right text-lg sm:text-xl transition-transform"></i>
                 </button>
@@ -284,7 +282,7 @@
                 try { return katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
             });
             
-            processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\/g, (match, prefix, math) => {
+            processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
                 try { return prefix + katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
             });
 
@@ -328,33 +326,23 @@
         async function deleteExt(id) { if(confirm("Delete Extension?")) { await DB.delete(id); renderExtList(); if (currentChatExtId === id) { currentChatExtId = null; saveCurrentChat(); } refreshExtSelectors(); } }
         function renderExtForm() { document.getElementById('ext-form-area').classList.remove('hidden'); document.getElementById('ext-form-area').classList.add('flex'); document.getElementById('ext-name').value = extForm.name; renderExtLinks(); renderExtFiles(); }
         
-        // --- BULK URL PARSER ENGINE ---
+        // BULK URL PARSER ENGINE
         async function addExtLink() {
-            const input = document.getElementById('ext-link-input'); 
-            const rawText = input.value.trim(); 
-            if (!rawText) return;
+            const input = document.getElementById('ext-link-input');
+            const rawValue = input.value.trim();
+            if (!rawValue) return;
 
-            const urlRegex = /(https?:\/\/[^\s,]+)/g;
-            let matchedUrls = rawText.match(urlRegex) || [];
-            let urls = [...new Set(matchedUrls)]; 
-
-            if (urls.length === 0) return alert("No valid URLs found. Please ensure they start with http:// or https://");
-            
-            const remainingSpace = 200 - extForm.links.length;
-            if (urls.length > remainingSpace) {
-                alert(`You pasted ${urls.length} links, but only have space for ${remainingSpace}. Truncating the list.`);
-                urls = urls.slice(0, remainingSpace);
+            const urls = rawValue.split(',').map(u => u.trim()).filter(u => u);
+            if (extForm.links.length + urls.length > 200) {
+                return alert(`Adding these would exceed the 200 link limit. You can add ${200 - extForm.links.length} more.`);
             }
 
             const btn = document.getElementById('ext-link-btn'); 
-            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin mr-1"></i> Processing...`; 
+            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; 
             btn.disabled = true;
-            
+            input.value = ''; 
+
             for (const url of urls) {
-                const tempIndex = extForm.links.length;
-                extForm.links.push({ url, status: '⏳ Loading...', text: '' });
-                renderExtLinks();
-                
                 const isYT = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
                 try { 
                     if (isYT) {
@@ -364,25 +352,22 @@
                         if (match) {
                             const capRes = await fetch(match[1].replace(/\\u0026/g, '&')); const capXml = await capRes.text();
                             const transcript = capXml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
-                            extForm.links[tempIndex] = { url, status: 'YT Loaded ✅', text: transcript.substring(0, 150000) };
-                        } else extForm.links[tempIndex] = { url, status: 'No Captions ⚠️', text: "No captions available." };
+                            extForm.links.push({ url, status: 'YT Loaded ✅', text: transcript.substring(0, 50000) });
+                        } else extForm.links.push({ url, status: 'No Captions ⚠️', text: "No captions available." });
                     } else {
                         const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) }); 
                         const data = await res.json();
-                        if (data.success) { extForm.links[tempIndex] = { url, status: 'Loaded ✅', text: data.text }; } 
-                        else { extForm.links[tempIndex] = { url, status: 'Failed ❌', text: '' }; }
+                        if (data.success) { extForm.links.push({ url, status: 'Loaded ✅', text: data.text }); } 
+                        else { extForm.links.push({ url, status: 'Failed ❌', text: '' }); }
                     }
-                } catch (e) { extForm.links[tempIndex] = { url, status: 'Network Err ❌', text: '' }; }
+                } catch (e) { extForm.links.push({ url, status: 'Network Err ❌', text: '' }); }
                 renderExtLinks();
             }
-            
-            input.value = ''; 
-            btn.innerHTML = `<i class="ph-bold ph-plus mr-1"></i> Extract & Load Links`; 
-            btn.disabled = false;
+            btn.innerHTML = `<i class="ph-bold ph-plus"></i>`; btn.disabled = false;
         }
 
         function removeExtLink(index) { extForm.links.splice(index, 1); renderExtLinks(); }
-        function renderExtLinks() { document.getElementById('ext-link-list').innerHTML = extForm.links.map((l, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span><span class="${l.status.includes('✅') ? 'text-emerald-400' : (l.status.includes('⏳') ? 'text-amber-400' : 'text-red-400')} whitespace-nowrap">${l.status}</span><button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
+        function renderExtLinks() { document.getElementById('ext-link-list').innerHTML = extForm.links.map((l, i) => `<div class="flex justify-between items-center bg-black/50 px-3 py-2 rounded text-[10px] border border-white/5"><span class="truncate flex-1 text-gray-300 pr-2">${l.url}</span><span class="${l.status.includes('✅') ? 'text-emerald-400' : 'text-red-400'} whitespace-nowrap">${l.status}</span><button onclick="removeExtLink(${i})" class="ml-2 text-gray-500 hover:text-white"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
 
         document.getElementById('ext-file-input').addEventListener('change', (e) => {
             const files = Array.from(e.target.files); if (extForm.files.length + files.length > 20) return alert("Max 20 docs.");
@@ -402,7 +387,7 @@
         
         async function generatePdf() {
             if (!currentPdfMsgId) return; const btn = document.getElementById('pdf-dl-btn'); const origHtml = btn.innerHTML; btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true;
-            const filename = document.getElementById('pdf-filename').value.trim() || 'Chatini_Analysis'; const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId); if (!wrapper) { closePdfModal(); return; }
+            const filename = document.getElementById('pdf-filename').value.trim() || 'LexisAI_Analysis'; const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId); if (!wrapper) { closePdfModal(); return; }
             
             const clone = wrapper.querySelector('.msg-content').cloneNode(true); 
             const actionBar = clone.querySelector('.action-bar'); if (actionBar) actionBar.remove(); 
@@ -423,7 +408,7 @@
             }
 
             clone.style.padding = '20px'; clone.style.background = '#0a0a0a'; clone.style.color = '#e5e7eb'; clone.style.fontFamily = 'system-ui, sans-serif'; 
-            clone.prepend(Object.assign(document.createElement('div'), {innerHTML:`<h2 style="color:#22d3ee; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">Chatini Premium Analysis</h2>`}));
+            clone.prepend(Object.assign(document.createElement('div'), {innerHTML:`<h2 style="color:#22d3ee; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">LexisAI Premium Analysis</h2>`}));
             try { await html2pdf().set({ margin:15, filename:`${filename}.pdf`, html2canvas:{scale:2, backgroundColor:'#0a0a0a'}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'} }).from(clone).save(); showToast("Downloaded!"); } catch (e) { showToast("Failed"); } btn.innerHTML = origHtml; btn.disabled = false; closePdfModal();
         }
 
@@ -462,7 +447,7 @@
         function updateUIState() {
             renderModelSelector(); const model = CONFIG.models[activeModelId];
             els.inputGlow.className = `absolute -inset-0.5 rounded-2xl sm:rounded-3xl blur-md opacity-30 transition duration-1000 ${model.glow}`;
-            els.input.placeholder = `Message Chatini (${model.name})...`;
+            els.input.placeholder = `Message LexisAI (${model.name})...`;
             if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white text-black hover:scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)] flex-shrink-0'; els.sendIcon.classList.add('translate-x-0.5', '-translate-y-0.5'); } 
             else { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0'; els.sendIcon.classList.remove('translate-x-0.5', '-translate-y-0.5'); }
         }
@@ -471,7 +456,6 @@
         function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
 
-            // Auto-complete unclosed artifact tags if the stream was forcefully halted
             if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) {
                 markdownContent += '\n</artifact>';
             }
@@ -519,7 +503,7 @@
                 return '';
             });
 
-            const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? `<div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3"><button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-copy text-sm"></i> Copy</button><button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-download-simple text-sm"></i> Save PDF</button><span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50"><i class="ph-bold ph-check-circle"></i> Chatini</span></div>` : '';
+            const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? `<div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3"><button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-copy text-sm"></i> Copy</button><button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-download-simple text-sm"></i> Save PDF</button><span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50"><i class="ph-bold ph-check-circle"></i> LexisAI</span></div>` : '';
             return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${renderMathAndMarkdown(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
         }
 
@@ -577,13 +561,13 @@
                                     const dataStr = line.slice(6).trim(); if (!dataStr) continue;
                                     try {
                                         const data = JSON.parse(dataStr);
-                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
+                                        if (data.log) { logContainer.innerHTML += `<div>&gt; ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
                                         if (data.thought) {
                                             if (!thoughtBox) { logContainer.innerHTML += `<div class="mt-2 p-2 bg-black/80 border border-white/5 rounded text-[10px] text-gray-500 h-24 overflow-y-auto no-scrollbar" id="research-thought-box"></div>`; thoughtBox = document.getElementById('research-thought-box'); }
                                             thoughtBox.innerHTML += data.thought.replace(/\n/g, '<br>'); thoughtBox.scrollTop = thoughtBox.scrollHeight;
                                         }
-                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Pass 1 Draft Complete. Executing Core Pass 2...</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; break; }
-                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
+                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">&gt; Pass 1 Draft Complete. Executing Core Pass 2...</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; break; }
+                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">&gt; Error: ${data.error}</div>`; break; }
                                     } catch (e) { }
                                 }
                             }
@@ -591,13 +575,13 @@
                         if (done) break;
                     }
                     await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
-                } catch (err) { logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
+                } catch (err) { logContainer.innerHTML += `<div class="text-red-400">&gt; Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
             }
 
             if (!isDeepResearchOn) {
                 const currentModel = CONFIG.models[activeModelId];
                 els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
-                els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension..." : "Chatini is analyzing...";
+                els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension..." : "LexisAI is analyzing...";
                 els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
             }
             try {
@@ -611,7 +595,7 @@
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ messages: contextMessages.slice(-200), modelId: activeModelId, researchContext: compiledResearchContext })
+                    body: JSON.stringify({ messages: contextMessages.slice(-1000), modelId: activeModelId, researchContext: compiledResearchContext })
                 });
                 els.indicator.classList.add('hidden');
                 const assistantMsgObj = appendMessage('assistant', '', activeModelId);
