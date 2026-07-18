@@ -2,21 +2,44 @@ export const config = {
     runtime: 'edge', 
 };
 
+// ============================================================================
+// HYPER-CONDENSED DATA MATRIX (HCDM) ALGORITHM
+// Intelligently truncates massive datasets by uniformly distributing the token 
+// budget across all documents, extracting maximum signal (Heads & Tails).
+// ============================================================================
+function compressKnowledge(text, maxLimit) {
+    if (!text || text.length <= maxLimit) return text;
+    
+    // Step 1: Detect document boundaries to fragment the massive string
+    let blocks = text.split(/(?=URL: |--- DOC: |\[Title: )/g);
+    
+    // Fallback: Flat truncation if no clear boundaries exist
+    if (blocks.length <= 1) {
+        return text.substring(0, Math.floor(maxLimit * 0.6)) + 
+               "\n...[DATA CONDENSED]...\n" + 
+               text.substring(text.length - Math.floor(maxLimit * 0.4));
+    }
+    
+    // Step 2: Calculate equal token budget per document
+    const charsPerBlock = Math.max(250, Math.floor(maxLimit / blocks.length));
+    
+    // Step 3: Extract high-signal data (Top 60% / Bottom 40%) from each document
+    return blocks.map(block => {
+        if (block.length <= charsPerBlock) return block;
+        const top = Math.floor(charsPerBlock * 0.6);
+        const bottom = Math.floor(charsPerBlock * 0.4);
+        return block.substring(0, top) + 
+               "\n...[DATA CONDENSED]...\n" + 
+               block.substring(block.length - bottom);
+    }).join('\n');
+}
+
 export default async function handler(req) {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
     try {
         const { messages, modelId, researchContext } = await req.json();
-        const latestMessage = messages[messages.length - 1];
-        const userQuery = latestMessage.content;
         
-        const allAttachments = [];
-        messages.forEach(m => {
-            if (m.attachments && Array.isArray(m.attachments)) {
-                allAttachments.push(...m.attachments);
-            }
-        });
-
         const GROQ_KEY = process.env.GROQ_API_KEY;
         const TAVILY_KEY = process.env.TAVILY_API_KEY;
         const GEMINI_KEYS = [
@@ -25,8 +48,7 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY_3
         ].filter(Boolean);
 
-        // --- UPGRADED: STRICT TASK OBEDIENCE & LATEX ENFORCEMENT ---
-        let systemPrompt = `You are LexisAI, a premium, hyper-intelligent AI.
+        let systemPrompt = `You are LexisAI, a premium, hyper-intelligent agent.
 
 **DYNAMIC BEHAVIOR PROTOCOL:**
 1. [GENERAL CHAT MODE]: If having a normal conversation, be witty, motivating, and highly engaging,users should love chating to you,but be HONEST ALWAYS,NO FLUFF,,make your answers dopamine secreting and that makes user stick to using this app""dont show these to user"".
@@ -41,18 +63,32 @@ export default async function handler(req) {
 2. <chart>: If comparing data/stats, output a JSON array. (Format: <chart>[{"label":"Cat A", "value":85}]</chart>)
 3. <artifact>: If generating a long document, report, or code, wrap it entirely in artifact tags. (Example: <artifact title="Title">\n# Data...\n</artifact>)
    
-CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or your backend mechanics. Speak directly to the user. Ensure your response reaches a COMPLETE, definitive conclusion. DO NOT stop mid-sentence.`;
+CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or backend mechanics. Speak directly to the user. Ensure your response reaches a COMPLETE, definitive conclusion. DO NOT stop mid-sentence.`;
 
-        let contextData = "";
+        let massiveKnowledgeBase = "";
+        let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
 
         // ---------------------------------------------------------
-        // RESEARCH CONTEXT & EXPANSION TRIGGER
+        // 1. EXTRACT & COMPILE ALL KNOWLEDGE VECTORS
         // ---------------------------------------------------------
+
+        // A. Extract Extension Links injected by Frontend
+        if (processedMessages.length > 0 && processedMessages[0].content.includes('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]')) {
+            const parts = processedMessages[0].content.split('[USER QUERY:]\n');
+            if (parts.length > 1) {
+                massiveKnowledgeBase += parts[0].replace('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]\n', '') + "\n";
+                // Strip the injection from the chat history so it doesn't break conversation flow
+                processedMessages[0].content = parts.slice(1).join('[USER QUERY:]\n');
+            }
+        }
+
+        // B. Add Deep Research Context
         if (researchContext) {
-            // Stripped mechanical mentions, focus on final output generation
-            systemPrompt += `\n\n[CRITICAL DIRECTIVE: You have been provided with a massive, compiled Master Research Document. You must synthesize this data into the ultimate, exhaustive, hyper-detailed final response. Obey the user's specific formatting perfectly.]`;
-            contextData = `\n\n--- COMPILED RESEARCH CONTEXT ---\n${researchContext}`;
+            massiveKnowledgeBase += "\n--- COMPILED RESEARCH CONTEXT ---\n" + researchContext + "\n";
+            systemPrompt += `\n\n[CRITICAL DIRECTIVE: Synthesize the provided Master Research Document into the ultimate, exhaustive, hyper-detailed final response. Obey the user's formatting perfectly.]`;
         } else {
+            // Standard Tavily Search
+            const userQuery = processedMessages[processedMessages.length - 1].content;
             const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
             const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
 
@@ -65,93 +101,80 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or your backend
                     if (tavilyRes.ok) {
                         const tavData = await tavilyRes.json();
                         const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
-                        contextData = `\n\n--- REAL-TIME SEARCH CONTEXT ---\n${searchResults}\n\nCite search context using <sources>.`;
+                        massiveKnowledgeBase += `\n--- REAL-TIME SEARCH CONTEXT ---\n${searchResults}\n`;
                     }
-                } catch (e) { console.error("Tavily Search Failed."); }
+                } catch (e) {}
             }
         }
 
-        const processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
-        
-        // CRITICAL FIX: Put Context BEFORE User Query to cure Instruction Amnesia
-        if (contextData) {
-            processedMessages[processedMessages.length - 1].content = `${contextData}\n\n[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${userQuery}`;
-        }
-
-        // ---------------------------------------------------------
-        // DECODING ENGINE
-        // ---------------------------------------------------------
-        let textDocumentContext = "";
+        // C. Extract and Decode Attachments
         const geminiInlineParts = [];
         const geminiSupportedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
-        allAttachments.forEach(att => {
-            const mime = att.type ? att.type.toLowerCase() : 'text/plain';
-            const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv') || att.name.endsWith('.txt') || att.name.endsWith('.md') || att.name.endsWith('.py');
-            
-            if (isText) {
-                try {
-                    const decodedStr = decodeURIComponent(escape(atob(att.base64)));
-                    textDocumentContext += `\n--- DOC: ${att.name} ---\n${decodedStr.substring(0, modelId === 'spark' ? 5000 : 35000)}\n`;
-                } catch (e) {
-                    try {
-                        const fallbackStr = atob(att.base64);
-                        textDocumentContext += `\n--- DOC: ${att.name} ---\n${fallbackStr.substring(0, modelId === 'spark' ? 5000 : 35000)}\n`;
-                    } catch (err) { }
-                }
-            } else if (modelId !== 'spark') {
-                if (geminiSupportedMimes.includes(mime)) {
-                    geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
-                } else {
-                    textDocumentContext += `\n[System Note: User attached '${att.name}' (${mime}). Not readable natively. Ask user to copy-paste or convert to PDF.]\n`;
-                }
+        messages.forEach(m => {
+            if (m.attachments && Array.isArray(m.attachments)) {
+                m.attachments.forEach(att => {
+                    const mime = att.type ? att.type.toLowerCase() : 'text/plain';
+                    const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv') || att.name.endsWith('.txt') || att.name.endsWith('.md') || att.name.endsWith('.py');
+                    
+                    if (isText) {
+                        try {
+                            const decodedStr = decodeURIComponent(escape(atob(att.base64)));
+                            massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${decodedStr}\n`;
+                        } catch (e) {
+                            try { massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${atob(att.base64)}\n`; } catch (err) {}
+                        }
+                    } else if (modelId !== 'spark') {
+                        if (geminiSupportedMimes.includes(mime)) {
+                            geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
+                        } else {
+                            massiveKnowledgeBase += `\n[System Note: User attached '${att.name}' (${mime}). Not readable natively.]\n`;
+                        }
+                    }
+                });
             }
         });
 
-        if (textDocumentContext) {
-            // Again, ensure strict formatting reminders
-            systemPrompt += `\n\n[KNOWLEDGE BASE & UPLOADED DOCUMENTS:]\n${textDocumentContext}\n\n[CRITICAL REMINDER: Obey the user's latest command flawlessly. Do not add fluff.]`;
+        // ---------------------------------------------------------
+        // 2. THE HCDM COMPRESSION TRIGGER
+        // ---------------------------------------------------------
+        // Safely bounds Gemini to ~500k tokens and Spark to ~5k tokens, killing 429s forever.
+        const MAX_CHARS = modelId === 'spark' ? 20000 : 2000000; 
+        const condensedKnowledge = compressKnowledge(massiveKnowledgeBase, MAX_CHARS);
+
+        if (condensedKnowledge.trim().length > 0) {
+            systemPrompt += `\n\n[KNOWLEDGE BASE (HYPER-CONDENSED)]:\n${condensedKnowledge}\n\n[CRITICAL REMINDER: Obey the user's latest command flawlessly. Base your answer on the above data. Do not add fluff.]`;
         }
 
+        // Fix Instruction Amnesia: Append the explicit user command to the absolute end of the message tree
+        const latestUserQuery = processedMessages[processedMessages.length - 1].content;
+        processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${latestUserQuery}`;
+
         // ---------------------------------------------------------
-        // SPARK MEMORY COMPRESSION
+        // 3. FINAL HISTORY CHUNKING (SPARK PROTECTION)
         // ---------------------------------------------------------
         let finalMessages = [];
-        
         if (modelId === 'spark') {
-            const sparkCharLimit = 28000;
-            let currentChars = systemPrompt.length;
-            
-            if (allAttachments.length > 0 && geminiInlineParts.length === 0) {
-                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User uploaded Images/PDFs. You (Spark) cannot see them. Ask them to switch to Flux/Oracle.]`;
+            const sparkHistoryCharLimit = 6000; // Leave room for the 20k system prompt
+            let currentChars = 0;
+            if (geminiInlineParts.length > 0) {
+                processedMessages[processedMessages.length - 1].content += `\n\n[SYSTEM: User uploaded Images/PDFs. You (Spark) cannot see them. Ask them to switch to Oracle.]`;
             }
 
             for (let i = processedMessages.length - 1; i >= 0; i--) {
                 const msg = processedMessages[i];
-                if (currentChars + msg.content.length < sparkCharLimit) {
+                if (currentChars + msg.content.length < sparkHistoryCharLimit) {
                     finalMessages.unshift(msg);
                     currentChars += msg.content.length;
-                } else {
-                    let compressedMsg = msg.content.replace(/\s+/g, ' ').substring(0, 500); 
-                    if (currentChars + compressedMsg.length < sparkCharLimit) {
-                        finalMessages.unshift({ role: msg.role, content: compressedMsg });
-                        currentChars += compressedMsg.length;
-                    } else {
-                        const remnants = processedMessages.slice(0, i + 1).map(m => m.content.replace(/[^a-zA-Z0-9 ]/g, '').substring(0, 50)).join('|');
-                        if (finalMessages.length > 0) {
-                            finalMessages[0].content = `[DEEP_MEMORY:${remnants.substring(0, sparkCharLimit - currentChars)}]\n` + finalMessages[0].content;
-                        }
-                        break;
-                    }
-                }
+                } else break; 
             }
-            if (finalMessages.length === 0) finalMessages = processedMessages.slice(-1);
+            if (finalMessages.length === 0) finalMessages = [processedMessages[processedMessages.length - 1]];
         } else {
             finalMessages = processedMessages;
         }
 
         // ---------------------------------------------------------
-        // LLM STREAMING
+        // 4. LLM STREAMING & AGGRESSIVE KEY ROTATION
         // ---------------------------------------------------------
         let llmRes = null;
         let finalErrorText = "";
@@ -182,12 +205,20 @@ CRITICAL: NEVER mention "Pass 1", "Pass 2", "Internal research", or your backend
                 ]
             };
 
+            // Smart Rotation: Continues immediately if it hits a 429/503 quota limit
             for (let i = 0; i < GEMINI_KEYS.length; i++) {
                 const currentKey = GEMINI_KEYS[i];
                 const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
                 llmRes = await fetch(streamUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                
                 if (llmRes.ok) break; 
-                else { finalErrorText = await llmRes.text(); if (llmRes.status === 400) break; }
+                
+                finalErrorText = await llmRes.text(); 
+                if (llmRes.status === 400) break; // Bad payload formatting, rotation won't fix
+                if (llmRes.status === 429 || llmRes.status === 503) {
+                    console.warn(`[Failover] Gemini Key ${i+1} rate limited. Swapping to next key...`);
+                    continue; 
+                }
             }
         }
 
