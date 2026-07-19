@@ -91,11 +91,11 @@
     </div>
 
     <!-- SIDEBAR -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="closeSidebar()"></div>
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-[80vw] max-w-xs glass-header transform -translate-x-full transition-transform duration-300 z-50 flex flex-col border-r border-white/10 shadow-2xl">
         <div class="p-4 border-b border-white/10 flex justify-between items-center mt-safe">
             <h2 class="text-xs font-bold tracking-widest text-gray-400 uppercase">Chat History</h2>
-            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-2"><i class="ph-bold ph-x text-lg"></i></button>
+            <button onclick="closeSidebar()" class="text-gray-400 hover:text-white p-2"><i class="ph-bold ph-x text-lg"></i></button>
         </div>
         <div class="p-4 space-y-3 border-b border-white/10">
             <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-plus"></i> New Conversation</button>
@@ -223,7 +223,7 @@
         let isPresentationMode = false;
         let isMathMode = false; 
         let currentChatId = Date.now().toString();
-        let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
+        let chats = []; 
         let messages = [];
         let pendingFiles = [];
         let currentChatExtId = null; 
@@ -262,7 +262,22 @@
         };
 
         window.onload = async () => {
-            await DB.init(); updateUIState(); refreshExtSelectors();
+            await DB.init(); 
+            updateUIState(); 
+            refreshExtSelectors();
+            
+            // Safe JSON parse to filter out corrupted old data completely
+            try {
+                const rawData = localStorage.getItem('chatini_sessions');
+                if (rawData) {
+                    const parsed = JSON.parse(rawData);
+                    chats = (Array.isArray(parsed) ? parsed : []).filter(c => c && c.id);
+                }
+            } catch (e) {
+                console.error("Local Storage Parse Error:", e);
+                chats = [];
+            }
+
             if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
         };
 
@@ -686,23 +701,82 @@
 
         function renderStagingArea() { els.stagingArea.innerHTML = pendingFiles.map((file, index) => `<div class="flex items-center gap-2 bg-surface2 border border-white/10 px-3 py-1.5 rounded-lg text-xs"><i class="ph-bold ${file.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-cyan-400"></i><span class="truncate max-w-[100px] text-gray-300">${file.name}</span><button onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 ml-1"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
         function removeFile(index) { pendingFiles.splice(index, 1); renderStagingArea(); updateUIState(); }
-        function toggleSidebar() { if (els.sidebar.classList.contains('-translate-x-full')) { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); } else { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); } }
+        
+        // Split toggle into explicit states for robust logic
+        function openSidebar() { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); }
+        function closeSidebar() { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); }
+        function toggleSidebar() { if (els.sidebar.classList.contains('-translate-x-full')) { openSidebar(); } else { closeSidebar(); } }
 
         function saveCurrentChat() {
-            if (messages.length === 0) return; const chatIndex = chats.findIndex(c => c.id.toString() === currentChatId.toString());
-            let title = "New Conversation"; const firstUserMsg = messages.find(m => m.role === 'user'); if (firstUserMsg) title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
-            const safeMessages = messages.map(m => ({ id: m.id, role: m.role, content: m.content, modelId: m.modelId, attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) }));
+            if (messages.length === 0) return; 
+            const chatIndex = chats.findIndex(c => c && c.id && c.id.toString() === currentChatId.toString());
+            
+            let title = "New Conversation"; 
+            const firstUserMsg = messages.find(m => m.role === 'user'); 
+            if (firstUserMsg && firstUserMsg.content) {
+                title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
+            }
+            
+            const safeMessages = messages.map(m => ({ 
+                id: m.id, 
+                role: m.role, 
+                content: m.content || '', 
+                modelId: m.modelId || activeModelId, 
+                attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) 
+            }));
+            
             const chatData = { id: currentChatId, title: chatIndex > -1 ? chats[chatIndex].title : title, messages: safeMessages, extId: currentChatExtId, date: Date.now() };
-            if (chatIndex > -1) chats[chatIndex] = chatData; else chats.unshift(chatData);
-            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) { }
+            
+            if (chatIndex > -1) chats[chatIndex] = chatData; 
+            else chats.unshift(chatData);
+            
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) { console.error('Failed to save to localStorage', e); }
+            renderHistoryList();
         }
 
-        function createNewChat() { currentChatId = Date.now().toString(); messages = []; pendingFiles = []; currentChatExtId = null; els.extSelector.value = ""; renderStagingArea(); renderMessagesToUI(); toggleSidebar(); appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init'); closeCanvas(); }
-        function loadChat(id) { const chat = chats.find(c => c.id.toString() === id.toString()); if (chat) { currentChatId = chat.id; messages = chat.messages; currentChatExtId = chat.extId || null; els.extSelector.value = currentChatExtId || ""; renderMessagesToUI(); toggleSidebar(); closeCanvas(); } }
-        function deleteChat(id, e) { e.stopPropagation(); chats = chats.filter(c => c.id.toString() !== id.toString()); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); if (currentChatId.toString() === id.toString()) createNewChat(); else renderHistoryList(); }
-        function renameChat(id, e) { e.stopPropagation(); const chat = chats.find(c => c.id.toString() === id.toString()); const newName = prompt("Rename chat:", chat.title); if (newName && newName.trim()) { chat.title = newName.trim(); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); renderHistoryList(); } }
+        function createNewChat() { 
+            if (isProcessing) return showToast("Please wait for response to finish.");
+            currentChatId = Date.now().toString(); 
+            messages = []; 
+            pendingFiles = []; 
+            currentChatExtId = null; 
+            els.extSelector.value = ""; 
+            renderStagingArea(); 
+            renderMessagesToUI(); 
+            
+            const initMsgId = 'init_' + Date.now();
+            const initText = 'System Initialized. New chat created. How may I assist you today?';
+            appendMessage('assistant', initText, activeModelId, initMsgId); 
+            
+            // Push manually so it visually saves and populates in sidebar history immediately
+            messages.push({ role: 'assistant', content: initText, id: initMsgId, modelId: activeModelId });
+            saveCurrentChat();
+            
+            closeSidebar(); 
+            closeCanvas(); 
+        }
+        
+        function loadChat(id) { 
+            if (isProcessing) return showToast("Please wait for response to finish.");
+            const chat = chats.find(c => c && c.id && c.id.toString() === id.toString()); 
+            if (chat) { 
+                currentChatId = chat.id.toString(); 
+                messages = chat.messages || []; 
+                currentChatExtId = chat.extId || null; 
+                els.extSelector.value = currentChatExtId || ""; 
+                renderMessagesToUI(); 
+                closeSidebar(); 
+                closeCanvas(); 
+                updateUIState();
+            } 
+        }
+
+        function deleteChat(id, e) { e.stopPropagation(); chats = chats.filter(c => c && c.id && c.id.toString() !== id.toString()); try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch(err){} if (currentChatId.toString() === id.toString()) createNewChat(); else renderHistoryList(); }
+        
+        function renameChat(id, e) { e.stopPropagation(); const chat = chats.find(c => c && c.id && c.id.toString() === id.toString()); if(!chat) return; const newName = prompt("Rename chat:", chat.title); if (newName && newName.trim()) { chat.title = newName.trim(); try{localStorage.setItem('chatini_sessions', JSON.stringify(chats));}catch(err){} renderHistoryList(); } }
 
         function renderHistoryList() { els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id.toString() === currentChatId.toString() ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join(''); }
+        
         function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id.toString() === msgId.toString()); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); closeCanvas(); }
 
         function renderModelSelector() { els.selector.innerHTML = Object.values(CONFIG.models).map(model => `<button onclick="if(!isProcessing){activeModelId='${model.id}';updateUIState();}" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}"><i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm sm:text-base"></i> ${model.name}</button>`).join(''); }
@@ -717,7 +791,7 @@
 
         // --- UPGRADED JSON ARTIFACT PARSER ---
         function parseRichText(content, isStreaming = false, msgId = null) {
-            let extractedHtml = ''; let markdownContent = content;
+            let extractedHtml = ''; let markdownContent = content || '';
 
             if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) { markdownContent += '\n</artifact>'; }
 
@@ -791,7 +865,7 @@
             div.id = 'msg-wrapper-' + msgId;
 
             if (isUser) {
-                let attHtml = attachmentsMeta.length > 0 ? `<div class="flex flex-wrap gap-2 mb-2">` + attachmentsMeta.map(a => `<span class="bg-black/50 text-gray-300 text-[10px] px-2 py-1 rounded border border-white/10"><i class="ph-bold ${a.type && a.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'}"></i> ${a.name}</span>`).join('') + `</div>` : '';
+                let attHtml = (attachmentsMeta && attachmentsMeta.length > 0) ? `<div class="flex flex-wrap gap-2 mb-2">` + attachmentsMeta.map(a => `<span class="bg-black/50 text-gray-300 text-[10px] px-2 py-1 rounded border border-white/10"><i class="ph-bold ${a.type && a.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'}"></i> ${a.name}</span>`).join('') + `</div>` : '';
                 div.innerHTML = `<div class="group flex gap-2 sm:gap-3 w-fit max-w-[90%] sm:max-w-[85%] md:max-w-[80%] items-center justify-end"><button onclick="editMessage('${msgId}')" class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-2 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-all flex-shrink-0"><i class="ph-bold ph-pencil-simple text-xs sm:text-sm"></i></button><div class="bg-surface3 border border-white/10 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap break-words text-sm sm:text-base">${attHtml}${content}</div></div>`;
             } else {
                 const model = CONFIG.models[modelId] || CONFIG.models.oracle;
@@ -816,6 +890,15 @@
             els.container.appendChild(div); 
             els.canvas.scrollTop = els.canvas.scrollHeight; 
             return document.getElementById('research-logs');
+        }
+
+        function renderMessagesToUI() { 
+            els.container.innerHTML = ''; 
+            window.ARTIFACT_STORE = {}; 
+            (messages || []).forEach(msg => {
+                if(!msg) return;
+                appendMessage(msg.role || 'user', msg.content || '', msg.modelId || activeModelId, msg.id, msg.attachmentsMeta || []);
+            }); 
         }
 
         async function handleSend() {
@@ -1051,4 +1134,5 @@
     </script>
 </body>
 </html>
+
 
