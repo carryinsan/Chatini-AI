@@ -3,16 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>LexisAI</title>
+    <title>LexisAI Workspace</title>
     
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
-    <!-- KaTeX Math Rendering Engine -->
+    <!-- KaTeX Math Engine -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+    <!-- Native PPTX Generator Library -->
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
     
     <script>
         tailwind.config = { darkMode: 'class', theme: { extend: { colors: { background: '#050505', surface: '#0a0a0a', surface2: '#121212', surface3: '#1a1a1a' }, animation: { 'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite' } } } }
@@ -74,10 +77,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
                         <label class="text-xs text-gray-400 mb-2 flex justify-between uppercase tracking-wider font-semibold"><span>Public Links / YouTube</span> <span class="text-cyan-400 text-[10px]">Max 200</span></label>
-                        <div class="flex flex-col gap-2 mb-3">
-                            <textarea id="ext-link-input" rows="3" placeholder="Paste multiple links separated by commas or spaces..." class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-500 resize-y"></textarea>
-                            <button onclick="addExtLink()" id="ext-link-btn" class="w-full bg-cyan-500/20 text-cyan-400 py-2 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center justify-center font-bold text-sm"><i class="ph-bold ph-plus mr-1"></i> Extract & Load Links</button>
-                        </div>
+                        <div class="flex gap-2 mb-3"><input type="url" id="ext-link-input" placeholder="https://url1, https://url2..." class="flex-1 bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-cyan-500"><button onclick="addExtLink()" id="ext-link-btn" class="bg-cyan-500/20 text-cyan-400 px-3 rounded-lg hover:bg-cyan-500/30 transition-colors flex items-center justify-center min-w-[40px]" title="Process URLs"><i class="ph-bold ph-plus"></i></button></div>
                         <div id="ext-link-list" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1"></div>
                     </div>
                     <div class="bg-surface2 p-4 rounded-2xl border border-white/5">
@@ -127,8 +127,13 @@
         
         <div class="w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0 flex items-center">
             <div class="flex items-center gap-2 w-max mx-auto sm:mx-0">
+                <!-- PPT MAKER TOGGLE -->
+                <button id="ppt-btn" onclick="togglePresentationMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-amber-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Auto-Pilot Premium Presentation Engine">
+                    <i id="ppt-icon" class="ph-bold ph-presentation-chart text-sm sm:text-base"></i> <span class="">Slides</span>
+                </button>
+                
                 <button id="deep-research-btn" onclick="toggleDeepResearch()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-cyan-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Auto-Pilot Deep Research">
-                    <i id="deep-research-icon" class="ph-bold ph-radar text-sm sm:text-base"></i> <span class="">Deep Research</span>
+                    <i id="deep-research-icon" class="ph-bold ph-radar text-sm sm:text-base"></i> <span class="">Research</span>
                 </button>
                 <div id="model-selector" class="flex bg-black/50 sm:bg-black p-1 rounded-full border border-white/10 shadow-inner"></div>
             </div>
@@ -214,6 +219,7 @@
         let activeModelId = 'oracle';
         let isProcessing = false;
         let isDeepResearchOn = false;
+        let isPresentationMode = false;
         let currentChatId = Date.now().toString();
         let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
         let messages = [];
@@ -245,7 +251,9 @@
             canvasContent: document.getElementById('canvas-content'),
             canvasTitle: document.getElementById('canvas-title'),
             researchBtn: document.getElementById('deep-research-btn'),
-            researchIcon: document.getElementById('deep-research-icon')
+            researchIcon: document.getElementById('deep-research-icon'),
+            pptBtn: document.getElementById('ppt-btn'),
+            pptIcon: document.getElementById('ppt-icon')
         };
 
         window.onload = async () => {
@@ -256,6 +264,7 @@
         function toggleDeepResearch() {
             isDeepResearchOn = !isDeepResearchOn;
             if (isDeepResearchOn) {
+                if (isPresentationMode) togglePresentationMode();
                 els.researchBtn.classList.replace('text-gray-500', 'text-cyan-400');
                 els.researchBtn.classList.replace('border-transparent', 'border-cyan-500/50');
                 els.researchBtn.classList.add('bg-cyan-500/10');
@@ -269,33 +278,77 @@
             }
         }
 
-        // FAIL-SAFE MATH RENDERING ENGINE
+        function togglePresentationMode() {
+            isPresentationMode = !isPresentationMode;
+            if (isPresentationMode) {
+                if (isDeepResearchOn) toggleDeepResearch();
+                els.pptBtn.classList.replace('text-gray-500', 'text-amber-400');
+                els.pptBtn.classList.replace('border-transparent', 'border-amber-500/50');
+                els.pptBtn.classList.add('bg-amber-500/10');
+                els.pptIcon.classList.add('animate-pulse');
+                showToast("Presentation Engine Engaged");
+            } else {
+                els.pptBtn.classList.replace('text-amber-400', 'text-gray-500');
+                els.pptBtn.classList.replace('border-amber-500/50', 'border-transparent');
+                els.pptBtn.classList.remove('bg-amber-500/10');
+                els.pptIcon.classList.remove('animate-pulse');
+            }
+        }
+
         function renderMathAndMarkdown(text) {
             if (!text) return "";
             let processedText = text;
-            
             processedText = processedText.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, p1, math) => {
                 try { return katex.renderToString(math, { displayMode: true, throwOnError: false }); } catch(e) { return match; }
             });
-            
             processedText = processedText.replace(/\\\(([\s\S]*?)\\\)/g, (match, math) => {
                 try { return katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
             });
-            
             processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
                 try { return prefix + katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
             });
-
             return marked.parse(processedText);
         }
 
-        function openCanvas(artifactId, title) {
+        // --- Visual Render Engine for Canvas Slides ---
+        function renderSlideHTML(s) {
+            let html = `<div class="absolute top-2 left-2 text-[10px] bg-black/50 px-2 py-1 rounded text-white/50 z-20">Slide ${s.slideNumber}</div>`;
+            const imgHtml = s.imageUrl ? `<img src="${s.imageUrl}" class="absolute inset-0 w-full h-full object-cover z-0" crossorigin="anonymous" onerror="this.style.display='none'"/>` : '';
+            
+            if (s.layout === 'title_slide') {
+                html += imgHtml + `<div class="absolute inset-0 bg-black/60 z-10 flex flex-col justify-center items-center text-center p-8"><h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4 drop-shadow-xl max-w-[90%] leading-tight">${s.title}</h1><p class="text-lg sm:text-xl lg:text-2xl text-gray-300 drop-shadow-lg font-light max-w-[80%]">${s.subtitle || ''}</p></div>`;
+            } else if (s.layout === 'split_image_text') {
+                html += `<div class="flex h-full w-full bg-white z-10 relative"><div class="w-1/2 p-6 sm:p-10 flex flex-col justify-center"><h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 leading-tight">${s.title}</h2><h3 class="text-base sm:text-lg text-gray-600 mb-6 font-medium">${s.subtitle || ''}</h3><ul class="list-disc pl-5 space-y-2 sm:space-y-3 text-gray-800 text-sm sm:text-base">${(s.bullets||[]).map(b => `<li>${b}</li>`).join('')}</ul></div><div class="w-1/2 relative bg-gray-100 border-l border-gray-200">${imgHtml}</div></div>`;
+            } else if (s.layout === 'full_image_quote') {
+                html += imgHtml + `<div class="absolute inset-x-8 sm:inset-x-16 bottom-8 sm:bottom-12 bg-black/70 backdrop-blur-md p-6 sm:p-8 rounded-2xl z-10 text-center border border-white/20 shadow-2xl"><h2 class="text-2xl sm:text-3xl italic text-white mb-3 font-serif leading-snug">"${s.title}"</h2><p class="text-base sm:text-lg text-gray-300 font-medium tracking-wide">— ${s.subtitle || ''}</p></div>`;
+            } else {
+                html += `<div class="w-full h-full bg-white p-8 sm:p-12 z-10 relative flex flex-col"><h2 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 tracking-tight">${s.title}</h2><h3 class="text-lg sm:text-xl text-gray-500 mb-8 border-b-2 border-gray-100 pb-5 font-medium">${s.subtitle || ''}</h3><ul class="list-disc pl-6 space-y-3 sm:space-y-5 text-gray-800 text-base sm:text-lg flex-1 overflow-y-auto pr-4">${(s.bullets||[]).map(b => `<li class="pl-2">${b}</li>`).join('')}</ul></div>`;
+            }
+            return html;
+        }
+
+        function renderPresentationPreview(payload) {
+            let html = `<div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><div><h3 class="text-xl font-bold text-amber-400 mb-1">📊 ${payload.metadata.title}</h3><p class="text-xs text-gray-500">${payload.metadata.slideCount} Slides • Auto-Generated by LexisAI</p></div><button onclick="downloadPPTX('${window.CURRENT_CANVAS_ID}')" class="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-amber-500/20 hover:scale-105 transition-all flex items-center gap-2"><i class="ph-bold ph-download-simple text-lg"></i> Download .PPTX</button></div><div class="space-y-8 pb-10">`;
+            payload.slides.forEach(s => { html += `<div class="bg-white rounded-xl overflow-hidden shadow-2xl aspect-[16/9] relative flex flex-col group border border-white/5">` + renderSlideHTML(s) + `</div>`; });
+            html += `</div>`; return html;
+        }
+
+        // --- Open Canvas with Type Detection ---
+        function openCanvas(artifactId, title, type = 'document') {
             window.CURRENT_CANVAS_ID = artifactId;
             els.workspace.classList.remove('hidden');
             setTimeout(() => els.workspace.classList.remove('translate-x-full'), 10);
             els.canvasTitle.innerText = title || "Document Artifact";
-            const rawMarkdown = window.ARTIFACT_STORE[artifactId] || "";
-            els.canvasContent.innerHTML = renderMathAndMarkdown(rawMarkdown);
+            const rawData = window.ARTIFACT_STORE[artifactId] || "";
+            
+            if (type === 'presentation' || rawData.startsWith('{"metadata"')) {
+                try {
+                    const payload = JSON.parse(rawData);
+                    els.canvasContent.innerHTML = renderPresentationPreview(payload);
+                } catch(e) { els.canvasContent.innerHTML = "<div class='text-center text-gray-500 mt-20'><i class='ph-bold ph-spinner animate-spin text-4xl mb-4'></i><p>Compiling Premium Slides...</p></div>"; }
+            } else {
+                els.canvasContent.innerHTML = renderMathAndMarkdown(rawData);
+            }
         }
 
         function closeCanvas() {
@@ -326,39 +379,25 @@
         async function deleteExt(id) { if(confirm("Delete Extension?")) { await DB.delete(id); renderExtList(); if (currentChatExtId === id) { currentChatExtId = null; saveCurrentChat(); } refreshExtSelectors(); } }
         function renderExtForm() { document.getElementById('ext-form-area').classList.remove('hidden'); document.getElementById('ext-form-area').classList.add('flex'); document.getElementById('ext-name').value = extForm.name; renderExtLinks(); renderExtFiles(); }
         
-        // BULK URL PARSER ENGINE
         async function addExtLink() {
-            const input = document.getElementById('ext-link-input');
-            const rawValue = input.value.trim();
-            if (!rawValue) return;
-
+            const input = document.getElementById('ext-link-input'); const rawValue = input.value.trim(); if (!rawValue) return;
             const urls = rawValue.split(',').map(u => u.trim()).filter(u => u);
-            if (extForm.links.length + urls.length > 200) {
-                return alert(`Adding these would exceed the 200 link limit. You can add ${200 - extForm.links.length} more.`);
-            }
-
-            const btn = document.getElementById('ext-link-btn'); 
-            btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; 
-            btn.disabled = true;
-            input.value = ''; 
-
+            if (extForm.links.length + urls.length > 200) return alert(`Limit exceeded. You can add ${200 - extForm.links.length} more.`);
+            const btn = document.getElementById('ext-link-btn'); btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; btn.disabled = true; input.value = ''; 
             for (const url of urls) {
                 const isYT = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
                 try { 
                     if (isYT) {
                         const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
                         const res = await fetch(proxyUrl); const data = await res.json();
-                        const html = data.contents; const match = html.match(/"captionTracks":\[\{"baseUrl":"([^"]+)"/);
+                        const match = data.contents.match(/"captionTracks":\[\{"baseUrl":"([^"]+)"/);
                         if (match) {
                             const capRes = await fetch(match[1].replace(/\\u0026/g, '&')); const capXml = await capRes.text();
-                            const transcript = capXml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
-                            extForm.links.push({ url, status: 'YT Loaded ✅', text: transcript.substring(0, 50000) });
+                            extForm.links.push({ url, status: 'YT Loaded ✅', text: capXml.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"').substring(0, 50000) });
                         } else extForm.links.push({ url, status: 'No Captions ⚠️', text: "No captions available." });
                     } else {
-                        const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) }); 
-                        const data = await res.json();
-                        if (data.success) { extForm.links.push({ url, status: 'Loaded ✅', text: data.text }); } 
-                        else { extForm.links.push({ url, status: 'Failed ❌', text: '' }); }
+                        const res = await fetch('/api/scrape', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({url}) }); const data = await res.json();
+                        if (data.success) extForm.links.push({ url, status: 'Loaded ✅', text: data.text }); else extForm.links.push({ url, status: 'Failed ❌', text: '' });
                     }
                 } catch (e) { extForm.links.push({ url, status: 'Network Err ❌', text: '' }); }
                 renderExtLinks();
@@ -402,7 +441,11 @@
                     if (matchId && window.ARTIFACT_STORE[matchId[1]]) {
                         const title = matchTitle ? matchTitle[1] : 'Artifact';
                         const content = window.ARTIFACT_STORE[matchId[1]];
-                        el.outerHTML = `<div style="border: 1px solid #333; padding: 15px; border-radius: 8px; margin: 15px 0; background-color: #111;"><h3 style="color: #22d3ee; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 8px; font-size: 16px;">📄 ${title}</h3><div style="font-size: 13px; color: #ccc;">${renderMathAndMarkdown(content)}</div></div>`;
+                        if(content.startsWith('{"metadata"')) {
+                            el.outerHTML = `<em>[Presentation File - Download via Workspace]</em>`;
+                        } else {
+                            el.outerHTML = `<div style="border: 1px solid #333; padding: 15px; border-radius: 8px; margin: 15px 0; background-color: #111;"><h3 style="color: #22d3ee; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 8px; font-size: 16px;">📄 ${title}</h3><div style="font-size: 13px; color: #ccc;">${renderMathAndMarkdown(content)}</div></div>`;
+                        }
                     } else { el.outerHTML = `<em>[Artifact Unavailable]</em>`; }
                 });
             }
@@ -410,6 +453,67 @@
             clone.style.padding = '20px'; clone.style.background = '#0a0a0a'; clone.style.color = '#e5e7eb'; clone.style.fontFamily = 'system-ui, sans-serif'; 
             clone.prepend(Object.assign(document.createElement('div'), {innerHTML:`<h2 style="color:#22d3ee; margin-bottom:20px; border-bottom:1px solid #333; padding-bottom:10px;">LexisAI Premium Analysis</h2>`}));
             try { await html2pdf().set({ margin:15, filename:`${filename}.pdf`, html2canvas:{scale:2, backgroundColor:'#0a0a0a'}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'} }).from(clone).save(); showToast("Downloaded!"); } catch (e) { showToast("Failed"); } btn.innerHTML = origHtml; btn.disabled = false; closePdfModal();
+        }
+
+        // --- PPTX Client-Side Generation ---
+        async function downloadPPTX(artifactId) {
+            showToast("Building .PPTX File...");
+            try {
+                const raw = window.ARTIFACT_STORE[artifactId];
+                const payload = JSON.parse(raw);
+                
+                let pptx;
+                if (typeof pptxgen !== 'undefined') {
+                    pptx = new pptxgen();
+                } else if (typeof PptxGenJS !== 'undefined') {
+                    pptx = new PptxGenJS();
+                } else {
+                    throw new Error("PPTX library not loaded");
+                }
+                
+                pptx.layout = 'LAYOUT_16x9';
+                pptx.author = 'LexisAI Premium';
+                pptx.company = 'LexisAI';
+                pptx.subject = payload.metadata.title;
+                
+                for(let i=0; i<payload.slides.length; i++) {
+                    const s = payload.slides[i];
+                    let slide = pptx.addSlide();
+                    slide.addText(payload.metadata.watermark || "© LexisAI Premium", { x: 0.5, y: '95%', w: '90%', fontSize: 10, color: '888888', align: 'center' });
+                    
+                    if (s.layout === 'title_slide') {
+                        if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: 0, y: 0, w: '100%', h: '100%', sizing: { type: 'cover' } });
+                        slide.addShape(pptx.ShapeType.rect, { x: 0, y: '30%', w: '100%', h: '40%', fill: { color: '000000', transparency: 50 } });
+                        slide.addText(s.title, { x: 0.5, y: '35%', w: '90%', fontSize: 44, color: 'FFFFFF', bold: true, align: 'center' });
+                        if(s.subtitle) slide.addText(s.subtitle, { x: 0.5, y: '55%', w: '90%', fontSize: 24, color: 'F0F0F0', align: 'center' });
+                    } 
+                    else if (s.layout === 'split_image_text') {
+                        if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: '50%', y: 0, w: '50%', h: '100%', sizing: { type: 'cover' } });
+                        slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '50%', h: '100%', fill: { color: 'FFFFFF' } });
+                        slide.addText(s.title, { x: 0.5, y: 1.0, w: '40%', fontSize: 32, bold: true, color: '363636' });
+                        if(s.subtitle) slide.addText(s.subtitle, { x: 0.5, y: 2.0, w: '40%', fontSize: 18, color: '666666' });
+                        if(s.bullets && s.bullets.length) {
+                            slide.addText(s.bullets.map(b => ({text: b, options:{bullet:true}})), { x: 0.5, y: 3.0, w: '40%', fontSize: 16, color: '363636', valign:'top' });
+                        }
+                    }
+                    else if (s.layout === 'full_image_quote') {
+                        if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: 0, y: 0, w: '100%', h: '100%', sizing: { type: 'cover' } });
+                        slide.addShape(pptx.ShapeType.rect, { x: '10%', y: '60%', w: '80%', h: '30%', fill: { color: '000000', transparency: 40 } });
+                        slide.addText(`"${s.title}"`, { x: '10%', y: '65%', w: '80%', fontSize: 36, color: 'FFFFFF', italic: true, align: 'center' });
+                        if(s.subtitle) slide.addText(`- ${s.subtitle}`, { x: '10%', y: '80%', w: '80%', fontSize: 20, color: 'E0E0E0', align: 'center' });
+                    }
+                    else { 
+                        slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: '100%', fill: { color: 'FFFFFF' } });
+                        slide.addText(s.title, { x: 0.5, y: 0.8, w: '90%', fontSize: 36, bold: true, color: '363636' });
+                        if(s.subtitle) slide.addText(s.subtitle, { x: 0.5, y: 1.5, w: '90%', fontSize: 20, color: '666666' });
+                        if(s.bullets && s.bullets.length) {
+                            slide.addText(s.bullets.map(b => ({text: b, options:{bullet:true, color:'363636', fontSize: 18}})), { x: 0.5, y: 2.5, w: '90%', h: '60%', color: '363636', valign:'top', margin: 0.1 });
+                        }
+                    }
+                }
+                await pptx.writeFile({ fileName: `${payload.metadata.title.replace(/\s+/g, '_')}.pptx` });
+                showToast("PPTX Exported Successfully!");
+            } catch(e) { console.error(e); showToast("PPTX Generation Failed"); }
         }
 
         els.fileInput.addEventListener('change', async (e) => {
@@ -452,54 +556,65 @@
             else { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0'; els.sendIcon.classList.remove('translate-x-0.5', '-translate-y-0.5'); }
         }
 
-        // --- THE UPGRADED LIVE PARSER ---
+        // --- UPGRADED JSON & PRESENTATION ARTIFACT PARSER ---
         function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
 
-            if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) {
-                markdownContent += '\n</artifact>';
-            }
+            if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) { markdownContent += '\n</artifact>'; }
 
-            markdownContent = markdownContent.replace(/<artifact(?: title="([^"]+)")?>([\s\S]*?)(<\/artifact>|$)/g, (match, title, artifactContent, closeTag) => {
+            markdownContent = markdownContent.replace(/<artifact(?: title="([^"]+)")?(?: type="([^"]+)")?>([\s\S]*?)(<\/artifact>|$)/g, (match, title, type, artifactContent, closeTag) => {
                 const artId = msgId ? 'art_' + msgId : 'art_' + Math.random().toString(36).substr(2, 9);
                 window.ARTIFACT_STORE[artId] = artifactContent.trim();
                 
-                // LIVE DOM UPDATE: If canvas is open to this artifact, update text while streaming
-                if (window.CURRENT_CANVAS_ID === artId) {
-                    els.canvasContent.innerHTML = renderMathAndMarkdown(artifactContent.trim());
-                    els.canvasTitle.innerText = title || "Document Artifact";
+                if (window.CURRENT_CANVAS_ID === artId) { 
+                    if (type === 'presentation') {
+                        try {
+                            const payload = JSON.parse(artifactContent.trim());
+                            els.canvasContent.innerHTML = renderPresentationPreview(payload);
+                        } catch(e) { els.canvasContent.innerHTML = "<div class='text-center text-gray-500 mt-20'><i class='ph-bold ph-spinner animate-spin text-4xl mb-4'></i><p>Compiling Premium Slides...</p></div>"; }
+                    } else {
+                        els.canvasContent.innerHTML = renderMathAndMarkdown(artifactContent.trim()); 
+                    }
+                    els.canvasTitle.innerText = title || "Document Artifact"; 
                 }
 
+                const isPres = type === 'presentation';
+                const iconColor = isPres ? 'amber-400' : 'cyan-400';
+                const iconBg = isPres ? 'amber-500/10' : 'cyan-500/10';
+                const iconBorder = isPres ? 'amber-500/20' : 'cyan-500/20';
+                const iconHover = isPres ? 'amber-500/50' : 'cyan-500/50';
+                const iconClass = isPres ? 'ph-presentation-chart' : 'ph-layout';
+                const titleText = title ? title.replace(/'/g, "\\'") : (isPres ? 'Slide Deck' : 'Document');
+
                 if (!closeTag && isStreaming) {
-                    extractedHtml += `<div class="artifact-card mt-4 p-4 border border-cyan-500/50 bg-cyan-500/10 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-[0_0_15px_rgba(6,182,212,0.2)] group animate-pulse" onclick="openCanvas('${artId}', '${(title || 'Generating Document...').replace(/'/g, "\\'")}')"><div class="flex items-center gap-3"><i class="ph-bold ph-layout text-cyan-400 text-xl"></i><div><p class="text-[10px] text-cyan-400 font-bold uppercase tracking-widest mb-0.5">Live Workspace (Click to Open)</p><p class="text-sm text-white font-medium">${title || 'Drafting Document...'}</p></div></div><i class="ph-bold ph-spinner animate-spin text-cyan-400"></i></div>`;
+                    extractedHtml += `<div class="artifact-card mt-4 p-4 border border-${iconColor.split('-')[0]}-500/50 bg-${iconBg} rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-[0_0_15px_rgba(var(--tw-colors-${iconColor.split('-')[0]}-500),0.2)] group animate-pulse" onclick="openCanvas('${artId}', '${titleText}', '${type || 'document'}')"><div class="flex items-center gap-3"><i class="ph-bold ${iconClass} text-${iconColor} text-xl"></i><div><p class="text-[10px] text-${iconColor} font-bold uppercase tracking-widest mb-0.5">Live Workspace (Click to Open)</p><p class="text-sm text-white font-medium">${title || 'Drafting Document...'}</p></div></div><i class="ph-bold ph-spinner animate-spin text-${iconColor}"></i></div>`;
                     return ''; 
                 }
 
-                extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${(title || 'Document').replace(/'/g, "\\'")}')"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 group-hover:border-cyan-500/50 transition-colors"><i class="ph-fill ph-layout text-cyan-400 text-xl"></i></div><div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">Interactive Workspace</p><p class="text-sm text-white font-medium group-hover:text-cyan-400 transition-colors">${title || 'Untitled Artifact'}</p></div></div><i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i></div>`;
+                extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${titleText}', '${type || 'document'}')"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-${iconBg} flex items-center justify-center border border-${iconBorder} group-hover:border-${iconHover} transition-colors"><i class="ph-fill ${iconClass} text-${iconColor} text-xl"></i></div><div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">${isPres ? 'Presentation Deck' : 'Interactive Workspace'}</p><p class="text-sm text-white font-medium group-hover:text-${iconColor} transition-colors">${title || 'Untitled Artifact'}</p></div></div><i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i></div>`;
                 return ''; 
             });
 
-            // Extract Sources
             markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
                 if (!closeTag) return `<div class="animate-pulse text-purple-400 text-[10px] sm:text-xs mt-2"><i class="ph ph-circle-notch animate-spin"></i> Analyzing Sources...</div>`;
                 try {
-                    const cleanJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
-                    const chipsHtml = JSON.parse(cleanJson).map(s => `<a href="${s.url}" target="_blank" class="inline-flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl border border-white/5 text-[10px] font-medium transition-colors"><i class="ph-bold ph-link text-purple-400"></i> ${s.title || s.name || 'Source'}</a>`).join('');
+                    const cleanedJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    const sources = JSON.parse(cleanedJson);
+                    const chipsHtml = sources.map(s => `<a href="${s.url}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-full text-[10px] transition-colors"><i class="ph ph-link"></i> ${s.title || 'Source'}</a>`).join('');
                     extractedHtml += `<div class="extra-data-block mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5"><div class="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-widest"><i class="ph-bold ph-link text-purple-400"></i> Sources & Files</div><div class="flex flex-wrap gap-2">${chipsHtml}</div></div>`;
-                } catch (e) { } 
+                } catch (e) { console.error("Error parsing sources:", e); } 
                 return '';
             });
 
-            // Extract Charts
             markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|$)/g, (match, jsonStr, closeTag) => {
                 if (!closeTag) return `<div class="mt-3 sm:mt-4 p-3 sm:p-4 border border-cyan-500/30 bg-cyan-500/5 rounded-lg text-cyan-400 text-[10px] sm:text-xs flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin"></i> Rendering Data...</div>`;
                 try {
-                    const cleanJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
-                    const data = JSON.parse(cleanJson); 
+                    const cleanedJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
+                    const data = JSON.parse(cleanedJson); 
                     const maxVal = Math.max(...data.map(d => d.value));
                     const barsHtml = data.map(item => `<div class="flex-1 flex flex-col items-center gap-1 sm:gap-2 group min-w-[20px]"><div class="w-full bg-gradient-to-t from-cyan-900/40 to-cyan-400 rounded-t-sm transition-all duration-1000 ease-out group-hover:to-cyan-300 relative chart-bar" style="height: ${(item.value / maxVal) * 100}%"><div class="opacity-0 group-hover:opacity-100 absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[9px] sm:text-xs font-bold py-0.5 sm:py-1 px-1 sm:px-2 rounded transition-opacity z-10">${item.value}</div></div><span class="text-[8px] sm:text-[10px] text-gray-500 font-medium truncate w-full text-center px-0.5">${item.label}</span></div>`).join('');
                     extractedHtml += `<div class="extra-data-block w-full mt-3 sm:mt-4 mb-3 sm:mb-4 p-3 sm:p-5 bg-surface2 border border-white/5 rounded-xl shadow-xl overflow-hidden overflow-x-auto no-scrollbar"><div class="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-6 text-[9px] sm:text-[10px] font-semibold tracking-widest text-gray-400 uppercase min-w-[200px]"><i class="ph-bold ph-chart-bar text-cyan-400 text-xs sm:text-sm"></i> Live Analysis</div><div class="flex items-end h-24 sm:h-32 gap-1 sm:gap-2 min-w-[200px]">${barsHtml}</div></div>`;
-                } catch (e) { } 
+                } catch (e) { console.error("Error parsing chart:", e); } 
                 return '';
             });
 
@@ -509,7 +624,10 @@
 
         function appendMessage(role, content, modelId, specificId = null, attachmentsMeta = []) {
             const isUser = role === 'user'; const msgId = specificId || Date.now().toString();
-            const div = document.createElement('div'); div.className = `flex w-full mb-6 sm:mb-8 ${isUser ? 'justify-end' : 'justify-start'}`; div.id = 'msg-wrapper-' + msgId;
+            const div = document.createElement('div'); 
+            div.className = `flex w-full mb-6 sm:mb-8 ${isUser ? 'justify-end' : 'justify-start'}`; 
+            div.id = 'msg-wrapper-' + msgId;
+
             if (isUser) {
                 let attHtml = attachmentsMeta.length > 0 ? `<div class="flex flex-wrap gap-2 mb-2">` + attachmentsMeta.map(a => `<span class="bg-black/50 text-gray-300 text-[10px] px-2 py-1 rounded border border-white/10"><i class="ph-bold ${a.type && a.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'}"></i> ${a.name}</span>`).join('') + `</div>` : '';
                 div.innerHTML = `<div class="group flex gap-2 sm:gap-3 w-fit max-w-[90%] sm:max-w-[85%] md:max-w-[80%] items-center justify-end"><button onclick="editMessage('${msgId}')" class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-2 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-all flex-shrink-0"><i class="ph-bold ph-pencil-simple text-xs sm:text-sm"></i></button><div class="bg-surface3 border border-white/10 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap break-words text-sm sm:text-base">${attHtml}${content}</div></div>`;
@@ -517,37 +635,106 @@
                 const model = CONFIG.models[modelId] || CONFIG.models.oracle;
                 div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"><div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1 shadow-[0_0_10px_rgba(255,255,255,0.05)]"><i class="${model.icon} ph-fill ${model.color} text-sm sm:text-base"></i></div><div class="msg-content flex flex-col pt-1 w-full min-w-0 overflow-hidden">${parseRichText(content, false, msgId)}</div></div>`;
             }
-            els.container.appendChild(div); els.canvas.scrollTop = els.canvas.scrollHeight; return { container: div.querySelector('.msg-content'), id: msgId };
+            els.container.appendChild(div); 
+            els.canvas.scrollTop = els.canvas.scrollHeight; 
+            return { container: div.querySelector('.msg-content'), id: msgId };
         }
 
-        function appendResearchTerminal() {
-            const div = document.createElement('div'); div.className = `flex w-full mb-6 sm:mb-8 justify-start`;
-            div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"><div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-cyan-500/20 border border-cyan-500/50 flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(6,182,212,0.3)] animate-pulse"><i class="ph-bold ph-radar text-cyan-400 text-sm sm:text-base"></i></div><div class="bg-black border border-cyan-500/30 rounded-xl p-4 w-full md:w-2/3 shadow-inner terminal-text text-xs sm:text-sm text-cyan-400 flex flex-col gap-2" id="research-logs"><div class="opacity-70"><i class="ph-bold ph-terminal-window"></i> Initializing Auto-Pilot Agent...</div></div></div>`;
-            els.container.appendChild(div); els.canvas.scrollTop = els.canvas.scrollHeight; return document.getElementById('research-logs');
+        function appendResearchTerminal(initText = 'Initializing Auto-Pilot Agent...', type = 'research') {
+            const isPpt = type === 'presentation';
+            const cColor = isPpt ? 'text-amber-400' : 'text-cyan-400';
+            const cBg = isPpt ? 'bg-amber-500/20' : 'bg-cyan-500/20';
+            const cBorder = isPpt ? 'border-amber-500/50' : 'border-cyan-500/50';
+            const cIcon = isPpt ? 'ph-presentation-chart' : 'ph-radar';
+
+            const div = document.createElement('div'); 
+            div.className = "flex w-full mb-6 sm:mb-8 justify-start";
+            div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"><div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full ${cBg} border ${cBorder} flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse"><i class="ph-bold ${cIcon} ${cColor} text-sm sm:text-base"></i></div><div class="bg-black border ${cBorder.replace('50','30')} rounded-xl p-4 w-full md:w-2/3 shadow-inner terminal-text text-xs sm:text-sm ${cColor} flex flex-col gap-2" id="research-logs"><div class="opacity-70"><i class="ph-bold ph-terminal-window"></i> ${initText}</div></div></div>`;
+            els.container.appendChild(div); 
+            els.canvas.scrollTop = els.canvas.scrollHeight; 
+            return document.getElementById('research-logs');
         }
 
         function renderMessagesToUI() { els.container.innerHTML = ''; window.ARTIFACT_STORE = {}; messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta)); }
-
+        
         async function handleSend() {
             const text = els.input.value.trim();
             if ((!text && pendingFiles.length === 0) || isProcessing) return;
+
             const attachmentsMeta = pendingFiles.map(f => ({ name: f.name, type: f.type }));
             const userMsgObj = appendMessage('user', text, null, null, attachmentsMeta);
+
             let payloadFiles = [...pendingFiles];
             if (messages.length === 0 && currentChatExtId) {
                 const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
                 if (activeExt && activeExt.files) payloadFiles = [...payloadFiles, ...activeExt.files];
             }
+
             const currentMessage = { role: 'user', content: text, id: userMsgObj.id, attachments: payloadFiles, attachmentsMeta: attachmentsMeta };
             messages.push(currentMessage);
+
             els.input.value = ''; els.input.style.height = 'auto'; pendingFiles = []; renderStagingArea();
             isProcessing = true; updateUIState();
+
+            // --- INTERCEPT: PRESENTATION MODE ---
+            if (isPresentationMode) {
+                els.indicator.classList.add('hidden');
+                const logContainer = appendResearchTerminal('Initializing Premium Slide Engine...', 'presentation');
+                try {
+                    let extContext = "";
+                    if (currentChatExtId) {
+                        const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
+                        if (activeExt && activeExt.links && activeExt.links.length > 0) {
+                            extContext = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
+                        }
+                    }
+                    const res = await fetch('/api/presentation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: text, context: extContext }) });
+                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+                    let compiledPayload = null;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (value) {
+                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    const dataStr = line.slice(6).trim(); if (!dataStr) continue;
+                                    try {
+                                        const data = JSON.parse(dataStr);
+                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
+                                        if (data.done) { compiledPayload = data.payload; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Slide Deck Compiled. Transferring to Workspace...</div>`; break; }
+                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
+                                    } catch (e) { }
+                                }
+                            }
+                        }
+                        if (done) break;
+                    }
+                    await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
+
+                    if (compiledPayload) {
+                        const assistantMsgObj = appendMessage('assistant', '', activeModelId);
+                        const rawJson = JSON.stringify(compiledPayload);
+                        const artifactContent = `<artifact title="${compiledPayload.metadata.title}" type="presentation">\n${rawJson}\n</artifact>`;
+
+                        assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
+                        messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
+                        saveCurrentChat();
+                    }
+                } catch (err) {
+                    logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove();
+                }
+                isProcessing = false; updateUIState();
+                return; // Exits standard chat flow
+            }
+
+            // --- STANDARD CHAT & RESEARCH FLOW ---
             let compiledResearchContext = "";
             let contextMessages = messages.map(m => ({ role: m.role, content: m.content, attachments: m.id === currentMessage.id ? m.attachments : undefined }));
-            
+
             if (isDeepResearchOn) {
                 els.indicator.classList.add('hidden');
-                const logContainer = appendResearchTerminal();
+                const logContainer = appendResearchTerminal('Initializing Auto-Pilot Agent...', 'research');
                 let thoughtBox = null;
                 try {
                     const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) });
@@ -561,13 +748,13 @@
                                     const dataStr = line.slice(6).trim(); if (!dataStr) continue;
                                     try {
                                         const data = JSON.parse(dataStr);
-                                        if (data.log) { logContainer.innerHTML += `<div>&gt; ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
+                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
                                         if (data.thought) {
                                             if (!thoughtBox) { logContainer.innerHTML += `<div class="mt-2 p-2 bg-black/80 border border-white/5 rounded text-[10px] text-gray-500 h-24 overflow-y-auto no-scrollbar" id="research-thought-box"></div>`; thoughtBox = document.getElementById('research-thought-box'); }
                                             thoughtBox.innerHTML += data.thought.replace(/\n/g, '<br>'); thoughtBox.scrollTop = thoughtBox.scrollHeight;
                                         }
-                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">&gt; Pass 1 Draft Complete. Executing Core Pass 2...</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; break; }
-                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">&gt; Error: ${data.error}</div>`; break; }
+                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Pass 1 Draft Complete. Executing Core Pass 2...</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; break; }
+                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
                                     } catch (e) { }
                                 }
                             }
@@ -575,7 +762,7 @@
                         if (done) break;
                     }
                     await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
-                } catch (err) { logContainer.innerHTML += `<div class="text-red-400">&gt; Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
+                } catch (err) { logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
             }
 
             if (!isDeepResearchOn) {
@@ -584,6 +771,7 @@
                 els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension..." : "LexisAI is analyzing...";
                 els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
             }
+
             try {
                 if (currentChatExtId) {
                     const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
@@ -592,24 +780,27 @@
                         if (compiledLinksText) contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
                     }
                 }
+
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ messages: contextMessages.slice(-1000), modelId: activeModelId, researchContext: compiledResearchContext })
                 });
+
                 els.indicator.classList.add('hidden');
                 const assistantMsgObj = appendMessage('assistant', '', activeModelId);
                 const contentContainer = assistantMsgObj.container;
                 contentContainer.classList.add('typing-cursor');
+
                 const reader = response.body.getReader(); const decoder = new TextDecoder();
                 let fullResponse = ""; let buffer = "";
-                
+
                 let streamTimeout;
                 const startWatchdog = () => {
                     clearTimeout(streamTimeout);
-                    streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000); 
+                    streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000);
                 };
-                
+
                 try {
                     startWatchdog();
                     while (true) {
@@ -624,6 +815,7 @@
                                         const data = JSON.parse(dataStr);
                                         if (data.ui_error) { fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`; contentContainer.innerHTML = fullResponse; break; }
                                         let textChunk = ""; if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content; else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
+
                                         fullResponse += textChunk;
                                         contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id);
                                         els.canvas.scrollTop = els.canvas.scrollHeight;
@@ -634,20 +826,22 @@
                         if (done) break;
                     }
                 } catch (streamErr) {
-                    if (streamErr === "Stream Timeout" || (streamErr && streamErr.message === "Stream Timeout")) console.warn("Stream Auto-Completed (Watchdog)");
+                    if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") console.warn("Stream Auto-Completed (Watchdog)");
                     else throw streamErr;
                 } finally { clearTimeout(streamTimeout); }
-                
+
                 contentContainer.classList.remove('typing-cursor');
                 contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat();
+
             } catch (error) {
                 els.indicator.classList.add('hidden');
                 appendMessage('assistant', `<span class="text-red-400 text-sm">Network Error. Failed.</span>`, activeModelId);
             }
             isProcessing = false; updateUIState();
         }
+
         els.input.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; updateUIState(); });
         els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
         els.sendBtn.addEventListener('click', handleSend);
