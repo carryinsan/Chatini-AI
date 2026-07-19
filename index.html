@@ -10,11 +10,9 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
-    <!-- KaTeX Math Engine -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
-    <!-- Native PPTX Generator Library -->
     <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
     
     <script>
@@ -127,7 +125,11 @@
         
         <div class="w-full sm:w-auto overflow-x-auto no-scrollbar pb-1 sm:pb-0 flex items-center">
             <div class="flex items-center gap-2 w-max mx-auto sm:mx-0">
-                <!-- PPT MAKER TOGGLE -->
+                <!-- TRI-STATE TOGGLES -->
+                <button id="math-btn" onclick="toggleMathMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-emerald-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Interactive Cartesian Engine">
+                    <i id="math-icon" class="ph-bold ph-function text-sm sm:text-base"></i> <span class="">Maths</span>
+                </button>
+                
                 <button id="ppt-btn" onclick="togglePresentationMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-amber-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Auto-Pilot Premium Presentation Engine">
                     <i id="ppt-icon" class="ph-bold ph-presentation-chart text-sm sm:text-base"></i> <span class="">Slides</span>
                 </button>
@@ -140,7 +142,6 @@
         </div>
     </header>
 
-    <!-- SPLIT SCREEN LAYOUT CONTAINER -->
     <div class="flex-1 flex w-full overflow-hidden relative min-h-0">
         <main id="chat-canvas" class="flex-1 h-full overflow-y-auto overflow-x-hidden px-2 sm:px-6 md:px-12 lg:px-24 xl:px-48 py-6 scroll-smooth z-10 min-h-0">
             <div id="message-container" class="max-w-4xl mx-auto space-y-6 sm:space-y-8 pb-10"></div>
@@ -166,7 +167,7 @@
                     <button onclick="closeCanvas()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded"><i class="ph-bold ph-x"></i></button>
                 </div>
             </div>
-            <div id="canvas-content" class="flex-1 overflow-y-auto min-h-0 h-full p-6 lg:p-10 prose prose-invert max-w-none text-sm md:text-base selection:bg-cyan-500/30 pb-24"></div>
+            <div id="canvas-content" class="flex-1 overflow-y-auto min-h-0 h-full p-0 lg:p-0 prose prose-invert max-w-none text-sm md:text-base selection:bg-cyan-500/30"></div>
         </aside>
     </div>
 
@@ -220,6 +221,7 @@
         let isProcessing = false;
         let isDeepResearchOn = false;
         let isPresentationMode = false;
+        let isMathMode = false; 
         let currentChatId = Date.now().toString();
         let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
         let messages = [];
@@ -229,6 +231,7 @@
         
         window.ARTIFACT_STORE = {};
         window.CURRENT_CANVAS_ID = null;
+        window.MATH_STATE = {}; 
 
         const els = {
             selector: document.getElementById('model-selector'),
@@ -253,7 +256,9 @@
             researchBtn: document.getElementById('deep-research-btn'),
             researchIcon: document.getElementById('deep-research-icon'),
             pptBtn: document.getElementById('ppt-btn'),
-            pptIcon: document.getElementById('ppt-icon')
+            pptIcon: document.getElementById('ppt-icon'),
+            mathBtn: document.getElementById('math-btn'),
+            mathIcon: document.getElementById('math-icon')
         };
 
         window.onload = async () => {
@@ -265,6 +270,7 @@
             isDeepResearchOn = !isDeepResearchOn;
             if (isDeepResearchOn) {
                 if (isPresentationMode) togglePresentationMode();
+                if (isMathMode) toggleMathMode();
                 els.researchBtn.classList.replace('text-gray-500', 'text-cyan-400');
                 els.researchBtn.classList.replace('border-transparent', 'border-cyan-500/50');
                 els.researchBtn.classList.add('bg-cyan-500/10');
@@ -282,6 +288,7 @@
             isPresentationMode = !isPresentationMode;
             if (isPresentationMode) {
                 if (isDeepResearchOn) toggleDeepResearch();
+                if (isMathMode) toggleMathMode();
                 els.pptBtn.classList.replace('text-gray-500', 'text-amber-400');
                 els.pptBtn.classList.replace('border-transparent', 'border-amber-500/50');
                 els.pptBtn.classList.add('bg-amber-500/10');
@@ -292,6 +299,24 @@
                 els.pptBtn.classList.replace('border-amber-500/50', 'border-transparent');
                 els.pptBtn.classList.remove('bg-amber-500/10');
                 els.pptIcon.classList.remove('animate-pulse');
+            }
+        }
+
+        function toggleMathMode() {
+            isMathMode = !isMathMode;
+            if (isMathMode) {
+                if (isDeepResearchOn) toggleDeepResearch();
+                if (isPresentationMode) togglePresentationMode();
+                els.mathBtn.classList.replace('text-gray-500', 'text-emerald-400');
+                els.mathBtn.classList.replace('border-transparent', 'border-emerald-500/50');
+                els.mathBtn.classList.add('bg-emerald-500/10');
+                els.mathIcon.classList.add('animate-pulse');
+                showToast("Cartesian Engine Engaged");
+            } else {
+                els.mathBtn.classList.replace('text-emerald-400', 'text-gray-500');
+                els.mathBtn.classList.replace('border-emerald-500/50', 'border-transparent');
+                els.mathBtn.classList.remove('bg-emerald-500/10');
+                els.mathIcon.classList.remove('animate-pulse');
             }
         }
 
@@ -310,13 +335,155 @@
             return marked.parse(processedText);
         }
 
-        // --- Visual Render Engine for Canvas Slides ---
+        // --- MATH RENDERER LOGIC ---
+        function renderMathUI(payload, artifactId) {
+            let sliders = payload.variables.map(v => `
+                <div class="mb-5">
+                    <label class="flex justify-between text-[11px] text-gray-400 mb-1.5 font-mono uppercase tracking-wider">
+                        <span>${v.label} (${v.name})</span>
+                        <span id="val-${v.name}-${artifactId}" class="text-white font-bold">${v.default}</span>
+                    </label>
+                    <input type="range" id="slider-${v.name}-${artifactId}" min="${v.min}" max="${v.max}" step="${v.step}" value="${v.default}" class="w-full accent-emerald-500 h-1 bg-white/10 rounded-lg appearance-none cursor-pointer">
+                </div>
+            `).join('');
+
+            return `
+            <div class="flex flex-col h-full bg-[#050505] overflow-hidden">
+                <div class="flex justify-between items-center p-4 border-b border-white/10 bg-[#0a0a0a]">
+                    <div>
+                        <h3 class="text-lg font-bold text-emerald-400 flex items-center gap-2"><i class="ph-fill ph-function"></i> ${payload.title}</h3>
+                        <code class="text-[10px] text-emerald-400/50 mt-1 block">${payload.expression}</code>
+                    </div>
+                    <button id="toggle-grid-${artifactId}" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-gray-400 transition-colors text-xs font-bold uppercase tracking-wider flex items-center gap-2" title="Toggle Grid"><i class="ph-bold ph-grid-four"></i> Grid</button>
+                </div>
+                <div class="flex-1 flex flex-col md:flex-row min-h-0">
+                    <div class="w-full md:w-72 p-5 border-b md:border-b-0 md:border-r border-white/10 bg-[#0a0a0a] overflow-y-auto">
+                        <div class="text-[10px] uppercase tracking-widest text-emerald-500 font-bold mb-6 flex items-center gap-2"><i class="ph-bold ph-sliders"></i> Variables</div>
+                        ${sliders || '<div class="text-xs text-gray-600 italic">Static Graph</div>'}
+                    </div>
+                    <div class="flex-1 relative overflow-hidden bg-black flex items-center justify-center p-2" id="canvas-wrapper-${artifactId}">
+                        <canvas id="math-canvas-${artifactId}" class="absolute inset-0 w-full h-full"></canvas>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function initMathCanvas(artifactId) {
+            const raw = window.ARTIFACT_STORE[artifactId];
+            if(!raw) return;
+            const payload = JSON.parse(raw);
+            const canvas = document.getElementById(`math-canvas-${artifactId}`);
+            if(!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            window.MATH_STATE[artifactId] = { vars: {}, showGrid: true };
+            payload.variables.forEach(v => {
+                window.MATH_STATE[artifactId].vars[v.name] = v.default;
+                const slider = document.getElementById(`slider-${v.name}-${artifactId}`);
+                const valDisplay = document.getElementById(`val-${v.name}-${artifactId}`);
+                if(slider) {
+                    slider.addEventListener('input', (e) => {
+                        const val = parseFloat(e.target.value);
+                        window.MATH_STATE[artifactId].vars[v.name] = val;
+                        if(valDisplay) valDisplay.innerText = val.toFixed(2).replace(/\.00$/, '');
+                        drawMath(canvas, ctx, payload, window.MATH_STATE[artifactId]);
+                    });
+                }
+            });
+
+            const gridBtn = document.getElementById(`toggle-grid-${artifactId}`);
+            if(gridBtn) {
+                gridBtn.addEventListener('click', () => {
+                    window.MATH_STATE[artifactId].showGrid = !window.MATH_STATE[artifactId].showGrid;
+                    drawMath(canvas, ctx, payload, window.MATH_STATE[artifactId]);
+                });
+            }
+
+            const container = canvas.parentElement;
+            const resizeObserver = new ResizeObserver(() => {
+                canvas.width = container.clientWidth;
+                canvas.height = container.clientHeight;
+                drawMath(canvas, ctx, payload, window.MATH_STATE[artifactId]);
+            });
+            resizeObserver.observe(container);
+
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawMath(canvas, ctx, payload, window.MATH_STATE[artifactId]);
+        }
+
+        function drawMath(canvas, ctx, payload, state) {
+            const w = canvas.width, h = canvas.height;
+            const xMin = payload.xRange[0], xMax = payload.xRange[1];
+            const yMin = payload.yRange[0], yMax = payload.yRange[1];
+            const colors = payload.colors || { grid: "#1e293b", axes: "#475569", line: "#0ea5e9", glow: "#22d3ee" };
+            const vars = state.vars;
+
+            ctx.fillStyle = '#020202';
+            ctx.fillRect(0, 0, w, h);
+
+            const mapX = (x) => ((x - xMin) / (xMax - xMin)) * w;
+            const mapY = (y) => h - ((y - yMin) / (yMax - yMin)) * h;
+
+            if(state.showGrid) {
+                ctx.strokeStyle = colors.grid;
+                ctx.lineWidth = 1;
+                for(let i=0; i<=20; i++) {
+                    let gx = mapX(xMin + (xMax-xMin)*(i/20));
+                    ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, h); ctx.stroke();
+                    let gy = mapY(yMin + (yMax-yMin)*(i/20));
+                    ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(w, gy); ctx.stroke();
+                }
+                ctx.strokeStyle = colors.axes;
+                ctx.lineWidth = 2;
+                const originX = mapX(0), originY = mapY(0);
+                if(originX >= 0 && originX <= w) { ctx.beginPath(); ctx.moveTo(originX, 0); ctx.lineTo(originX, h); ctx.stroke(); }
+                if(originY >= 0 && originY <= h) { ctx.beginPath(); ctx.moveTo(0, originY); ctx.lineTo(w, originY); ctx.stroke(); }
+            }
+
+            ctx.strokeStyle = colors.line;
+            ctx.lineWidth = 4;
+            ctx.lineJoin = "round";
+            ctx.shadowColor = colors.glow;
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+
+            try {
+                const varNames = payload.variables.map(v => v.name);
+                const varVals = payload.variables.map(v => vars[v.name]);
+
+                if(payload.type === 'parametric') {
+                    const func = new Function('t', ...varNames, `let x, y; ${payload.expression}; return {x, y};`);
+                    const tMin = payload.tRange[0], tMax = payload.tRange[1];
+                    const steps = 2000;
+                    for(let i=0; i<=steps; i++) {
+                        let t = tMin + (tMax - tMin) * (i/steps);
+                        let pt = func(t, ...varVals);
+                        let px = mapX(pt.x), py = mapY(pt.y);
+                        if(i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    }
+                } else {
+                    const func = new Function('x', ...varNames, `let y; ${payload.expression}; return y;`);
+                    const steps = 2000;
+                    for(let i=0; i<=steps; i++) {
+                        let x = xMin + (xMax - xMin) * (i/steps);
+                        let y = func(x, ...varVals);
+                        let px = mapX(x), py = mapY(y);
+                        if(i===0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    }
+                }
+                ctx.stroke();
+            } catch(e) { console.error(e); }
+            ctx.shadowBlur = 0;
+        }
+
+        // --- PPTX RENDERER ---
         function renderSlideHTML(s) {
             let html = `<div class="absolute top-2 left-2 text-[10px] bg-black/50 px-2 py-1 rounded text-white/50 z-20">Slide ${s.slideNumber}</div>`;
             const imgHtml = s.imageUrl ? `<img src="${s.imageUrl}" class="absolute inset-0 w-full h-full object-cover z-0" crossorigin="anonymous" onerror="this.style.display='none'"/>` : '';
             
             if (s.layout === 'title_slide') {
-                html += imgHtml + `<div class="absolute inset-0 bg-black/60 z-10 flex flex-col justify-center items-center text-center p-8"><h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4 drop-shadow-xl max-w-[90%] leading-tight">${s.title}</h1><p class="text-lg sm:text-xl lg:text-2xl text-gray-300 drop-shadow-lg font-light max-w-[80%]">${s.subtitle || ''}</p></div>`;
+                html += imgHtml + `<div class="absolute inset-0 bg-black/40 z-10 flex flex-col justify-center items-center text-center p-8"><h1 class="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white mb-4 drop-shadow-xl max-w-[90%] leading-tight">${s.title}</h1><p class="text-lg sm:text-xl lg:text-2xl text-gray-300 drop-shadow-lg font-light max-w-[80%]">${s.subtitle || ''}</p></div>`;
             } else if (s.layout === 'split_image_text') {
                 html += `<div class="flex h-full w-full bg-white z-10 relative"><div class="w-1/2 p-6 sm:p-10 flex flex-col justify-center"><h2 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 leading-tight">${s.title}</h2><h3 class="text-base sm:text-lg text-gray-600 mb-6 font-medium">${s.subtitle || ''}</h3><ul class="list-disc pl-5 space-y-2 sm:space-y-3 text-gray-800 text-sm sm:text-base">${(s.bullets||[]).map(b => `<li>${b}</li>`).join('')}</ul></div><div class="w-1/2 relative bg-gray-100 border-l border-gray-200">${imgHtml}</div></div>`;
             } else if (s.layout === 'full_image_quote') {
@@ -328,12 +495,12 @@
         }
 
         function renderPresentationPreview(payload) {
-            let html = `<div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4"><div><h3 class="text-xl font-bold text-amber-400 mb-1">📊 ${payload.metadata.title}</h3><p class="text-xs text-gray-500">${payload.metadata.slideCount} Slides • Auto-Generated by LexisAI</p></div><button onclick="downloadPPTX('${window.CURRENT_CANVAS_ID}')" class="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-amber-500/20 hover:scale-105 transition-all flex items-center gap-2"><i class="ph-bold ph-download-simple text-lg"></i> Download .PPTX</button></div><div class="space-y-8 pb-10">`;
+            let html = `<div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4 px-6 pt-6"><div><h3 class="text-xl font-bold text-amber-400 mb-1">📊 ${payload.metadata.title}</h3><p class="text-xs text-gray-500">${payload.metadata.slideCount} Slides • Auto-Generated by LexisAI</p></div><button onclick="downloadPPTX('${window.CURRENT_CANVAS_ID}')" class="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-amber-500/20 hover:scale-105 transition-all flex items-center gap-2"><i class="ph-bold ph-download-simple text-lg"></i> Download .PPTX</button></div><div class="space-y-8 pb-10 px-6">`;
             payload.slides.forEach(s => { html += `<div class="bg-white rounded-xl overflow-hidden shadow-2xl aspect-[16/9] relative flex flex-col group border border-white/5">` + renderSlideHTML(s) + `</div>`; });
             html += `</div>`; return html;
         }
 
-        // --- Open Canvas with Type Detection ---
+        // --- ARTIFACT OPENING ---
         function openCanvas(artifactId, title, type = 'document') {
             window.CURRENT_CANVAS_ID = artifactId;
             els.workspace.classList.remove('hidden');
@@ -342,11 +509,17 @@
             const rawData = window.ARTIFACT_STORE[artifactId] || "";
             
             if (type === 'presentation' || rawData.startsWith('{"metadata"')) {
+                els.canvasContent.classList.remove('p-6', 'lg:p-10'); 
+                try { els.canvasContent.innerHTML = renderPresentationPreview(JSON.parse(rawData)); } 
+                catch(e) { els.canvasContent.innerHTML = "<div class='text-center text-gray-500 mt-20'><i class='ph-bold ph-spinner animate-spin text-4xl mb-4'></i><p>Compiling Premium Slides...</p></div>"; }
+            } else if (type === 'math') {
+                els.canvasContent.classList.remove('p-6', 'lg:p-10'); 
                 try {
-                    const payload = JSON.parse(rawData);
-                    els.canvasContent.innerHTML = renderPresentationPreview(payload);
-                } catch(e) { els.canvasContent.innerHTML = "<div class='text-center text-gray-500 mt-20'><i class='ph-bold ph-spinner animate-spin text-4xl mb-4'></i><p>Compiling Premium Slides...</p></div>"; }
+                    els.canvasContent.innerHTML = renderMathUI(JSON.parse(rawData), artifactId);
+                    setTimeout(() => initMathCanvas(artifactId), 50);
+                } catch(e) { els.canvasContent.innerHTML = "<div class='text-center text-gray-500 mt-20'><i class='ph-bold ph-spinner animate-spin text-4xl mb-4'></i><p>Computing Algebra...</p></div>"; }
             } else {
+                els.canvasContent.classList.add('p-6', 'lg:p-10'); 
                 els.canvasContent.innerHTML = renderMathAndMarkdown(rawData);
             }
         }
@@ -443,6 +616,8 @@
                         const content = window.ARTIFACT_STORE[matchId[1]];
                         if(content.startsWith('{"metadata"')) {
                             el.outerHTML = `<em>[Presentation File - Download via Workspace]</em>`;
+                        } else if(content.includes('"type":"y_equals_fx"') || content.includes('"type":"parametric"')) {
+                            el.outerHTML = `<div style="border: 1px solid #333; padding: 15px; border-radius: 8px; margin: 15px 0; background-color: #111;"><h3 style="color: #10b981; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 8px; font-size: 16px;">📈 ${title}</h3><em>[Interactive Cartesian Graph - View in Workspace]</em></div>`;
                         } else {
                             el.outerHTML = `<div style="border: 1px solid #333; padding: 15px; border-radius: 8px; margin: 15px 0; background-color: #111;"><h3 style="color: #22d3ee; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #222; padding-bottom: 8px; font-size: 16px;">📄 ${title}</h3><div style="font-size: 13px; color: #ccc;">${renderMathAndMarkdown(content)}</div></div>`;
                         }
@@ -455,26 +630,14 @@
             try { await html2pdf().set({ margin:15, filename:`${filename}.pdf`, html2canvas:{scale:2, backgroundColor:'#0a0a0a'}, jsPDF:{unit:'mm', format:'a4', orientation:'portrait'} }).from(clone).save(); showToast("Downloaded!"); } catch (e) { showToast("Failed"); } btn.innerHTML = origHtml; btn.disabled = false; closePdfModal();
         }
 
-        // --- PPTX Client-Side Generation ---
         async function downloadPPTX(artifactId) {
             showToast("Building .PPTX File...");
             try {
                 const raw = window.ARTIFACT_STORE[artifactId];
                 const payload = JSON.parse(raw);
                 
-                let pptx;
-                if (typeof pptxgen !== 'undefined') {
-                    pptx = new pptxgen();
-                } else if (typeof PptxGenJS !== 'undefined') {
-                    pptx = new PptxGenJS();
-                } else {
-                    throw new Error("PPTX library not loaded");
-                }
-                
-                pptx.layout = 'LAYOUT_16x9';
-                pptx.author = 'LexisAI Premium';
-                pptx.company = 'LexisAI';
-                pptx.subject = payload.metadata.title;
+                let pptx = new pptxgen();
+                pptx.layout = 'LAYOUT_16x9'; pptx.author = 'LexisAI Premium'; pptx.company = 'LexisAI'; pptx.subject = payload.metadata.title;
                 
                 for(let i=0; i<payload.slides.length; i++) {
                     const s = payload.slides[i];
@@ -492,9 +655,7 @@
                         slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '50%', h: '100%', fill: { color: 'FFFFFF' } });
                         slide.addText(s.title, { x: 0.5, y: 1.0, w: '40%', fontSize: 32, bold: true, color: '363636' });
                         if(s.subtitle) slide.addText(s.subtitle, { x: 0.5, y: 2.0, w: '40%', fontSize: 18, color: '666666' });
-                        if(s.bullets && s.bullets.length) {
-                            slide.addText(s.bullets.map(b => ({text: b, options:{bullet:true}})), { x: 0.5, y: 3.0, w: '40%', fontSize: 16, color: '363636', valign:'top' });
-                        }
+                        if(s.bullets && s.bullets.length) slide.addText(s.bullets.map(b => ({text: b, options:{bullet:true}})), { x: 0.5, y: 3.0, w: '40%', fontSize: 16, color: '363636', valign:'top' });
                     }
                     else if (s.layout === 'full_image_quote') {
                         if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: 0, y: 0, w: '100%', h: '100%', sizing: { type: 'cover' } });
@@ -506,9 +667,7 @@
                         slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: '100%', h: '100%', fill: { color: 'FFFFFF' } });
                         slide.addText(s.title, { x: 0.5, y: 0.8, w: '90%', fontSize: 36, bold: true, color: '363636' });
                         if(s.subtitle) slide.addText(s.subtitle, { x: 0.5, y: 1.5, w: '90%', fontSize: 20, color: '666666' });
-                        if(s.bullets && s.bullets.length) {
-                            slide.addText(s.bullets.map(b => ({text: b, options:{bullet:true, color:'363636', fontSize: 18}})), { x: 0.5, y: 2.5, w: '90%', h: '60%', color: '363636', valign:'top', margin: 0.1 });
-                        }
+                        if(s.bullets && s.bullets.length) slide.addText(s.bullets.map(b => ({text: b, options:{bullet:true, color:'363636', fontSize: 18}})), { x: 0.5, y: 2.5, w: '90%', h: '60%', color: '363636', valign:'top', margin: 0.1 });
                     }
                 }
                 await pptx.writeFile({ fileName: `${payload.metadata.title.replace(/\s+/g, '_')}.pptx` });
@@ -556,7 +715,7 @@
             else { els.sendBtn.className = 'p-2.5 sm:p-3 m-1 rounded-xl sm:rounded-2xl flex items-center justify-center transition-all bg-white/5 text-gray-500 cursor-not-allowed flex-shrink-0'; els.sendIcon.classList.remove('translate-x-0.5', '-translate-y-0.5'); }
         }
 
-        // --- UPGRADED JSON & PRESENTATION ARTIFACT PARSER ---
+        // --- UPGRADED JSON ARTIFACT PARSER ---
         function parseRichText(content, isStreaming = false, msgId = null) {
             let extractedHtml = ''; let markdownContent = content;
 
@@ -568,10 +727,12 @@
                 
                 if (window.CURRENT_CANVAS_ID === artId) { 
                     if (type === 'presentation') {
-                        try {
-                            const payload = JSON.parse(artifactContent.trim());
-                            els.canvasContent.innerHTML = renderPresentationPreview(payload);
-                        } catch(e) { els.canvasContent.innerHTML = "<div class='text-center text-gray-500 mt-20'><i class='ph-bold ph-spinner animate-spin text-4xl mb-4'></i><p>Compiling Premium Slides...</p></div>"; }
+                        try { els.canvasContent.innerHTML = renderPresentationPreview(JSON.parse(artifactContent.trim())); } catch(e) { }
+                    } else if (type === 'math') {
+                        try { 
+                            els.canvasContent.innerHTML = renderMathUI(JSON.parse(artifactContent.trim()), artId); 
+                            setTimeout(() => initMathCanvas(artId), 50);
+                        } catch(e) { }
                     } else {
                         els.canvasContent.innerHTML = renderMathAndMarkdown(artifactContent.trim()); 
                     }
@@ -579,19 +740,20 @@
                 }
 
                 const isPres = type === 'presentation';
-                const iconColor = isPres ? 'amber-400' : 'cyan-400';
-                const iconBg = isPres ? 'amber-500/10' : 'cyan-500/10';
-                const iconBorder = isPres ? 'amber-500/20' : 'cyan-500/20';
-                const iconHover = isPres ? 'amber-500/50' : 'cyan-500/50';
-                const iconClass = isPres ? 'ph-presentation-chart' : 'ph-layout';
-                const titleText = title ? title.replace(/'/g, "\\'") : (isPres ? 'Slide Deck' : 'Document');
+                const isMath = type === 'math';
+                const iconColor = isMath ? 'emerald-400' : (isPres ? 'amber-400' : 'cyan-400');
+                const iconBg = isMath ? 'emerald-500/10' : (isPres ? 'amber-500/10' : 'cyan-500/10');
+                const iconBorder = isMath ? 'emerald-500/20' : (isPres ? 'amber-500/20' : 'cyan-500/20');
+                const iconHover = isMath ? 'emerald-500/50' : (isPres ? 'amber-500/50' : 'cyan-500/50');
+                const iconClass = isMath ? 'ph-function' : (isPres ? 'ph-presentation-chart' : 'ph-layout');
+                const titleText = title ? title.replace(/'/g, "\\'") : (isMath ? 'Interactive Graph' : (isPres ? 'Slide Deck' : 'Document'));
 
                 if (!closeTag && isStreaming) {
                     extractedHtml += `<div class="artifact-card mt-4 p-4 border border-${iconColor.split('-')[0]}-500/50 bg-${iconBg} rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-[0_0_15px_rgba(var(--tw-colors-${iconColor.split('-')[0]}-500),0.2)] group animate-pulse" onclick="openCanvas('${artId}', '${titleText}', '${type || 'document'}')"><div class="flex items-center gap-3"><i class="ph-bold ${iconClass} text-${iconColor} text-xl"></i><div><p class="text-[10px] text-${iconColor} font-bold uppercase tracking-widest mb-0.5">Live Workspace (Click to Open)</p><p class="text-sm text-white font-medium">${title || 'Drafting Document...'}</p></div></div><i class="ph-bold ph-spinner animate-spin text-${iconColor}"></i></div>`;
                     return ''; 
                 }
 
-                extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${titleText}', '${type || 'document'}')"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-${iconBg} flex items-center justify-center border border-${iconBorder} group-hover:border-${iconHover} transition-colors"><i class="ph-fill ${iconClass} text-${iconColor} text-xl"></i></div><div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">${isPres ? 'Presentation Deck' : 'Interactive Workspace'}</p><p class="text-sm text-white font-medium group-hover:text-${iconColor} transition-colors">${title || 'Untitled Artifact'}</p></div></div><i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i></div>`;
+                extractedHtml += `<div class="artifact-card mt-4 p-4 border border-white/10 bg-surface2 hover:bg-surface3 rounded-xl flex items-center justify-between cursor-pointer transition-colors shadow-lg group" onclick="openCanvas('${artId}', '${titleText}', '${type || 'document'}')"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-${iconBg} flex items-center justify-center border border-${iconBorder} group-hover:border-${iconHover} transition-colors"><i class="ph-fill ${iconClass} text-${iconColor} text-xl"></i></div><div><p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">${isMath ? 'Cartesian Engine' : (isPres ? 'Presentation Deck' : 'Interactive Workspace')}</p><p class="text-sm text-white font-medium group-hover:text-${iconColor} transition-colors">${title || 'Untitled Artifact'}</p></div></div><i class="ph-bold ph-caret-right text-gray-500 group-hover:text-white transition-colors"></i></div>`;
                 return ''; 
             });
 
@@ -640,12 +802,13 @@
             return { container: div.querySelector('.msg-content'), id: msgId };
         }
 
-        function appendResearchTerminal(initText = 'Initializing Auto-Pilot Agent...', type = 'research') {
+        function appendResearchTerminal(initText = 'Initializing Agent...', type = 'research') {
             const isPpt = type === 'presentation';
-            const cColor = isPpt ? 'text-amber-400' : 'text-cyan-400';
-            const cBg = isPpt ? 'bg-amber-500/20' : 'bg-cyan-500/20';
-            const cBorder = isPpt ? 'border-amber-500/50' : 'border-cyan-500/50';
-            const cIcon = isPpt ? 'ph-presentation-chart' : 'ph-radar';
+            const isMath = type === 'math';
+            const cColor = isMath ? 'text-emerald-400' : (isPpt ? 'text-amber-400' : 'text-cyan-400');
+            const cBg = isMath ? 'bg-emerald-500/20' : (isPpt ? 'bg-amber-500/20' : 'bg-cyan-500/20');
+            const cBorder = isMath ? 'border-emerald-500/50' : (isPpt ? 'border-amber-500/50' : 'border-cyan-500/50');
+            const cIcon = isMath ? 'ph-function' : (isPpt ? 'ph-presentation-chart' : 'ph-radar');
 
             const div = document.createElement('div'); 
             div.className = "flex w-full mb-6 sm:mb-8 justify-start";
@@ -655,8 +818,6 @@
             return document.getElementById('research-logs');
         }
 
-        function renderMessagesToUI() { els.container.innerHTML = ''; window.ARTIFACT_STORE = {}; messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta)); }
-        
         async function handleSend() {
             const text = els.input.value.trim();
             if ((!text && pendingFiles.length === 0) || isProcessing) return;
@@ -676,6 +837,51 @@
             els.input.value = ''; els.input.style.height = 'auto'; pendingFiles = []; renderStagingArea();
             isProcessing = true; updateUIState();
 
+            // --- INTERCEPT: MATH ENGINE ---
+            if (isMathMode) {
+                els.indicator.classList.add('hidden');
+                const logContainer = appendResearchTerminal('Initializing Cartesian Core...', 'math');
+                try {
+                    const res = await fetch('/api/maths', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) });
+                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+                    let compiledPayload = null;
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (value) {
+                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    const dataStr = line.slice(6).trim(); if (!dataStr) continue;
+                                    try {
+                                        const data = JSON.parse(dataStr);
+                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
+                                        if (data.done) { compiledPayload = data.payload; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Rendering Interactive Cartesian Grid...</div>`; break; }
+                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
+                                    } catch (e) { }
+                                }
+                            }
+                        }
+                        if (done) break;
+                    }
+                    await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
+
+                    if (compiledPayload) {
+                        const assistantMsgObj = appendMessage('assistant', '', activeModelId);
+                        const rawJson = JSON.stringify(compiledPayload);
+                        const artifactContent = `<artifact title="${compiledPayload.title}" type="math">\n${rawJson}\n</artifact>`;
+
+                        assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
+                        messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
+                        saveCurrentChat();
+                    }
+                } catch (err) {
+                    logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove();
+                }
+                isProcessing = false; updateUIState();
+                return;
+            }
+
             // --- INTERCEPT: PRESENTATION MODE ---
             if (isPresentationMode) {
                 els.indicator.classList.add('hidden');
@@ -684,9 +890,7 @@
                     let extContext = "";
                     if (currentChatExtId) {
                         const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
-                        if (activeExt && activeExt.links && activeExt.links.length > 0) {
-                            extContext = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
-                        }
+                        if (activeExt && activeExt.links && activeExt.links.length > 0) extContext = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
                     }
                     const res = await fetch('/api/presentation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: text, context: extContext }) });
                     const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
@@ -716,7 +920,6 @@
                         const assistantMsgObj = appendMessage('assistant', '', activeModelId);
                         const rawJson = JSON.stringify(compiledPayload);
                         const artifactContent = `<artifact title="${compiledPayload.metadata.title}" type="presentation">\n${rawJson}\n</artifact>`;
-
                         assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
                         messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
                         saveCurrentChat();
@@ -725,7 +928,7 @@
                     logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove();
                 }
                 isProcessing = false; updateUIState();
-                return; // Exits standard chat flow
+                return;
             }
 
             // --- STANDARD CHAT & RESEARCH FLOW ---
