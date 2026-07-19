@@ -37,6 +37,7 @@
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
         .terminal-text { font-family: 'Courier New', Courier, monospace; }
         #workspace-canvas { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease; }
+        .canvas-expanded { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; z-index: 100 !important; border-left: none !important; }
         .katex-display { overflow-x: auto; overflow-y: hidden; padding-bottom: 0.5rem; margin: 1em 0; }
         .katex { font-size: 1.1em; }
     </style>
@@ -163,6 +164,9 @@
                     <h2 id="canvas-title" class="text-sm font-bold text-white truncate max-w-[200px]">Artifact</h2>
                 </div>
                 <div class="flex gap-2">
+                    <!-- NEW FULL SCREEN TOGGLE BUTTON -->
+                    <button onclick="toggleCanvasExpanded()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded text-xs flex items-center gap-1" title="Maximize/Minimize"><i id="expand-canvas-icon" class="ph-bold ph-corners-out"></i></button>
+                    
                     <button onclick="copyCanvasContent()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded text-xs flex items-center gap-1"><i class="ph-bold ph-copy"></i> Copy</button>
                     <button onclick="closeCanvas()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded"><i class="ph-bold ph-x"></i></button>
                 </div>
@@ -222,6 +226,7 @@
         let isDeepResearchOn = false;
         let isPresentationMode = false;
         let isMathMode = false; 
+        let isCanvasExpanded = false; // NEW STATE FOR EXPAND/MINIMIZE
         let currentChatId = Date.now().toString();
         let chats = []; 
         let messages = [];
@@ -266,7 +271,6 @@
             updateUIState(); 
             refreshExtSelectors();
             
-            // Safe JSON parse to filter out corrupted old data completely
             try {
                 const rawData = localStorage.getItem('chatini_sessions');
                 if (rawData) {
@@ -515,7 +519,21 @@
             html += `</div>`; return html;
         }
 
-        // --- ARTIFACT OPENING ---
+        // --- ARTIFACT TOGGLE / FULL SCREEN LOGIC ---
+        function toggleCanvasExpanded() {
+            isCanvasExpanded = !isCanvasExpanded;
+            const icon = document.getElementById('expand-canvas-icon');
+            if (isCanvasExpanded) {
+                els.workspace.classList.add('canvas-expanded');
+                icon.classList.replace('ph-corners-out', 'ph-corners-in');
+            } else {
+                els.workspace.classList.remove('canvas-expanded');
+                icon.classList.replace('ph-corners-in', 'ph-corners-out');
+            }
+            // Trigger resize to ensure components like Math Canvas respond to new dimensions
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+        }
+
         function openCanvas(artifactId, title, type = 'document') {
             window.CURRENT_CANVAS_ID = artifactId;
             els.workspace.classList.remove('hidden');
@@ -537,9 +555,12 @@
                 els.canvasContent.classList.add('p-6', 'lg:p-10'); 
                 els.canvasContent.innerHTML = renderMathAndMarkdown(rawData);
             }
+            // Ensure resize is triggered for layout fixes
+            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
         }
 
         function closeCanvas() {
+            if (isCanvasExpanded) toggleCanvasExpanded(); // Reset expansion state
             window.CURRENT_CANVAS_ID = null;
             els.workspace.classList.add('translate-x-full');
             setTimeout(() => els.workspace.classList.add('hidden'), 400); 
@@ -702,7 +723,6 @@
         function renderStagingArea() { els.stagingArea.innerHTML = pendingFiles.map((file, index) => `<div class="flex items-center gap-2 bg-surface2 border border-white/10 px-3 py-1.5 rounded-lg text-xs"><i class="ph-bold ${file.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-cyan-400"></i><span class="truncate max-w-[100px] text-gray-300">${file.name}</span><button onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 ml-1"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
         function removeFile(index) { pendingFiles.splice(index, 1); renderStagingArea(); updateUIState(); }
         
-        // Split toggle into explicit states for robust logic
         function openSidebar() { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); }
         function closeSidebar() { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); }
         function toggleSidebar() { if (els.sidebar.classList.contains('-translate-x-full')) { openSidebar(); } else { closeSidebar(); } }
@@ -748,7 +768,6 @@
             const initText = 'System Initialized. New chat created. How may I assist you today?';
             appendMessage('assistant', initText, activeModelId, initMsgId); 
             
-            // Push manually so it visually saves and populates in sidebar history immediately
             messages.push({ role: 'assistant', content: initText, id: initMsgId, modelId: activeModelId });
             saveCurrentChat();
             
