@@ -8,11 +8,9 @@ export const config = {
 // ============================================================================
 function sanitizeJSON(str) {
     try {
-        // Extract content between the first [ and the last ]
         const match = str.match(/\[[\s\S]*\]/);
         if (!match) throw new Error("No JSON array found");
         let clean = match[0];
-        // Remove trailing commas before closing brackets/braces (common LLM error)
         clean = clean.replace(/,\s*([\]}])/g, '$1');
         return JSON.parse(clean);
     } catch (e) {
@@ -28,9 +26,9 @@ async function fetchGeminiWithRotation(prompt, keys, sendLog, agentName) {
     let finalError = "";
     
     const payload = {
-        systemInstruction: { parts: [{ text: "You are a world-class Presentation Designer for LexisAI Premium. Output strictly in JSON format. Do not use markdown code blocks. Just output the raw JSON array." }] },
+        systemInstruction: { parts: [{ text: "You are LexisAI's Premium Presentation Designer. Output strictly in JSON format. Do not use markdown code blocks. Just output the raw JSON array. Never break character. Never mention you are an AI." }] },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192 },
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192, temperature: 0.7 }, // Temp raised slightly for higher creativity
         safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
             { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -54,7 +52,7 @@ async function fetchGeminiWithRotation(prompt, keys, sendLog, agentName) {
                     sendLog(`> [${agentName}] Rate limit on Key ${i+1}. Rotating to backup...`);
                     continue;
                 }
-                break; // Break on 400 Bad Request
+                break; 
             }
         } catch (e) {
             finalError = e.message;
@@ -100,12 +98,16 @@ export default async function handler(req) {
                 // ---------------------------------------------------------
                 // PASS 1: THE ARCHITECT (Groq Llama 3.1)
                 // ---------------------------------------------------------
-                sendLog("> [Pass 1] Deploying Groq Architect to map 18-slide master structure...");
+                sendLog("> [Pass 1] Deploying Architect Agent to map 18-slide master structure...");
                 
-                let masterOutline = [];
-                const groqPrompt = `You are a Master Presentation Strategist. Create an 18-slide master outline for a highly premium, market-beating presentation about: "${topic}". 
+                // ANTI-PERSONA BLEED PROMPT
+                const groqPrompt = `You are a Master Presentation Strategist for LexisAI. Create an 18-slide master outline for a highly premium, market-beating presentation about: "${topic}". 
 Context provided: ${context ? context.substring(0, 3000) : 'None'}.
-Output ONLY a JSON array of 18 objects. Each object must have: "slideNumber" (1 to 18), "intent" (what the slide covers), and "suggestedLayout" (choose one: 'title_slide', 'split_image_text', 'full_image_quote', 'bullet_points').`;
+
+CRITICAL RULES:
+1. ABSOLUTELY NEVER mention "Groq", "Gemini", "AI", or "Language Model". 
+2. Act as a top-tier human business consultant.
+3. Output ONLY a JSON array of 18 objects. Each object must have: "slideNumber" (1 to 18), "intent" (what the slide covers), and "suggestedLayout" (choose one: 'title_slide', 'split_image_text', 'full_image_quote', 'bullet_points').`;
 
                 const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
@@ -113,30 +115,29 @@ Output ONLY a JSON array of 18 objects. Each object must have: "slideNumber" (1 
                     body: JSON.stringify({
                         model: 'llama-3.1-8b-instant',
                         messages: [{ role: 'user', content: groqPrompt }],
-                        temperature: 0.2,
+                        temperature: 0.3,
                         response_format: { type: "json_object" }
                     })
                 });
 
-                if (!groqRes.ok) throw new Error("Pass 1 (Groq) Failed to construct outline.");
+                if (!groqRes.ok) throw new Error("Pass 1 Architect Failed to construct outline.");
                 const groqData = await groqRes.json();
                 const rawOutline = groqData.choices[0].message.content;
                 
-                // Try parsing Groq's output. If it fails, fallback to a strict regex sanitization.
+                let masterOutline = [];
                 try {
                     masterOutline = JSON.parse(rawOutline);
-                    if (masterOutline.slides) masterOutline = masterOutline.slides; // Handle {slides: []} wrapper
+                    if (masterOutline.slides) masterOutline = masterOutline.slides;
                 } catch(e) {
                     masterOutline = sanitizeJSON(rawOutline);
                 }
 
                 if (!masterOutline || !Array.isArray(masterOutline)) {
-                    throw new Error("Pass 1 (Groq) generated an invalid master structure.");
+                    throw new Error("Pass 1 generated an invalid master structure.");
                 }
 
                 sendLog("> [Pass 1] Master 18-slide blueprint secured.");
                 
-                // Split outline in half for parallel processing
                 const midPoint = Math.floor(masterOutline.length / 2);
                 const firstHalf = masterOutline.slice(0, midPoint);
                 const secondHalf = masterOutline.slice(midPoint);
@@ -144,56 +145,53 @@ Output ONLY a JSON array of 18 objects. Each object must have: "slideNumber" (1 
                 // ---------------------------------------------------------
                 // PASS 2 & 3: THE DESIGNERS (Gemini Parallel Execution)
                 // ---------------------------------------------------------
-                sendLog("> [Pass 2 & 3] Deploying Dual Gemini Agents for continuous high-fidelity creation...");
+                sendLog("> [Pass 2 & 3] Deploying Dual LexisAI Agents for high-fidelity creation...");
                 
-                const geminiInstructions = `You are generating the actual content for a premium PowerPoint presentation. 
-Here is the master outline: ${JSON.stringify(masterOutline)}.
-
-Your specific task is to generate the FULL DATA for the following specific slides:
+                // ANTI-OVERLAP & CREATIVITY PROMPT
+                const geminiInstructions = `You are a world-class Corporate Presentation Designer for LexisAI.
+Generate the FULL DATA for the following specific slides based on this outline:
 [TARGET_SLIDES]
 
-Follow these strict rules for every slide object:
+CRITICAL ANTI-OVERLAP AND DESIGN RULES:
 1. "slideNumber": Must match the outline.
 2. "layout": Must be exactly one of: 'title_slide', 'split_image_text', 'full_image_quote', 'bullet_points'.
-3. "title": Catchy, premium title.
-4. "subtitle": Optional subtitle or quote.
-5. "bullets": An array of 3 to 5 highly engaging strings (empty array if layout is full_image_quote).
+3. "title": Catchy, premium title. **MAXIMUM 6 WORDS**.
+4. "subtitle": Optional subtitle or quote. **MAXIMUM 12 WORDS**.
+5. "bullets": An array of 3 to 4 highly engaging strings. **EACH BULLET MUST BE MAXIMUM 10 WORDS LONG**. (If you make them longer, the text will overlap on the slide. Keep them punchy and short!). Use empty array [] if layout is full_image_quote.
 6. "imagePrompt": A highly detailed, Midjourney-style prompt for an AI image generator (e.g., "Cinematic 8k rendering of a futuristic cityscape, photorealistic, neon lighting, no text"). MUST be provided if layout is title_slide, split_image_text, or full_image_quote.
+7. ABSOLUTELY NEVER mention "Gemini", "Groq", "AI", or backend mechanics. Be highly creative, professional, and market-beating.
 
-Output ONLY a JSON array of these slide objects.`;
+Output ONLY a JSON array of these slide objects. Do NOT wrap in markdown.`;
 
-                // Execute Gemini Passes concurrently to halve the wait time
                 const [pass2Raw, pass3Raw] = await Promise.all([
-                    fetchGeminiWithRotation(geminiInstructions.replace('[TARGET_SLIDES]', JSON.stringify(firstHalf)), GEMINI_KEYS, sendLog, "Agent A"),
-                    fetchGeminiWithRotation(geminiInstructions.replace('[TARGET_SLIDES]', JSON.stringify(secondHalf)), GEMINI_KEYS, sendLog, "Agent B")
+                    fetchGeminiWithRotation(geminiInstructions.replace('[TARGET_SLIDES]', JSON.stringify(firstHalf)), GEMINI_KEYS, sendLog, "Agent Alpha"),
+                    fetchGeminiWithRotation(geminiInstructions.replace('[TARGET_SLIDES]', JSON.stringify(secondHalf)), GEMINI_KEYS, sendLog, "Agent Beta")
                 ]);
 
-                sendLog("> [Pass 2 & 3] Dual Agents finished drafting content. Synthesizing...");
+                sendLog("> [Pass 2 & 3] Content synthesis complete. Applying aesthetic layers...");
 
-                // Sanitize and parse outputs
                 const slidesA = sanitizeJSON(pass2Raw) || [];
                 const slidesB = sanitizeJSON(pass3Raw) || [];
                 let finalSlides = [...slidesA, ...slidesB];
 
-                // Sort by slide number just in case the AI messed up the order
                 finalSlides.sort((a, b) => a.slideNumber - b.slideNumber);
 
                 // ---------------------------------------------------------
-                // POST-PROCESSING: AI IMAGE GENERATION & WATERMARKING
+                // POST-PROCESSING: AI IMAGE GENERATION CACHE FIX
                 // ---------------------------------------------------------
-                sendLog("> Compiling visual assets via Pollinations AI...");
+                sendLog("> Compiling visual assets and dynamic media...");
                 
                 finalSlides = finalSlides.map(slide => {
-                    // Convert the descriptive prompt into a direct AI-generation URL
                     if (slide.imagePrompt) {
-                        const encodedPrompt = encodeURIComponent(slide.imagePrompt + ", highly detailed, masterpiece, 8k resolution, no text, no watermarks");
-                        // Use Pollinations API for instant, free, unauthenticated AI image generation
-                        slide.imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1920&height=1080&nologo=true`;
+                        // Added a random seed to the URL to prevent aggressive browser caching from breaking the images
+                        const seed = Math.floor(Math.random() * 100000);
+                        const encodedPrompt = encodeURIComponent(slide.imagePrompt + ", highly detailed, masterpiece, 8k resolution, photorealistic, cinematic lighting, no text, no watermarks");
+                        slide.imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1920&height=1080&nologo=true&seed=${seed}`;
                     }
                     return slide;
                 });
 
-                sendLog("> Applying LexisAI Premium watermarks & formatting payload...");
+                sendLog("> Applying LexisAI Premium formatting payload...");
 
                 const finalPayload = {
                     metadata: {
@@ -207,7 +205,6 @@ Output ONLY a JSON array of these slide objects.`;
                 };
 
                 sendLog("> Workspace Generation Complete. Ready for PPTX export.");
-                
                 sendDone(finalPayload);
 
             } catch (error) {
@@ -224,4 +221,5 @@ Output ONLY a JSON array of these slide objects.`;
         }
     });
 }
+
 
