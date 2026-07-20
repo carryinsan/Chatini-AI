@@ -10,9 +10,11 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     
+    <!-- KaTeX Math Engine -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 
+    <!-- Native PPTX Generator Library -->
     <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
     
     <script>
@@ -37,7 +39,6 @@
         .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; }
         .terminal-text { font-family: 'Courier New', Courier, monospace; }
         #workspace-canvas { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease; }
-        .canvas-expanded { position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100dvh !important; z-index: 100 !important; border-left: none !important; }
         .katex-display { overflow-x: auto; overflow-y: hidden; padding-bottom: 0.5rem; margin: 1em 0; }
         .katex { font-size: 1.1em; }
     </style>
@@ -92,11 +93,11 @@
     </div>
 
     <!-- SIDEBAR -->
-    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="closeSidebar()"></div>
+    <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-[80vw] max-w-xs glass-header transform -translate-x-full transition-transform duration-300 z-50 flex flex-col border-r border-white/10 shadow-2xl">
         <div class="p-4 border-b border-white/10 flex justify-between items-center mt-safe">
             <h2 class="text-xs font-bold tracking-widest text-gray-400 uppercase">Chat History</h2>
-            <button onclick="closeSidebar()" class="text-gray-400 hover:text-white p-2"><i class="ph-bold ph-x text-lg"></i></button>
+            <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-2"><i class="ph-bold ph-x text-lg"></i></button>
         </div>
         <div class="p-4 space-y-3 border-b border-white/10">
             <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-plus"></i> New Conversation</button>
@@ -164,9 +165,6 @@
                     <h2 id="canvas-title" class="text-sm font-bold text-white truncate max-w-[200px]">Artifact</h2>
                 </div>
                 <div class="flex gap-2">
-                    <!-- NEW FULL SCREEN TOGGLE BUTTON -->
-                    <button onclick="toggleCanvasExpanded()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded text-xs flex items-center gap-1" title="Maximize/Minimize"><i id="expand-canvas-icon" class="ph-bold ph-corners-out"></i></button>
-                    
                     <button onclick="copyCanvasContent()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded text-xs flex items-center gap-1"><i class="ph-bold ph-copy"></i> Copy</button>
                     <button onclick="closeCanvas()" class="text-gray-400 hover:text-white bg-white/5 p-1.5 rounded"><i class="ph-bold ph-x"></i></button>
                 </div>
@@ -221,14 +219,56 @@
             delete: (id) => new Promise(resolve => { const tx = DB.db.transaction('extensions', 'readwrite'); tx.objectStore('extensions').delete(id); tx.oncomplete = () => resolve(); })
         };
 
+        // --- SILENT TELEMETRY ENGINE ---
+        function getDeviceId() {
+            let id = localStorage.getItem('lexis_device_id');
+            if (!id) {
+                id = 'dev_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
+                localStorage.setItem('lexis_device_id', id);
+            }
+            return id;
+        }
+
+        function getDeviceInfo() {
+            const ua = navigator.userAgent;
+            let device = "Desktop";
+            if (/Mobi|Android/i.test(ua)) device = "Mobile";
+            if (/Tablet|iPad/i.test(ua)) device = "Tablet";
+            let os = "Unknown";
+            if (/Win/i.test(ua)) os = "Windows";
+            else if (/Mac/i.test(ua)) os = "MacOS";
+            else if (/iPhone|iPad|iPod/i.test(ua)) os = "iOS";
+            else if (/Android/i.test(ua)) os = "Android";
+            else if (/Linux/i.test(ua)) os = "Linux";
+            return `${device} - ${os}`;
+        }
+
+        function sendTelemetry(action, model, status, errorDetails = '') {
+            try {
+                fetch('/api/track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        deviceId: getDeviceId(),
+                        nickname: localStorage.getItem('lexis_nickname') || 'Anonymous',
+                        deviceInfo: getDeviceInfo(),
+                        action: action,
+                        model: model,
+                        status: status,
+                        errorDetails: errorDetails
+                    })
+                }).catch(()=>{}); // Silent failure
+            } catch(e) {}
+        }
+        // --------------------------------
+
         let activeModelId = 'oracle';
         let isProcessing = false;
         let isDeepResearchOn = false;
         let isPresentationMode = false;
         let isMathMode = false; 
-        let isCanvasExpanded = false; // NEW STATE FOR EXPAND/MINIMIZE
         let currentChatId = Date.now().toString();
-        let chats = []; 
+        let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
         let messages = [];
         let pendingFiles = [];
         let currentChatExtId = null; 
@@ -267,24 +307,14 @@
         };
 
         window.onload = async () => {
-            await DB.init(); 
-            updateUIState(); 
-            refreshExtSelectors();
-            
-            try {
-                const rawData = localStorage.getItem('chatini_sessions');
-                if (rawData) {
-                    const parsed = JSON.parse(rawData);
-                    chats = (Array.isArray(parsed) ? parsed : []).filter(c => c && c.id);
-                }
-            } catch (e) {
-                console.error("Local Storage Parse Error:", e);
-                chats = [];
-            }
-
+            await DB.init(); updateUIState(); refreshExtSelectors();
             if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
+            
+            // Ensure ID is generated
+            getDeviceId();
         };
 
+        // --- TRI-STATE TOGGLES ---
         function toggleDeepResearch() {
             isDeepResearchOn = !isDeepResearchOn;
             if (isDeepResearchOn) {
@@ -519,21 +549,7 @@
             html += `</div>`; return html;
         }
 
-        // --- ARTIFACT TOGGLE / FULL SCREEN LOGIC ---
-        function toggleCanvasExpanded() {
-            isCanvasExpanded = !isCanvasExpanded;
-            const icon = document.getElementById('expand-canvas-icon');
-            if (isCanvasExpanded) {
-                els.workspace.classList.add('canvas-expanded');
-                icon.classList.replace('ph-corners-out', 'ph-corners-in');
-            } else {
-                els.workspace.classList.remove('canvas-expanded');
-                icon.classList.replace('ph-corners-in', 'ph-corners-out');
-            }
-            // Trigger resize to ensure components like Math Canvas respond to new dimensions
-            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
-        }
-
+        // --- ARTIFACT OPENING ---
         function openCanvas(artifactId, title, type = 'document') {
             window.CURRENT_CANVAS_ID = artifactId;
             els.workspace.classList.remove('hidden');
@@ -555,12 +571,9 @@
                 els.canvasContent.classList.add('p-6', 'lg:p-10'); 
                 els.canvasContent.innerHTML = renderMathAndMarkdown(rawData);
             }
-            // Ensure resize is triggered for layout fixes
-            setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
         }
 
         function closeCanvas() {
-            if (isCanvasExpanded) toggleCanvasExpanded(); // Reset expansion state
             window.CURRENT_CANVAS_ID = null;
             els.workspace.classList.add('translate-x-full');
             setTimeout(() => els.workspace.classList.add('hidden'), 400); 
@@ -629,7 +642,7 @@
 
         let currentPdfMsgId = null;
         function showToast(msg) { const toast = document.getElementById('toast'); document.getElementById('toast-msg').innerText = msg; toast.classList.remove('opacity-0', '-translate-y-10'); setTimeout(() => toast.classList.add('opacity-0', '-translate-y-10'), 2500); }
-        async function copyToClipboard(msgId) { const msg = messages.find(m => m.id.toString() === msgId.toString()); if (!msg) return; try { if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(msg.content); else { const t = document.createElement("textarea"); t.value = msg.content; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); } showToast("Copied!"); } catch (err) { showToast("Copy failed!"); } }
+        async function copyToClipboard(msgId) { const msg = messages.find(m => m.id === msgId); if (!msg) return; try { if (navigator.clipboard && window.isSecureContext) await navigator.clipboard.writeText(msg.content); else { const t = document.createElement("textarea"); t.value = msg.content; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); } showToast("Copied!"); } catch (err) { showToast("Copy failed!"); } }
         function openPdfModal(msgId) { currentPdfMsgId = msgId; document.getElementById('pdf-modal').classList.remove('hidden'); }
         function closePdfModal() { document.getElementById('pdf-modal').classList.add('hidden'); currentPdfMsgId = null; }
         
@@ -722,81 +735,24 @@
 
         function renderStagingArea() { els.stagingArea.innerHTML = pendingFiles.map((file, index) => `<div class="flex items-center gap-2 bg-surface2 border border-white/10 px-3 py-1.5 rounded-lg text-xs"><i class="ph-bold ${file.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-cyan-400"></i><span class="truncate max-w-[100px] text-gray-300">${file.name}</span><button onclick="removeFile(${index})" class="text-gray-500 hover:text-red-400 ml-1"><i class="ph-bold ph-x"></i></button></div>`).join(''); }
         function removeFile(index) { pendingFiles.splice(index, 1); renderStagingArea(); updateUIState(); }
-        
-        function openSidebar() { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); }
-        function closeSidebar() { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); }
-        function toggleSidebar() { if (els.sidebar.classList.contains('-translate-x-full')) { openSidebar(); } else { closeSidebar(); } }
+        function toggleSidebar() { if (els.sidebar.classList.contains('-translate-x-full')) { els.sidebar.classList.remove('-translate-x-full'); els.sidebarOverlay.classList.remove('hidden'); renderHistoryList(); } else { els.sidebar.classList.add('-translate-x-full'); els.sidebarOverlay.classList.add('hidden'); } }
 
         function saveCurrentChat() {
-            if (messages.length === 0) return; 
-            const chatIndex = chats.findIndex(c => c && c.id && c.id.toString() === currentChatId.toString());
-            
-            let title = "New Conversation"; 
-            const firstUserMsg = messages.find(m => m.role === 'user'); 
-            if (firstUserMsg && firstUserMsg.content) {
-                title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
-            }
-            
-            const safeMessages = messages.map(m => ({ 
-                id: m.id, 
-                role: m.role, 
-                content: m.content || '', 
-                modelId: m.modelId || activeModelId, 
-                attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) 
-            }));
-            
+            if (messages.length === 0) return; const chatIndex = chats.findIndex(c => c.id === currentChatId);
+            let title = "New Conversation"; const firstUserMsg = messages.find(m => m.role === 'user'); if (firstUserMsg) title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : '');
+            const safeMessages = messages.map(m => ({ id: m.id, role: m.role, content: m.content, modelId: m.modelId, attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) }));
             const chatData = { id: currentChatId, title: chatIndex > -1 ? chats[chatIndex].title : title, messages: safeMessages, extId: currentChatExtId, date: Date.now() };
-            
-            if (chatIndex > -1) chats[chatIndex] = chatData; 
-            else chats.unshift(chatData);
-            
-            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) { console.error('Failed to save to localStorage', e); }
-            renderHistoryList();
+            if (chatIndex > -1) chats[chatIndex] = chatData; else chats.unshift(chatData);
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) { }
         }
 
-        function createNewChat() { 
-            if (isProcessing) return showToast("Please wait for response to finish.");
-            currentChatId = Date.now().toString(); 
-            messages = []; 
-            pendingFiles = []; 
-            currentChatExtId = null; 
-            els.extSelector.value = ""; 
-            renderStagingArea(); 
-            renderMessagesToUI(); 
-            
-            const initMsgId = 'init_' + Date.now();
-            const initText = 'System Initialized. New chat created. How may I assist you today?';
-            appendMessage('assistant', initText, activeModelId, initMsgId); 
-            
-            messages.push({ role: 'assistant', content: initText, id: initMsgId, modelId: activeModelId });
-            saveCurrentChat();
-            
-            closeSidebar(); 
-            closeCanvas(); 
-        }
-        
-        function loadChat(id) { 
-            if (isProcessing) return showToast("Please wait for response to finish.");
-            const chat = chats.find(c => c && c.id && c.id.toString() === id.toString()); 
-            if (chat) { 
-                currentChatId = chat.id.toString(); 
-                messages = chat.messages || []; 
-                currentChatExtId = chat.extId || null; 
-                els.extSelector.value = currentChatExtId || ""; 
-                renderMessagesToUI(); 
-                closeSidebar(); 
-                closeCanvas(); 
-                updateUIState();
-            } 
-        }
+        function createNewChat() { currentChatId = Date.now().toString(); messages = []; pendingFiles = []; currentChatExtId = null; els.extSelector.value = ""; renderStagingArea(); renderMessagesToUI(); toggleSidebar(); appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init'); closeCanvas(); }
+        function loadChat(id) { const chat = chats.find(c => c.id === id); if (chat) { currentChatId = chat.id; messages = chat.messages; currentChatExtId = chat.extId || null; els.extSelector.value = currentChatExtId || ""; renderMessagesToUI(); toggleSidebar(); closeCanvas(); } }
+        function deleteChat(id, e) { e.stopPropagation(); chats = chats.filter(c => c.id !== id); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); if (currentChatId === id) createNewChat(); else renderHistoryList(); }
+        function renameChat(id, e) { e.stopPropagation(); const chat = chats.find(c => c.id === id); const newName = prompt("Rename chat:", chat.title); if (newName && newName.trim()) { chat.title = newName.trim(); localStorage.setItem('chatini_sessions', JSON.stringify(chats)); renderHistoryList(); } }
 
-        function deleteChat(id, e) { e.stopPropagation(); chats = chats.filter(c => c && c.id && c.id.toString() !== id.toString()); try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch(err){} if (currentChatId.toString() === id.toString()) createNewChat(); else renderHistoryList(); }
-        
-        function renameChat(id, e) { e.stopPropagation(); const chat = chats.find(c => c && c.id && c.id.toString() === id.toString()); if(!chat) return; const newName = prompt("Rename chat:", chat.title); if (newName && newName.trim()) { chat.title = newName.trim(); try{localStorage.setItem('chatini_sessions', JSON.stringify(chats));}catch(err){} renderHistoryList(); } }
-
-        function renderHistoryList() { els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id.toString() === currentChatId.toString() ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join(''); }
-        
-        function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id.toString() === msgId.toString()); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); closeCanvas(); }
+        function renderHistoryList() { els.historyList.innerHTML = chats.map(chat => `<div class="group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-white/10 border border-white/5' : 'hover:bg-white/5 border border-transparent'}" onclick="loadChat('${chat.id}')"><div class="flex items-center gap-3 overflow-hidden"><i class="ph ph-chat-circle text-gray-500 flex-shrink-0"></i><div class="flex flex-col"><span class="text-sm text-gray-300 truncate">${chat.title}</span>${chat.extId ? '<span class="text-[9px] text-purple-400 font-bold uppercase"><i class="ph-bold ph-brain"></i> Ext Active</span>' : ''}</div></div><div class="flex gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><button onclick="renameChat('${chat.id}', event)" class="text-gray-500 hover:text-white p-1"><i class="ph-bold ph-pencil-simple"></i></button><button onclick="deleteChat('${chat.id}', event)" class="text-red-500/70 hover:text-red-400 p-1"><i class="ph-bold ph-trash"></i></button></div></div>`).join(''); }
+        function editMessage(msgId) { if(isProcessing) return; const msgIndex = messages.findIndex(m => m.id === msgId); if (msgIndex === -1) return; els.input.value = messages[msgIndex].content; messages = messages.slice(0, msgIndex); renderMessagesToUI(); els.input.focus(); els.input.style.height = 'auto'; els.input.style.height = (els.input.scrollHeight) + 'px'; updateUIState(); closeCanvas(); }
 
         function renderModelSelector() { els.selector.innerHTML = Object.values(CONFIG.models).map(model => `<button onclick="if(!isProcessing){activeModelId='${model.id}';updateUIState();}" class="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `${model.bg} ${model.color} shadow-sm` : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'}"><i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm sm:text-base"></i> ${model.name}</button>`).join(''); }
 
@@ -810,9 +766,12 @@
 
         // --- UPGRADED JSON ARTIFACT PARSER ---
         function parseRichText(content, isStreaming = false, msgId = null) {
-            let extractedHtml = ''; let markdownContent = content || '';
+            let extractedHtml = ''; 
+            let markdownContent = content;
 
-            if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) { markdownContent += '\n</artifact>'; }
+            if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) { 
+                markdownContent += '\n</artifact>'; 
+            }
 
             markdownContent = markdownContent.replace(/<artifact(?: title="([^"]+)")?(?: type="([^"]+)")?>([\s\S]*?)(<\/artifact>|$)/g, (match, title, type, artifactContent, closeTag) => {
                 const artId = msgId ? 'art_' + msgId : 'art_' + Math.random().toString(36).substr(2, 9);
@@ -855,9 +814,19 @@
                 try {
                     const cleanedJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
                     const sources = JSON.parse(cleanedJson);
-                    const chipsHtml = sources.map(s => `<a href="${s.url}" target="_blank" class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/20 rounded-full text-[10px] transition-colors"><i class="ph ph-link"></i> ${s.title || 'Source'}</a>`).join('');
-                    extractedHtml += `<div class="extra-data-block mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5"><div class="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-widest"><i class="ph-bold ph-link text-purple-400"></i> Sources & Files</div><div class="flex flex-wrap gap-2">${chipsHtml}</div></div>`;
-                } catch (e) { console.error("Error parsing sources:", e); } 
+                    const chipsHtml = sources.map(s => `
+                        <a href="${s.url}" target="_blank" class="inline-flex items-center gap-1.5 bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/20 px-2 py-1 rounded text-[10px] transition-colors">
+                            <i class="ph-bold ph-link"></i> ${s.title || s.name || 'Source'}
+                        </a>
+                    `).join('');
+                    extractedHtml += `
+                        <div class="extra-data-block mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-white/5">
+                            <div class="text-[10px] font-semibold text-gray-500 mb-2 uppercase tracking-widest">
+                                <i class="ph-bold ph-link text-purple-400"></i> Sources & Files
+                            </div>
+                            <div class="flex flex-wrap gap-2">${chipsHtml}</div>
+                        </div>`;
+                } catch (e) { console.error("Error parsing sources:", e); }
                 return '';
             });
 
@@ -867,28 +836,83 @@
                     const cleanedJson = jsonStr.replace(/```json/gi, '').replace(/```/g, '').trim();
                     const data = JSON.parse(cleanedJson); 
                     const maxVal = Math.max(...data.map(d => d.value));
-                    const barsHtml = data.map(item => `<div class="flex-1 flex flex-col items-center gap-1 sm:gap-2 group min-w-[20px]"><div class="w-full bg-gradient-to-t from-cyan-900/40 to-cyan-400 rounded-t-sm transition-all duration-1000 ease-out group-hover:to-cyan-300 relative chart-bar" style="height: ${(item.value / maxVal) * 100}%"><div class="opacity-0 group-hover:opacity-100 absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[9px] sm:text-xs font-bold py-0.5 sm:py-1 px-1 sm:px-2 rounded transition-opacity z-10">${item.value}</div></div><span class="text-[8px] sm:text-[10px] text-gray-500 font-medium truncate w-full text-center px-0.5">${item.label}</span></div>`).join('');
-                    extractedHtml += `<div class="extra-data-block w-full mt-3 sm:mt-4 mb-3 sm:mb-4 p-3 sm:p-5 bg-surface2 border border-white/5 rounded-xl shadow-xl overflow-hidden overflow-x-auto no-scrollbar"><div class="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-6 text-[9px] sm:text-[10px] font-semibold tracking-widest text-gray-400 uppercase min-w-[200px]"><i class="ph-bold ph-chart-bar text-cyan-400 text-xs sm:text-sm"></i> Live Analysis</div><div class="flex items-end h-24 sm:h-32 gap-1 sm:gap-2 min-w-[200px]">${barsHtml}</div></div>`;
-                } catch (e) { console.error("Error parsing chart:", e); } 
+                    const barsHtml = data.map(item => `
+                        <div class="flex-1 flex flex-col items-center gap-1 sm:gap-2 group min-w-[20px]">
+                            <div class="w-full bg-gradient-to-t from-cyan-900/40 to-cyan-400 rounded-t-sm transition-all duration-1000 ease-out group-hover:to-cyan-300 relative chart-bar" style="height: ${(item.value / maxVal) * 100}%">
+                                <div class="opacity-0 group-hover:opacity-100 absolute -top-6 sm:-top-8 left-1/2 -translate-x-1/2 bg-white text-black text-[9px] sm:text-xs font-bold py-0.5 sm:py-1 px-1 sm:px-2 rounded transition-opacity z-10">${item.value}</div>
+                            </div>
+                            <span class="text-[8px] sm:text-[10px] text-gray-500 font-medium truncate w-full text-center px-0.5">${item.label}</span>
+                        </div>
+                    `).join('');
+                    extractedHtml += `
+                        <div class="extra-data-block w-full mt-3 sm:mt-4 mb-3 sm:mb-4 p-3 sm:p-5 bg-surface2 border border-white/5 rounded-xl shadow-xl overflow-hidden overflow-x-auto no-scrollbar">
+                            <div class="flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-6 text-[9px] sm:text-[10px] font-semibold tracking-widest text-gray-400 uppercase min-w-[200px]">
+                                <i class="ph-bold ph-chart-bar text-cyan-400 text-xs sm:text-sm"></i> Live Analysis
+                            </div>
+                            <div class="flex items-end h-24 sm:h-32 gap-1 sm:gap-2 min-w-[200px]">${barsHtml}</div>
+                        </div>`;
+                } catch (e) { console.error("Error parsing chart:", e); }
                 return '';
             });
 
-            const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? `<div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3"><button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-copy text-sm"></i> Copy</button><button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors"><i class="ph-bold ph-download-simple text-sm"></i> Save PDF</button><span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50"><i class="ph-bold ph-check-circle"></i> LexisAI</span></div>` : '';
-            return `<div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">${renderMathAndMarkdown(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
+            const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? `
+                <div class="action-bar mt-3 sm:mt-4 flex items-center justify-end gap-3 sm:gap-4 border-t border-white/5 pt-2 sm:pt-3">
+                    <button onclick="copyToClipboard('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors">
+                        <i class="ph-bold ph-copy text-sm"></i> Copy
+                    </button>
+                    <button onclick="openPdfModal('${msgId}')" class="text-[10px] sm:text-xs font-medium text-gray-500 hover:text-cyan-400 flex items-center gap-1 transition-colors">
+                        <i class="ph-bold ph-download-simple text-sm"></i> Save PDF
+                    </button>
+                    <span class="text-emerald-500 text-[9px] sm:text-[10px] flex items-center gap-1 ml-1 sm:ml-2 opacity-50">
+                        <i class="ph-bold ph-check-circle"></i> LexisAI
+                    </span>
+                </div>` : '';
+
+            return `
+                <div class="prose prose-invert prose-sm sm:prose-base max-w-none text-gray-200">
+                    ${renderMathAndMarkdown(markdownContent)}
+                </div>
+                ${extractedHtml}
+                ${actionBarHtml}
+            `;
         }
 
         function appendMessage(role, content, modelId, specificId = null, attachmentsMeta = []) {
-            const isUser = role === 'user'; const msgId = specificId || Date.now().toString();
+            const isUser = role === 'user'; 
+            const msgId = specificId || Date.now().toString();
             const div = document.createElement('div'); 
             div.className = `flex w-full mb-6 sm:mb-8 ${isUser ? 'justify-end' : 'justify-start'}`; 
             div.id = 'msg-wrapper-' + msgId;
 
             if (isUser) {
-                let attHtml = (attachmentsMeta && attachmentsMeta.length > 0) ? `<div class="flex flex-wrap gap-2 mb-2">` + attachmentsMeta.map(a => `<span class="bg-black/50 text-gray-300 text-[10px] px-2 py-1 rounded border border-white/10"><i class="ph-bold ${a.type && a.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'}"></i> ${a.name}</span>`).join('') + `</div>` : '';
-                div.innerHTML = `<div class="group flex gap-2 sm:gap-3 w-fit max-w-[90%] sm:max-w-[85%] md:max-w-[80%] items-center justify-end"><button onclick="editMessage('${msgId}')" class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-2 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-all flex-shrink-0"><i class="ph-bold ph-pencil-simple text-xs sm:text-sm"></i></button><div class="bg-surface3 border border-white/10 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap break-words text-sm sm:text-base">${attHtml}${content}</div></div>`;
+                let attHtml = attachmentsMeta.length > 0 ? `
+                    <div class="flex flex-wrap gap-2 mb-2">
+                        ${attachmentsMeta.map(a => `
+                            <span class="bg-black/50 text-gray-300 text-[10px] px-2 py-1 rounded border border-white/10">
+                                <i class="ph-bold ${a.type && a.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'}"></i> ${a.name}
+                            </span>
+                        `).join('')}
+                    </div>` : '';
+                div.innerHTML = `
+                    <div class="group flex gap-2 sm:gap-3 w-fit max-w-[90%] sm:max-w-[85%] md:max-w-[80%] items-center justify-end">
+                        <button onclick="editMessage('${msgId}')" class="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 p-1.5 sm:p-2 rounded-full hover:bg-white/10 text-gray-500 hover:text-white transition-all flex-shrink-0">
+                            <i class="ph-bold ph-pencil-simple text-xs sm:text-sm"></i>
+                        </button>
+                        <div class="bg-surface3 border border-white/10 px-4 sm:px-5 py-3 sm:py-4 rounded-2xl rounded-tr-sm text-gray-100 shadow-md whitespace-pre-wrap break-words text-sm sm:text-base">
+                            ${attHtml}${content}
+                        </div>
+                    </div>`;
             } else {
                 const model = CONFIG.models[modelId] || CONFIG.models.oracle;
-                div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"><div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1 shadow-[0_0_10px_rgba(255,255,255,0.05)]"><i class="${model.icon} ph-fill ${model.color} text-sm sm:text-base"></i></div><div class="msg-content flex flex-col pt-1 w-full min-w-0 overflow-hidden">${parseRichText(content, false, msgId)}</div></div>`;
+                div.innerHTML = `
+                    <div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]">
+                        <div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-[#111] border border-white/10 flex items-center justify-center mt-1 shadow-[0_0_10px_rgba(255,255,255,0.05)]">
+                            <i class="${model.icon} ph-fill ${model.color} text-sm sm:text-base"></i>
+                        </div>
+                        <div class="msg-content flex flex-col pt-1 w-full min-w-0 overflow-hidden">
+                            ${parseRichText(content, false, msgId)}
+                        </div>
+                    </div>`;
             }
             els.container.appendChild(div); 
             els.canvas.scrollTop = els.canvas.scrollHeight; 
@@ -901,11 +925,21 @@
             const cColor = isMath ? 'text-emerald-400' : (isPpt ? 'text-amber-400' : 'text-cyan-400');
             const cBg = isMath ? 'bg-emerald-500/20' : (isPpt ? 'bg-amber-500/20' : 'bg-cyan-500/20');
             const cBorder = isMath ? 'border-emerald-500/50' : (isPpt ? 'border-amber-500/50' : 'border-cyan-500/50');
-            const cIcon = isMath ? 'ph-function' : (isPpt ? 'ph-presentation-chart' : 'ph-radar');
+            const iconClass = isMath ? 'ph-function' : (isPpt ? 'ph-presentation-chart' : 'ph-radar');
 
             const div = document.createElement('div'); 
             div.className = "flex w-full mb-6 sm:mb-8 justify-start";
-            div.innerHTML = `<div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]"><div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full ${cBg} border ${cBorder} flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse"><i class="ph-bold ${cIcon} ${cColor} text-sm sm:text-base"></i></div><div class="bg-black border ${cBorder.replace('50','30')} rounded-xl p-4 w-full md:w-2/3 shadow-inner terminal-text text-xs sm:text-sm ${cColor} flex flex-col gap-2" id="research-logs"><div class="opacity-70"><i class="ph-bold ph-terminal-window"></i> ${initText}</div></div></div>`;
+            div.innerHTML = `
+                <div class="flex gap-3 sm:gap-4 w-full sm:max-w-[95%] lg:max-w-[90%]">
+                    <div class="w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full ${cBg} border ${cBorder} flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse">
+                        <i class="ph-bold ${iconClass} ${cColor} text-sm sm:text-base"></i>
+                    </div>
+                    <div class="bg-black border ${cBorder.replace('50','30')} rounded-xl p-4 w-full md:w-2/3 shadow-inner terminal-text text-xs sm:text-sm ${cColor} flex flex-col gap-2" id="research-logs">
+                        <div class="opacity-70">
+                            <i class="ph-bold ph-terminal-window"></i> ${initText}
+                        </div>
+                    </div>
+                </div>`;
             els.container.appendChild(div); 
             els.canvas.scrollTop = els.canvas.scrollHeight; 
             return document.getElementById('research-logs');
@@ -914,10 +948,7 @@
         function renderMessagesToUI() { 
             els.container.innerHTML = ''; 
             window.ARTIFACT_STORE = {}; 
-            (messages || []).forEach(msg => {
-                if(!msg) return;
-                appendMessage(msg.role || 'user', msg.content || '', msg.modelId || activeModelId, msg.id, msg.attachmentsMeta || []);
-            }); 
+            messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta)); 
         }
 
         async function handleSend() {
@@ -929,15 +960,20 @@
 
             let payloadFiles = [...pendingFiles];
             if (messages.length === 0 && currentChatExtId) {
-                const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
+                const exts = await DB.getAll(); 
+                const activeExt = exts.find(e => e.id === currentChatExtId);
                 if (activeExt && activeExt.files) payloadFiles = [...payloadFiles, ...activeExt.files];
             }
 
             const currentMessage = { role: 'user', content: text, id: userMsgObj.id, attachments: payloadFiles, attachmentsMeta: attachmentsMeta };
             messages.push(currentMessage);
 
-            els.input.value = ''; els.input.style.height = 'auto'; pendingFiles = []; renderStagingArea();
-            isProcessing = true; updateUIState();
+            els.input.value = ''; 
+            els.input.style.height = 'auto'; 
+            pendingFiles = []; 
+            renderStagingArea();
+            isProcessing = true; 
+            updateUIState();
 
             // --- INTERCEPT: MATH ENGINE ---
             if (isMathMode) {
@@ -945,28 +981,46 @@
                 const logContainer = appendResearchTerminal('Initializing Cartesian Core...', 'math');
                 try {
                     const res = await fetch('/api/maths', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) });
-                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+                    const reader = res.body.getReader(); 
+                    const decoder = new TextDecoder(); 
+                    let buffer = "";
                     let compiledPayload = null;
 
                     while (true) {
                         const { done, value } = await reader.read();
                         if (value) {
-                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
+                            buffer += decoder.decode(value, { stream: true }); 
+                            let lines = buffer.split('\n'); 
+                            buffer = lines.pop();
                             for (const line of lines) {
                                 if (line.startsWith('data: ')) {
-                                    const dataStr = line.slice(6).trim(); if (!dataStr) continue;
+                                    const dataStr = line.slice(6).trim(); 
+                                    if (!dataStr) continue;
                                     try {
                                         const data = JSON.parse(dataStr);
-                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
-                                        if (data.done) { compiledPayload = data.payload; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Rendering Interactive Cartesian Grid...</div>`; break; }
-                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
+                                        if (data.log) { 
+                                            logContainer.innerHTML += `<div>&gt; ${data.log}</div>`; 
+                                            els.canvas.scrollTop = els.canvas.scrollHeight; 
+                                        }
+                                        if (data.done) { 
+                                            compiledPayload = data.payload; 
+                                            logContainer.innerHTML += `<div class="text-emerald-400 mt-2">&gt; Rendering Interactive Cartesian Grid...</div>`; 
+                                            sendTelemetry('maths', activeModelId, 'success'); 
+                                            break; 
+                                        }
+                                        if (data.error) { 
+                                            logContainer.innerHTML += `<div class="text-red-400">&gt; Error: ${data.error}</div>`; 
+                                            sendTelemetry('maths', activeModelId, 'error', data.error); 
+                                            break; 
+                                        }
                                     } catch (e) { }
                                 }
                             }
                         }
                         if (done) break;
                     }
-                    await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
+                    await new Promise(r => setTimeout(r, 1000)); 
+                    logContainer.parentElement.parentElement.remove();
 
                     if (compiledPayload) {
                         const assistantMsgObj = appendMessage('assistant', '', activeModelId);
@@ -978,9 +1032,13 @@
                         saveCurrentChat();
                     }
                 } catch (err) {
-                    logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove();
+                    logContainer.innerHTML += `<div class="text-red-400">&gt; Network Error establishing Agent stream.</div>`; 
+                    await new Promise(r => setTimeout(r, 2000)); 
+                    logContainer.parentElement.parentElement.remove();
+                    sendTelemetry('maths', activeModelId, 'error', err.message);
                 }
-                isProcessing = false; updateUIState();
+                isProcessing = false; 
+                updateUIState();
                 return;
             }
 
@@ -991,32 +1049,53 @@
                 try {
                     let extContext = "";
                     if (currentChatExtId) {
-                        const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
-                        if (activeExt && activeExt.links && activeExt.links.length > 0) extContext = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
+                        const exts = await DB.getAll(); 
+                        const activeExt = exts.find(e => e.id === currentChatExtId);
+                        if (activeExt && activeExt.links && activeExt.links.length > 0) {
+                            extContext = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
+                        }
                     }
                     const res = await fetch('/api/presentation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ topic: text, context: extContext }) });
-                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+                    const reader = res.body.getReader(); 
+                    const decoder = new TextDecoder(); 
+                    let buffer = "";
                     let compiledPayload = null;
 
                     while (true) {
                         const { done, value } = await reader.read();
                         if (value) {
-                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
+                            buffer += decoder.decode(value, { stream: true }); 
+                            let lines = buffer.split('\n'); 
+                            buffer = lines.pop();
                             for (const line of lines) {
                                 if (line.startsWith('data: ')) {
-                                    const dataStr = line.slice(6).trim(); if (!dataStr) continue;
+                                    const dataStr = line.slice(6).trim(); 
+                                    if (!dataStr) continue;
                                     try {
                                         const data = JSON.parse(dataStr);
-                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
-                                        if (data.done) { compiledPayload = data.payload; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Slide Deck Compiled. Transferring to Workspace...</div>`; break; }
-                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
+                                        if (data.log) { 
+                                            logContainer.innerHTML += `<div>&gt; ${data.log}</div>`; 
+                                            els.canvas.scrollTop = els.canvas.scrollHeight; 
+                                        }
+                                        if (data.done) { 
+                                            compiledPayload = data.payload; 
+                                            logContainer.innerHTML += `<div class="text-emerald-400 mt-2">&gt; Slide Deck Compiled. Transferring to Workspace...</div>`; 
+                                            sendTelemetry('slides', activeModelId, 'success'); 
+                                            break; 
+                                        }
+                                        if (data.error) { 
+                                            logContainer.innerHTML += `<div class="text-red-400">&gt; Error: ${data.error}</div>`; 
+                                            sendTelemetry('slides', activeModelId, 'error', data.error); 
+                                            break; 
+                                        }
                                     } catch (e) { }
                                 }
                             }
                         }
                         if (done) break;
                     }
-                    await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
+                    await new Promise(r => setTimeout(r, 1000)); 
+                    logContainer.parentElement.parentElement.remove();
 
                     if (compiledPayload) {
                         const assistantMsgObj = appendMessage('assistant', '', activeModelId);
@@ -1027,15 +1106,20 @@
                         saveCurrentChat();
                     }
                 } catch (err) {
-                    logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove();
+                    logContainer.innerHTML += `<div class="text-red-400">&gt; Network Error establishing Agent stream.</div>`; 
+                    await new Promise(r => setTimeout(r, 2000)); 
+                    logContainer.parentElement.parentElement.remove();
+                    sendTelemetry('slides', activeModelId, 'error', err.message);
                 }
-                isProcessing = false; updateUIState();
+                isProcessing = false; 
+                updateUIState();
                 return;
             }
 
             // --- STANDARD CHAT & RESEARCH FLOW ---
             let compiledResearchContext = "";
             let contextMessages = messages.map(m => ({ role: m.role, content: m.content, attachments: m.id === currentMessage.id ? m.attachments : undefined }));
+            let currentAction = isDeepResearchOn ? 'research' : 'chat';
 
             if (isDeepResearchOn) {
                 els.indicator.classList.add('hidden');
@@ -1043,46 +1127,77 @@
                 let thoughtBox = null;
                 try {
                     const res = await fetch('/api/research', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: text }) });
-                    const reader = res.body.getReader(); const decoder = new TextDecoder(); let buffer = "";
+                    const reader = res.body.getReader(); 
+                    const decoder = new TextDecoder(); 
+                    let buffer = "";
                     while (true) {
                         const { done, value } = await reader.read();
                         if (value) {
-                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
+                            buffer += decoder.decode(value, { stream: true }); 
+                            let lines = buffer.split('\n'); 
+                            buffer = lines.pop();
                             for (const line of lines) {
                                 if (line.startsWith('data: ')) {
-                                    const dataStr = line.slice(6).trim(); if (!dataStr) continue;
+                                    const dataStr = line.slice(6).trim(); 
+                                    if (!dataStr) continue;
                                     try {
                                         const data = JSON.parse(dataStr);
-                                        if (data.log) { logContainer.innerHTML += `<div>> ${data.log}</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; }
-                                        if (data.thought) {
-                                            if (!thoughtBox) { logContainer.innerHTML += `<div class="mt-2 p-2 bg-black/80 border border-white/5 rounded text-[10px] text-gray-500 h-24 overflow-y-auto no-scrollbar" id="research-thought-box"></div>`; thoughtBox = document.getElementById('research-thought-box'); }
-                                            thoughtBox.innerHTML += data.thought.replace(/\n/g, '<br>'); thoughtBox.scrollTop = thoughtBox.scrollHeight;
+                                        if (data.log) { 
+                                            logContainer.innerHTML += `<div>&gt; ${data.log}</div>`; 
+                                            els.canvas.scrollTop = els.canvas.scrollHeight; 
                                         }
-                                        if (data.done) { compiledResearchContext = data.context; logContainer.innerHTML += `<div class="text-emerald-400 mt-2">> Pass 1 Draft Complete. Executing Core Pass 2...</div>`; els.canvas.scrollTop = els.canvas.scrollHeight; break; }
-                                        if (data.error) { logContainer.innerHTML += `<div class="text-red-400">> Error: ${data.error}</div>`; break; }
+                                        if (data.thought) {
+                                            if (!thoughtBox) { 
+                                                logContainer.innerHTML += `<div class="mt-2 p-2 bg-black/80 border border-white/5 rounded text-[10px] text-gray-500 h-24 overflow-y-auto no-scrollbar" id="research-thought-box"></div>`; 
+                                                thoughtBox = document.getElementById('research-thought-box'); 
+                                            }
+                                            thoughtBox.innerHTML += data.thought.replace(/\n/g, '<br>'); 
+                                            thoughtBox.scrollTop = thoughtBox.scrollHeight;
+                                        }
+                                        if (data.done) { 
+                                            compiledResearchContext = data.context; 
+                                            logContainer.innerHTML += `<div class="text-emerald-400 mt-2">&gt; Pass 1 Draft Complete. Executing Core Pass 2...</div>`; 
+                                            els.canvas.scrollTop = els.canvas.scrollHeight; 
+                                            break; 
+                                        }
+                                        if (data.error) { 
+                                            logContainer.innerHTML += `<div class="text-red-400">&gt; Error: ${data.error}</div>`; 
+                                            sendTelemetry(currentAction, activeModelId, 'error', data.error); 
+                                            break; 
+                                        }
                                     } catch (e) { }
                                 }
                             }
                         }
                         if (done) break;
                     }
-                    await new Promise(r => setTimeout(r, 1000)); logContainer.parentElement.parentElement.remove();
-                } catch (err) { logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; await new Promise(r => setTimeout(r, 2000)); logContainer.parentElement.parentElement.remove(); }
+                    await new Promise(r => setTimeout(r, 1000)); 
+                    logContainer.parentElement.parentElement.remove();
+                } catch (err) { 
+                    logContainer.innerHTML += `<div class="text-red-400">&gt; Network Error establishing Agent stream.</div>`; 
+                    await new Promise(r => setTimeout(r, 2000)); 
+                    logContainer.parentElement.parentElement.remove(); 
+                    sendTelemetry(currentAction, activeModelId, 'error', err.message); 
+                }
             }
 
             if (!isDeepResearchOn) {
                 const currentModel = CONFIG.models[activeModelId];
                 els.indicatorIcon.className = `${currentModel.icon} ph-fill ${currentModel.color}`;
                 els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension..." : "LexisAI is analyzing...";
-                els.indicator.classList.remove('hidden'); els.canvas.scrollTop = els.canvas.scrollHeight;
+                els.indicator.classList.remove('hidden'); 
+                els.canvas.scrollTop = els.canvas.scrollHeight;
             }
 
             try {
                 if (currentChatExtId) {
-                    const exts = await DB.getAll(); const activeExt = exts.find(e => e.id === currentChatExtId);
+                    const exts = await DB.getAll(); 
+                    const activeExt = exts.find(e => e.id === currentChatExtId);
                     if (activeExt && activeExt.links && activeExt.links.length > 0) {
                         const compiledLinksText = activeExt.links.filter(l => l.text).map(l => `URL: ${l.url}\nData: ${l.text}`).join('\n\n');
-                        if (compiledLinksText) contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
+                        if (compiledLinksText) {
+                            contextMessages[0].content = `[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]\n${compiledLinksText}\n\n[USER QUERY:]\n${contextMessages[0].content}`;
+                        }
                     }
                 }
 
@@ -1097,8 +1212,11 @@
                 const contentContainer = assistantMsgObj.container;
                 contentContainer.classList.add('typing-cursor');
 
-                const reader = response.body.getReader(); const decoder = new TextDecoder();
-                let fullResponse = ""; let buffer = "";
+                const reader = response.body.getReader(); 
+                const decoder = new TextDecoder();
+                let fullResponse = ""; 
+                let buffer = "";
+                let uiErrFlag = false;
 
                 let streamTimeout;
                 const startWatchdog = () => {
@@ -1112,14 +1230,28 @@
                         const { done, value } = await reader.read();
                         startWatchdog();
                         if (value) {
-                            buffer += decoder.decode(value, { stream: true }); let lines = buffer.split('\n'); buffer = lines.pop();
+                            buffer += decoder.decode(value, { stream: true }); 
+                            let lines = buffer.split('\n'); 
+                            buffer = lines.pop();
                             for (const line of lines) {
                                 if (line.startsWith('data: ')) {
-                                    const dataStr = line.slice(6).trim(); if (dataStr === '[DONE]') continue;
+                                    const dataStr = line.slice(6).trim(); 
+                                    if (dataStr === '[DONE]') continue;
                                     try {
                                         const data = JSON.parse(dataStr);
-                                        if (data.ui_error) { fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`; contentContainer.innerHTML = fullResponse; break; }
-                                        let textChunk = ""; if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content; else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
+                                        if (data.ui_error) { 
+                                            fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`; 
+                                            contentContainer.innerHTML = fullResponse; 
+                                            uiErrFlag = true; 
+                                            sendTelemetry(currentAction, activeModelId, 'error', data.ui_error); 
+                                            break; 
+                                        }
+                                        let textChunk = ""; 
+                                        if (data.choices && data.choices[0] && data.choices[0].delta && data.choices[0].delta.content) {
+                                            textChunk = data.choices[0].delta.content;
+                                        } else if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+                                            textChunk = data.candidates[0].content.parts[0].text;
+                                        }
 
                                         fullResponse += textChunk;
                                         contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id);
@@ -1131,27 +1263,48 @@
                         if (done) break;
                     }
                 } catch (streamErr) {
-                    if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") console.warn("Stream Auto-Completed (Watchdog)");
-                    else throw streamErr;
-                } finally { clearTimeout(streamTimeout); }
+                    if (streamErr === "Stream Timeout" || (streamErr && streamErr.message === "Stream Timeout")) {
+                        console.warn("Stream Auto-Completed (Watchdog)");
+                    } else { 
+                        uiErrFlag = true; 
+                        sendTelemetry(currentAction, activeModelId, 'error', streamErr.message); 
+                        throw streamErr; 
+                    }
+                } finally { 
+                    clearTimeout(streamTimeout); 
+                }
 
                 contentContainer.classList.remove('typing-cursor');
                 contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat();
 
+                if (!uiErrFlag) sendTelemetry(currentAction, activeModelId, 'success');
+
             } catch (error) {
                 els.indicator.classList.add('hidden');
                 appendMessage('assistant', `<span class="text-red-400 text-sm">Network Error. Failed.</span>`, activeModelId);
+                sendTelemetry(currentAction, activeModelId, 'error', error.message);
             }
-            isProcessing = false; updateUIState();
+            isProcessing = false; 
+            updateUIState();
         }
 
-        els.input.addEventListener('input', function() { this.style.height = 'auto'; this.style.height = (this.scrollHeight) + 'px'; updateUIState(); });
-        els.input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } });
+        els.input.addEventListener('input', function() { 
+            this.style.height = 'auto'; 
+            this.style.height = (this.scrollHeight) + 'px'; 
+            updateUIState(); 
+        });
+        
+        els.input.addEventListener('keydown', (e) => { 
+            if (e.key === 'Enter' && !e.shiftKey) { 
+                e.preventDefault(); 
+                handleSend(); 
+            } 
+        });
+        
         els.sendBtn.addEventListener('click', handleSend);
     </script>
 </body>
 </html>
-
 
