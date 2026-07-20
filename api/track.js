@@ -9,12 +9,14 @@ export default async function handler(req) {
         const payload = await req.json();
         const { deviceId, nickname, deviceInfo, action, model, status, errorDetails } = payload;
         
-        // ============================================================================
-        // HARDCODED UPSTASH CREDENTIALS 
-        // Bypasses Vercel Environment Variables entirely for absolute reliability
-        // ============================================================================
-        const UPSTASH_URL = "https://regular-mule-102700.upstash.io";
-        const UPSTASH_TOKEN = "ggAAAAAAAZEsAAIgcDETfOxil9U703IkeWOzFH1pTaODetJDrsmMQWERTTdxAQ";
+        // Auto-Sanitizing limits crashes
+        const RAW_URL = "https://regular-mule-102700.upstash.io";
+        const RAW_TOKEN = "ggAAAAAAAZEsAAIgcDETfOxil9U703IkeWOzFH1pTaODetJDrsmMQWERTTdxAQ";
+
+        const UPSTASH_URL = RAW_URL.trim().replace(/\/$/, '');
+        const UPSTASH_TOKEN = RAW_TOKEN.trim();
+
+        if (!UPSTASH_URL.startsWith('https://')) return new Response('Bad URL', { status: 200 });
 
         const country = req.headers.get('x-vercel-ip-country') || 'Unknown';
         const city = req.headers.get('x-vercel-ip-city') || 'Unknown';
