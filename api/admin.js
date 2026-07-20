@@ -7,13 +7,17 @@ export default async function handler(req) {
 
     try {
         const { secretKey } = await req.json();
-        const ADMIN_SECRET = process.env.ADMIN_PANEL_SECRET;
+        
+        // NEW WAY: Hardcoded Master Password. 
+        // Bypasses Vercel Environment Variable caching issues completely.
+        const MASTER_PASSWORD = "Lexis-Admin-2026!";
         
         // Cryptographic lockout: Rejects brute force or unauthorized access instantly
-        if (!ADMIN_SECRET || secretKey !== ADMIN_SECRET) {
+        if (secretKey !== MASTER_PASSWORD) {
             return new Response(JSON.stringify({ error: "Unauthorized. Invalid Master Key." }), { status: 401 });
         }
 
+        // Exact variable names mapped from your Upstash screenshot
         const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL;
         const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -42,6 +46,12 @@ export default async function handler(req) {
         });
 
         const data1 = await res1.json();
+        
+        // Catch Upstash specific errors
+        if (data1.error) {
+            return new Response(JSON.stringify({ error: `Upstash Error: ${data1.error}` }), { status: 500 });
+        }
+
         const statsArray = data1[0].result || [];
         const recentDeviceIds = data1[1].result || [];
         const timelineRaw = data1[2].result || [];
@@ -83,4 +93,5 @@ export default async function handler(req) {
         return new Response(JSON.stringify({ error: `System fault: ${error.message}` }), { status: 500 });
     }
 }
+
 
