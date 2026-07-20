@@ -16,13 +16,13 @@ export default async function handler(req) {
         }
 
         // ============================================================================
-        // AUTO-SANITIZING CREDENTIALS
-        // .trim() mathematically destroys invisible spaces/newlines that crash Vercel
+        // NEW UPSTASH CREDENTIALS (INJECTED)
+        // Auto-Sanitizing mathematically destroys invisible spaces/newlines
         // ============================================================================
-        const RAW_URL = "https://regular-mule-102700.upstash.io";
-        const RAW_TOKEN = "ggAAAAAAAZEsAAIgcDETfOxil9U703IkeWOzFH1pTaODetJDrsmMQWERTTdxAQ";
+        const RAW_URL = "https://immortal-eagle-36171.upstash.io";
+        const RAW_TOKEN = "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw";
 
-        const UPSTASH_URL = RAW_URL.trim().replace(/\/$/, ''); // Removes trailing slash if present
+        const UPSTASH_URL = RAW_URL.trim().replace(/\/$/, '');
         const UPSTASH_TOKEN = RAW_TOKEN.trim();
 
         if (!UPSTASH_URL.startsWith('https://')) {
@@ -41,7 +41,7 @@ export default async function handler(req) {
             ["LRANGE", "global:timeline", 0, 49]  
         ];
 
-        // DIAGNOSTIC FETCH: Catch exact network drops
+        // DIAGNOSTIC FETCH
         let res1;
         try {
             res1 = await fetch(`${UPSTASH_URL}/pipeline`, {
@@ -61,7 +61,6 @@ export default async function handler(req) {
             return new Response(JSON.stringify({ error: `Upstash returned invalid data (Status ${res1.status}). Expected JSON. Raw: ${rawText.substring(0, 100)}` }), { status: 500 });
         }
         
-        // Catch Upstash specific Unauthorized/Authentication errors
         if (data1.error) {
             return new Response(JSON.stringify({ error: `Upstash Access Denied: ${data1.error}. Your Token is incorrect or expired.` }), { status: 500 });
         }
