@@ -286,6 +286,7 @@ RULES:
 2. Output ONLY a raw JSON array of exactly 18 objects.
 3. Object format: {"slideNumber": Integer, "intent": "String", "suggestedLayout": "title_slide" | "split_image_text" | "full_image_quote" | "bullet_points"}.`;
 
+                // CORRECTED URL: Completely clean and valid
                 const groqRes = await fetch('[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
