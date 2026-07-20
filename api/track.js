@@ -9,9 +9,11 @@ export default async function handler(req) {
         const payload = await req.json();
         const { deviceId, nickname, deviceInfo, action, model, status, errorDetails } = payload;
         
-        // Auto-Sanitizing limits crashes
-        const RAW_URL = "https://regular-mule-102700.upstash.io";
-        const RAW_TOKEN = "ggAAAAAAAZEsAAIgcDETfOxil9U703IkeWOzFH1pTaODetJDrsmMQWERTTdxAQ";
+        // ============================================================================
+        // NEW UPSTASH CREDENTIALS (INJECTED)
+        // ============================================================================
+        const RAW_URL = "https://immortal-eagle-36171.upstash.io";
+        const RAW_TOKEN = "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw";
 
         const UPSTASH_URL = RAW_URL.trim().replace(/\/$/, '');
         const UPSTASH_TOKEN = RAW_TOKEN.trim();
