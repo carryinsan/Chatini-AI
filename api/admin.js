@@ -15,15 +15,12 @@ export default async function handler(req) {
             return new Response(JSON.stringify({ error: "Unauthorized. Invalid Master Key." }), { status: 401 });
         }
 
-        // Extracts your specific screenshot variables OR Vercel's default KV variables as an ultimate fallback
-        const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
-        const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
-
-        if (!UPSTASH_URL || !UPSTASH_TOKEN) {
-            return new Response(JSON.stringify({ 
-                error: "CRITICAL VERCEL STEP REQUIRED: Vercel cannot see your Upstash keys! You added them in settings, but they haven't applied to the live app. You MUST go to your Vercel Dashboard -> Deployments -> Click the 3 dots (...) on your latest deployment -> select 'Redeploy'. Environment variables do not apply until a redeploy happens!" 
-            }), { status: 500 });
-        }
+        // ============================================================================
+        // HARDCODED UPSTASH CREDENTIALS 
+        // Bypasses Vercel Environment Variables entirely for absolute reliability
+        // ============================================================================
+        const UPSTASH_URL = "https://regular-mule-102700.upstash.io";
+        const UPSTASH_TOKEN = "ggAAAAAAAZEsAAIgcDETfOxil9U703IkeWOzFH1pTaODetJDrsmMQWERTTdxAQ";
 
         const keysToFetch = [
             "stats:total_events", "stats:total_success", "stats:total_errors",
