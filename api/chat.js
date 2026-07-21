@@ -2,20 +2,13 @@ export const config = {
     runtime: 'edge', 
 };
 
-// ============================================================================
-// ULTRA-CONDENSED CONTEXT MATRIX (UCCM) ALGORITHM
-// Mathematically guarantees payload sizes remain under Free-Tier TPM limits 
-// while ensuring every single document/link is included in the analysis.
-// ============================================================================
 function hyperCondense(text, maxChars) {
     if (!text || text.length <= maxChars) return text;
     
     const blocks = text.split(/(?=--- DOC: |--- REAL-TIME SEARCH CONTEXT ---|URL: |\[Title: )/g).filter(b => b.trim());
     if (blocks.length === 0) return text.substring(0, maxChars);
     if (blocks.length === 1) {
-        return text.substring(0, Math.floor(maxChars * 0.6)) + 
-               "\n\n...[DATA COMPRESSED]...\n\n" + 
-               text.substring(text.length - Math.floor(maxChars * 0.4));
+        return text.substring(0, Math.floor(maxChars * 0.6)) + "\n\n...[DATA COMPRESSED]...\n\n" + text.substring(text.length - Math.floor(maxChars * 0.4));
     }
     
     const charsPerBlock = Math.max(50, Math.floor(maxChars / blocks.length));
@@ -32,7 +25,8 @@ export default async function handler(req) {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
     try {
-        const { messages, modelId, researchContext } = await req.json();
+        // NEW: Accepts userProfile from the frontend's Infinite Memory database
+        const { messages, modelId, researchContext, userProfile } = await req.json();
         
         const GROQ_KEY = process.env.GROQ_API_KEY;
         const TAVILY_KEY = process.env.TAVILY_API_KEY;
@@ -42,34 +36,34 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY_3
         ].filter(Boolean);
 
-        // --- UPGRADED: DOPAMINE PERSONA & HYPER-FAST EXECUTION ---
-        let systemPrompt = `You are LexisAI, a premium, hyper-intelligent agent.
+        // Parse user memory to inject directly into the AI's subconscious
+        let memoryString = "";
+        if (userProfile && Object.keys(userProfile).length > 0) {
+            memoryString = `\n\n[USER PROFILE/MEMORY DETECTED]: You automatically know this about the user: ${JSON.stringify(userProfile)}. Tailor your response perfectly to their preferences, job, and tone without explicitly saying "I see in your profile". Just act naturally based on it.`;
+        }
+
+        let systemPrompt = `You are LexisAI, a premium, hyper-intelligent agent.${memoryString}
 
 **CORE DIRECTIVE (HIDDEN FROM USER):**
-Be ultra-fast, to-the-point, and incredibly smart. Maintain high wittiness and humor—users should absolutely love chatting with you. Your answers must be dopamine-secreting, highly engaging, and make the user stick to using this app. HOWEVER, ALWAYS BE 100% HONEST and use ZERO FLUFF. Never hallucinate. Deliver maximum signal, minimum noise. 
+Be ultra-fast, to-the-point, and incredibly smart. Maintain high wittiness and humor—users should absolutely love chatting with you. Your answers must be dopamine-secreting, highly engaging, and make the user stick to using this app. ALWAYS BE 100% HONEST and use ZERO FLUFF.
 
 **DYNAMIC BEHAVIOR PROTOCOL:**
 1. [GENERAL CHAT MODE]: Witty, motivating, engaging, brilliant.
-2. [STRICT TASK MODE]: If the user asks for a specific format, alignment, extraction, or uploads documents/links, OBEY STRICTLY. 
-   - ZERO introductory fluff (e.g., Do NOT say "Here is your text...").
-   - ZERO concluding summaries unless requested.
-   - DO NOT add unsolicited bullet points. Output EXACTLY the requested format.
+2. [STRICT TASK MODE]: If the user asks for a specific format, alignment, extraction, or uploads documents/links, OBEY STRICTLY. ZERO intro/outro fluff. Output EXACTLY the requested format.
 3. [MATH PROTOCOL]: ALWAYS use LaTeX formatting for math. Enclose block equations in $$ and inline math in $.
 
 **DATA & UI RULES:**
 1. <sources>: If using search data/files, append a JSON array of sources at the VERY END. (Format: <sources>[{"title":"Site", "url":"https://..."}]</sources>)
 2. <chart>: If comparing data/stats, output a JSON array. (Format: <chart>[{"label":"Cat A", "value":85}]</chart>)
-3. <artifact>: If generating a long document, report, code, or aligned text, wrap it entirely in artifact tags. (Example: <artifact title="Title">\n# Data...\n</artifact>)
+3. <artifact>: If generating a long document, wrap it in <artifact title="Title">...</artifact>.
+4. <artifact type="html">: **CRITICAL NEW FEATURE.** If the user asks for a game, a timer, a calculator, or a UI component, write fully functioning HTML/CSS/JS code and wrap it entirely in <artifact type="html" title="App Name"> YOUR CODE HERE </artifact>. Use Tailwind CSS via CDN inside the HTML. The frontend will render it as a live, interactive web app!
    
 CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. Speak directly. Ensure responses reach a COMPLETE, definitive conclusion.`;
 
         let massiveKnowledgeBase = "";
         let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
 
-        // ---------------------------------------------------------
         // 1. EXTRACT & COMPILE ALL KNOWLEDGE VECTORS
-        // ---------------------------------------------------------
-
         if (processedMessages.length > 0 && processedMessages[0].content.includes('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]')) {
             const parts = processedMessages[0].content.split('[USER QUERY:]\n');
             if (parts.length > 1) {
@@ -101,16 +95,12 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
             }
         }
 
-        // ---------------------------------------------------------
-        // 2. THE PDF ALCHEMIST ENGINE (Links & Files)
-        // ---------------------------------------------------------
-
-        // A. Extract PDF URLs from Gibberish Scrape Data
+        // Extract PDF URLs from Gibberish Scrape Data
         const pdfUrlRegex = /URL:\s*(https?:\/\/[^\s]+?\.pdf)/gi;
         let match;
         let pdfUrls = [];
         while ((match = pdfUrlRegex.exec(massiveKnowledgeBase)) !== null) { pdfUrls.push(match[1]); }
-        pdfUrls = [...new Set(pdfUrls)]; // Deduplicate
+        pdfUrls = [...new Set(pdfUrls)]; 
         
         if (pdfUrls.length > 0) {
             const jinaPromises = pdfUrls.map(url => 
@@ -129,7 +119,6 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
             });
         }
 
-        // B. Extract Attachments
         const geminiInlineParts = [];
         const geminiSupportedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
@@ -147,14 +136,9 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
                             try { massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${atob(att.base64)}\n`; } catch (err) {}
                         }
                     } else if (mime === 'application/pdf' && modelId === 'spark') {
-                        // SPARK PDF VISION HACK: Convert base64 to text via Jina Reader on the fly
                         try {
                             const pdfBuffer = Uint8Array.from(atob(att.base64), c => c.charCodeAt(0));
-                            const jinaRes = await fetch('https://r.jina.ai/', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/pdf', 'X-Retain-Images': 'none' },
-                                body: pdfBuffer
-                            });
+                            const jinaRes = await fetch('https://r.jina.ai/', { method: 'POST', headers: { 'Content-Type': 'application/pdf', 'X-Retain-Images': 'none' }, body: pdfBuffer });
                             const pdfText = await jinaRes.text();
                             massiveKnowledgeBase += `\n--- DOC: ${att.name} (PDF Extracted) ---\n${pdfText}\n`;
                         } catch (e) {
@@ -171,9 +155,6 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
             }
         }
 
-        // ---------------------------------------------------------
-        // 3. THE UCCM COMPRESSION TRIGGER (Anti-429 Shield)
-        // ---------------------------------------------------------
         const MAX_CHARS = modelId === 'spark' ? 15000 : 80000; 
         const condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
 
@@ -184,9 +165,6 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
         const latestUserQuery = processedMessages[processedMessages.length - 1].content;
         processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${latestUserQuery}`;
 
-        // ---------------------------------------------------------
-        // 4. FINAL HISTORY CHUNKING
-        // ---------------------------------------------------------
         let finalMessages = [];
         if (modelId === 'spark') {
             const sparkHistoryCharLimit = 5000; 
@@ -203,9 +181,6 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
             finalMessages = processedMessages;
         }
 
-        // ---------------------------------------------------------
-        // 5. LLM STREAMING & AGGRESSIVE KEY ROTATION
-        // ---------------------------------------------------------
         let llmRes = null;
         let finalErrorText = "";
 
