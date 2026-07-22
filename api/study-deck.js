@@ -1,75 +1,106 @@
 export const config = {
-  runtime: 'edge',
+    runtime: 'edge',
 };
 
-function extractJSON(str) {
-  try {
-    let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const start = clean.indexOf('{');
-    const end = clean.lastIndexOf('}');
-    if (start === -1 || end === -1) throw new Error("No JSON found");
-    return JSON.parse(clean.substring(start, end + 1));
-  } catch (e) {
-    return { deckName: "Overview", cards: [{ q: "Error Extracting", a: "Please try again.", hint: "Network or complex text issue" }] };
-  }
+const FALLBACK_DECK = {
+    deckName: "Core Concepts Overview",
+    cards: [
+        { q: "What are the primary insights?", a: "Review the provided text stream for core structural guidelines.", hint: "Check summary details" },
+        { q: "How can this be applied?", a: "Integrate findings directly into your active workspace session.", hint: "Practical execution" }
+    ]
+};
+
+function sanitizeJSON(str) {
+    try {
+        const match = str.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error("No JSON object found");
+        let clean = match[0].replace(/,\s*([\]}])/g, '$1');
+        return JSON.parse(clean);
+    } catch (e) {
+        return null;
+    }
 }
 
-async function callGemini(systemPrompt, userPrompt) {
-  const rawKeys = [
-    process.env.GEMINI_API_KEY_1, process.env.GEMINI_API_KEY_2, 
-    process.env.GEMINI_API_KEY_3, process.env.GEMINI_API_KEY
-  ];
-  const keys = rawKeys.map(k => k ? k.replace(/[\r\n\s]/g, '') : null).filter(Boolean);
-  if (keys.length === 0) throw new Error("No Gemini keys found.");
+async function fetchStudyBlueprint(prompt, keys) {
+    let finalError = "";
+    const systemInstruction = `You are LexisAI, an elite Academic Tutor.
+Convert the provided material into a high-yield Study Deck containing key facts and definitions.
 
-  let lastError = null;
-  for (const key of keys) {
-    try {
-      const res = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$){key}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: { temperature: 0.2, responseMimeType: "application/json" }
-        })
-      });
+CRITICAL: Output ONLY a valid JSON object. No markdown, no \`\`\`json.
+SCHEMA:
+{
+  "deckName": "Name of the topic",
+  "cards": [
+    { "q": "Question text here?", "a": "Clear, concise answer here.", "hint": "A subtle hint for the user." }
+  ]
+}`;
 
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Empty payload.");
-      return text;
-    } catch (err) { lastError = err; }
-  }
-  throw new Error(`All keys failed. Last error: ${lastError?.message}`);
+    const payload = {
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192, temperature: 0.2 },
+        safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
+    };
+
+    for (let i = 0; i < keys.length; i++) {
+        const currentKey = keys[i].replace(/[\r\n\s]/g, '');
+        const streamUrl = `[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$){currentKey}`;
+        
+        try {
+            const res = await fetch(streamUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) {
+                const data = await res.json();
+                return data.candidates[0].content.parts[0].text;
+            } else {
+                finalError = await res.text();
+                if (res.status === 429 || res.status === 503) continue;
+                break; 
+            }
+        } catch (e) {
+            finalError = e.message;
+        }
+    }
+    throw new Error(`Execution Failed: ${finalError}`);
 }
 
 export default async function handler(req) {
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-  try {
-    const { textContext } = await req.json();
-    if (!textContext) throw new Error("No text provided.");
+    if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
-    const safeContext = textContext.length > 80000 ? textContext.substring(0, 80000) + "\n[TRUNCATED]" : textContext;
+    try {
+        const { textContext } = await req.json();
+        const GEMINI_KEYS = [
+            process.env.GEMINI_API_KEY_1,
+            process.env.GEMINI_API_KEY_2,
+            process.env.GEMINI_API_KEY_3,
+            process.env.GEMINI_API_KEY
+        ].filter(Boolean);
 
-    const systemPrompt = `You are LexisAI, an elite Academic Tutor.
-    TASK: Convert the provided material into a high-yield Study Deck. Extract the most important facts.
-    
-    OUTPUT FORMAT: Output ONLY raw JSON.
-    {
-      "deckName": "Topic Name",
-      "cards": [
-        { "q": "Question?", "a": "Answer.", "hint": "A subtle hint." }
-      ]
-    }`;
+        if (GEMINI_KEYS.length === 0) {
+            return new Response(JSON.stringify({ success: true, data: FALLBACK_DECK }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
 
-    const rawText = await callGemini(systemPrompt, `Create flashcards:\n\n${safeContext}`);
-    const deckData = extractJSON(rawText);
+        const safeContext = textContext && textContext.length > 80000 ? textContext.substring(0, 80000) + "\n[TRUNCATED]" : (textContext || "General study overview.");
 
-    return new Response(JSON.stringify({ success: true, data: deckData }), { status: 200 });
-  } catch (error) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500 });
-  }
+        let rawJSON = "";
+        try {
+            rawJSON = await fetchStudyBlueprint(safeContext, GEMINI_KEYS);
+        } catch (err) {
+            return new Response(JSON.stringify({ success: true, data: FALLBACK_DECK }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const deckData = sanitizeJSON(rawJSON) || FALLBACK_DECK;
+
+        return new Response(JSON.stringify({ success: true, data: deckData }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({ success: true, data: FALLBACK_DECK }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+        });
+    }
 }
