@@ -62,13 +62,6 @@ tailwind.config = {
 .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1rem; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; text-align: center; }
 .flip-card-front { background: #111; border: 1px solid rgba(255,255,255,0.1); }
 .flip-card-back { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); transform: rotateY(180deg); color: #c7d2fe; }
-/* --- NEW ADDONS --- */
-.flip-card { perspective: 1000px; cursor: pointer; height: 300px; width: 100%; }
-.flip-card-inner { position: relative; width: 100%; height: 100%; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-style: preserve-3d; }
-.flip-card.flipped .flip-card-inner { transform: rotateY(180deg); }
-.flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1rem; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; text-align: center; }
-.flip-card-front { background: #111; border: 1px solid rgba(255,255,255,0.1); }
-.flip-card-back { background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.3); transform: rotateY(180deg); color: #c7d2fe; }
 </style>
 </head>
 
@@ -210,11 +203,6 @@ tailwind.config = {
         <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-users-three"></i> Invite Co-Op Friend</button>
         <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-plus"></i> New Conversation</button>
         <button onclick="openExtModal()" class="w-full flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-brain"></i> Manage Extensions</button>
-
-        <!-- NEW ADDONS -->
-        <button onclick="generateBrainMap()" class="w-full flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-graph"></i> Constellation Map</button>
-
-        <!-- NEW ADDONS -->
         <button onclick="generateBrainMap()" class="w-full flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-graph"></i> Constellation Map</button>
         <div class="relative w-full">
             <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none appearance-none cursor-pointer hover:border-white/20 transition-colors">
@@ -252,22 +240,8 @@ tailwind.config = {
                 <i id="ppt-icon" class="ph-bold ph-presentation-chart text-sm sm:text-base"></i> <span>Slides</span>
             </button>
             <button id="deep-research-btn" onclick="toggleDeepResearch()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-cyan-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Auto-Pilot Deep Research">
-
-            </button>
-
-            <!-- NEW ADDONS -->
-            <button id="podcast-btn" onclick="togglePodcastMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-pink-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Neural Podcast Producer">
-                <i id="podcast-icon" class="ph-bold ph-headphones text-sm sm:text-base"></i> <span>Audio</span>
-            </button>
-            <button id="app-btn" onclick="toggleAppMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-orange-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Web App Builder">
-                <i id="app-icon" class="ph-bold ph-code text-sm sm:text-base"></i> <span>App</span>
-            </button>
-            <button id="study-btn" onclick="toggleStudyMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-indigo-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Study Deck Generator">
-                <i id="study-icon" class="ph-bold ph-cards text-sm sm:text-base"></i> <span>Study</span>
                 <i id="deep-research-icon" class="ph-bold ph-radar text-sm sm:text-base"></i> <span>Research</span>
             </button>
-
-            <!-- NEW ADDONS -->
             <button id="podcast-btn" onclick="togglePodcastMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-pink-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Neural Podcast Producer">
                 <i id="podcast-icon" class="ph-bold ph-headphones text-sm sm:text-base"></i> <span>Audio</span>
             </button>
@@ -518,12 +492,6 @@ let isProcessing = false;
 let isDeepResearchOn = false;
 let isPresentationMode = false;
 let isMathMode = false;
-
-
-let isPodcastMode = false;
-let isAppMode = false;
-let isStudyMode = false;
-
 let isPodcastMode = false;
 let isAppMode = false;
 let isStudyMode = false;
@@ -567,13 +535,7 @@ const els = {
     pptBtn: document.getElementById('ppt-btn'),
     pptIcon: document.getElementById('ppt-icon'),
     mathBtn: document.getElementById('math-btn'),
-        mathIcon: document.getElementById('math-icon'),
-    podcastBtn: document.getElementById('podcast-btn'),
-    podcastIcon: document.getElementById('podcast-icon'),
-    appBtn: document.getElementById('app-btn'),
-    appIcon: document.getElementById('app-icon'),
-    studyBtn: document.getElementById('study-btn'),
-    studyIcon: document.getElementById('study-icon')
+    mathIcon: document.getElementById('math-icon'),
     podcastBtn: document.getElementById('podcast-btn'),
     podcastIcon: document.getElementById('podcast-icon'),
     appBtn: document.getElementById('app-btn'),
@@ -837,6 +799,9 @@ function toggleDeepResearch() {
     if (isDeepResearchOn) {
         if (isPresentationMode) togglePresentationMode();
         if (isMathMode) toggleMathMode();
+        if (isPodcastMode) togglePodcastMode();
+        if (isAppMode) toggleAppMode();
+        if (isStudyMode) toggleStudyMode();
         els.researchBtn.classList.replace('text-gray-500', 'text-cyan-400');
         els.researchBtn.classList.replace('border-transparent', 'border-cyan-500/50');
         els.researchBtn.classList.add('bg-cyan-500/10');
@@ -855,6 +820,9 @@ function togglePresentationMode() {
     if (isPresentationMode) {
         if (isDeepResearchOn) toggleDeepResearch();
         if (isMathMode) toggleMathMode();
+        if (isPodcastMode) togglePodcastMode();
+        if (isAppMode) toggleAppMode();
+        if (isStudyMode) toggleStudyMode();
         els.pptBtn.classList.replace('text-gray-500', 'text-amber-400');
         els.pptBtn.classList.replace('border-transparent', 'border-amber-500/50');
         els.pptBtn.classList.add('bg-amber-500/10');
@@ -868,73 +836,14 @@ function togglePresentationMode() {
     }
 }
 
-// --- NEW ADDONS ---
-function togglePodcastMode() {
-    isPodcastMode = !isPodcastMode;
-    if (isPodcastMode) {
-        if (isDeepResearchOn) toggleDeepResearch();
-        if (isPresentationMode) togglePresentationMode();
-        if (isMathMode) toggleMathMode();
-        if (isAppMode) toggleAppMode();
-        if (isStudyMode) toggleStudyMode();
-        els.podcastBtn.classList.replace('text-gray-500', 'text-pink-400');
-        els.podcastBtn.classList.replace('border-transparent', 'border-pink-500/50');
-        els.podcastBtn.classList.add('bg-pink-500/10');
-        els.podcastIcon.classList.add('animate-pulse');
-        showToast("Neural Podcast Producer Engaged");
-    } else {
-        els.podcastBtn.classList.replace('text-pink-400', 'text-gray-500');
-        els.podcastBtn.classList.replace('border-pink-500/50', 'border-transparent');
-        els.podcastBtn.classList.remove('bg-pink-500/10');
-        els.podcastIcon.classList.remove('animate-pulse');
-    }
-}
-function toggleAppMode() {
-    isAppMode = !isAppMode;
-    if (isAppMode) {
-        if (isDeepResearchOn) toggleDeepResearch();
-        if (isPresentationMode) togglePresentationMode();
-        if (isMathMode) toggleMathMode();
-        if (isPodcastMode) togglePodcastMode();
-        if (isStudyMode) toggleStudyMode();
-        els.appBtn.classList.replace('text-gray-500', 'text-orange-400');
-        els.appBtn.classList.replace('border-transparent', 'border-orange-500/50');
-        els.appBtn.classList.add('bg-orange-500/10');
-        els.appIcon.classList.add('animate-pulse');
-        showToast("Web App Builder Engaged");
-    } else {
-        els.appBtn.classList.replace('text-orange-400', 'text-gray-500');
-        els.appBtn.classList.replace('border-orange-500/50', 'border-transparent');
-        els.appBtn.classList.remove('bg-orange-500/10');
-        els.appIcon.classList.remove('animate-pulse');
-    }
-}
-function toggleStudyMode() {
-    isStudyMode = !isStudyMode;
-    if (isStudyMode) {
-        if (isDeepResearchOn) toggleDeepResearch();
-        if (isPresentationMode) togglePresentationMode();
-        if (isMathMode) toggleMathMode();
-        if (isPodcastMode) togglePodcastMode();
-        if (isAppMode) toggleAppMode();
-        els.studyBtn.classList.replace('text-gray-500', 'text-indigo-400');
-        els.studyBtn.classList.replace('border-transparent', 'border-indigo-500/50');
-        els.studyBtn.classList.add('bg-indigo-500/10');
-        els.studyIcon.classList.add('animate-pulse');
-        showToast("Study Deck Generator Engaged");
-    } else {
-        els.studyBtn.classList.replace('text-indigo-400', 'text-gray-500');
-        els.studyBtn.classList.replace('border-indigo-500/50', 'border-transparent');
-        els.studyBtn.classList.remove('bg-indigo-500/10');
-        els.studyIcon.classList.remove('animate-pulse');
-    }
-}
-
 function toggleMathMode() {
     isMathMode = !isMathMode;
     if (isMathMode) {
         if (isDeepResearchOn) toggleDeepResearch();
         if (isPresentationMode) togglePresentationMode();
+        if (isPodcastMode) togglePodcastMode();
+        if (isAppMode) toggleAppMode();
+        if (isStudyMode) toggleStudyMode();
         els.mathBtn.classList.replace('text-gray-500', 'text-emerald-400');
         els.mathBtn.classList.replace('border-transparent', 'border-emerald-500/50');
         els.mathBtn.classList.add('bg-emerald-500/10');
@@ -948,8 +857,6 @@ function toggleMathMode() {
     }
 }
 
-
-// --- NEW ADDONS ---
 function togglePodcastMode() {
     isPodcastMode = !isPodcastMode;
     if (isPodcastMode) {
@@ -970,6 +877,7 @@ function togglePodcastMode() {
         els.podcastIcon.classList.remove('animate-pulse');
     }
 }
+
 function toggleAppMode() {
     isAppMode = !isAppMode;
     if (isAppMode) {
@@ -990,6 +898,7 @@ function toggleAppMode() {
         els.appIcon.classList.remove('animate-pulse');
     }
 }
+
 function toggleStudyMode() {
     isStudyMode = !isStudyMode;
     if (isStudyMode) {
@@ -1207,7 +1116,6 @@ function renderSlideHTML(s) {
     return html;
 }
 
-// --- NEW ADDONS ---
 function renderPodcastUI(payload) {
     let html = `<div class="p-6 pb-2 border-b border-white/10 flex justify-between items-center bg-[#0a0a0a]">
         <div>
@@ -1284,85 +1192,6 @@ function renderBrainMapUI(payload) {
     }, 100);
     return html + `</div>`;
 }
-
-// --- NEW ADDONS ---
-function renderPodcastUI(payload) {
-    let html = `<div class="p-6 pb-2 border-b border-white/10 flex justify-between items-center bg-[#0a0a0a]">
-        <div>
-            <h3 class="text-xl font-bold text-pink-400 flex items-center gap-2"><i class="ph-fill ph-headphones"></i> ${payload.title}</h3>
-            <p class="text-xs text-gray-500 mt-1">Generated Audio Transcript</p>
-        </div>
-        <button class="bg-pink-500 hover:bg-pink-400 text-black px-4 py-2 rounded-xl font-bold shadow-lg shadow-pink-500/20 flex items-center gap-2 transition-colors"><i class="ph-fill ph-play"></i> Play</button>
-    </div><div class="p-6 space-y-6">`;
-    payload.script.forEach(line => {
-        const isA = line.host === "A";
-        html += `<div class="flex flex-col ${isA ? 'items-start' : 'items-end'} w-full">
-            <span class="text-[10px] font-bold text-gray-500 mb-1 tracking-widest uppercase">Host ${line.host}</span>
-            <div class="max-w-[80%] p-4 rounded-2xl text-sm ${isA ? 'bg-[#111] border border-white/10 rounded-tl-sm text-gray-200' : 'bg-pink-500/10 border border-pink-500/20 rounded-tr-sm text-pink-100'}">${line.text}</div>
-        </div>`;
-    });
-    return html + `</div>`;
-}
-
-function renderStudyDeckUI(payload) {
-    let html = `<div class="p-6 pb-4 border-b border-white/10 bg-[#0a0a0a]">
-        <h3 class="text-xl font-bold text-indigo-400 flex items-center gap-2"><i class="ph-fill ph-cards"></i> ${payload.deckName}</h3>
-        <p class="text-xs text-gray-500 mt-1">${payload.cards.length} Cards • Click to flip</p>
-    </div><div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">`;
-    payload.cards.forEach((c, i) => {
-        html += `<div class="flip-card" onclick="this.classList.toggle('flipped')">
-            <div class="flip-card-inner shadow-xl">
-                <div class="flip-card-front">
-                    <div class="absolute top-4 left-4 text-[10px] text-gray-500 font-mono">Q${i+1}</div>
-                    <h4 class="text-lg font-bold text-white mb-4">${c.q}</h4>
-                    <p class="text-xs text-gray-600 mt-auto"><i class="ph-bold ph-lightbulb"></i> ${c.hint || 'Tap to reveal'}</p>
-                </div>
-                <div class="flip-card-back">
-                    <div class="absolute top-4 left-4 text-[10px] text-indigo-400/50 font-mono">Answer</div>
-                    <p class="text-base font-medium leading-relaxed">${c.a}</p>
-                </div>
-            </div>
-        </div>`;
-    });
-    return html + `</div>`;
-}
-
-function renderBrainMapUI(payload) {
-    let html = `<div class="w-full h-full relative min-h-[500px] overflow-hidden bg-black" id="brain-map-container">
-        <div class="absolute top-4 left-4 z-20 text-blue-400 font-bold flex items-center gap-2"><i class="ph-fill ph-graph"></i> Neural Constellation</div>
-        <svg class="absolute inset-0 w-full h-full pointer-events-none z-0" id="brain-map-lines"></svg>`;
-    const positions = {};
-    payload.nodes.forEach((n, i) => {
-        const x = 15 + ((i * 37) % 70);
-        const y = 15 + ((i * 23) % 70);
-        positions[n.id] = {x, y};
-        const colors = {
-            'skill': 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30',
-            'project': 'text-purple-400 bg-purple-500/10 border-purple-500/30',
-            'preference': 'text-orange-400 bg-orange-500/10 border-orange-500/30'
-        };
-        const color = colors[n.group] || 'text-cyan-400 bg-cyan-500/10 border-cyan-500/30';
-        html += `<div class="absolute flex flex-col items-center gap-1.5 transform -translate-x-1/2 -translate-y-1/2 z-10 cursor-pointer hover:scale-125 transition-transform duration-300" style="left: ${x}%; top: ${y}%" title="${n.group}">
-            <div class="w-3 h-3 rounded-full ${color.split(' ')[1]} border ${color.split(' ')[2]} shadow-[0_0_15px_currentColor]"></div>
-            <div class="text-[9px] font-bold ${color.split(' ')[0]} bg-black/80 px-2 py-1 rounded backdrop-blur-md whitespace-nowrap border border-white/5">${n.label}</div>
-        </div>`;
-    });
-    setTimeout(() => {
-        const svg = document.getElementById('brain-map-lines');
-        if(!svg) return;
-        let linesHtml = "";
-        payload.links.forEach(l => {
-            const s = positions[l.source], t = positions[l.target];
-            if(s && t) {
-                linesHtml += `<line x1="${s.x}%" y1="${s.y}%" x2="${t.x}%" y2="${t.y}%" stroke="rgba(96, 165, 250, 0.15)" stroke-width="1.5"></line>
-                <text x="${(s.x+t.x)/2}%" y="${(s.y+t.y)/2}%" fill="rgba(96, 165, 250, 0.4)" font-size="8" font-family="monospace" text-anchor="middle" dominant-baseline="middle">${l.label}</text>`;
-            }
-        });
-        svg.innerHTML = linesHtml;
-    }, 100);
-    return html + `</div>`;
-}
-
 
 function renderPresentationPreview(payload) {
     let html = `<div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4 px-6 pt-6">
@@ -1407,17 +1236,6 @@ function openCanvas(artifactId, title, type = 'document') {
         } catch(e) { 
             els.canvasContent.innerHTML = "<div class='text-center text-gray-500 mt-20'><i class='ph-bold ph-spinner animate-spin text-4xl mb-4'></i><p>Computing Algebra...</p></div>"; 
         }
-        } else if (type === 'podcast') {
-        els.canvasContent.className = "flex-1 overflow-y-auto min-h-0 h-full p-0 selection:bg-pink-500/30 relative";
-        try { els.canvasContent.innerHTML = renderPodcastUI(JSON.parse(rawData)); } catch(e) { }
-    } else if (type === 'study_deck') {
-        els.canvasContent.className = "flex-1 overflow-y-auto min-h-0 h-full p-0 selection:bg-indigo-500/30 relative";
-        try { els.canvasContent.innerHTML = renderStudyDeckUI(JSON.parse(rawData)); } catch(e) { }
-    } else if (type === 'brain_map') {
-        els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
-        try { els.canvasContent.innerHTML = renderBrainMapUI(JSON.parse(rawData)); } catch(e) { }
-
-    // --- NEW ADDONS ---
     } else if (type === 'podcast') {
         els.canvasContent.className = "flex-1 overflow-y-auto min-h-0 h-full p-0 selection:bg-pink-500/30 relative";
         try { els.canvasContent.innerHTML = renderPodcastUI(JSON.parse(rawData)); } catch(e) { }
@@ -1427,9 +1245,7 @@ function openCanvas(artifactId, title, type = 'document') {
     } else if (type === 'brain_map') {
         els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
         try { els.canvasContent.innerHTML = renderBrainMapUI(JSON.parse(rawData)); } catch(e) { }
-
-
-} else if (type === 'html') {
+    } else if (type === 'html') {
         els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
         els.canvasContent.innerHTML = `<iframe class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin" id="app-iframe-${artifactId}"></iframe>`;
         setTimeout(() => {
@@ -2013,6 +1829,15 @@ function parseRichText(content, isStreaming = false, msgId = null) {
                         iframe.contentWindow.document.close(); 
                     } 
                 }, 50);
+            } else if (type === 'podcast') {
+                els.canvasContent.className = "flex-1 overflow-y-auto min-h-0 h-full p-0 selection:bg-pink-500/30 relative";
+                try { els.canvasContent.innerHTML = renderPodcastUI(JSON.parse(artifactContent.trim())); } catch(e) { }
+            } else if (type === 'study_deck') {
+                els.canvasContent.className = "flex-1 overflow-y-auto min-h-0 h-full p-0 selection:bg-indigo-500/30 relative";
+                try { els.canvasContent.innerHTML = renderStudyDeckUI(JSON.parse(artifactContent.trim())); } catch(e) { }
+            } else if (type === 'brain_map') {
+                els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
+                try { els.canvasContent.innerHTML = renderBrainMapUI(JSON.parse(artifactContent.trim())); } catch(e) { }
             } else {
                 els.canvasContent.className = "flex-1 overflow-y-auto min-h-0 h-full p-6 lg:p-10 prose prose-invert max-w-none text-sm md:text-base selection:bg-cyan-500/30 relative";
                 els.canvasContent.innerHTML = renderMathAndMarkdown(artifactContent.trim());
@@ -2028,28 +1853,13 @@ function parseRichText(content, isStreaming = false, msgId = null) {
         const isMap = type === 'brain_map';
         
         let iconColor = 'cyan-400', iconBg = 'cyan-500/10', iconBorder = 'cyan-500/20', iconClass = 'ph-layout', typeName = 'Interactive Workspace';
-        if(isMath) { iconColor = 'emerald-400'; iconBg = 'emerald-500/10'; iconBorder = 'emerald-500/20'; iconClass = 'ph-function'; typeName = 'Cartesian Engine'; }
-        else if(isPres) { iconColor = 'amber-400'; iconBg = 'amber-500/10'; iconBorder = 'amber-500/20'; iconClass = 'ph-presentation-chart'; typeName = 'Presentation Deck'; }
-        else if(isApp) { iconColor = 'orange-400'; iconBg = 'orange-500/10'; iconBorder = 'orange-500/20'; iconClass = 'ph-code'; typeName = 'Executable App'; }
-        else if(isPod) { iconColor = 'pink-400'; iconBg = 'pink-500/10'; iconBorder = 'pink-500/20'; iconClass = 'ph-headphones'; typeName = 'Audio Transcript'; }
-        else if(isStudy) { iconColor = 'indigo-400'; iconBg = 'indigo-500/10'; iconBorder = 'indigo-500/20'; iconClass = 'ph-cards'; typeName = 'Study Deck'; }
-        else if(isMap) { iconColor = 'blue-400'; iconBg = 'blue-500/10'; iconBorder = 'blue-500/20'; iconClass = 'ph-graph'; typeName = 'Constellation Map'; }
-        const isPod = type === 'podcast';
-        const isStudy = type === 'study_deck';
-        const isMap = type === 'brain_map';
         
-        let iconColor = 'cyan-400', iconBg = 'cyan-500/10', iconBorder = 'cyan-500/20', iconClass = 'ph-layout', typeName = 'Interactive Workspace';
         if(isMath) { iconColor = 'emerald-400'; iconBg = 'emerald-500/10'; iconBorder = 'emerald-500/20'; iconClass = 'ph-function'; typeName = 'Cartesian Engine'; }
         else if(isPres) { iconColor = 'amber-400'; iconBg = 'amber-500/10'; iconBorder = 'amber-500/20'; iconClass = 'ph-presentation-chart'; typeName = 'Presentation Deck'; }
         else if(isApp) { iconColor = 'orange-400'; iconBg = 'orange-500/10'; iconBorder = 'orange-500/20'; iconClass = 'ph-code'; typeName = 'Executable App'; }
         else if(isPod) { iconColor = 'pink-400'; iconBg = 'pink-500/10'; iconBorder = 'pink-500/20'; iconClass = 'ph-headphones'; typeName = 'Audio Transcript'; }
         else if(isStudy) { iconColor = 'indigo-400'; iconBg = 'indigo-500/10'; iconBorder = 'indigo-500/20'; iconClass = 'ph-cards'; typeName = 'Study Deck'; }
         else if(isMap) { iconColor = 'blue-400'; iconBg = 'blue-500/10'; iconBorder = 'blue-500/20'; iconClass = 'ph-graph'; typeName = 'Constellation Map'; }
-
-        const iconColor = isMath ? 'emerald-400' : (isPres ? 'amber-400' : (isApp ? 'purple-400' : 'cyan-400'));
-        const iconBg = isMath ? 'emerald-500/10' : (isPres ? 'amber-500/10' : (isApp ? 'purple-500/10' : 'cyan-500/10'));
-        const iconBorder = isMath ? 'emerald-500/20' : (isPres ? 'amber-500/20' : (isApp ? 'purple-500/20' : 'cyan-500/20'));
-        const iconClass = isMath ? 'ph-function' : (isPres ? 'ph-presentation-chart' : (isApp ? 'ph-browser' : 'ph-layout'));
 
         const titleText = title ? title.replace(/'/g, "\\'") : typeName;
 
@@ -2073,7 +1883,7 @@ function parseRichText(content, isStreaming = false, msgId = null) {
                     <i class="ph-fill ${iconClass} text-${iconColor} text-xl"></i>
                 </div>
                 <div>
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">${isMath ? 'Cartesian Engine' : (isPres ? 'Presentation Deck' : (isApp ? 'Executable App' : 'Interactive Workspace'))}</p>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-0.5">${typeName}</p>
                     <p class="text-sm text-white font-medium group-hover:text-${iconColor} transition-colors">${title || 'Untitled Artifact'}</p>
                 </div>
             </div>
@@ -2321,14 +2131,6 @@ async function handleSend() {
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat();
-
-                if (currentMultiplayerRoom) {
-                    fetch('/api/multiplayer', {
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'send', message: artifactContent, nickname: 'LexisAI' })
-                    }).catch(() => {});
-                }
             }
         } catch (err) {
             logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; 
@@ -2405,14 +2207,6 @@ async function handleSend() {
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat();
-
-                if (currentMultiplayerRoom) {
-                    fetch('/api/multiplayer', {
-                        method: 'POST', 
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'send', message: artifactContent, nickname: 'LexisAI' })
-                    }).catch(() => {});
-                }
             }
         } catch (err) {
             logContainer.innerHTML += `<div class="text-red-400">> Network Error establishing Agent stream.</div>`; 
@@ -2420,98 +2214,9 @@ async function handleSend() {
             logContainer.parentElement.parentElement.remove();
             sendTelemetry('slides', activeModelId, 'error', err.message);
         }
-
-    // --- NEW ADDONS ---
-    if (isPodcastMode) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Initializing Neural Audio Producer...', 'presentation');
-        logContainer.classList.replace('text-amber-400', 'text-pink-400');
-        try {
-            const res = await fetch('/api/podcast', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ textContext: text }) 
-            });
-            const data = await res.json();
-            logContainer.parentElement.parentElement.remove();
-            if (data.success && data.data) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
-                const artifactContent = `<artifact title="${data.data.title}" type="podcast">\n${JSON.stringify(data.data)}\n</artifact>`;
-                assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
-            } else {
-                appendMessage('assistant', `<span class="text-red-400">Failed to generate audio script: ${data.error}</span>`, activeModelId);
-            }
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            appendMessage('assistant', `<span class="text-red-400">Network Error.</span>`, activeModelId);
-        }
         isProcessing = false; updateUIState(); return;
     }
 
-    if (isAppMode) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Initializing App Builder Engine...', 'math');
-        logContainer.classList.replace('text-emerald-400', 'text-orange-400');
-        try {
-            const res = await fetch('/api/app-builder', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ prompt: text }) 
-            });
-            const data = await res.json();
-            logContainer.parentElement.parentElement.remove();
-            if (data.success && data.html) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
-                const artifactContent = `<artifact title="Interactive Web App" type="html">\n${data.html}\n</artifact>`;
-                assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
-            } else {
-                appendMessage('assistant', `<span class="text-red-400">Failed to generate App: ${data.error}</span>`, activeModelId);
-            }
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            appendMessage('assistant', `<span class="text-red-400">Network Error.</span>`, activeModelId);
-        }
-        isProcessing = false; updateUIState(); return;
-    }
-
-    if (isStudyMode) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Extracting Flashcards...', 'research');
-        logContainer.classList.replace('text-cyan-400', 'text-indigo-400');
-        try {
-            const res = await fetch('/api/study-deck', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ textContext: text }) 
-            });
-            const data = await res.json();
-            logContainer.parentElement.parentElement.remove();
-            if (data.success && data.data) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
-                const artifactContent = `<artifact title="${data.data.deckName}" type="study_deck">\n${JSON.stringify(data.data)}\n</artifact>`;
-                assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
-            } else {
-                appendMessage('assistant', `<span class="text-red-400">Failed to generate deck: ${data.error}</span>`, activeModelId);
-            }
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            appendMessage('assistant', `<span class="text-red-400">Network Error.</span>`, activeModelId);
-        }
-        isProcessing = false; updateUIState(); return;
-    }
-
-        isProcessing = false; updateUIState();
-        return;
-    }
-
-
-    // --- NEW ADDONS ---
     if (isPodcastMode) {
         els.indicator.classList.add('hidden');
         const logContainer = appendResearchTerminal('Initializing Neural Audio Producer...', 'presentation');
@@ -2796,7 +2501,6 @@ async function handleSend() {
     updateUIState();
 }
 
-// --- NEW ADDONS ---
 async function generateBrainMap() {
     if (messages.length === 0) return showToast("Chat history is empty.");
     toggleSidebar();
@@ -2826,38 +2530,6 @@ async function generateBrainMap() {
     }
     isProcessing = false; updateUIState();
 }
-
-// --- NEW ADDONS ---
-async function generateBrainMap() {
-    if (messages.length === 0) return showToast("Chat history is empty.");
-    toggleSidebar();
-    isProcessing = true; updateUIState();
-    const logContainer = appendResearchTerminal('Mapping Neural Pathways...', 'research');
-    logContainer.classList.replace('text-cyan-400', 'text-blue-400');
-    try {
-        const res = await fetch('/api/brain-map', { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ chatHistory: messages }) 
-        });
-        const data = await res.json();
-        logContainer.parentElement.parentElement.remove();
-        if (data.success && data.data) {
-            const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
-            const artifactContent = `<artifact title="Neural Constellation" type="brain_map">\n${JSON.stringify(data.data)}\n</artifact>`;
-            assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
-            messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
-            saveCurrentChat();
-        } else {
-            showToast("Brain Map Failed.");
-        }
-    } catch (err) {
-        logContainer.parentElement.parentElement.remove();
-        showToast("Network Error.");
-    }
-    isProcessing = false; updateUIState();
-}
-
 
 els.input.addEventListener('input', function() { 
     this.style.height = 'auto'; 
