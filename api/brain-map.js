@@ -7,30 +7,23 @@ function extractJSON(str) {
     let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
     const start = clean.indexOf('{');
     const end = clean.lastIndexOf('}');
-    if (start === -1 || end === -1) throw new Error("No JSON structure found");
+    if (start === -1 || end === -1) throw new Error("No JSON found");
     return JSON.parse(clean.substring(start, end + 1));
   } catch (e) {
     return {
-      nodes: [
-        { id: "core", label: "User Interaction", group: "project" },
-        { id: "ai", label: "LexisAI Core", group: "skill" }
-      ],
-      links: [
-        { source: "core", target: "ai", label: "connects" }
-      ]
+      nodes: [{ id: "user", label: "User Interaction", group: "project" }, { id: "ai", label: "LexisAI", group: "skill" }],
+      links: [{ source: "user", target: "ai", label: "communicates with" }]
     };
   }
 }
 
-async function callGemini(systemPrompt, userPrompt, responseMimeType = "application/json") {
-  const keys = [
-    process.env.GEMINI_API_KEY_1,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-    process.env.GEMINI_API_KEY
-  ].filter(Boolean);
-
-  if (keys.length === 0) throw new Error("No Gemini API keys configured.");
+async function callGemini(systemPrompt, userPrompt) {
+  const rawKeys = [
+    process.env.GEMINI_API_KEY_1, process.env.GEMINI_API_KEY_2, 
+    process.env.GEMINI_API_KEY_3, process.env.GEMINI_API_KEY
+  ];
+  const keys = rawKeys.map(k => k ? k.replace(/[\r\n\s]/g, '') : null).filter(Boolean);
+  if (keys.length === 0) throw new Error("No Gemini keys found.");
 
   let lastError = null;
   for (const key of keys) {
@@ -41,25 +34,19 @@ async function callGemini(systemPrompt, userPrompt, responseMimeType = "applicat
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt }] },
           contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: {
-            temperature: 0.1,
-            ...(responseMimeType ? { responseMimeType } : {})
-          }
+          generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
         })
       });
 
       const data = await res.json();
-      if (data.error) throw new Error(data.error.message || "Gemini error");
-
+      if (data.error) throw new Error(data.error.message);
+      
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Empty candidate payload");
+      if (!text) throw new Error("Empty payload.");
       return text;
-    } catch (err) {
-      lastError = err;
-      console.warn(`Gemini key failed, attempting key fallback...`);
-    }
+    } catch (err) { lastError = err; }
   }
-  throw new Error(`All Gemini API keys failed. Last error: ${lastError?.message}`);
+  throw new Error(`All keys failed. Last error: ${lastError?.message}`);
 }
 
 export default async function handler(req) {
@@ -68,36 +55,27 @@ export default async function handler(req) {
     const { chatHistory } = await req.json();
     if (!chatHistory || !Array.isArray(chatHistory)) throw new Error("Invalid chat history structure.");
 
-    // Compress history for fast payload execution
     const compressedHistory = chatHistory.slice(-30).map(m => `${m.role}: ${m.content}`).join('\n').substring(0, 40000);
 
-    const systemPrompt = `You are LexisAI's Neural Core. Your job is to map the user's brain.
-    NEVER mention OpenAI, Google, Anthropic, or any other AI name.
-    
-    TASK: Analyze the chat history and extract facts, projects, preferences, and skills about the user into a 2D knowledge graph.
+    const systemPrompt = `You are LexisAI's Neural Core.
+    TASK: Analyze the chat history and extract facts, projects, preferences, and skills about the user.
     
     OUTPUT FORMAT: Output ONLY raw JSON matching this schema:
     {
       "nodes": [
         { "id": "python", "label": "Python", "group": "skill" },
-        { "id": "lexis", "label": "Building LexisAI", "group": "project" },
         { "id": "darkmode", "label": "Prefers Dark Mode", "group": "preference" }
       ],
       "links": [
-        { "source": "lexis", "target": "python", "label": "uses" },
-        { "source": "lexis", "target": "darkmode", "label": "designed in" }
+        { "source": "lexis", "target": "python", "label": "uses" }
       ]
     }`;
 
-    const rawText = await callGemini(systemPrompt, `Map this history:\n\n${compressedHistory}`, "application/json");
+    const rawText = await callGemini(systemPrompt, `Map this history:\n\n${compressedHistory}`);
     const constellationData = extractJSON(rawText);
 
-    return new Response(JSON.stringify({ success: true, data: constellationData }), {
-      status: 200, headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(JSON.stringify({ success: true, data: constellationData }), { status: 200 });
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), { 
-      status: 500, headers: { 'Content-Type': 'application/json' } 
-    });
+    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500 });
   }
 }
