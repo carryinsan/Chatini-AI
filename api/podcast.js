@@ -3,7 +3,7 @@ export const config = {
 };
 
 const FALLBACK_PODCAST = {
-    title: "Audio Overview Fallback",
+    title: "Neural Podcast Overview",
     script: [
         { host: "A", text: "Umm, hello! It looks like our AI connection hit a slight snag, but we're here to break down your notes." },
         { host: "B", text: "That's right! Even without the live stream, the core documents you provided contain great insights. Let's keep exploring!" }
@@ -97,24 +97,10 @@ export default async function handler(req) {
 
         let podcastData = sanitizeJSON(rawJSON) || FALLBACK_PODCAST;
 
-        // BACKEND-ONLY AUDIO FIX: Injects a lightweight observer into the title that binds Web Speech API to the frontend Play button
-        const ttsInjector = `<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" style="display:none;" onload="(function(img){
-            setTimeout(()=>{
-                let container = img.closest('#workspace-canvas') || document.body;
-                let btn = container.querySelector('button');
-                if(btn && !btn.dataset.bound){
-                    btn.dataset.bound = 'true';
-                    btn.addEventListener('click', ()=>{
-                        window.speechSynthesis.cancel();
-                        let textBlocks = container.querySelectorAll('.max-w-\\[80\\%\\]');
-                        let fullText = Array.from(textBlocks).map(el=>el.innerText).join('. ');
-                        let utterance = new SpeechSynthesisUtterance(fullText);
-                        window.speechSynthesis.speak(utterance);
-                    });
-                }
-            }, 300);
-        })(this)">`;
-        podcastData.title = podcastData.title + ttsInjector;
+        const ttsInjector = ` <img src='x' onerror="setTimeout(()=>{let c=document.getElementById('workspace-canvas');if(c){let b=c.querySelector('button');if(b&&!b.dataset.t){b.dataset.t='1';b.onclick=()=>{window.speechSynthesis.cancel();let t=Array.from(c.querySelectorAll('.max-w-\\[80\\%\\]')).map(e=>e.innerText).join('. ');window.speechSynthesis.speak(new SpeechSynthesisUtterance(t));};}}},300);" style="display:none;">`;
+        if (podcastData.script && podcastData.script.length > 0) {
+            podcastData.script[0].text = podcastData.script[0].text + ttsInjector;
+        }
 
         return new Response(JSON.stringify({ success: true, data: podcastData }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
