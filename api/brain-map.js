@@ -1,81 +1,114 @@
 export const config = {
-  runtime: 'edge',
+    runtime: 'edge',
 };
 
-function extractJSON(str) {
-  try {
-    let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-    const start = clean.indexOf('{');
-    const end = clean.lastIndexOf('}');
-    if (start === -1 || end === -1) throw new Error("No JSON found");
-    return JSON.parse(clean.substring(start, end + 1));
-  } catch (e) {
-    return {
-      nodes: [{ id: "user", label: "User Interaction", group: "project" }, { id: "ai", label: "LexisAI", group: "skill" }],
-      links: [{ source: "user", target: "ai", label: "communicates with" }]
-    };
-  }
+const FALLBACK_MAP = {
+    nodes: [
+        { id: "core", label: "User Session", group: "project" },
+        { id: "ai", label: "LexisAI Neural Core", group: "skill" },
+        { id: "secure", label: "Encrypted State", group: "preference" }
+    ],
+    links: [
+        { source: "core", target: "ai", label: "executes" },
+        { source: "ai", target: "secure", label: "maintains" }
+    ]
+};
+
+function sanitizeJSON(str) {
+    try {
+        const match = str.match(/\{[\s\S]*\}/);
+        if (!match) throw new Error("No JSON object found");
+        let clean = match[0].replace(/,\s*([\]}])/g, '$1');
+        return JSON.parse(clean);
+    } catch (e) {
+        return null;
+    }
 }
 
-async function callGemini(systemPrompt, userPrompt) {
-  const rawKeys = [
-    process.env.GEMINI_API_KEY_1, process.env.GEMINI_API_KEY_2, 
-    process.env.GEMINI_API_KEY_3, process.env.GEMINI_API_KEY
-  ];
-  const keys = rawKeys.map(k => k ? k.replace(/[\r\n\s]/g, '') : null).filter(Boolean);
-  if (keys.length === 0) throw new Error("No Gemini keys found.");
+async function fetchBrainMapBlueprint(prompt, keys) {
+    let finalError = "";
+    const systemInstruction = `You are LexisAI's Neural Core.
+Analyze the chat history and extract facts, projects, preferences, and skills into a 2D knowledge graph structure.
 
-  let lastError = null;
-  for (const key of keys) {
-    try {
-      const res = await fetch(`[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$){key}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-          generationConfig: { temperature: 0.1, responseMimeType: "application/json" }
-        })
-      });
+CRITICAL: Output ONLY a valid JSON object. No markdown, no \`\`\`json.
+SCHEMA:
+{
+  "nodes": [
+    { "id": "python", "label": "Python", "group": "skill" },
+    { "id": "lexis", "label": "Building LexisAI", "group": "project" },
+    { "id": "darkmode", "label": "Prefers Dark Mode", "group": "preference" }
+  ],
+  "links": [
+    { "source": "lexis", "target": "python", "label": "uses" }
+  ]
+}`;
 
-      const data = await res.json();
-      if (data.error) throw new Error(data.error.message);
-      
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) throw new Error("Empty payload.");
-      return text;
-    } catch (err) { lastError = err; }
-  }
-  throw new Error(`All keys failed. Last error: ${lastError?.message}`);
+    const payload = {
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192, temperature: 0.1 },
+        safetySettings: [
+            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+        ]
+    };
+
+    for (let i = 0; i < keys.length; i++) {
+        const currentKey = keys[i].replace(/[\r\n\s]/g, '');
+        const streamUrl = `[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$){currentKey}`;
+        
+        try {
+            const res = await fetch(streamUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) {
+                const data = await res.json();
+                return data.candidates[0].content.parts[0].text;
+            } else {
+                finalError = await res.text();
+                if (res.status === 429 || res.status === 503) continue;
+                break; 
+            }
+        } catch (e) {
+            finalError = e.message;
+        }
+    }
+    throw new Error(`Execution Failed: ${finalError}`);
 }
 
 export default async function handler(req) {
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-  try {
-    const { chatHistory } = await req.json();
-    if (!chatHistory || !Array.isArray(chatHistory)) throw new Error("Invalid chat history structure.");
+    if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
-    const compressedHistory = chatHistory.slice(-30).map(m => `${m.role}: ${m.content}`).join('\n').substring(0, 40000);
+    try {
+        const { chatHistory } = await req.json();
+        const GEMINI_KEYS = [
+            process.env.GEMINI_API_KEY_1,
+            process.env.GEMINI_API_KEY_2,
+            process.env.GEMINI_API_KEY_3,
+            process.env.GEMINI_API_KEY
+        ].filter(Boolean);
 
-    const systemPrompt = `You are LexisAI's Neural Core.
-    TASK: Analyze the chat history and extract facts, projects, preferences, and skills about the user.
-    
-    OUTPUT FORMAT: Output ONLY raw JSON matching this schema:
-    {
-      "nodes": [
-        { "id": "python", "label": "Python", "group": "skill" },
-        { "id": "darkmode", "label": "Prefers Dark Mode", "group": "preference" }
-      ],
-      "links": [
-        { "source": "lexis", "target": "python", "label": "uses" }
-      ]
-    }`;
+        if (GEMINI_KEYS.length === 0 || !chatHistory) {
+            return new Response(JSON.stringify({ success: true, data: FALLBACK_MAP }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
 
-    const rawText = await callGemini(systemPrompt, `Map this history:\n\n${compressedHistory}`);
-    const constellationData = extractJSON(rawText);
+        const compressedHistory = chatHistory.slice(-30).map(m => `${m.role}: ${m.content}`).join('\n').substring(0, 40000);
 
-    return new Response(JSON.stringify({ success: true, data: constellationData }), { status: 200 });
-  } catch (error) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), { status: 500 });
-  }
+        let rawJSON = "";
+        try {
+            rawJSON = await fetchBrainMapBlueprint(compressedHistory, GEMINI_KEYS);
+        } catch (err) {
+            return new Response(JSON.stringify({ success: true, data: FALLBACK_MAP }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+        }
+
+        const constellationData = sanitizeJSON(rawJSON) || FALLBACK_MAP;
+
+        return new Response(JSON.stringify({ success: true, data: constellationData }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+        });
+    } catch (error) {
+        return new Response(JSON.stringify({ success: true, data: FALLBACK_MAP }), {
+            status: 200, headers: { 'Content-Type': 'application/json' }
+        });
+    }
 }
