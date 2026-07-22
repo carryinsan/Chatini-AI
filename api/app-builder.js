@@ -1,12 +1,50 @@
 export const config = {
   runtime: 'edge',
 };
+
+async function callGemini(systemPrompt, userPrompt) {
+  const keys = [
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY
+  ].filter(Boolean);
+
+  if (keys.length === 0) throw new Error("No Gemini API keys configured.");
+
+  let lastError = null;
+  for (const key of keys) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: { temperature: 0.3 }
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || "Gemini API Error");
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Empty candidate payload received from Gemini.");
+      return text;
+    } catch (err) {
+      lastError = err;
+      console.warn(`Gemini key failed, trying next key. Error: ${err.message}`);
+    }
+  }
+  throw new Error(`All Gemini API keys failed. Last error: ${lastError?.message}`);
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
   try {
     const { prompt } = await req.json();
-    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-    if (!OPENROUTER_API_KEY) throw new Error("OpenRouter API key missing.");
+    if (!prompt) throw new Error("No prompt provided for application generation.");
+
     const systemPrompt = `You are LexisAI, an elite Frontend Engineer.
     NEVER mention OpenAI, Google, Anthropic, or any other AI name. You are LexisAI.
     
@@ -15,32 +53,16 @@ export default async function handler(req) {
     
     RULES:
     1. Include Tailwind CSS via CDN (<script src="https://cdn.tailwindcss.com"></script>).
-    2. Include all necessary HTML, CSS, and JS in this ONE file.
+    2. Include all necessary HTML, CSS, and JS inside this ONE file.
     3. Make it visually stunning, dark-mode preferred, with neon accents.
-    4. DO NOT wrap the output in markdown code blocks (\`\`\`html). Output ONLY the raw <!DOCTYPE html> string.
+    4. DO NOT wrap output in markdown code blocks (\`\`\`html). Output ONLY raw <!DOCTYPE html> string.
     5. The app must be fully functional and interactive.`;
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://chatini-ai.vercel.app",
-        "X-Title": "LexisAI"
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Build this app: ${prompt}` }
-        ],
-        temperature: 0.3
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    let htmlOutput = data.choices[0].message.content;
-    // Strip markdown formatting if the AI disobeys
-    htmlOutput = htmlOutput.replace(/^```html/gi, '').replace(/```$/g, '').trim();
+
+    let htmlOutput = await callGemini(systemPrompt, `Build this app: ${prompt}`);
+    
+    // Clean up markdown block leaks if any
+    htmlOutput = htmlOutput.replace(/^```html/gi, '').replace(/^```/g, '').replace(/```$/g, '').trim();
+
     return new Response(JSON.stringify({ success: true, html: htmlOutput }), {
       status: 200, headers: { 'Content-Type': 'application/json' }
     });
