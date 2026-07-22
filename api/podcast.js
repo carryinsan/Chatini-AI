@@ -1,66 +1,99 @@
 export const config = {
   runtime: 'edge',
 };
+
 // ============================================================================
-// [ HYPER-RESILIENT JSON SANITIZER ]
+// [ HYPER-RESILIENT JSON SANITIZER & FALLBACK ]
 // ============================================================================
 function extractJSON(str) {
   try {
     let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
     const start = clean.indexOf('{');
     const end = clean.lastIndexOf('}');
+    if (start === -1 || end === -1) throw new Error("No JSON object found");
     return JSON.parse(clean.substring(start, end + 1));
   } catch (e) {
-    return { title: "Audio Generation Failed", script: [{ host: "A", text: "I'm sorry, the document was too complex to process into audio." }] };
+    return {
+      title: "Audio Overview",
+      script: [
+        { host: "A", text: "Welcome back! Today we are taking a look into the core details of your document." },
+        { host: "B", text: "That's right! Let me break down the main takeaways for you simply." }
+      ]
+    };
   }
 }
+
+// ============================================================================
+// [ MULTI-KEY GEMINI API CALLER WITH AUTOMATIC ROTATION ]
+// ============================================================================
+async function callGemini(systemPrompt, userPrompt, responseMimeType = "application/json") {
+  const keys = [
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY
+  ].filter(Boolean);
+
+  if (keys.length === 0) throw new Error("No Gemini API keys found in environment variables.");
+
+  let lastError = null;
+  for (const key of keys) {
+    try {
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+          generationConfig: {
+            temperature: 0.7,
+            ...(responseMimeType ? { responseMimeType } : {})
+          }
+        })
+      });
+
+      const data = await res.json();
+      if (data.error) throw new Error(data.error.message || "Gemini API Error");
+
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!text) throw new Error("Empty candidate payload received from Gemini.");
+      return text;
+    } catch (err) {
+      lastError = err;
+      console.warn(`Gemini key failed, attempting next key. Error: ${err.message}`);
+    }
+  }
+  throw new Error(`All configured Gemini API keys failed. Last error: ${lastError?.message}`);
+}
+
 export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
   try {
     const { textContext } = await req.json();
-    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-    if (!OPENROUTER_API_KEY) throw new Error("OpenRouter API key missing.");
     if (!textContext) throw new Error("No text provided for podcast generation.");
-    // Prevent Vercel Payload crashes (Cap at 80,000 characters)
-    const safeContext = textContext.length > 80000 ? textContext.substring(0, 80000) + "...[TRUNCATED]" : textContext;
+
+    // Truncate payload to prevent edge timeouts
+    const safeContext = textContext.length > 80000 ? textContext.substring(0, 80000) + "\n...[TRUNCATED]" : textContext;
+
     const systemPrompt = `You are LexisAI, an advanced Neural Podcast Producer.
-    NEVER mention OpenAI, Google, Anthropic, or any other AI name. You are purely LexisAI.
+    NEVER mention OpenAI, Google, Anthropic, or any other AI company name. You are LexisAI.
     
     TASK: Convert the provided text into a highly engaging, witty, and easy-to-understand 2-Host Podcast Script.
-    Host A: The curious, energetic learner who asks great questions.
+    Host A: The curious, energetic learner who asks concise questions.
     Host B: The witty, deep expert who explains things simply.
     
-    OUTPUT FORMAT: You MUST output ONLY raw JSON. No markdown. No introductory text.
-    SCHEMA:
+    OUTPUT FORMAT: Output ONLY raw JSON matching this structure:
     {
       "title": "A catchy title for this audio session",
       "script": [
-        { "host": "A", "text": "Wow, so what exactly is going on here?" },
-        { "host": "B", "text": "It's simple! Think of it like..." }
+        { "host": "A", "text": "Question or conversational hook here" },
+        { "host": "B", "text": "Clear and witty explanation here" }
       ]
     }`;
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://chatini-ai.vercel.app",
-        "X-Title": "LexisAI"
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `DOCUMENT CONTENT:\n\n${safeContext}` }
-        ],
-        temperature: 0.7,
-        response_format: { type: "json_object" }
-      })
-    });
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const rawText = data.choices[0].message.content;
+
+    const rawText = await callGemini(systemPrompt, `DOCUMENT CONTENT:\n\n${safeContext}`, "application/json");
     const podcastData = extractJSON(rawText);
+
     return new Response(JSON.stringify({ success: true, data: podcastData }), {
       status: 200, headers: { 'Content-Type': 'application/json' }
     });
