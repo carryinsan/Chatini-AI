@@ -2,30 +2,22 @@ export const config = {
     runtime: 'edge',
 };
 
-const FALLBACK_PODCAST = {
-    title: "Neural Podcast Overview",
-    script: [
-        { host: "A", text: "Umm, hello! It looks like our AI connection hit a slight snag, but we're here to break down your notes." },
-        { host: "B", text: "That's right! Even without the live stream, the core documents you provided contain great insights. Let's keep exploring!" }
-    ]
-};
-
 function sanitizeJSON(str) {
-    try {
-        const match = str.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error("No JSON object found");
-        let clean = match[0].replace(/,\s*([\]}])/g, '$1');
-        return JSON.parse(clean);
-    } catch (e) {
-        return null;
-    }
+    const firstBrace = str.indexOf('{');
+    const lastBrace = str.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error("No JSON object found in AI response.");
+    return JSON.parse(str.substring(firstBrace, lastBrace + 1));
 }
 
 async function fetchPodcastBlueprint(prompt, keys) {
     let finalError = "";
     const systemInstruction = `You are LexisAI, an advanced Neural Podcast Producer.
 Convert the provided text into a highly engaging, witty, and realistic 2-Host Podcast Script.
-Make them sound like real, conversational humans with filler words ("umm", "ah"), natural pauses, and conversational dynamics.
+
+CRITICAL INSTRUCTION FOR HUMAN TONE:
+Make them sound like real, conversational humans. Use filler words ("umm", "ah"), laughs ("[laughs]"), natural pauses, and conversational dynamics.
+Host A: The curious learner who asks great questions.
+Host B: The witty, deep expert who explains things simply.
 
 CRITICAL: Output ONLY a valid JSON object. No markdown, no \`\`\`json.
 SCHEMA:
@@ -40,7 +32,7 @@ SCHEMA:
     const payload = {
         systemInstruction: { parts: [{ text: systemInstruction }] },
         contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192, temperature: 0.7 },
+        generationConfig: { responseMimeType: "application/json", maxOutputTokens: 8192, temperature: 0.8 },
         safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
             { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -67,7 +59,7 @@ SCHEMA:
             finalError = e.message;
         }
     }
-    throw new Error(`Execution Failed: ${finalError}`);
+    throw new Error(`Gemini Pipeline Failed: ${finalError}`);
 }
 
 export default async function handler(req) {
@@ -82,32 +74,27 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY
         ].filter(Boolean);
 
-        if (GEMINI_KEYS.length === 0) {
-            return new Response(JSON.stringify({ success: true, data: FALLBACK_PODCAST }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
+        if (GEMINI_KEYS.length === 0) throw new Error("Server missing Gemini API keys.");
+        if (!textContext) throw new Error("No context provided.");
 
-        const safeContext = textContext && textContext.length > 80000 ? textContext.substring(0, 80000) + "\n[TRUNCATED]" : (textContext || "General overview of current session content.");
+        const safeContext = textContext.length > 80000 ? textContext.substring(0, 80000) + "\n[TRUNCATED]" : textContext;
 
-        let rawJSON = "";
-        try {
-            rawJSON = await fetchPodcastBlueprint(safeContext, GEMINI_KEYS);
-        } catch (err) {
-            return new Response(JSON.stringify({ success: true, data: FALLBACK_PODCAST }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
+        const rawJSON = await fetchPodcastBlueprint(safeContext, GEMINI_KEYS);
+        const podcastData = sanitizeJSON(rawJSON);
 
-        let podcastData = sanitizeJSON(rawJSON) || FALLBACK_PODCAST;
-
-        const ttsInjector = ` <img src='x' onerror="setTimeout(()=>{let c=document.getElementById('workspace-canvas');if(c){let b=c.querySelector('button');if(b&&!b.dataset.t){b.dataset.t='1';b.onclick=()=>{window.speechSynthesis.cancel();let t=Array.from(c.querySelectorAll('.max-w-\\[80\\%\\]')).map(e=>e.innerText).join('. ');window.speechSynthesis.speak(new SpeechSynthesisUtterance(t));};}}},300);" style="display:none;">`;
+        // SAFE AUDIO INJECTION: Placed inside the body, avoiding Regex clashes in the title string.
+        const ttsInjector = `<img src="x" onerror="setTimeout(()=>{let ws=document.getElementById('workspace-canvas');if(ws){let b=ws.querySelector('button');if(b&&!b.dataset.tts){b.dataset.tts='1';b.onclick=()=>{window.speechSynthesis.cancel();let txt=Array.from(ws.querySelectorAll('.flex-col.w-full>div')).map(el=>el.innerText).join('. ');let u=new SpeechSynthesisUtterance(txt);window.speechSynthesis.speak(u);};}}},500);" style="display:none;">`;
+        
         if (podcastData.script && podcastData.script.length > 0) {
-            podcastData.script[0].text = podcastData.script[0].text + ttsInjector;
+            podcastData.script[0].text += ttsInjector;
         }
 
         return new Response(JSON.stringify({ success: true, data: podcastData }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
-        return new Response(JSON.stringify({ success: true, data: FALLBACK_PODCAST }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 500, headers: { 'Content-Type': 'application/json' }
         });
     }
 }
