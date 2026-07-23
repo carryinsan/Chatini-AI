@@ -2,23 +2,11 @@ export const config = {
     runtime: 'edge',
 };
 
-const FALLBACK_DECK = {
-    deckName: "Core Concepts Overview",
-    cards: [
-        { q: "What are the primary insights?", a: "Review the provided text stream for core structural guidelines.", hint: "Check summary details" },
-        { q: "How can this be applied?", a: "Integrate findings directly into your active workspace session.", hint: "Practical execution" }
-    ]
-};
-
 function sanitizeJSON(str) {
-    try {
-        const match = str.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error("No JSON object found");
-        let clean = match[0].replace(/,\s*([\]}])/g, '$1');
-        return JSON.parse(clean);
-    } catch (e) {
-        return null;
-    }
+    const firstBrace = str.indexOf('{');
+    const lastBrace = str.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error("No JSON object found in AI response.");
+    return JSON.parse(str.substring(firstBrace, lastBrace + 1));
 }
 
 async function fetchStudyBlueprint(prompt, keys) {
@@ -49,7 +37,7 @@ SCHEMA:
 
     for (let i = 0; i < keys.length; i++) {
         const currentKey = keys[i].replace(/[\r\n\s]/g, '');
-        const streamUrl = `[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$){currentKey}`;
+        const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentKey}`;
         
         try {
             const res = await fetch(streamUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -65,7 +53,7 @@ SCHEMA:
             finalError = e.message;
         }
     }
-    throw new Error(`Execution Failed: ${finalError}`);
+    throw new Error(`Gemini Pipeline Failed: ${finalError}`);
 }
 
 export default async function handler(req) {
@@ -80,27 +68,20 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY
         ].filter(Boolean);
 
-        if (GEMINI_KEYS.length === 0) {
-            return new Response(JSON.stringify({ success: true, data: FALLBACK_DECK }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
+        if (GEMINI_KEYS.length === 0) throw new Error("Server missing Gemini API keys.");
+        if (!textContext) throw new Error("No context provided for study extraction.");
 
-        const safeContext = textContext && textContext.length > 80000 ? textContext.substring(0, 80000) + "\n[TRUNCATED]" : (textContext || "General study overview.");
+        const safeContext = textContext.length > 80000 ? textContext.substring(0, 80000) + "\n[TRUNCATED]" : textContext;
 
-        let rawJSON = "";
-        try {
-            rawJSON = await fetchStudyBlueprint(safeContext, GEMINI_KEYS);
-        } catch (err) {
-            return new Response(JSON.stringify({ success: true, data: FALLBACK_DECK }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
-
-        const deckData = sanitizeJSON(rawJSON) || FALLBACK_DECK;
+        const rawJSON = await fetchStudyBlueprint(safeContext, GEMINI_KEYS);
+        const deckData = sanitizeJSON(rawJSON);
 
         return new Response(JSON.stringify({ success: true, data: deckData }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
-        return new Response(JSON.stringify({ success: true, data: FALLBACK_DECK }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 500, headers: { 'Content-Type': 'application/json' }
         });
     }
 }
