@@ -2,27 +2,11 @@ export const config = {
     runtime: 'edge',
 };
 
-const FALLBACK_MAP = {
-    nodes: [
-        { id: "core", label: "User Session", group: "project" },
-        { id: "ai", label: "LexisAI Neural Core", group: "skill" },
-        { id: "secure", label: "Encrypted State", group: "preference" }
-    ],
-    links: [
-        { source: "core", target: "ai", label: "executes" },
-        { source: "ai", target: "secure", label: "maintains" }
-    ]
-};
-
 function sanitizeJSON(str) {
-    try {
-        const match = str.match(/\{[\s\S]*\}/);
-        if (!match) throw new Error("No JSON object found");
-        let clean = match[0].replace(/,\s*([\]}])/g, '$1');
-        return JSON.parse(clean);
-    } catch (e) {
-        return null;
-    }
+    const firstBrace = str.indexOf('{');
+    const lastBrace = str.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error("No JSON object found in AI response.");
+    return JSON.parse(str.substring(firstBrace, lastBrace + 1));
 }
 
 async function fetchBrainMapBlueprint(prompt, keys) {
@@ -57,7 +41,7 @@ SCHEMA:
 
     for (let i = 0; i < keys.length; i++) {
         const currentKey = keys[i].replace(/[\r\n\s]/g, '');
-        const streamUrl = `[https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$){currentKey}`;
+        const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${currentKey}`;
         
         try {
             const res = await fetch(streamUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -73,7 +57,7 @@ SCHEMA:
             finalError = e.message;
         }
     }
-    throw new Error(`Execution Failed: ${finalError}`);
+    throw new Error(`Gemini Pipeline Failed: ${finalError}`);
 }
 
 export default async function handler(req) {
@@ -88,27 +72,20 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY
         ].filter(Boolean);
 
-        if (GEMINI_KEYS.length === 0 || !chatHistory) {
-            return new Response(JSON.stringify({ success: true, data: FALLBACK_MAP }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
+        if (GEMINI_KEYS.length === 0) throw new Error("Server missing Gemini API keys.");
+        if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) throw new Error("Insufficient history to map.");
 
         const compressedHistory = chatHistory.slice(-30).map(m => `${m.role}: ${m.content}`).join('\n').substring(0, 40000);
 
-        let rawJSON = "";
-        try {
-            rawJSON = await fetchBrainMapBlueprint(compressedHistory, GEMINI_KEYS);
-        } catch (err) {
-            return new Response(JSON.stringify({ success: true, data: FALLBACK_MAP }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
-
-        const constellationData = sanitizeJSON(rawJSON) || FALLBACK_MAP;
+        const rawJSON = await fetchBrainMapBlueprint(compressedHistory, GEMINI_KEYS);
+        const constellationData = sanitizeJSON(rawJSON);
 
         return new Response(JSON.stringify({ success: true, data: constellationData }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
-        return new Response(JSON.stringify({ success: true, data: FALLBACK_MAP }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 500, headers: { 'Content-Type': 'application/json' }
         });
     }
 }
