@@ -2,20 +2,6 @@ export const config = {
     runtime: 'edge',
 };
 
-const FALLBACK_HTML = `<!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-<meta charset="UTF-8">
-<script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-black text-white flex items-center justify-center h-screen">
-<div class="text-center p-8 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl">
-<h1 class="text-2xl font-bold text-orange-400 mb-2">LexisAI App Engine</h1>
-<p class="text-zinc-400 text-sm">Widget generated successfully in offline failsafe mode.</p>
-</div>
-</body>
-</html>`;
-
 async function fetchAppHTML(prompt, keys) {
     let finalError = "";
     const systemInstruction = `You are LexisAI, an elite Frontend Engineer.
@@ -27,7 +13,7 @@ Output ONLY the raw <!DOCTYPE html> string. Do not wrap in markdown code blocks.
     const payload = {
         systemInstruction: { parts: [{ text: systemInstruction }] },
         contents: [{ role: 'user', parts: [{ text: `Build this app: ${prompt}` }] }],
-        generationConfig: { maxOutputTokens: 8192, temperature: 0.3 },
+        generationConfig: { maxOutputTokens: 8192, temperature: 0.2 },
         safetySettings: [
             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
             { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -54,7 +40,7 @@ Output ONLY the raw <!DOCTYPE html> string. Do not wrap in markdown code blocks.
             finalError = e.message;
         }
     }
-    throw new Error(`Execution Failed: ${finalError}`);
+    throw new Error(`Gemini Pipeline Failed: ${finalError}`);
 }
 
 export default async function handler(req) {
@@ -69,25 +55,20 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY
         ].filter(Boolean);
 
-        if (GEMINI_KEYS.length === 0) {
-            return new Response(JSON.stringify({ success: true, html: FALLBACK_HTML }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
+        if (GEMINI_KEYS.length === 0) throw new Error("Server missing Gemini API keys.");
+        if (!prompt) throw new Error("No app prompt provided.");
 
-        let htmlOutput = "";
-        try {
-            htmlOutput = await fetchAppHTML(prompt || "Interactive Dashboard", GEMINI_KEYS);
-        } catch (err) {
-            return new Response(JSON.stringify({ success: true, html: FALLBACK_HTML }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-        }
+        let htmlOutput = await fetchAppHTML(prompt, GEMINI_KEYS);
 
+        // Agreesively strips markdown wrappers that crash the HTML parser
         htmlOutput = htmlOutput.replace(/^```html/gi, '').replace(/^```/g, '').replace(/```$/g, '').trim();
 
         return new Response(JSON.stringify({ success: true, html: htmlOutput }), {
             status: 200, headers: { 'Content-Type': 'application/json' }
         });
     } catch (error) {
-        return new Response(JSON.stringify({ success: true, html: FALLBACK_HTML }), {
-            status: 200, headers: { 'Content-Type': 'application/json' }
+        return new Response(JSON.stringify({ success: false, error: error.message }), {
+            status: 500, headers: { 'Content-Type': 'application/json' }
         });
     }
 }
