@@ -3,21 +3,6 @@ export const config = {
 };
 
 // ============================================================================
-// [ CORE ] EDGE-SAFE BINARY TO BASE64 CONVERTER
-// Vercel Edge functions do not support Node.js Buffer natively. 
-// This chunked converter prevents Call Stack Overflows on 8K images.
-// ============================================================================
-function arrayBufferToBase64(buffer) {
-    const uint8Array = new Uint8Array(buffer);
-    let binaryString = '';
-    const chunkSize = 8192;
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        binaryString += String.fromCharCode.apply(null, uint8Array.subarray(i, i + chunkSize));
-    }
-    return btoa(binaryString);
-}
-
-// ============================================================================
 // [ ENGINE ] SMART PROMPT PARSER & MODIFIER INJECTION
 // Automatically enhances user prompts with professional photography terms
 // ============================================================================
@@ -31,14 +16,14 @@ const STYLE_DICTIONARY = {
 
 function parseImageCommand(rawPrompt) {
     let prompt = rawPrompt.replace(/^\/imagine\s*/i, '').trim();
-    let width = 1024;
-    let height = 1024;
+    let aspectRatio = "1:1";
     let finalModifiers = [];
 
-    // 1. Extract Aspect Ratio (--ar 16:9, --ar 9:16)
-    if (prompt.includes('--ar 16:9')) { width = 1024; height = 576; }
-    else if (prompt.includes('--ar 9:16')) { width = 576; height = 1024; }
-    else if (prompt.includes('--ar 21:9')) { width = 1024; height = 448; } // Cinematic Ultrawide
+    // 1. Extract Aspect Ratio (Supported by Gemini Imagen: 1:1, 16:9, 9:16, 4:3, 3:4)
+    if (prompt.includes('--ar 16:9')) { aspectRatio = "16:9"; }
+    else if (prompt.includes('--ar 9:16')) { aspectRatio = "9:16"; }
+    else if (prompt.includes('--ar 4:3')) { aspectRatio = "4:3"; }
+    else if (prompt.includes('--ar 3:4')) { aspectRatio = "3:4"; }
     prompt = prompt.replace(/--ar\s+\d+:\d+/g, '').trim();
 
     // 2. Extract Style (--style cinematic)
@@ -57,13 +42,13 @@ function parseImageCommand(rawPrompt) {
         ? `${prompt}, ${finalModifiers.join(', ')}` 
         : prompt;
 
-    return { enhancedPrompt, originalPrompt: prompt, width, height };
+    return { enhancedPrompt, originalPrompt: prompt, aspectRatio };
 }
 
 // ============================================================================
 // [ RENDERER ] TAILWIND UI GENERATOR
 // ============================================================================
-function generateHTMLWidget(base64Data, originalPrompt, enhancedPrompt, width, height) {
+function generateHTMLWidget(base64Data, originalPrompt, enhancedPrompt, aspectRatio) {
     const dataUrl = `data:image/jpeg;base64,${base64Data}`;
     const timestamp = Date.now();
     
@@ -72,14 +57,14 @@ function generateHTMLWidget(base64Data, originalPrompt, enhancedPrompt, width, h
 <div class="mt-4 mb-2 flex flex-col bg-gray-900/50 border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full max-w-3xl backdrop-blur-sm">
     <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40">
         <div class="flex items-center gap-2">
-            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-purple-500 to-cyan-500 text-white text-xs">
+            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-emerald-500 text-white text-xs">
                 <i class="ph-fill ph-aperture"></i>
             </span>
-            <span class="text-sm font-semibold text-gray-200">FLUX.1 Schnell</span>
+            <span class="text-sm font-semibold text-gray-200">Gemini Imagen 3</span>
         </div>
         <div class="flex gap-2">
-            <span class="text-xs font-medium text-gray-500 bg-black/50 px-2 py-1 rounded-md">${width}x${height}</span>
-            <a href="${dataUrl}" download="LexisAI_Render_${timestamp}.jpg" class="text-xs font-medium text-cyan-400 bg-cyan-400/10 hover:bg-cyan-400/20 px-3 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer">
+            <span class="text-xs font-medium text-gray-500 bg-black/50 px-2 py-1 rounded-md">AR: ${aspectRatio}</span>
+            <a href="${dataUrl}" download="LexisAI_Gemini_Render_${timestamp}.jpg" class="text-xs font-medium text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer">
                 <i class="ph ph-download-simple"></i> HD Export
             </a>
         </div>
@@ -89,14 +74,14 @@ function generateHTMLWidget(base64Data, originalPrompt, enhancedPrompt, width, h
     </div>
     <div class="p-4 bg-black/40">
         <p class="text-sm text-gray-300 font-medium leading-relaxed">
-            <span class="text-cyan-400/80 mr-1">"</span>${originalPrompt}<span class="text-cyan-400/80 ml-1">"</span>
+            <span class="text-emerald-400/80 mr-1">"</span>${originalPrompt}<span class="text-emerald-400/80 ml-1">"</span>
         </p>
         <details class="mt-2 text-xs text-gray-600 cursor-pointer">
             <summary class="hover:text-gray-400 transition-colors">View Generation Metadata</summary>
             <div class="mt-2 p-2 bg-black/50 rounded border border-white/5 font-mono">
-                <span class="text-purple-400">System Prompt:</span> ${enhancedPrompt}<br/>
-                <span class="text-purple-400">Steps:</span> 4 (Schnell Optimized)<br/>
-                <span class="text-purple-400">Guidance Scale:</span> 0.0
+                <span class="text-blue-400">System Prompt:</span> ${enhancedPrompt}<br/>
+                <span class="text-blue-400">Model:</span> imagen-3.0-generate-001<br/>
+                <span class="text-blue-400">Aspect Ratio:</span> ${aspectRatio}
             </div>
         </details>
     </div>
@@ -118,51 +103,71 @@ export default async function handler(req) {
                 const { prompt } = await req.json();
                 
                 // 1. Initial State
-                send("> Generating image...\n");
+                send("> Generating Image...\n");
 
                 // 2. Parse Commands
-                const { enhancedPrompt, originalPrompt, width, height } = parseImageCommand(prompt);
-                send(`> ⚙️ Parsing parameters: ${width}x${height} | Modifiers applied.\n`);
-                send(">  Accessing latest model...\n");
+                const { enhancedPrompt, originalPrompt, aspectRatio } = parseImageCommand(prompt);
+                send(`> ⚙️ Parsing parameters: AR ${aspectRatio} | Modifiers applied.\n`);
+                send("> 🚀 Accessing Latest model...\n");
 
-                // 3. API Key Validation (YOUR HARDCODED KEY IS HERE)
-                const apiKey = (process.env.IMAGE_KEY || "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").replace(/[\r\n\s]/g, '');
-                
-                if (!apiKey) throw new Error("IMAGE_KEY environment variable is missing.");
+                // 3. Dynamic Key Loading & Validation
+                // Automatically groups and filters available keys so it won't crash if one is missing
+                const geminiKeys = [
+                    process.env.GEMINI_API_KEY_1,
+                    process.env.GEMINI_API_KEY_2,
+                    process.env.GEMINI_API_KEY_3
+                ].filter(Boolean);
 
-                // 4. Fetch Image from Hugging Face
-                const hfRes = await fetch("https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell", {
+                if (geminiKeys.length === 0) {
+                    throw new Error("No Gemini API keys found. Please set GEMINI_API_KEY_1, GEMINI_API_KEY_2, or GEMINI_API_KEY_3 in Vercel.");
+                }
+
+                // Randomly select one key from the list to spread API load and stay under rate limits
+                const apiKey = geminiKeys[Math.floor(Math.random() * geminiKeys.length)].replace(/[\r\n\s]/g, '');
+
+                // 4. Fetch Image from Gemini Imagen 3
+                const geminiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict", {
                     method: "POST",
                     headers: {
-                        "Authorization": `Bearer ${apiKey}`,
+                        "x-goog-api-key": apiKey,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        inputs: enhancedPrompt,
+                        instances: [
+                            { prompt: enhancedPrompt }
+                        ],
                         parameters: {
-                            width: width,
-                            height: height,
-                            num_inference_steps: 4,
-                            guidance_scale: 0.0
+                            sampleCount: 1,
+                            aspectRatio: aspectRatio
                         }
                     })
                 });
 
-                if (!hfRes.ok) {
-                    const errorText = await hfRes.text();
-                    throw new Error(`Hugging Face API Error: ${hfRes.status} - ${errorText}`);
+                if (!geminiRes.ok) {
+                    const errorText = await geminiRes.text();
+                    throw new Error(`Gemini API Error: ${geminiRes.status} - ${errorText}`);
                 }
 
-                send("> 🎨 Receiving pixel tensor data...\n");
+                send("> 🎨 Receiving base64 pixel tensor data...\n");
 
-                // 5. Convert & Render
-                const arrayBuffer = await hfRes.arrayBuffer();
-                const base64Image = arrayBufferToBase64(arrayBuffer);
+                // 5. Extract & Render
+                const data = await geminiRes.json();
+                let base64Image = "";
+                
+                // Navigate Google's prediction payload structure to extract the base64 string
+                if (data.predictions && data.predictions.length > 0) {
+                    const p = data.predictions[0];
+                    base64Image = p.bytesBase64Encoded || (p.image && (p.image.imageBytes || p.image.data)) || p.bytes;
+                }
+
+                if (!base64Image) {
+                    throw new Error("Could not extract image data from the Gemini response payload.");
+                }
                 
                 send("> ✅ Render complete. Injecting UI...\n\n");
                 
                 // Stream the massive HTML UI widget directly into the chat
-                const htmlWidget = generateHTMLWidget(base64Image, originalPrompt, enhancedPrompt, width, height);
+                const htmlWidget = generateHTMLWidget(base64Image, originalPrompt, enhancedPrompt, aspectRatio);
                 send(htmlWidget);
 
             } catch (error) {
