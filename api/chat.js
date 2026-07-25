@@ -1,3 +1,5 @@
+import { verifyAndLimit } from './auth.js';
+
 export const config = {
     runtime: 'edge', 
 };
@@ -43,6 +45,15 @@ export default async function handler(req) {
             try {
                 const { messages, modelId, researchContext, userProfile } = await req.json();
                 
+                // ====================================================================
+                // 0. FIREWALL & RATE LIMITING (SaaS Gateway)
+                // ====================================================================
+                const auth = await verifyAndLimit(req, modelId, 'none');
+                if (!auth.authorized && !auth.isCreator) {
+                    sendError(auth.error);
+                    return; // Stop execution if they hit their daily limit or lack a key
+                }
+
                 // 1. STRICT KEY SANITIZATION (Prevents "Invalid URL" crashes)
                 const GROQ_KEY = process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.replace(/[\r\n\s]/g, '') : null;
                 const TAVILY_KEY = process.env.TAVILY_API_KEY ? process.env.TAVILY_API_KEY.replace(/[\r\n\s]/g, '') : null;
@@ -259,12 +270,47 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     
                     if (!llmRes.ok) throw new Error(await llmRes.text());
 
+                    // ================================================================
+                    // CORE BUG FIX: BULLETPROOF STREAM SANITIZER FOR GROQ
+                    // Filters out raw JSON and outputs clean UI data 
+                    // ================================================================
                     const reader = llmRes.body.getReader();
-                    while(true) {
+                    const decoder = new TextDecoder();
+                    let buffer = "";
+
+                    while (true) {
                         const { done, value } = await reader.read();
-                        if(done) break;
-                        controller.enqueue(value);
+                        if (done) break;
+                        
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep incomplete chunk in buffer
+
+                        for (const line of lines) {
+                            const trimmedLine = line.trim();
+                            if (!trimmedLine) continue;
+
+                            let jsonStr = trimmedLine;
+                            if (trimmedLine.startsWith('data: ')) {
+                                jsonStr = trimmedLine.slice(6);
+                            }
+                            
+                            if (jsonStr === '[DONE]') continue;
+
+                            try {
+                                const rawData = JSON.parse(jsonStr);
+                                // Extract ONLY the clean text delta from Groq's messy response
+                                if (rawData.choices && rawData.choices[0].delta && rawData.choices[0].delta.content) {
+                                    const cleanText = rawData.choices[0].delta.content;
+                                    const cleanPayload = { choices: [{ delta: { content: cleanText } }] };
+                                    controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
+                                }
+                            } catch (e) {
+                                // Silently swallow broken chunks so they don't break the frontend UI
+                            }
+                        }
                     }
+                    
                 } else {
                     const finalPayload = {
                         systemInstruction: { parts: [{ text: systemPrompt }] },
