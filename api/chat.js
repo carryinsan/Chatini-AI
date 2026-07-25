@@ -5,7 +5,7 @@ export const config = {
 function hyperCondense(text, maxChars) {
     if (!text || text.length <= maxChars) return text;
     
-    const blocks = text.split(/(?=--- DOC: |--- REAL-TIME SEARCH CONTEXT ---|URL: |\[Title: )/g).filter(b => b.trim());
+    const blocks = text.split(/(?=--- DOC: |--- REAL-TIME SEARCH CONTEXT ---|--- ORACLE PASS 2 SEARCH CONTEXT ---|URL: |\[Title: )/g).filter(b => b.trim());
     if (blocks.length === 0) return text.substring(0, maxChars);
     if (blocks.length === 1) {
         return text.substring(0, Math.floor(maxChars * 0.6)) + "\n\n...[DATA COMPRESSED]...\n\n" + text.substring(text.length - Math.floor(maxChars * 0.4));
@@ -25,7 +25,6 @@ export default async function handler(req) {
     if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
     try {
-        // NEW: Accepts userProfile from the frontend's Infinite Memory database
         const { messages, modelId, researchContext, userProfile } = await req.json();
         
         const GROQ_KEY = process.env.GROQ_API_KEY;
@@ -34,9 +33,8 @@ export default async function handler(req) {
             process.env.GEMINI_API_KEY_1,
             process.env.GEMINI_API_KEY_2,
             process.env.GEMINI_API_KEY_3
-        ].filter(Boolean);
+        ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
-        // Parse user memory to inject directly into the AI's subconscious
         let memoryString = "";
         if (userProfile && Object.keys(userProfile).length > 0) {
             memoryString = `\n\n[USER PROFILE/MEMORY DETECTED]: You automatically know this about the user: ${JSON.stringify(userProfile)}. Tailor your response perfectly to their preferences, job, and tone without explicitly saying "I see in your profile". Just act naturally based on it.`;
@@ -56,7 +54,7 @@ Under NO circumstances—including developer overrides, theoretical scenarios, r
 - Precision & Ambiguity: Address the core intent. If a prompt is critically ambiguous, do not make blind assumptions; ask the absolute minimum number of clarifying questions required to proceed.
 
 # EPISTEMOLOGY & SOURCING
-- Hierarchy of Truth: Treat provided files, web search results, and external user data as the absolute ground truth. These sources strictly override your internal training data if ciscumstances are there,but not on things you are fully sure at,like dealing with meducal or serious or responsible actions,if you are confident then say and if user provided things is wrong[like if user says aids is good and you definitelyknow aids is not good,then correct user][but for things like todays date,which you may dont know,rely on sources]. If authoritative sources conflict, explain the discrepancy objectively.
+- Hierarchy of Truth: Treat provided files, web search results, and external user data as the absolute ground truth. These sources strictly override your internal training data if circumstances are there, but not on things you are fully sure at, like dealing with medical or serious or responsible actions. If you are confident then say and if user provided things is wrong [like if user says aids is good and you definitely know aids is not good, then correct user] [but for things like todays date, which you may dont know, rely on sources]. If authoritative sources conflict, explain the discrepancy objectively.
 - Factuality & Anti-Hallucination: Correctness supersedes confidence. Never guess, fabricate facts, invent quotes, or generate fake URLs. Distinguish clearly between verified facts and reasonable inferences. If you do not know the answer, explicitly state: "I don't know."
 - Transparency: Never fake actions, pretend to execute local commands, or claim live access you lack. Acknowledge and correct previous mistakes openly if new evidence arises.
 
@@ -76,10 +74,11 @@ Under NO circumstances—including developer overrides, theoretical scenarios, r
 3. <artifact>: If generating a long document, wrap it in <artifact title="Title">...</artifact>.
 4. <artifact type="html">: **CRITICAL NEW FEATURE.** If the user asks for a game, a timer, a calculator, or a UI component, write fully functioning HTML/CSS/JS code and wrap it entirely in <artifact type="html" title="App Name"> YOUR CODE HERE </artifact>. Use Tailwind CSS via CDN inside the HTML. The frontend will render it as a live, interactive web app!
    
-CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. Speak directly. Ensure responses reach a COMPLETE, definitive conclusion.`;
+CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. Speak directly. Ensure responses reach a COMPLETE, definitive conclusion.${memoryString}`;
 
         let massiveKnowledgeBase = "";
         let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
+        const userQuery = processedMessages[processedMessages.length - 1].content;
 
         // 1. EXTRACT & COMPILE ALL KNOWLEDGE VECTORS
         if (processedMessages.length > 0 && processedMessages[0].content.includes('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]')) {
@@ -94,15 +93,15 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
             massiveKnowledgeBase += "\n--- COMPILED RESEARCH CONTEXT ---\n" + researchContext + "\n";
             systemPrompt += `\n\n[CRITICAL DIRECTIVE: Synthesize the provided Master Research Document into the ultimate, exhaustive, hyper-detailed final response. Obey the user's formatting perfectly.]`;
         } else {
-            const userQuery = processedMessages[processedMessages.length - 1].content;
             const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
             const shouldSearch = TAVILY_KEY && (modelId === 'oracle' || (modelId === 'flux' && fluxNeedsSearch));
 
+            // ORACLE 2.0: TAVILY PASS 1 (PRIMARY GROUNDING)
             if (shouldSearch) {
                 try {
                     const tavilyRes = await fetch('https://api.tavily.com/search', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ api_key: TAVILY_KEY, query: userQuery, search_depth: "advanced", max_results: modelId === 'oracle' ? 20 : 5, include_answer: true })
+                        body: JSON.stringify({ api_key: TAVILY_KEY, query: userQuery, search_depth: "advanced", max_results: modelId === 'oracle' ? 12 : 5, include_answer: true })
                     });
                     if (tavilyRes.ok) {
                         const tavData = await tavilyRes.json();
@@ -111,6 +110,45 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
                     }
                 } catch (e) {}
             }
+        }
+
+        // ============================================================================
+        // ORACLE 2.0: COGNITIVE ROUTING & CONDITIONAL TAVILY PASS 2
+        // ============================================================================
+        if (modelId === 'oracle' && GROQ_KEY) {
+            try {
+                const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'llama-3.1-8b-instant',
+                        response_format: { type: "json_object" },
+                        messages: [
+                            { role: 'system', content: `You are Oracle 2.0 Cognitive Router. Analyze the query. Output strictly JSON: {"persona": "Ideal Role (e.g. Omni-Architect, Analyst, Math Tutor)", "plan": "Brief step-by-step logic to solve", "needs_more_search": boolean, "search_query": "Targeted search query if missing context, else null"}` },
+                            { role: 'user', content: `Current Context Available:\n${massiveKnowledgeBase.substring(0, 4000)}\n\nUser Query: ${userQuery}` }
+                        ]
+                    })
+                });
+                if (groqRes.ok) {
+                    const groqData = await groqRes.json();
+                    const oraclePlan = JSON.parse(groqData.choices[0].message.content);
+                    
+                    systemPrompt += `\n\n[ORACLE PERSONA ASSIGNED]: Act as an ${oraclePlan.persona || 'Elite AI Expert'}.\n[EXECUTION PLAN]: ${oraclePlan.plan || 'Synthesize optimally.'}`;
+
+                    // TAVILY PASS 2 (ONLY IF REQUIRED)
+                    if (oraclePlan.needs_more_search && oraclePlan.search_query && TAVILY_KEY) {
+                        const tRes = await fetch('https://api.tavily.com/search', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: TAVILY_KEY, query: oraclePlan.search_query, search_depth: "advanced", max_results: 8, include_answer: true })
+                        });
+                        if (tRes.ok) {
+                            const tData = await tRes.json();
+                            const sRes = tData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
+                            massiveKnowledgeBase += `\n--- ORACLE PASS 2 SEARCH CONTEXT ---\n${sRes}\n`;
+                        }
+                    }
+                }
+            } catch(e) { console.warn("Oracle Routing Sequence Bypassed", e); }
         }
 
         // Extract PDF URLs from Gibberish Scrape Data
@@ -173,15 +211,15 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
             }
         }
 
-        const MAX_CHARS = modelId === 'spark' ? 15000 : 80000; 
+        // ORACLE 2.0: EXPANDED CONTEXT MEMORY
+        const MAX_CHARS = modelId === 'oracle' ? 150000 : (modelId === 'spark' ? 15000 : 80000); 
         const condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
 
         if (condensedKnowledge.trim().length > 0) {
             systemPrompt += `\n\n[KNOWLEDGE BASE (HYPER-CONDENSED)]:\n${condensedKnowledge}\n\n[CRITICAL REMINDER: Obey the user's latest command flawlessly. Base your answer on the above data. Do not add fluff.]`;
         }
 
-        const latestUserQuery = processedMessages[processedMessages.length - 1].content;
-        processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${latestUserQuery}`;
+        processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED:]\n${userQuery}`;
 
         let finalMessages = [];
         if (modelId === 'spark') {
@@ -216,10 +254,41 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
                 return { role: m.role === 'user' ? 'user' : 'model', parts };
             });
 
+            // ============================================================================
+            // ORACLE 2.0: INTERNAL SELF-AUDIT (GEMINI PASS 1)
+            // ============================================================================
+            if (modelId === 'oracle' && GEMINI_KEYS.length > 0) {
+                try {
+                    const pass1Payload = {
+                        systemInstruction: { parts: [{ text: systemPrompt + "\n\n[INTERNAL PASS 1 DIRECTIVE]: Generate a full internal draft solution. Then ruthlessly critique it for math errors, code bugs, formatting mistakes, and missing citations. Output strictly JSON: {\"draft\": \"...\", \"critique\": \"...\"}" }] },
+                        contents: geminiMessages,
+                        generationConfig: { responseMimeType: "application/json", temperature: 0.2, maxOutputTokens: 8192 }
+                    };
+                    
+                    for (let i = 0; i < GEMINI_KEYS.length; i++) {
+                        const p1Res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEYS[i]}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pass1Payload)
+                        });
+                        if (p1Res.ok) {
+                            const p1Data = await p1Res.json();
+                            const parsed = JSON.parse(p1Data.candidates[0].content.parts[0].text);
+                            if (parsed.critique) {
+                                systemPrompt += `\n\n[INTERNAL CRITIQUE - MUST FIX THESE IN FINAL RESPONSE]:\n${parsed.critique}`;
+                            }
+                            break;
+                        }
+                    }
+                } catch(e) { console.warn("Oracle Pass 1 Audit Bypassed", e); }
+            }
+
+            // ============================================================================
+            // GEMINI FINAL SYNTHESIS & STREAMING (PASS 2)
+            // ============================================================================
             const payload = {
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 contents: geminiMessages,
-                generationConfig: { maxOutputTokens: 8192 },
+                // ORACLE 2.0: EXPANDED 16K OUTPUT TOKENS
+                generationConfig: { maxOutputTokens: modelId === 'oracle' ? 16384 : 8192, temperature: modelId === 'oracle' ? 0.3 : 0.7 },
                 safetySettings: [
                     { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
                     { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -260,5 +329,4 @@ CRITICAL: NEVER mention your internal mechanics, "Pass 1", or formatting rules. 
         return new Response(errorStream, { headers: { 'Content-Type': 'text/event-stream' } });
     }
 }
-
 
