@@ -230,7 +230,7 @@ class TavilySwarm {
         this.MAX_CALLS = GLOBAL_CONFIG.MAX_TAVILY_CALLS;
     }
 
-    async search(queries, depth = "advanced", maxResults = 8) {
+    async search(queries, depth = "advanced", maxResults=20) {
         if (!this.apiKey) {
             this.sendLog("> [!] Tavily API Key missing. Bypassing external web scrape.");
             return "";
