@@ -118,15 +118,16 @@ export default async function handler(req) {
                 const { prompt } = await req.json();
                 
                 // 1. Initial State
-                send("> 🟢 Initiating FLUX.1 Neural Engine...\n");
+                send("> Generating image...\n");
 
                 // 2. Parse Commands
                 const { enhancedPrompt, originalPrompt, width, height } = parseImageCommand(prompt);
                 send(`> ⚙️ Parsing parameters: ${width}x${height} | Modifiers applied.\n`);
-                send("> 🚀 Accessing Hugging Face Inference Router...\n");
+                send(">  Accessing latest model...\n");
 
-                // 3. API Key Validation
-                const apiKey = process.env.IMAGE_KEY?.replace(/[\r\n\s]/g, '');
+                // 3. API Key Validation (YOUR HARDCODED KEY IS HERE)
+                const apiKey = (process.env.IMAGE_KEY || "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").replace(/[\r\n\s]/g, '');
+                
                 if (!apiKey) throw new Error("IMAGE_KEY environment variable is missing.");
 
                 // 4. Fetch Image from Hugging Face
@@ -183,4 +184,3 @@ export default async function handler(req) {
         }
     });
 }
-
