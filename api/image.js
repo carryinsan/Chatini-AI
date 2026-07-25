@@ -19,11 +19,12 @@ function parseImageCommand(rawPrompt) {
     let aspectRatio = "1:1";
     let finalModifiers = [];
 
-    // 1. Extract Aspect Ratio (Supported by Gemini Imagen: 1:1, 16:9, 9:16, 4:3, 3:4)
+    // 1. Extract Aspect Ratio 
     if (prompt.includes('--ar 16:9')) { aspectRatio = "16:9"; }
     else if (prompt.includes('--ar 9:16')) { aspectRatio = "9:16"; }
     else if (prompt.includes('--ar 4:3')) { aspectRatio = "4:3"; }
     else if (prompt.includes('--ar 3:4')) { aspectRatio = "3:4"; }
+    else if (prompt.includes('--ar 21:9')) { aspectRatio = "21:9"; }
     prompt = prompt.replace(/--ar\s+\d+:\d+/g, '').trim();
 
     // 2. Extract Style (--style cinematic)
@@ -57,14 +58,14 @@ function generateHTMLWidget(base64Data, originalPrompt, enhancedPrompt, aspectRa
 <div class="mt-4 mb-2 flex flex-col bg-gray-900/50 border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full max-w-3xl backdrop-blur-sm">
     <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40">
         <div class="flex items-center gap-2">
-            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-emerald-500 text-white text-xs">
+            <span class="flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 text-white text-xs">
                 <i class="ph-fill ph-aperture"></i>
             </span>
-            <span class="text-sm font-semibold text-gray-200">Gemini Imagen 3</span>
+            <span class="text-sm font-semibold text-gray-200">Gemini 2.5 Flash Image</span>
         </div>
         <div class="flex gap-2">
             <span class="text-xs font-medium text-gray-500 bg-black/50 px-2 py-1 rounded-md">AR: ${aspectRatio}</span>
-            <a href="${dataUrl}" download="LexisAI_Gemini_Render_${timestamp}.jpg" class="text-xs font-medium text-emerald-400 bg-emerald-400/10 hover:bg-emerald-400/20 px-3 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer">
+            <a href="${dataUrl}" download="LexisAI_Gemini_Render_${timestamp}.jpg" class="text-xs font-medium text-blue-400 bg-blue-400/10 hover:bg-blue-400/20 px-3 py-1 rounded-md transition-colors flex items-center gap-1 cursor-pointer">
                 <i class="ph ph-download-simple"></i> HD Export
             </a>
         </div>
@@ -74,14 +75,14 @@ function generateHTMLWidget(base64Data, originalPrompt, enhancedPrompt, aspectRa
     </div>
     <div class="p-4 bg-black/40">
         <p class="text-sm text-gray-300 font-medium leading-relaxed">
-            <span class="text-emerald-400/80 mr-1">"</span>${originalPrompt}<span class="text-emerald-400/80 ml-1">"</span>
+            <span class="text-blue-400/80 mr-1">"</span>${originalPrompt}<span class="text-blue-400/80 ml-1">"</span>
         </p>
         <details class="mt-2 text-xs text-gray-600 cursor-pointer">
             <summary class="hover:text-gray-400 transition-colors">View Generation Metadata</summary>
             <div class="mt-2 p-2 bg-black/50 rounded border border-white/5 font-mono">
-                <span class="text-blue-400">System Prompt:</span> ${enhancedPrompt}<br/>
-                <span class="text-blue-400">Model:</span> imagen-3.0-generate-001<br/>
-                <span class="text-blue-400">Aspect Ratio:</span> ${aspectRatio}
+                <span class="text-indigo-400">System Prompt:</span> ${enhancedPrompt}<br/>
+                <span class="text-indigo-400">Model Engine:</span> gemini-2.5-flash-image<br/>
+                <span class="text-indigo-400">Aspect Ratio:</span> ${aspectRatio}
             </div>
         </details>
     </div>
@@ -103,15 +104,14 @@ export default async function handler(req) {
                 const { prompt } = await req.json();
                 
                 // 1. Initial State
-                send("> Generating Image...\n");
+                send("> 🟢 Initiating Image Generation...\n");
 
                 // 2. Parse Commands
                 const { enhancedPrompt, originalPrompt, aspectRatio } = parseImageCommand(prompt);
                 send(`> ⚙️ Parsing parameters: AR ${aspectRatio} | Modifiers applied.\n`);
-                send("> 🚀 Accessing Latest model...\n");
+                send("> 🚀 Accessing latest LexisAI model...\n");
 
                 // 3. Dynamic Key Loading & Validation
-                // Automatically groups and filters available keys so it won't crash if one is missing
                 const geminiKeys = [
                     process.env.GEMINI_API_KEY_1,
                     process.env.GEMINI_API_KEY_2,
@@ -119,27 +119,24 @@ export default async function handler(req) {
                 ].filter(Boolean);
 
                 if (geminiKeys.length === 0) {
-                    throw new Error("No Gemini API keys found. Please set GEMINI_API_KEY_1, GEMINI_API_KEY_2, or GEMINI_API_KEY_3 in Vercel.");
+                    throw new Error("No Gemini API keys found. Please set GEMINI_API_KEY_1, 2, or 3 in Vercel.");
                 }
 
                 // Randomly select one key from the list to spread API load and stay under rate limits
                 const apiKey = geminiKeys[Math.floor(Math.random() * geminiKeys.length)].replace(/[\r\n\s]/g, '');
 
-                // 4. Fetch Image from Gemini Imagen 3
-                const geminiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict", {
+                // 4. Fetch Image from Gemini 2.5 Flash Image via generateContent
+                const geminiRes = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent", {
                     method: "POST",
                     headers: {
                         "x-goog-api-key": apiKey,
                         "Content-Type": "application/json"
                     },
                     body: JSON.stringify({
-                        instances: [
-                            { prompt: enhancedPrompt }
-                        ],
-                        parameters: {
-                            sampleCount: 1,
-                            aspectRatio: aspectRatio
-                        }
+                        contents: [{
+                            role: "user",
+                            parts: [{ text: `Generate an image. Aspect Ratio requested: ${aspectRatio}. Prompt: ${enhancedPrompt}` }]
+                        }]
                     })
                 });
 
@@ -154,14 +151,23 @@ export default async function handler(req) {
                 const data = await geminiRes.json();
                 let base64Image = "";
                 
-                // Navigate Google's prediction payload structure to extract the base64 string
-                if (data.predictions && data.predictions.length > 0) {
+                // New Gemini 2.5 Flash Image Schema (inlineData block inside candidates)
+                if (data.candidates && data.candidates.length > 0) {
+                    const parts = data.candidates[0].content?.parts || [];
+                    const imagePart = parts.find(p => p.inlineData);
+                    if (imagePart) {
+                        base64Image = imagePart.inlineData.data;
+                    }
+                }
+
+                // Fallback extractor just in case Google switches the schema to the predict format
+                if (!base64Image && data.predictions && data.predictions.length > 0) {
                     const p = data.predictions[0];
                     base64Image = p.bytesBase64Encoded || (p.image && (p.image.imageBytes || p.image.data)) || p.bytes;
                 }
 
                 if (!base64Image) {
-                    throw new Error("Could not extract image data from the Gemini response payload.");
+                    throw new Error("Could not extract inline image data from the Gemini response payload.");
                 }
                 
                 send("> ✅ Render complete. Injecting UI...\n\n");
@@ -189,3 +195,5 @@ export default async function handler(req) {
         }
     });
 }
+
+
