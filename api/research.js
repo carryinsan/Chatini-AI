@@ -4,7 +4,7 @@ export const config = {
 
 /**
  * ============================================================================
- * LEXIS-AI AUTONOMOUS RESEARCH ENGINE (V4.0 - OMNI-PASS ARCHITECTURE)
+ * LEXIS-AI AUTONOMOUS RESEARCH ENGINE (V5.0 - OMNI-PASS ARCHITECTURE)
  * ============================================================================
  * An industrial-grade, 15-pass autonomous agent framework designed to conduct
  * massive parallel searches, extract structured evidence, resolve contradictions,
@@ -12,9 +12,9 @@ export const config = {
  * * CORE FEATURES & FAIL-SAFES:
  * - 15 Discrete AI Roles (Planner -> Extractor -> Critic -> Writers -> Editor)
  * - Intelligent Key Rotation & Rate-Limit Cooling (Zero 429 Errors)
- * - Strict Type Checking to prevent "Cannot read properties of undefined (reading 'replace')"
- * - Massive Parallel Tavily Searching & Deduplication
- * - Seamless SSE UI Streaming for Terminal "Thought" Visibility
+ * - Infinite Keep-Alive Ping (Prevents Vercel 504 Gateway Timeouts)
+ * - Regex-Backed JSON Parsing (Prevents "Cannot read properties" errors)
+ * - Massive Parallel Tavily Searching & Dynamic Gap Searching
  * ============================================================================
  */
 
@@ -37,31 +37,35 @@ const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  * @returns {Object}
  */
 function sanitizeJSON(str, fallback = {}) {
-    if (typeof str !== 'string') return fallback;
+    if (typeof str !== 'string' || !str) return fallback;
     try {
         let clean = str.replace(/```json/gi, '').replace(/```/g, '').trim();
-        const start = clean.indexOf('{');
-        const end = clean.lastIndexOf('}');
+        const startObj = clean.indexOf('{');
+        const endObj = clean.lastIndexOf('}');
         const startArr = clean.indexOf('[');
         const endArr = clean.lastIndexOf(']');
         
-        if (start !== -1 && end !== -1 && (startArr === -1 || start < startArr)) {
-            let objStr = clean.substring(start, end + 1).replace(/,\s*([\]}])/g, '$1');
-            return JSON.parse(objStr);
+        let targetStr = "";
+        if (startObj !== -1 && endObj !== -1 && (startArr === -1 || startObj < startArr)) {
+            targetStr = clean.substring(startObj, endObj + 1);
         } else if (startArr !== -1 && endArr !== -1) {
-            let arrStr = clean.substring(startArr, endArr + 1).replace(/,\s*([\]}])/g, '$1');
-            return JSON.parse(arrStr);
+            targetStr = clean.substring(startArr, endArr + 1);
+        } else {
+            return fallback;
         }
-        return fallback;
+
+        // Clean trailing commas that break strict JSON parsing
+        targetStr = targetStr.replace(/,\s*([\]}])/g, '$1');
+        return JSON.parse(targetStr);
     } catch (e) {
-        console.warn("[SanitizeJSON Error] Failed to parse. Using fallback.", e);
+        console.warn("[SanitizeJSON Warning] Parse failure. Deploying fallback struct.");
         return fallback;
     }
 }
 
 /**
  * Aggressive context compressor. Prevents max-token crashes while retaining
- * the maximum possible information density.
+ * the maximum possible information density for the LLM.
  * @param {string} text - Raw context string
  * @param {number} maxChars - Maximum character limit
  * @returns {string}
@@ -71,9 +75,9 @@ function hyperCondense(text, maxChars = 80000) {
     if (text.length <= maxChars) return text;
     
     const blocks = text.split(/(?=--- SOURCE: |\[Fact: |--- DOC: )/g).filter(b => b.trim());
-    if (blocks.length <= 1) return text.substring(0, maxChars) + "\n...[TRUNCATED]";
+    if (blocks.length <= 1) return text.substring(0, maxChars) + "\n\n...[DATA COMPRESSED]";
     
-    const charsPerBlock = Math.max(50, Math.floor(maxChars / blocks.length));
+    const charsPerBlock = Math.max(100, Math.floor(maxChars / blocks.length));
     return blocks.map(block => {
         if (block.length <= charsPerBlock) return block;
         const top = Math.floor(charsPerBlock * 0.7);
@@ -82,28 +86,42 @@ function hyperCondense(text, maxChars = 80000) {
     }).join('\n');
 }
 
+/**
+ * Advanced Fetch wrapper with hard timeouts to prevent hanging edge functions.
+ */
+async function fetchWithTimeout(url, options, timeoutMs = 45000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        const response = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return response;
+    } catch (err) {
+        clearTimeout(id);
+        throw err;
+    }
+}
+
 // ============================================================================
-// [API CONNECTION & RATE-LIMIT MANAGERS]
+// [API CONNECTION & ORCHESTRATION MANAGERS]
 // ============================================================================
 
 /**
  * Manages Google Gemini API Keys to completely eliminate 429/503 errors.
  * Tracks usage, automatically swaps keys, and applies exponential backoff cooling.
  */
-class GeminiKeyRotator {
-    constructor(keys) {
-        // STRICT TYPE CHECK: Prevents "Cannot read properties of undefined (reading 'replace')"
+class GeminiOrchestrator {
+    constructor(keys, sendLog) {
         this.keys = keys
             .filter(k => typeof k === 'string' && k.trim() !== '')
             .map(k => k.replace(/[\r\n\s]/g, ''));
             
         if (this.keys.length === 0) {
-            throw new Error("CRITICAL: No valid Gemini API keys provided to the Rotator Engine.");
+            throw new Error("CRITICAL: No valid Gemini API keys provided to the Orchestrator.");
         }
         
         this.currentIndex = 0;
-        this.attempts = 0;
-        this.maxAttempts = this.keys.length * 4; // Allows multiple full rotations
+        this.sendLog = sendLog;
     }
 
     getKey() {
@@ -114,76 +132,82 @@ class GeminiKeyRotator {
         this.currentIndex = (this.currentIndex + 1) % this.keys.length;
     }
 
-    async executeWithRetry(payload, sendLog, expectJson = false) {
-        let backoff = 2000; // Start with 2 seconds cooling
+    async execute(payload, taskName = "Task", isJson = false) {
+        let attempts = 0;
+        const maxAttempts = this.keys.length * 3; // Allow full rotation 3 times
+        let backoff = 2000; // Start with 2s cooling
 
-        while (this.attempts < this.maxAttempts) {
+        while (attempts < maxAttempts) {
             const key = this.getKey();
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
             
             try {
-                const response = await fetch(url, {
+                if (isJson && payload.generationConfig) {
+                    payload.generationConfig.responseMimeType = "application/json";
+                }
+
+                const response = await fetchWithTimeout(url, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
-                });
+                }, 60000); // 60s timeout for heavy generation
 
                 if (response.ok) {
-                    this.attempts = 0; // Reset attempts on successful execution
                     const data = await response.json();
                     if (data.candidates && data.candidates[0].content.parts[0].text) {
                         return data.candidates[0].content.parts[0].text;
                     }
-                    throw new Error("Invalid payload structure returned from Gemini.");
+                    throw new Error("Invalid payload structure returned from LLM.");
                 }
 
                 const errText = await response.text();
                 
                 if (response.status === 429) {
-                    sendLog(`> [Rate Limit Hit] Model exhausted. Cooling down for ${backoff/1000}s and rotating API keys...`);
+                    this.sendLog(`> [Rate Limit] Model exhausted on ${taskName}. Cooling down ${backoff/1000}s...`);
                     await sleep(backoff);
-                    backoff = Math.min(backoff * 1.5, 10000); // Exponential backoff maxing at 10s
+                    backoff = Math.min(backoff * 1.5, 12000); // Cap at 12s
                     this.rotate();
-                    this.attempts++;
+                    attempts++;
                     continue;
                 } else if (response.status >= 500) {
-                    sendLog(`> [Server Overload] Gemini 503/500 Error. Cooling down for 3s...`);
+                    this.sendLog(`> [Server Overload] 503 Error on ${taskName}. Hot-swapping keys...`);
                     await sleep(3000);
                     this.rotate();
-                    this.attempts++;
+                    attempts++;
                     continue;
                 } else {
                     throw new Error(`Gemini API Error: ${response.status} - ${errText}`);
                 }
 
             } catch (error) {
-                if (error.message.includes('fetch') || error.message.includes('network')) {
-                    sendLog(`> [Network Error] Connection dropped, retrying in 2s...`);
+                if (error.name === 'AbortError' || error.message.includes('fetch') || error.message.includes('network')) {
+                    this.sendLog(`> [Timeout] Connection dropped during ${taskName}. Retrying...`);
                     await sleep(2000);
                     this.rotate();
-                    this.attempts++;
+                    attempts++;
                 } else {
                     throw error;
                 }
             }
         }
-        throw new Error("CRITICAL FAILURE: All API keys and retry attempts exhausted. Sequence aborted.");
+        
+        this.sendLog(`> [CRITICAL FAILURE] All keys exhausted for ${taskName}. Deploying safe fallback.`);
+        return isJson ? "{}" : "";
     }
 }
 
 /**
  * Handles Massive Parallel Web Searches via Tavily API
  */
-class SearchEngine {
+class TavilySwarm {
     constructor(apiKey, sendLog) {
-        // STRICT TYPE CHECK
         this.apiKey = typeof apiKey === 'string' ? apiKey.replace(/[\r\n\s]/g, '') : null;
         this.sendLog = sendLog;
         this.uniqueUrls = new Set();
         this.allSources = [];
     }
 
-    async search(queries, depth = "advanced", maxResults = 10) {
+    async search(queries, depth = "advanced", maxResults = 15) {
         if (!this.apiKey) {
             this.sendLog("> [!] Tavily API Key missing. Bypassing external web scrape.");
             return "";
@@ -196,7 +220,7 @@ class SearchEngine {
         
         const searchPromises = validQueries.map(async (q) => {
             try {
-                const res = await fetch('https://api.tavily.com/search', {
+                const res = await fetchWithTimeout('https://api.tavily.com/search', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -206,7 +230,8 @@ class SearchEngine {
                         max_results: maxResults,
                         include_answer: true
                     })
-                });
+                }, 30000); // 30s timeout for search
+                
                 if (res.ok) return await res.json();
                 return null;
             } catch (e) {
@@ -237,304 +262,290 @@ class SearchEngine {
 }
 
 // ============================================================================
-// [15-PASS AUTONOMOUS AGENT CLASSES]
+// [THE 15-PASS COGNITIVE AGENTS]
 // ============================================================================
 
-class Agent_Planner {
-    static async execute(query, groqKey, rotator, sendLog) {
-        sendLog("> [PASS 0] Intent Analysis & Blueprint Generation...");
+const safetySettings = [
+    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+];
+
+class Agents {
+    
+    // PASS 0: PLANNER
+    static async pass0_Planner(query, groqKey, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 0: Intent Analysis & Blueprint");
+        sendLog("──────────────────────────────────────");
         
-        const systemPrompt = `You are the Research Master Planner. Analyze the user's query.
-Deconstruct the intent, required depth, domains, and potential ambiguities.
+        const prompt = `You are the LexisAI Research Planner. Break the user query into 10 highly targeted web search vectors.
 Output EXACTLY a JSON object with:
 {
-  "search_vectors": ["query 1", "query 2", "query 3", "query 4", "query 5"],
+  "search_vectors": ["query 1", "query 2", "query 3", "query 4", "query 5", "query 6", "query 7", "query 8", "query 9", "query 10"],
   "subquestions": ["what is X?", "history of Y?"],
-  "expected_entities": ["names", "organizations"],
-  "depth_required": "deep"
+  "expected_entities": ["names", "orgs"]
 }`;
 
-        // Attempt Groq for sheer speed
-        if (typeof groqKey === 'string' && groqKey.trim() !== '') {
+        if (groqKey) {
             try {
-                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                const res = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${groqKey.replace(/[\r\n\s]/g, '')}`, 'Content-Type': 'application/json' },
+                    headers: { 'Authorization': `Bearer ${groqKey}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         model: 'llama-3.1-8b-instant',
                         response_format: { type: "json_object" },
-                        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: query }],
+                        messages: [{ role: 'system', content: prompt }, { role: 'user', content: query }],
                         temperature: 0.2
                     })
-                });
+                }, 15000);
                 if (res.ok) {
                     const data = await res.json();
                     return sanitizeJSON(data.choices[0].message.content, { search_vectors: [query] });
                 }
             } catch (e) {
-                sendLog("> [Warning] Groq routing failed. Failing over to Gemini Core for Pass 0.");
+                sendLog("> Groq routing failed. Failing over to Gemini Core for Pass 0.");
             }
         }
 
-        // Gemini Fallback
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
+            systemInstruction: { parts: [{ text: prompt }] },
             contents: [{ role: 'user', parts: [{ text: query }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
+            generationConfig: { temperature: 0.2 }, safetySettings
         };
-        const rawText = await rotator.executeWithRetry(payload, sendLog, true);
+        const rawText = await orchestrator.execute(payload, "Pass 0 (Planner)", true);
         return sanitizeJSON(rawText, { search_vectors: [query] });
     }
-}
 
-class Agent_Extractor {
-    static async execute(rawText, rotator, sendLog) {
-        sendLog("> [PASS 2] Evidence Extraction. Building Fact Database...");
+    // PASS 2: EVIDENCE EXTRACTOR
+    static async pass2_Extractor(rawText, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 2: Evidence Extraction");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Converting raw documents into structured claim database...");
         
-        const systemPrompt = `You are the Evidence Extraction Engine.
+        const prompt = `You are the Evidence Extraction Engine.
 Read raw web scraped data and extract hard claims, facts, and statistics.
 DO NOT summarize. Extract specific data points.
-
 Output strictly JSON:
 {
   "claims": [
-    {
-      "fact": "The global GDP is projected to grow by 3.2% in 2026.",
-      "source_url": "https://...",
-      "confidence": "high",
-      "date_context": "2026 forecast"
-    }
+    { "fact": "Global GDP is projected at 3.2%", "source_url": "https://...", "confidence": "high", "date": "2026" }
   ]
 }`;
-
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: `EXTRACT FACTS FROM THIS:\n\n${hyperCondense(rawText, 60000)}` }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+            systemInstruction: { parts: [{ text: prompt }] },
+            contents: [{ role: 'user', parts: [{ text: `EXTRACT FACTS:\n\n${hyperCondense(rawText, 70000)}` }] }],
+            generationConfig: { temperature: 0.1 }, safetySettings
         };
-        const resText = await rotator.executeWithRetry(payload, sendLog, true);
+        const resText = await orchestrator.execute(payload, "Pass 2 (Extractor)", true);
         return sanitizeJSON(resText, { claims: [] });
     }
-}
 
-class Agent_GapFinder {
-    static async execute(query, extractedData, rotator, sendLog) {
-        sendLog("> [PASS 3] Gap Analysis. Hunting for missing information...");
+    // PASS 3: GAP ANALYSIS
+    static async pass3_GapFinder(query, extractedData, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 3: Gap Analysis");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Hunting for missing information and logical voids...");
         
-        const systemPrompt = `You are the Gap Analysis AI.
-Compare the USER QUERY against the EXTRACTED CLAIMS.
-What critical information is STILL MISSING to provide a perfect, exhaustive answer?
-
+        const prompt = `You are the Gap Analysis AI.
+Compare the USER QUERY against the EXTRACTED CLAIMS. What critical information is STILL MISSING to provide a perfect, exhaustive answer?
 Output strictly JSON:
 {
   "missing_information": ["latest 2026 regulation", "counter-arguments"],
   "new_search_queries": ["query 1", "query 2", "query 3"]
 }`;
-
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: `USER QUERY: ${query}\n\nCURRENT EXTRACTED FACTS:\n${JSON.stringify(extractedData).substring(0, 50000)}` }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
+            systemInstruction: { parts: [{ text: prompt }] },
+            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nEXTRACTED FACTS:\n${JSON.stringify(extractedData).substring(0, 60000)}` }] }],
+            generationConfig: { temperature: 0.2 }, safetySettings
         };
-        const resText = await rotator.executeWithRetry(payload, sendLog, true);
+        const resText = await orchestrator.execute(payload, "Pass 3 (Gap Finder)", true);
         return sanitizeJSON(resText, { missing_information: [], new_search_queries: [] });
     }
-}
 
-class Agent_ContradictionResolver {
-    static async execute(extractedData, rotator, sendLog) {
-        sendLog("> [PASS 5] Contradiction Detector. Resolving data conflicts...");
+    // PASS 5: CONTRADICTION RESOLVER
+    static async pass5_Resolver(extractedData, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 5: Contradiction Detector");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Cross-referencing sources to resolve conflicting data...");
         
-        const systemPrompt = `You are the Conflict Resolution Engine.
-Analyze the provided JSON database of claims. Find any claims that contradict each other.
-Explain WHY they differ (different year? nominal vs real? biased source?).
-
+        const prompt = `You are the Conflict Resolution Engine.
+Analyze the JSON claims. Find claims that contradict each other. Explain WHY they differ.
 Output strictly JSON:
 {
-  "resolved_conflicts": [
-    {
-      "conflict": "Source A says GDP is 5%, Source B says 4%.",
-      "resolution": "Source A is a 2025 estimate, Source B is final 2024 data."
-    }
-  ],
-  "safe_facts": "A clean, unified summary of the indisputable facts."
+  "resolved_conflicts": [ { "conflict": "A says 5%, B says 4%.", "resolution": "A is 2025, B is 2024." } ],
+  "safe_facts": "A clean, unified summary of indisputable facts."
 }`;
-
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: JSON.stringify(extractedData).substring(0, 60000) }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+            systemInstruction: { parts: [{ text: prompt }] },
+            contents: [{ role: 'user', parts: [{ text: JSON.stringify(extractedData).substring(0, 70000) }] }],
+            generationConfig: { temperature: 0.1 }, safetySettings
         };
-        const resText = await rotator.executeWithRetry(payload, sendLog, true);
-        return sanitizeJSON(resText, { resolved_conflicts: [], safe_facts: "Data unified." });
+        const resText = await orchestrator.execute(payload, "Pass 5 (Resolver)", true);
+        return sanitizeJSON(resText, { resolved_conflicts: [], safe_facts: "Data unified securely." });
     }
-}
 
-class Agent_Synthesizer {
-    static async execute(query, safeFacts, rawContext, rotator, sendLog) {
-        sendLog("> [PASS 6] Research Synthesis. Compiling Master Notes...");
+    // PASS 6: SYNTHESIS
+    static async pass6_Synthesizer(query, safeFacts, rawContext, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 6: Research Synthesis");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Compiling 50 pages of raw data into Master Research Notes...");
         
-        const systemPrompt = `You are the Master Synthesizer.
-Take all provided facts, resolutions, and raw data, and compile them into a MASSIVE "Master Research Notes" document.
+        const prompt = `You are the Master Synthesizer.
+Take all provided facts and compile them into a MASSIVE "Master Research Notes" document.
 This is NOT the final answer. This is an organized, heavily detailed, 2,000+ word internal knowledge base.
-
-Organize by: Core Concepts, Timeline / History, Statistics & Hard Data, Debates & Perspectives, Unknowns.
-DO NOT OUTPUT JSON. Output raw, highly structured Markdown text.`;
+Organize by: Core Concepts, Timeline, Statistics, Debates, Unknowns. Output raw Markdown text. DO NOT OUTPUT JSON.`;
 
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nVERIFIED FACTS: ${safeFacts}\n\nRAW CONTEXT:\n${hyperCondense(rawContext, 60000)}` }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+            systemInstruction: { parts: [{ text: prompt }] },
+            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nVERIFIED FACTS: ${safeFacts}\n\nRAW CONTEXT:\n${hyperCondense(rawContext, 70000)}` }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }, safetySettings
         };
-        return await rotator.executeWithRetry(payload, sendLog);
+        return await orchestrator.execute(payload, "Pass 6 (Synthesizer)");
     }
-}
 
-class Agent_Critic {
-    static async execute(masterNotes, rotator, sendLog) {
-        sendLog("> [PASS 7] Red-Team Critique. Searching for hallucinations and bias...");
+    // PASS 7: CRITIC
+    static async pass7_Critic(masterNotes, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 7: Red-Team Critique");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Attacking the Master Notes to find vulnerabilities...");
         
-        const systemPrompt = `You are a Hostile AI Auditor. Your ONLY job is to destroy the provided report.
+        const prompt = `You are a Hostile AI Auditor. Your ONLY job is to destroy the provided report.
 Find hallucinations, unsupported claims, weak arguments, missing perspectives, logical jumps, and bias.
-
 Output strictly JSON:
 {
   "flaws": ["Paragraph 3 claims X but provides no statistical backing."],
   "quality_score": 85
 }`;
-
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: hyperCondense(masterNotes, 60000) }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+            systemInstruction: { parts: [{ text: prompt }] },
+            contents: [{ role: 'user', parts: [{ text: hyperCondense(masterNotes, 70000) }] }],
+            generationConfig: { temperature: 0.1 }, safetySettings
         };
-        const resText = await rotator.executeWithRetry(payload, sendLog, true);
+        const resText = await orchestrator.execute(payload, "Pass 7 (Critic)", true);
         return sanitizeJSON(resText, { flaws: [], quality_score: 90 });
     }
-}
 
-class Agent_Reviser {
-    static async execute(masterNotes, critique, rotator, sendLog) {
-        sendLog("> [PASS 8] Blueprint Revision. Patching logical vulnerabilities...");
+    // PASS 8: REVISER
+    static async pass8_Reviser(masterNotes, critique, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 8: Blueprint Revision");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Patching logical vulnerabilities based on Red-Team feedback...");
         
-        const systemPrompt = `You are the Revision Engine.
-Read the Master Notes, read the Hostile Critique, and rewrite the Notes to fix EVERY flaw mentioned.
+        const prompt = `You are the Revision Engine.
+Read the Master Notes and the Hostile Critique. Rewrite the Notes to fix EVERY flaw mentioned.
 Expand sections, add nuance, and remove unsupported fluff. Output raw Markdown.`;
 
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: `CRITIQUE TO FIX:\n${JSON.stringify(critique)}\n\nMASTER NOTES:\n${hyperCondense(masterNotes, 60000)}` }] }],
-            generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
+            systemInstruction: { parts: [{ text: prompt }] },
+            contents: [{ role: 'user', parts: [{ text: `CRITIQUE TO FIX:\n${JSON.stringify(critique)}\n\nMASTER NOTES:\n${hyperCondense(masterNotes, 70000)}` }] }],
+            generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }, safetySettings
         };
-        return await rotator.executeWithRetry(payload, sendLog);
+        return await orchestrator.execute(payload, "Pass 8 (Reviser)");
     }
-}
 
-class Agent_QualityAuditor {
-    static async execute(revisedNotes, rotator, sendLog) {
-        sendLog("> [PASS 9] Quality Audit. Scoring completeness...");
-        const systemPrompt = `You are the Final Quality Auditor.
-Review the revised research notes. Do they fully answer the prompt? Are there unresolved contradictions?
-Score from 0 to 100.
-
-Output strictly JSON:
-{
-  "score": 95,
-  "reasoning": "The notes are exhaustive and well-supported."
-}`;
+    // PASS 9: QUALITY AUDIT
+    static async pass9_Quality(revisedNotes, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 9: Quality Audit");
+        sendLog("──────────────────────────────────────");
+        
+        const prompt = `You are the Final Quality Auditor. Review the revised research notes. Do they fully answer the prompt?
+Score from 0 to 100. Output strictly JSON: { "score": 95, "reasoning": "..." }`;
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: hyperCondense(revisedNotes, 60000) }] }],
-            generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
+            systemInstruction: { parts: [{ text: prompt }] },
+            contents: [{ role: 'user', parts: [{ text: hyperCondense(revisedNotes, 70000) }] }],
+            generationConfig: { temperature: 0.1 }, safetySettings
         };
-        const resText = await rotator.executeWithRetry(payload, sendLog, true);
+        const resText = await orchestrator.execute(payload, "Pass 9 (Quality)", true);
         return sanitizeJSON(resText, { score: 95, reasoning: "Fallback pass." });
     }
-}
 
-class Agent_Writer {
-    static async executePart1(query, revisedNotes, rotator, sendLog) {
-        sendLog("> [PASS 10] Long-Form Generation (Part 1: The Foundation)...");
-        const systemPrompt = `You are an elite, highly detailed technical writer.
-You are writing Part 1 (The Introduction, Core Definitions, and Context) of a massive 3-part comprehensive report.
-Base EVERYTHING on the provided Research Notes.
-Write at least 1,500 words. Use Markdown, tables, and lists.
-DO NOT CONCLUDE the report. End smoothly so Part 2 can continue.`;
-
-        const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nRESEARCH NOTES:\n${hyperCondense(revisedNotes, 60000)}` }] }],
-            generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
+    // PASS 10, 11, 12: CHUNKED WRITING
+    static async pass10_11_12_Writers(query, safeNotes, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 10, 11, 12: Chunked Long-Form Generation");
+        sendLog("──────────────────────────────────────");
+        
+        sendLog("> [PASS 10] Generating Part 1: The Foundation...");
+        const p1Prompt = `You are an elite technical writer. Write Part 1 (Introduction, Core Definitions, Context) of a massive 3-part report.
+Base EVERYTHING on the provided Notes. Write at least 2,000 words. DO NOT CONCLUDE the report. End smoothly.`;
+        const payload1 = {
+            systemInstruction: { parts: [{ text: p1Prompt }] },
+            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nNOTES:\n${hyperCondense(safeNotes, 60000)}` }] }],
+            generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }, safetySettings
         };
-        return await rotator.executeWithRetry(payload, sendLog);
+        const part1 = await orchestrator.execute(payload1, "Pass 10 (Writer P1)");
+
+        sendLog("> [PASS 11] Generating Part 2: Deep Analysis...");
+        const p2Prompt = `You are an elite technical writer. Write Part 2 (Deep Analysis, Data Breakdown) of a massive 3-part report.
+DO NOT REPEAT Part 1. Continue the logic deeply. Write at least 2,000 words.`;
+        const payload2 = {
+            systemInstruction: { parts: [{ text: p2Prompt }] },
+            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nNOTES: ${hyperCondense(safeNotes, 30000)}\n\nPART 1: ${hyperCondense(part1, 30000)}` }] }],
+            generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }, safetySettings
+        };
+        const part2 = await orchestrator.execute(payload2, "Pass 11 (Writer P2)");
+
+        sendLog("> [PASS 12] Generating Part 3: Synthesis & Edge Cases...");
+        const p3Prompt = `You are an elite technical writer. Write Part 3 (Edge Cases, Future Projections, Conclusion).
+DO NOT REPEAT Part 1 & 2. Write at least 1,500 words wrapping up the topic powerfully.`;
+        const payload3 = {
+            systemInstruction: { parts: [{ text: p3Prompt }] },
+            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nNOTES: ${hyperCondense(safeNotes, 20000)}\n\nPART 1&2: ${hyperCondense(part1 + "\n" + part2, 40000)}` }] }],
+            generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }, safetySettings
+        };
+        const part3 = await orchestrator.execute(payload3, "Pass 12 (Writer P3)");
+
+        return `${part1}\n\n${part2}\n\n${part3}`;
     }
 
-    static async executePart2(query, revisedNotes, part1Text, rotator, sendLog) {
-        sendLog("> [PASS 11] Long-Form Generation (Part 2: The Deep Analysis)...");
-        const systemPrompt = `You are an elite technical writer.
-You are writing Part 2 (The Deep Analysis, Data Breakdown, and Nuance) of a massive 3-part report.
-Here is Part 1. DO NOT REPEAT what is in Part 1. Continue the logic deeply.
-Write at least 1,500 words. Dive into the hardest technical details found in the notes.`;
-
+    // PASS 13: EDITOR
+    static async pass13_Editor(fullDraft, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 13: Editorial Review");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Enhancing structural flow, removing repetition, and polishing readability...");
+        
+        const prompt = `You are a Senior Managing Editor. The provided text is a massive report from 3 parts.
+Fix awkward transitions, remove redundant paragraphs, ensure heading consistency, and polish grammar.
+Output the fully polished Markdown report. DO NOT shorten it.`;
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nNOTES: ${hyperCondense(revisedNotes, 30000)}\n\nPART 1 (DO NOT REPEAT): ${hyperCondense(part1Text, 20000)}` }] }],
-            generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
-        };
-        return await rotator.executeWithRetry(payload, sendLog);
-    }
-
-    static async executePart3(query, revisedNotes, part1Text, part2Text, rotator, sendLog) {
-        sendLog("> [PASS 12] Long-Form Generation (Part 3: The Synthesis & Edge Cases)...");
-        const systemPrompt = `You are an elite technical writer.
-You are writing Part 3 (Edge Cases, Future Projections, and The Definitive Conclusion) of a massive report.
-Read Part 1 and Part 2. DO NOT REPEAT them.
-Write at least 1,000 words wrapping up the topic powerfully based on the notes.`;
-
-        const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nNOTES: ${hyperCondense(revisedNotes, 20000)}\n\nPART 1&2 (DO NOT REPEAT): ${hyperCondense(part1Text + "\n" + part2Text, 40000)}` }] }],
-            generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
-        };
-        return await rotator.executeWithRetry(payload, sendLog);
-    }
-}
-
-class Agent_Editor {
-    static async execute(fullDraft, rotator, sendLog) {
-        sendLog("> [PASS 13] Editorial Review. Enhancing structural flow and readability...");
-        const systemPrompt = `You are a Senior Managing Editor.
-The provided text is a massive report stitched together from 3 parts.
-Fix any awkward transitions, remove redundant paragraphs, ensure heading consistency, and polish the grammar to perfection.
-Output the fully polished Markdown report. DO NOT shorten it. Keep the extreme length, just make it read flawlessly.`;
-
-        const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
+            systemInstruction: { parts: [{ text: prompt }] },
             contents: [{ role: 'user', parts: [{ text: hyperCondense(fullDraft, 80000) }] }],
-            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }
+            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }, safetySettings
         };
-        return await rotator.executeWithRetry(payload, sendLog);
+        return await orchestrator.execute(payload, "Pass 13 (Editor)");
     }
-}
 
-class Agent_VerifierAndCiter {
-    static async execute(finalDraft, sourcesList, rotator, sendLog) {
-        sendLog("> [PASS 14 & 15] Fact Verification & Citation Linking...");
-        const systemPrompt = `You are the Final Compliance Auditor.
+    // PASS 14 & 15: VERIFIER AND CITER
+    static async pass14_15_Verifier(finalDraft, sourcesList, orchestrator, sendLog) {
+        sendLog("──────────────────────────────────────");
+        sendLog("PASS 14 & 15: Fact Verification & Citation");
+        sendLog("──────────────────────────────────────");
+        sendLog("> Final compliance audit. Attaching source vectors to document...");
+        
+        const prompt = `You are the Final Compliance Auditor.
 Read the final report. Append the exact provided source links at the bottom using <sources> HTML tags.
-Ensure the text looks perfect. Output the final, absolute version of the report.`;
-
+Output the final, absolute version of the report.`;
         const payload = {
-            systemInstruction: { parts: [{ text: systemPrompt }] },
+            systemInstruction: { parts: [{ text: prompt }] },
             contents: [{ role: 'user', parts: [{ text: `REPORT DRAFT:\n${hyperCondense(finalDraft, 80000)}\n\nSOURCES TO APPEND:\n${JSON.stringify(sourcesList)}` }] }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }, safetySettings
         };
-        return await rotator.executeWithRetry(payload, sendLog);
+        return await orchestrator.execute(payload, "Pass 14/15 (Verifier)");
     }
 }
 
 // ============================================================================
-// [MAIN ORCHESTRATION HANDLER]
+// [MAIN EDGE EXECUTION HANDLER]
 // ============================================================================
 
 export default async function handler(req) {
@@ -544,26 +555,43 @@ export default async function handler(req) {
 
     const stream = new ReadableStream({
         async start(controller) {
-            // UI Streaming Helpers
+            
+            // Helper to stream logs directly to the frontend UI
             const sendLog = (msg) => {
-                const chunk = JSON.stringify({ log: msg });
-                controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+                try {
+                    const chunk = JSON.stringify({ log: msg });
+                    controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+                } catch(e) {}
             };
+            
+            // Sends final massive payload and closes stream
             const sendDone = (context) => {
-                const chunk = JSON.stringify({ done: true, context: context });
-                controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
-                controller.close();
+                try {
+                    const chunk = JSON.stringify({ done: true, context: context });
+                    controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+                    controller.close();
+                } catch(e) {}
             };
+            
             const sendError = (err) => {
-                const chunk = JSON.stringify({ error: err });
-                controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
-                controller.close();
+                try {
+                    const chunk = JSON.stringify({ error: err });
+                    controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
+                    controller.close();
+                } catch(e) {}
             };
+
+            // Heartbeat Ping to prevent Vercel 504 Gateway Timeouts during long operations
+            let isDone = false;
+            const keepAlive = setInterval(() => {
+                if (!isDone) {
+                    try { controller.enqueue(encoder.encode(`: keepalive\n\n`)); } catch(e) {}
+                }
+            }, 5000);
 
             try {
                 const { query } = await req.json();
                 
-                // SAFE ENV EXTRACTION: Using strict typeof checks before .replace()
                 const rawGroqKey = process.env.GROQ_API_KEY || "";
                 const GROQ_KEY = typeof rawGroqKey === 'string' ? rawGroqKey.replace(/[\r\n\s]/g, '') : null;
                 
@@ -577,22 +605,22 @@ export default async function handler(req) {
                     process.env.GEMINI_API_KEY
                 ];
 
-                const keyRotator = new GeminiKeyRotator(rawGeminiKeys);
-                const searchEngine = new SearchEngine(TAVILY_KEY, sendLog);
+                const orchestrator = new GeminiOrchestrator(rawGeminiKeys, sendLog);
+                const searchEngine = new TavilySwarm(TAVILY_KEY, sendLog);
 
                 sendLog("> LexisAI Advanced Autonomous Research Sequence Initiated.");
                 
                 // ---------------------------------------------------------
-                // PASS 0: Intent Analysis & Blueprint
+                // PASS 0
                 // ---------------------------------------------------------
-                let blueprint = await Agent_Planner.execute(query, GROQ_KEY, keyRotator, sendLog);
+                let blueprint = await Agents.pass0_Planner(query, GROQ_KEY, orchestrator, sendLog);
                 let searchVectors = blueprint.search_vectors && Array.isArray(blueprint.search_vectors) && blueprint.search_vectors.length > 0 ? blueprint.search_vectors : [query];
                 
                 // ---------------------------------------------------------
                 // ITERATIVE RESEARCH LOOP (Pass 1 to Pass 9)
                 // ---------------------------------------------------------
                 let loopCount = 0;
-                const MAX_LOOPS = 2; // Hard cap to prevent Vercel edge timeout limits
+                const MAX_LOOPS = 2; // Strict limit to prevent endless loops
                 let masterRawContext = "";
                 let extractedDatabase = { claims: [] };
                 let safeNotes = "";
@@ -601,35 +629,37 @@ export default async function handler(req) {
                     sendLog(`\n> --- STARTING RESEARCH CYCLE ${loopCount + 1}/${MAX_LOOPS} ---`);
                     
                     // PASS 1: Massive Parallel Search
+                    sendLog("──────────────────────────────────────");
+                    sendLog("PASS 1: Massive Parallel Search");
+                    sendLog("──────────────────────────────────────");
                     const newRawData = await searchEngine.search(searchVectors, "advanced", 10);
                     masterRawContext += newRawData;
 
                     if (!masterRawContext.trim()) {
-                        sendLog("> [!] Critical: No web data found. Aborting sequence.");
-                        throw new Error("Tavily search returned no results.");
+                        throw new Error("Tavily search returned no viable documents.");
                     }
 
                     // PASS 2: Evidence Extraction
-                    const newFacts = await Agent_Extractor.execute(newRawData, keyRotator, sendLog);
-                    if (newFacts && newFacts.claims) {
+                    const newFacts = await Agents.pass2_Extractor(newRawData, orchestrator, sendLog);
+                    if (newFacts && Array.isArray(newFacts.claims)) {
                         extractedDatabase.claims = extractedDatabase.claims.concat(newFacts.claims);
                     }
 
                     // PASS 3: Gap Analysis
-                    const gapAnalysis = await Agent_GapFinder.execute(query, extractedDatabase, keyRotator, sendLog);
+                    const gapAnalysis = await Agents.pass3_GapFinder(query, extractedDatabase, orchestrator, sendLog);
 
                     // PASS 5: Contradiction Resolver
-                    const resolution = await Agent_ContradictionResolver.execute(extractedDatabase, keyRotator, sendLog);
+                    const resolution = await Agents.pass5_Resolver(extractedDatabase, orchestrator, sendLog);
 
                     // PASS 6: Research Synthesis
-                    safeNotes = await Agent_Synthesizer.execute(query, resolution.safe_facts || "", masterRawContext, keyRotator, sendLog);
+                    safeNotes = await Agents.pass6_Synthesizer(query, resolution.safe_facts || "Data unified.", masterRawContext, orchestrator, sendLog);
 
                     // PASS 7 & 8: Critique & Revision
-                    const critique = await Agent_Critic.execute(safeNotes, keyRotator, sendLog);
-                    safeNotes = await Agent_Reviser.execute(safeNotes, critique, keyRotator, sendLog);
+                    const critique = await Agents.pass7_Critic(safeNotes, orchestrator, sendLog);
+                    safeNotes = await Agents.pass8_Reviser(safeNotes, critique, orchestrator, sendLog);
                     
                     // PASS 9: Quality Check Logic
-                    const audit = await Agent_QualityAuditor.execute(safeNotes, keyRotator, sendLog);
+                    const audit = await Agents.pass9_Quality(safeNotes, orchestrator, sendLog);
                     
                     if (audit.score && audit.score >= 90) {
                         sendLog(`> [PASS 9] Quality Score: ${audit.score}/100. Verification Passed. Exiting research loop.`);
@@ -648,31 +678,24 @@ export default async function handler(req) {
                 }
 
                 // ---------------------------------------------------------
-                // PASS 10, 11, 12: Chunked Long-Form Writing
+                // PASS 10, 11, 12, 13, 14, 15: Writing & Finalizing
                 // ---------------------------------------------------------
-                sendLog(`\n> --- INITIATING REPORT COMPILATION (3-PART CHUNKED WRITE) ---`);
-                const part1 = await Agent_Writer.executePart1(query, safeNotes, keyRotator, sendLog);
-                const part2 = await Agent_Writer.executePart2(query, safeNotes, part1, keyRotator, sendLog);
-                const part3 = await Agent_Writer.executePart3(query, safeNotes, part1, part2, keyRotator, sendLog);
+                let fullDraft = await Agents.pass10_11_12_Writers(query, safeNotes, orchestrator, sendLog);
+                let polishedDraft = await Agents.pass13_Editor(fullDraft, orchestrator, sendLog);
+                const finalReport = await Agents.pass14_15_Verifier(polishedDraft, searchEngine.allSources, orchestrator, sendLog);
 
-                let fullDraft = `${part1}\n\n${part2}\n\n${part3}`;
-
-                // ---------------------------------------------------------
-                // PASS 13: Editorial Review
-                // ---------------------------------------------------------
-                let polishedDraft = await Agent_Editor.execute(fullDraft, keyRotator, sendLog);
-
-                // ---------------------------------------------------------
-                // PASS 14 & 15: Fact Verification & Citation Linking
-                // ---------------------------------------------------------
-                const finalReport = await Agent_VerifierAndCiter.execute(polishedDraft, searchEngine.allSources, keyRotator, sendLog);
-
-                sendLog("\n> [SUCCESS] Absolute Synthesis Complete. Deploying Artifact to UI.");
+                sendLog("──────────────────────────────────────");
+                sendLog("> [SUCCESS] Absolute Synthesis Complete. Deploying Artifact to UI.");
+                sendLog("──────────────────────────────────────");
                 
                 // Conclude stream by handing the massive generated context back to the frontend
+                isDone = true;
+                clearInterval(keepAlive);
                 sendDone(finalReport);
 
             } catch (error) {
+                isDone = true;
+                clearInterval(keepAlive);
                 console.error("Research Pipeline Failed:", error);
                 sendError(error.message || "Unknown execution error");
             }
