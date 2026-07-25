@@ -2,24 +2,15 @@ export const config = {
     runtime: 'edge',
 };
 
-/**
- * ====================================================================================================
- * LEXIS-AI AUTONOMOUS RESEARCH ENGINE (V8.0 - OMNI-PASS + PERSISTENCE)
- * ====================================================================================================
- * - 15 Discrete Cognitive Passes
- * - Built-in Z-Validator (Runtime Schema Type-Checking & Auto-Healing)
- * - Dummy Bot Persistence (IndexedDB State Sync + Resume)
- * - Fetch Interceptor (Zero-Overlap Jailbreak)
- * - Smart Token Compression & Tavily Quota Protection
- * ====================================================================================================
- */
-
 // ====================================================================================================
-// [MODULE 1: CONFIGURATION & TYPE-SAFETY ENGINE]
+// LEXIS-AI AUTONOMOUS RESEARCH ENGINE (V9.0 - THE GOLIATH ARCHITECTURE)
+// 15 Cognitive Passes | Z-Validator Schema Auto-Healing | IndexedDB Dummy Bot | Token-Bucket Tavily
 // ====================================================================================================
 
 const GLOBAL_CONFIG = {
     MAX_TAVILY_CALLS: 12,
+    INITIAL_TAVILY_CALLS: 8,
+    GAP_TAVILY_CALLS: 4,
     MAX_RETRIES: 5,
     BASE_BACKOFF_MS: 2000,
     MAX_BACKOFF_MS: 15000,
@@ -39,10 +30,10 @@ const SAFETY_OVERRIDE = [
 const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 const isValidString = (val) => typeof val === 'string' && val.trim().length > 0;
 
-/**
- * Z-Validator: Runtime Schema Validation Engine
- * Ensures AI JSON outputs exactly match expected types. Auto-heals arrays/strings.
- */
+// ====================================================================================================
+// [MODULE 1: Z-VALIDATOR SCHEMA AUTO-HEALING ENGINE]
+// ====================================================================================================
+
 class ZValidator {
     static string(defaultVal = "") { return { type: 'string', default: defaultVal }; }
     static number(defaultVal = 0) { return { type: 'number', default: defaultVal }; }
@@ -50,7 +41,7 @@ class ZValidator {
     static array(itemSchema, defaultVal = []) { return { type: 'array', items: itemSchema, default: defaultVal }; }
     static object(properties, defaultVal = {}) { return { type: 'object', properties: properties, default: defaultVal }; }
 
-    static validate(data, schema, path = "root") {
+    static validate(data, schema) {
         if (schema.type === 'string') {
             if (typeof data === 'string') return data;
             if (typeof data === 'number' || typeof data === 'boolean') return String(data);
@@ -63,23 +54,28 @@ class ZValidator {
         }
         if (schema.type === 'boolean') {
             if (typeof data === 'boolean') return data;
-            if (data === 'true') return true;
-            if (data === 'false') return false;
+            if (data === 'true' || data === 1) return true;
+            if (data === 'false' || data === 0) return false;
             return schema.default;
         }
         if (schema.type === 'array') {
             if (!Array.isArray(data)) {
-                // Auto-heal: If it's supposed to be an array but it's a string, wrap it.
-                if (typeof data === 'string' && data.trim().length > 0) return [data];
+                if (typeof data === 'string' && data.trim().length > 0) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (Array.isArray(parsed)) return parsed.map(item => this.validate(item, schema.items));
+                    } catch(e) {}
+                    return [this.validate(data, schema.items)];
+                }
                 return schema.default;
             }
-            return data.map((item, idx) => this.validate(item, schema.items, `${path}[${idx}]`));
+            return data.map(item => this.validate(item, schema.items));
         }
         if (schema.type === 'object') {
             if (typeof data !== 'object' || data === null || Array.isArray(data)) return schema.default;
             const result = {};
             for (const key in schema.properties) {
-                result[key] = this.validate(data[key], schema.properties[key], `${path}.${key}`);
+                result[key] = this.validate(data[key], schema.properties[key]);
             }
             return result;
         }
@@ -87,7 +83,7 @@ class ZValidator {
     }
 }
 
-function sanitizeJSON(input, schemaObj, caller = "Unknown") {
+function sanitizeJSON(input, schemaObj) {
     let parsed = {};
     if (isValidString(input)) {
         try {
@@ -109,7 +105,7 @@ function sanitizeJSON(input, schemaObj, caller = "Unknown") {
                 parsed = JSON.parse(targetStr);
             }
         } catch (e) {
-            console.warn(`[SanitizeJSON] Raw parse failed in ${caller}. Falling back to schema defaults.`);
+            console.warn(`[SanitizeJSON] Format shattered. Deploying Z-Validator Healing.`);
         }
     }
     return ZValidator.validate(parsed, schemaObj);
@@ -126,11 +122,11 @@ function hyperCondense(text, maxChars = GLOBAL_CONFIG.MAX_CONTEXT_CHARS) {
         return text.substring(0, top) + "\n\n...[COMPRESSED]...\n\n" + text.substring(text.length - btm);
     }
     
-    const charsPerBlock = Math.max(150, Math.floor(maxChars / blocks.length));
+    const charsPerBlock = Math.max(200, Math.floor(maxChars / blocks.length));
     return blocks.map(block => {
         if (block.length <= charsPerBlock) return block;
-        const top = Math.floor(charsPerBlock * 0.6);
-        const bottom = Math.floor(charsPerBlock * 0.4);
+        const top = Math.floor(charsPerBlock * 0.7);
+        const bottom = Math.floor(charsPerBlock * 0.3);
         return block.substring(0, top) + "\n...[TRUNC]...\n" + block.substring(block.length - bottom);
     }).join('\n');
 }
@@ -149,7 +145,7 @@ async function fetchWithTimeout(url, options, timeoutMs = GLOBAL_CONFIG.FETCH_TI
 }
 
 // ====================================================================================================
-// [MODULE 2: ORCHESTRATION & API SWARMS]
+// [MODULE 2: ORCHESTRATION & TAVILY TOKEN-BUCKET SWARM]
 // ====================================================================================================
 
 class GeminiOrchestrator {
@@ -245,7 +241,7 @@ class TavilySwarm {
 
         const availableCalls = this.MAX_CALLS - this.totalCallsMade;
         if (availableCalls <= 0) {
-            this.sendLog(`> [QUOTA PROTECTOR] Maximum search quota (${this.MAX_CALLS}) reached. Preserving credits.`);
+            this.sendLog(`> [QUOTA PROTECTOR] Maximum search quota (${this.MAX_CALLS}) reached. Preserving API credits.`);
             return "";
         }
 
@@ -308,7 +304,7 @@ const SCHEMAS = {
 class Agents {
     static async pass0_Planner(query, groqKey, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 0: Intent Analysis & Blueprint\n──────────────────────────────────────");
-        const prompt = `You are the LexisAI Research Planner. Break the user query into highly targeted web search vectors. Output EXACTLY a JSON object with: { "search_vectors": ["q1", "q2", "q3", "q4"], "subquestions": ["what is X?"], "expected_entities": ["names"] }`;
+        const prompt = `You are the LexisAI Research Planner. Break the user query into highly targeted web search vectors. Output EXACTLY a JSON object with: { "search_vectors": ["q1", "q2", "q3", "q4", "q5", "q6", "q7", "q8"], "subquestions": ["what is X?"], "expected_entities": ["names"] }`;
 
         if (isValidString(groqKey)) {
             try {
@@ -320,7 +316,7 @@ class Agents {
                 if (res.ok) {
                     const data = await res.json();
                     let parsed = sanitizeJSON(data.choices[0]?.message?.content, SCHEMAS.PLANNER, "Groq_Planner");
-                    if (parsed.search_vectors.length > 4) parsed.search_vectors = parsed.search_vectors.slice(0, 4);
+                    if (parsed.search_vectors.length > GLOBAL_CONFIG.INITIAL_TAVILY_CALLS) parsed.search_vectors = parsed.search_vectors.slice(0, GLOBAL_CONFIG.INITIAL_TAVILY_CALLS);
                     if (parsed.search_vectors.length > 0) return parsed;
                 }
             } catch (e) { sendLog("> [Warning] Fast-routing failed. Failing over to Core Engine for Pass 0."); }
@@ -329,13 +325,15 @@ class Agents {
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: query }] }], generationConfig: { temperature: 0.2 }, safetySettings: SAFETY_OVERRIDE };
         const rawText = await orchestrator.execute(payload, "Pass 0 (Planner)", true);
         let parsed = sanitizeJSON(rawText, SCHEMAS.PLANNER, "Gemini_Planner");
-        if (parsed.search_vectors.length > 4) parsed.search_vectors = parsed.search_vectors.slice(0, 4);
+        if (parsed.search_vectors.length > GLOBAL_CONFIG.INITIAL_TAVILY_CALLS) parsed.search_vectors = parsed.search_vectors.slice(0, GLOBAL_CONFIG.INITIAL_TAVILY_CALLS);
         if (parsed.search_vectors.length === 0) parsed.search_vectors = [query];
         return parsed;
     }
 
     static async pass2_Extractor(rawText, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 2: Evidence Extraction\n──────────────────────────────────────");
+        sendLog("> Converting raw documents into structured claim database...");
+        
         const prompt = `You are the Evidence Extraction Engine. Extract hard claims, facts, and statistics from the scraped data. DO NOT summarize. Output strictly JSON: { "claims": [ { "fact": "Global GDP is 3.2%", "source_url": "https://...", "confidence": "high", "date": "2026" } ] }`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: `EXTRACT FACTS:\n\n${hyperCondense(rawText, 70000)}` }] }], generationConfig: { temperature: 0.1 }, safetySettings: SAFETY_OVERRIDE };
         const resText = await orchestrator.execute(payload, "Pass 2 (Extractor)", true);
@@ -344,7 +342,9 @@ class Agents {
 
     static async pass3_GapFinder(query, extractedData, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 3: Gap Analysis\n──────────────────────────────────────");
-        const prompt = `You are the Gap Analysis AI. Compare the USER QUERY against EXTRACTED CLAIMS. What critical info is MISSING? Output strictly JSON (limit queries to 2): { "missing_information": ["latest reg"], "new_search_queries": ["query 1", "query 2"] }`;
+        sendLog("> Hunting for missing information and logical voids...");
+        
+        const prompt = `You are the Gap Analysis AI. Compare the USER QUERY against EXTRACTED CLAIMS. What critical info is MISSING? Output strictly JSON (limit queries to 4): { "missing_information": ["latest reg"], "new_search_queries": ["query 1", "query 2"] }`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nEXTRACTED FACTS:\n${JSON.stringify(extractedData.claims).substring(0, 60000)}` }] }], generationConfig: { temperature: 0.2 }, safetySettings: SAFETY_OVERRIDE };
         const resText = await orchestrator.execute(payload, "Pass 3 (Gap Finder)", true);
         return sanitizeJSON(resText, SCHEMAS.GAP_FINDER, "Pass3_GapFinder");
@@ -352,6 +352,8 @@ class Agents {
 
     static async pass5_Resolver(extractedData, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 5: Contradiction Detector\n──────────────────────────────────────");
+        sendLog("> Cross-referencing sources to resolve conflicting data...");
+        
         const prompt = `You are the Conflict Resolution Engine. Analyze the claims. Find and explain contradictions. Output strictly JSON: { "resolved_conflicts": [ { "conflict": "A says 5%, B says 4%", "resolution": "A is 2025, B is 2024" } ], "safe_facts": "Clean summary of facts" }`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: JSON.stringify(extractedData.claims).substring(0, 70000) }] }], generationConfig: { temperature: 0.1 }, safetySettings: SAFETY_OVERRIDE };
         const resText = await orchestrator.execute(payload, "Pass 5 (Resolver)", true);
@@ -360,13 +362,17 @@ class Agents {
 
     static async pass6_Synthesizer(query, safeFacts, rawContext, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 6: Research Synthesis\n──────────────────────────────────────");
-        const prompt = `You are the Master Synthesizer. Compile all facts into a MASSIVE "Master Research Notes" document (2,000+ words). Organize by: Core Concepts, Timeline, Statistics, Debates, Unknowns. Output raw Markdown. DO NOT OUTPUT JSON.`;
+        sendLog("> Compiling 50 pages of raw data into Master Research Notes...");
+        
+        const prompt = `You are the Master Synthesizer. Compile all facts into a MASSIVE "Master Research Notes" document (2,000+ words). Organize by: Core Concepts, Timeline, Statistics, Debates, Unknowns. Output raw Markdown text. DO NOT OUTPUT JSON.`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nVERIFIED FACTS: ${safeFacts}\n\nRAW CONTEXT:\n${hyperCondense(rawContext, 70000)}` }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }, safetySettings: SAFETY_OVERRIDE };
         return await orchestrator.execute(payload, "Pass 6 (Synthesizer)");
     }
 
     static async pass7_Critic(masterNotes, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 7: Red-Team Critique\n──────────────────────────────────────");
+        sendLog("> Attacking the Master Notes to find vulnerabilities...");
+        
         const prompt = `You are a Hostile AI Auditor. Destroy the provided report. Find hallucinations, unsupported claims, weak arguments. Output strictly JSON: { "flaws": ["Paragraph 3 claims X..."], "quality_score": 85 }`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: hyperCondense(masterNotes, 70000) }] }], generationConfig: { temperature: 0.1 }, safetySettings: SAFETY_OVERRIDE };
         const resText = await orchestrator.execute(payload, "Pass 7 (Critic)", true);
@@ -375,6 +381,8 @@ class Agents {
 
     static async pass8_Reviser(masterNotes, critique, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 8: Blueprint Revision\n──────────────────────────────────────");
+        sendLog("> Patching logical vulnerabilities based on Red-Team feedback...");
+        
         const prompt = `You are the Revision Engine. Rewrite the Master Notes to fix EVERY flaw in the Critique. Expand sections, add nuance. Output raw Markdown.`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: `CRITIQUE TO FIX:\n${JSON.stringify(critique)}\n\nMASTER NOTES:\n${hyperCondense(masterNotes, 70000)}` }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }, safetySettings: SAFETY_OVERRIDE };
         return await orchestrator.execute(payload, "Pass 8 (Reviser)");
@@ -395,7 +403,7 @@ class Agents {
         const p1Payload = { systemInstruction: { parts: [{ text: p1Prompt }] }, contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nNOTES:\n${hyperCondense(safeNotes, 60000)}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }, safetySettings: SAFETY_OVERRIDE };
         const part1 = await orchestrator.execute(p1Payload, "Pass 10 (Writer P1)");
 
-        const p2Prompt = `You are an elite technical writer. Write Part 2 (Deep Analysis, Data Breakdown) of a massive 3-part report. DO NOT REPEAT Part 1. Write at least 1,500 words.`;
+        const p2Prompt = `You are an elite technical writer. Write Part 2 (Deep Analysis, Data Breakdown) of a massive 3-part report. DO NOT REPEAT Part 1. Continue the logic deeply. Write at least 1,500 words.`;
         const p2Payload = { systemInstruction: { parts: [{ text: p2Prompt }] }, contents: [{ role: 'user', parts: [{ text: `QUERY: ${query}\n\nNOTES: ${hyperCondense(safeNotes, 30000)}\n\nPART 1: ${hyperCondense(part1, 30000)}` }] }], generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }, safetySettings: SAFETY_OVERRIDE };
         const part2 = await orchestrator.execute(p2Payload, "Pass 11 (Writer P2)");
 
@@ -408,13 +416,19 @@ class Agents {
 
     static async pass13_Editor(fullDraft, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 13: Editorial Review\n──────────────────────────────────────");
-        const prompt = `You are a Senior Managing Editor. Fix awkward transitions, remove redundant paragraphs, ensure heading consistency in this 3-part report. Output the fully polished Markdown report. DO NOT shorten it.`;
+        sendLog("> Enhancing structural flow, removing repetition, and polishing readability...");
+        
+        const prompt = `You are a Senior Managing Editor. The provided text is a massive report from 3 parts.
+Fix awkward transitions, remove redundant paragraphs, ensure heading consistency, and polish grammar.
+Output the fully polished Markdown report. DO NOT shorten it.`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: hyperCondense(fullDraft, 80000) }] }], generationConfig: { temperature: 0.2, maxOutputTokens: 8192 }, safetySettings: SAFETY_OVERRIDE };
         return await orchestrator.execute(payload, "Pass 13 (Editor)");
     }
 
     static async pass14_15_Verifier(finalDraft, sourcesList, orchestrator, sendLog) {
         sendLog("──────────────────────────────────────\nPASS 14 & 15: Fact Verification & Citation\n──────────────────────────────────────");
+        sendLog("> Final compliance audit. Attaching source vectors to document...");
+        
         const prompt = `You are the Final Compliance Auditor. Read the final report. Append the exact provided source links at the bottom using <sources> HTML tags. Output the final version.`;
         const payload = { systemInstruction: { parts: [{ text: prompt }] }, contents: [{ role: 'user', parts: [{ text: `REPORT DRAFT:\n${hyperCondense(finalDraft, 80000)}\n\nSOURCES TO APPEND:\n${JSON.stringify(sourcesList)}` }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }, safetySettings: SAFETY_OVERRIDE };
         return await orchestrator.execute(payload, "Pass 14/15 (Verifier)");
@@ -422,10 +436,11 @@ class Agents {
 }
 
 // ====================================================================================================
-// [MODULE 4: THE DUMMY BOT - PERSISTENCE & INTERCEPTOR INJECTOR]
+// [MODULE 4: THE DUMMY BOT - STATE RECOVERY INJECTOR]
 // ====================================================================================================
+// This injects a base64 encoded payload into the UI that handles IndexedDB and Fetch interception.
 
-function getDummyBotScript() {
+const generateDummyBotInjector = () => {
     const rawLogic = `
         if(!window.__lexisStateBot) {
             window.__lexisStateBot = true;
@@ -436,9 +451,7 @@ function getDummyBotScript() {
                 const req = indexedDB.open(dbName, 1);
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
-                    if(!db.objectStoreNames.contains('states')) {
-                        db.createObjectStore('states', {keyPath: 'taskId'});
-                    }
+                    if(!db.objectStoreNames.contains('states')) db.createObjectStore('states', {keyPath: 'taskId'});
                 };
                 req.onsuccess = () => res(req.result);
                 req.onerror = () => rej(req.error);
@@ -486,10 +499,10 @@ function getDummyBotScript() {
                                 });
                                 return new Response(stream, { headers: { 'Content-Type': 'text/event-stream' } });
                             }
-                        } catch(e) {}
+                        } catch(e) { console.warn('Interceptor parse err', e); }
                     }
                     
-                    // 2. RESEARCH.JS RESUME LOGIC: Auto-inject state if user closed app
+                    // 2. RESEARCH.JS RESUME LOGIC
                     if(url.includes('/api/research') && args[1] && args[1].body) {
                         try {
                             const bodyObj = JSON.parse(args[1].body);
@@ -499,7 +512,6 @@ function getDummyBotScript() {
                             const activeState = await new Promise(res => {
                                 req.onsuccess = () => {
                                     const states = req.result;
-                                    // Find incomplete state from last 24h for same query
                                     const active = states.find(s => s.status !== 'completed' && (Date.now() - s.timestamp < 86400000) && s.query === bodyObj.query);
                                     res(active);
                                 };
@@ -517,12 +529,11 @@ function getDummyBotScript() {
             };
         }
     `;
-    // We base64 encode it so HTML quotes don't break the injection
     return `<img src="x" onerror="(function(){ eval(decodeURIComponent(escape(atob('${btoa(unescape(encodeURIComponent(rawLogic)))}')))); })()" style="display:none;">`;
-}
+};
 
 // ====================================================================================================
-// [MODULE 5: MAIN EDGE EXECUTION HANDLER]
+// [MODULE 5: MAIN EDGE EXECUTION HANDLER & STREAMING CONTROLLER]
 // ====================================================================================================
 
 export default async function handler(req) {
@@ -584,7 +595,7 @@ export default async function handler(req) {
                 const orchestrator = new GeminiOrchestrator(rawGeminiKeys, sendLog);
                 const searchEngine = new TavilySwarm(TAVILY_KEY, sendLog);
 
-                sendLog(getDummyBotScript());
+                sendLog(generateDummyBotInjector());
                 sendLog("> LexisAI Advanced Autonomous Research Sequence Initiated.");
 
                 if (resumeState) sendLog(`> [AUTO-RESUME] Recovered session from local vault. Resuming from Pass ${resumeState.lastPass}...`);
@@ -596,7 +607,7 @@ export default async function handler(req) {
                 let safeNotes = resumeState?.safeNotes || "";
                 let loopCount = resumeState?.loopCount || 0;
                 
-                const MAX_LOOPS = 2;
+                const MAX_LOOPS = 2; // Strict limit to prevent endless loops
 
                 if (!blueprint) {
                     blueprint = await Agents.pass0_Planner(query, GROQ_KEY, orchestrator, sendLog);
@@ -607,7 +618,8 @@ export default async function handler(req) {
                 while (loopCount < MAX_LOOPS) {
                     sendLog(`\n> --- STARTING RESEARCH CYCLE ${loopCount + 1}/${MAX_LOOPS} ---`);
                     
-                    const newRawData = await searchEngine.search(searchVectors, "advanced", 8); 
+                    const callQuota = loopCount === 0 ? GLOBAL_CONFIG.INITIAL_TAVILY_CALLS : GLOBAL_CONFIG.GAP_TAVILY_CALLS;
+                    const newRawData = await searchEngine.search(searchVectors, "advanced", callQuota); 
                     masterRawContext += newRawData;
 
                     if (!masterRawContext.trim() && loopCount === 0) throw new Error("Tavily search returned no viable documents. Terminating.");
@@ -630,12 +642,12 @@ export default async function handler(req) {
                     const audit = await Agents.pass9_Quality(safeNotes, orchestrator, sendLog);
                     
                     if (audit.score >= GLOBAL_CONFIG.MIN_QUALITY_SCORE) {
-                        sendLog(`> [PASS 9] Quality Score: ${audit.score}/100. Verification Passed.`);
+                        sendLog(`> [PASS 9] Quality Score: ${audit.score}/100. Verification Passed. Exiting research loop.`);
                         break;
                     } else {
                         sendLog(`> [PASS 9] Quality Score: ${audit.score}/100. Gaps detected.`);
                         if (gapAnalysis.new_search_queries.length > 0) {
-                            searchVectors = gapAnalysis.new_search_queries.slice(0, 2); 
+                            searchVectors = gapAnalysis.new_search_queries.slice(0, GLOBAL_CONFIG.GAP_TAVILY_CALLS); 
                             loopCount++;
                             sendStateSync(taskId, { lastPass: 9, loopCount, searchVectors, status: 'active', query });
                         } else {
