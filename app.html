@@ -251,7 +251,10 @@ tailwind.config = {
             <button id="study-btn" onclick="toggleStudyMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-indigo-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="Study Deck Generator">
                 <i id="study-icon" class="ph-bold ph-cards text-sm sm:text-base"></i> <span>Study</span>
             </button>
-            <div id="model-selector" class="flex bg-black/50 sm:bg-black p-1 rounded-full border border-white/10 shadow-inner"></div>
+            <button id="image-btn" onclick="toggleImageMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 hover:text-fuchsia-400 bg-black/50 sm:bg-black shadow-inner transition-all duration-300" title="AI Visual Engine">
+    <i id="image-icon" class="ph-bold ph-aperture text-sm sm:text-base"></i> <span>Image</span>
+            </button>
+         <div id="model-selector" class="flex bg-black/50 sm:bg-black p-1 rounded-full border border-white/10 shadow-inner"></div>
         </div>
     </div>
 </header>
@@ -496,6 +499,7 @@ let isPodcastMode = false;
 let isAppMode = false;
 let isStudyMode = false;
 let isCanvasMaximized = false;
+let isImageMode = false;
 let currentChatId = Date.now().toString();
 let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
 let messages = [];
@@ -541,7 +545,9 @@ const els = {
     appBtn: document.getElementById('app-btn'),
     appIcon: document.getElementById('app-icon'),
     studyBtn: document.getElementById('study-btn'),
-    studyIcon: document.getElementById('study-icon')
+    studyIcon: document.getElementById('study-icon'),
+    imageBtn: document.getElementById('image-btn'),
+    imageIcon: document.getElementById('image-icon')
 };
 
 window.onload = async () => {
@@ -898,6 +904,28 @@ function toggleAppMode() {
         els.appIcon.classList.remove('animate-pulse');
     }
 }
+function toggleImageMode() {
+    isImageMode = !isImageMode;
+    if (isImageMode) {
+        if (isDeepResearchOn) toggleDeepResearch();
+        if (isPresentationMode) togglePresentationMode();
+        if (isMathMode) toggleMathMode();
+        if (isPodcastMode) togglePodcastMode();
+        if (isAppMode) toggleAppMode();
+        if (isStudyMode) toggleStudyMode();
+        els.imageBtn.classList.replace('text-gray-500', 'text-fuchsia-400');
+        els.imageBtn.classList.replace('border-transparent', 'border-fuchsia-500/50');
+        els.imageBtn.classList.add('bg-fuchsia-500/10');
+        els.imageIcon.classList.add('animate-pulse');
+        showToast("Visual Engine Engaged");
+    } else {
+        els.imageBtn.classList.replace('text-fuchsia-400', 'text-gray-500');
+        els.imageBtn.classList.replace('border-fuchsia-500/50', 'border-transparent');
+        els.imageBtn.classList.remove('bg-fuchsia-500/10');
+        els.imageIcon.classList.remove('animate-pulse');
+    }
+}
+    
 
 function toggleStudyMode() {
     isStudyMode = !isStudyMode;
@@ -2269,6 +2297,57 @@ async function handleSend() {
         } catch (err) {
             logContainer.parentElement.parentElement.remove();
             appendMessage('assistant', `<span class="text-red-400">Network Error.</span>`, activeModelId);
+        }
+        isProcessing = false; updateUIState(); return;
+    }
+
+        if (isImageMode || text.toLowerCase().startsWith('/imagine')) {
+        els.indicator.classList.add('hidden');
+        const logContainer = appendResearchTerminal('Initializing Neural Visual Engine...', 'presentation');
+        logContainer.classList.replace('text-amber-400', 'text-fuchsia-400');
+        logContainer.parentElement.querySelector('.bg-amber-500\\/20').className = "w-7 h-7 sm:w-8 sm:h-8 flex-shrink-0 rounded-full bg-fuchsia-500/20 border border-fuchsia-500/50 flex items-center justify-center mt-1 shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pulse";
+        logContainer.parentElement.querySelector('i').className = "ph-bold ph-aperture text-fuchsia-400 text-sm sm:text-base";
+        
+        const aiMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+        
+        try {
+            const res = await fetch('/api/image', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ prompt: text }) 
+            });
+            
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let htmlWidget = "";
+            
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                // Edge-Safe chunk decoding
+                const chunks = decoder.decode(value, { stream: true }).split('\n\n').filter(Boolean);
+                for (let chunk of chunks) {
+                    if (chunk.startsWith('data: ')) {
+                        const data = JSON.parse(chunk.substring(6));
+                        if(data.text.trim().startsWith('<div') || htmlWidget.length > 0) {
+                             htmlWidget += data.text; // Reassemble the massively detailed HTML chunk by chunk
+                        } else {
+                             logContainer.innerHTML += `<div>${data.text}</div>`;
+                             els.canvas.scrollTop = els.canvas.scrollHeight;
+                        }
+                    }
+                }
+            }
+            
+            setTimeout(() => logContainer.parentElement.parentElement.remove(), 1000);
+            aiMsgObj.container.innerHTML = htmlWidget;
+            messages.push({ role: 'assistant', content: htmlWidget, id: aiMsgObj.id, modelId: activeModelId });
+            saveCurrentChat();
+            
+        } catch (err) {
+            logContainer.parentElement.parentElement.remove();
+            aiMsgObj.container.innerHTML = `<span class="text-red-400">Visual Engine Error: ${err.message}</span>`;
         }
         isProcessing = false; updateUIState(); return;
     }
