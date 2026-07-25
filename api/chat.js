@@ -2,13 +2,6 @@ export const config = {
     runtime: 'edge', 
 };
 
-/**
- * ============================================================================
- * LEXIS-AI: ORACLE 2.0 COGNITIVE PIPELINE
- * Architecture: Edge Streaming + Multi-Pass Routing + Auto-Vanishing UI
- * ============================================================================
- */
-
 // Aggressive context compressor to prevent token-limit crashes on massive attachments
 function hyperCondense(text, maxChars) {
     if (!text || text.length <= maxChars) return text;
@@ -36,9 +29,9 @@ export default async function handler(req) {
     
     const stream = new ReadableStream({
         async start(controller) {
-            // Helper to manually inject UI chunks into the chat bubble (Consumes 0 Gemini Tokens)
+            // Helper to manually inject self-contained UI chunks (Consumes 0 Gemini Tokens)
             const sendUIChunk = (htmlString) => {
-                const chunk = JSON.stringify({ candidates: [{ content: { parts: [{ text: htmlString }] } }] });
+                const chunk = JSON.stringify({ candidates: [{ content: { parts: [{ text: htmlString + '\n\n' }] } }] });
                 controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
             };
 
@@ -62,22 +55,15 @@ export default async function handler(req) {
 
                 if (GEMINI_KEYS.length === 0) throw new Error("CRITICAL: No Gemini Keys Configured on Server.");
 
-                const thinkId = 'oracle_think_' + Date.now();
-                const isOracle = modelId === 'oracle';
+                // CORE FIX: Prevents overlapping. If Research is active, Oracle skips its extra thinking steps.
+                const isOracleThinkingEnabled = modelId === 'oracle' && !researchContext;
 
                 // --------------------------------------------------------------------
                 // PHASE 1: INJECT VISIBLE THINKING UI (Backend Only, Auto-Vanishing)
+                // We use self-contained DIVs to prevent Markdown parser breakage.
                 // --------------------------------------------------------------------
-                if (isOracle) {
-                    sendUIChunk(`<div id="${thinkId}" class="p-5 mb-5 rounded-2xl bg-[#0a0a0a] border border-cyan-500/20 shadow-2xl relative overflow-hidden font-mono text-xs text-gray-400">
-                        <div class="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-purple-500/5 animate-pulse"></div>
-                        <div class="relative z-10">
-                            <div class="flex items-center gap-3 mb-4 border-b border-white/10 pb-3">
-                                <svg class="animate-spin h-5 w-5 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> 
-                                <span class="text-cyan-400 font-bold uppercase tracking-widest text-[10px]">Oracle 2.0 Cognitive Pipeline</span>
-                            </div>
-                            <div class="space-y-2" id="oracle_logs_${thinkId}">
-                                <div class="text-cyan-500/80">> Initializing autonomous routing sequence...</div>`);
+                if (isOracleThinkingEnabled) {
+                    sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-cyan-500/30 text-cyan-400 px-4 py-3 rounded-xl text-xs font-mono mb-3 shadow-[0_0_15px_rgba(6,182,212,0.15)] flex items-center gap-3 animate-pulse"><svg class="animate-spin h-4 w-4 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Oracle Cognitive Pipeline Initiated...</div>`);
                 }
 
                 // Subconscious Memory Hook
@@ -124,25 +110,24 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                 }
 
+                // If Deep Research is active, we just absorb the context and skip thinking.
                 if (researchContext) {
                     massiveKnowledgeBase += "\n--- COMPILED RESEARCH CONTEXT ---\n" + researchContext + "\n";
                     systemPrompt += `\n\n[CRITICAL DIRECTIVE: Synthesize the provided Master Research Document into an exhaustive, deeply comprehensive final response.]`;
                 }
 
                 // --------------------------------------------------------------------
-                // PHASE 2: COGNITIVE ROUTING (The "Thinking" Logic via Groq)
-                // Note: The UI explicitly hides the word "Llama" and calls it "Oracle Router"
+                // PHASE 2: COGNITIVE ROUTING (Oracle Router via Groq)
                 // --------------------------------------------------------------------
                 let oraclePlan = { persona: "Elite AI Expert", plan: "Synthesizing optimal data.", needs_more_search: false, search_query: null };
                 
-                if (isOracle && GROQ_KEY) {
-                    if (isOracle) sendUIChunk(`<div><span class="text-purple-400">> [Router]</span> Allocating cognitive persona via Neural Core...</div>`);
+                if (isOracleThinkingEnabled && GROQ_KEY) {
                     try {
                         const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                model: 'llama-3.1-8b-instant', // Model name kept in code, hidden from UI
+                                model: 'llama-3.1-8b-instant', // Hidden from user
                                 response_format: { type: "json_object" },
                                 messages: [
                                     { role: 'system', content: `You are the Oracle Cognitive Router. Analyze the query. Output strictly JSON: {"persona": "Ideal Role (e.g. Senior Architect, Data Analyst)", "plan": "Brief 1-sentence step-by-step logic", "needs_more_search": boolean, "search_query": "Targeted query if context missing, else null"}` },
@@ -157,39 +142,35 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 const parsedPlan = JSON.parse(groqData.choices[0].message.content);
                                 oraclePlan = { ...oraclePlan, ...parsedPlan };
                                 systemPrompt += `\n\n[ORACLE PERSONA ASSIGNED]: Act as an ${oraclePlan.persona}.\n[EXECUTION PLAN]: ${oraclePlan.plan}`;
-                                
-                                if (isOracle) {
-                                    sendUIChunk(`<div><span class="text-emerald-400">> [System]</span> Persona locked: <span class="text-white">${oraclePlan.persona}</span></div>`);
-                                    sendUIChunk(`<div><span class="text-gray-500">> [Logic]</span> ${oraclePlan.plan}</div>`);
-                                }
+                                sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-purple-500/30 text-purple-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Persona Locked: ${oraclePlan.persona}</div>`);
                             } catch(e) {}
                         }
                     } catch(e) { 
-                        if (isOracle) sendUIChunk(`<div><span class="text-amber-500">> [Warning]</span> Router latency detected. Bypassing to main core...</div>`);
+                        sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-amber-500/30 text-amber-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-warning"></i> Router optimization bypassed. Proceeding to main core.</div>`);
                     }
                 }
 
                 // --------------------------------------------------------------------
-                // PHASE 3: TAVILY GROUNDING SEARCH (Pass 1 & 2)
+                // PHASE 3: TAVILY GROUNDING SEARCH
                 // --------------------------------------------------------------------
                 const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
                 const shouldSearch = !researchContext && TAVILY_KEY && (oraclePlan.needs_more_search || (modelId === 'flux' && fluxNeedsSearch));
 
                 if (shouldSearch) {
-                    if (isOracle) sendUIChunk(`<div><span class="text-blue-400">> [Search]</span> Querying secure web index for real-time context...</div>`);
+                    if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-blue-500/30 text-blue-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-globe"></i> Querying secure web index...</div>`);
                     try {
                         const tavilyRes = await fetch('https://api.tavily.com/search', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ api_key: TAVILY_KEY, query: oraclePlan.search_query || userQuery, search_depth: "advanced", max_results: isOracle ? 12 : 5, include_answer: true })
+                            body: JSON.stringify({ api_key: TAVILY_KEY, query: oraclePlan.search_query || userQuery, search_depth: "advanced", max_results: modelId === 'oracle' ? 12 : 5, include_answer: true })
                         });
                         if (tavilyRes.ok) {
                             const tavData = await tavilyRes.json();
                             const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
                             massiveKnowledgeBase += `\n--- SECURE SEARCH CONTEXT ---\n${searchResults}\n`;
-                            if (isOracle) sendUIChunk(`<div><span class="text-emerald-400">> [Search]</span> Grounding context acquired (${tavData.results.length} vectors).</div>`);
+                            if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Grounding context acquired.</div>`);
                         }
                     } catch (e) {
-                         if (isOracle) sendUIChunk(`<div><span class="text-red-400">> [Search]</span> Web grounding timeout. Proceeding with internal state.</div>`);
+                         if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-red-500/30 text-red-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-warning"></i> Web grounding timeout. Using internal state.</div>`);
                     }
                 }
 
@@ -213,8 +194,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                 }
 
-                // Hyper-Condense to protect context limits
-                const MAX_CHARS = isOracle ? 150000 : (modelId === 'spark' ? 15000 : 80000); 
+                // Hyper-Condense Context
+                const MAX_CHARS = modelId === 'oracle' ? 150000 : (modelId === 'spark' ? 15000 : 80000); 
                 const condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
 
                 if (condensedKnowledge.trim().length > 0) {
@@ -232,8 +213,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 // --------------------------------------------------------------------
                 // PHASE 4: INTERNAL GEMINI CRITIQUE (Pass 1 - Oracle Only)
                 // --------------------------------------------------------------------
-                if (isOracle) {
-                    sendUIChunk(`<div><span class="text-cyan-400">> [Audit]</span> Executing internal draft & red-team critique...</div>`);
+                if (isOracleThinkingEnabled && GEMINI_KEYS.length > 0) {
+                    sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-indigo-500/30 text-indigo-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-shield-check"></i> Executing internal red-team critique...</div>`);
                     try {
                         const pass1Payload = {
                             systemInstruction: { parts: [{ text: systemPrompt + "\n\n[INTERNAL PASS 1 DIRECTIVE]: Generate a fast internal draft solution. Then ruthlessly critique it for math errors, code bugs, and missing citations. Output strictly JSON: {\"critique\": \"your strict feedback on how to make the final answer flawless\"}" }] },
@@ -254,23 +235,23 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 break;
                             }
                         }
-                        if (p1Success) sendUIChunk(`<div><span class="text-emerald-400">> [Audit]</span> Logical critique verified. Synthesizing optimal payload.</div>`);
-                        else sendUIChunk(`<div><span class="text-amber-400">> [Audit]</span> Audit skipped. Proceeding to compilation.</div>`);
-                    } catch(e) { sendUIChunk(`<div><span class="text-amber-400">> [Audit]</span> Audit skipped. Proceeding to compilation.</div>`); }
+                        if (p1Success) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Logical critique verified.</div>`);
+                    } catch(e) { 
+                        // Fallback gracefully, don't crash
+                    }
                 }
 
                 // --------------------------------------------------------------------
                 // PHASE 5: THE VANISHING ACT
                 // --------------------------------------------------------------------
-                if (isOracle) {
-                    sendUIChunk(`<div><span class="text-white font-bold">> [Streaming]</span> Neural payload incoming...</div>`);
-                    // This CSS injection instantly hides the entire thinking block from the user's view 
-                    // seamlessly replacing it with the final streaming text.
-                    sendUIChunk(`</div></div></div><style>#${thinkId} { display: none !important; opacity: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: none; position: absolute; }</style>`);
+                if (isOracleThinkingEnabled) {
+                    // This CSS injection instantly hides all thinking boxes seamlessly
+                    // preventing the markdown parser from breaking it.
+                    sendUIChunk(`<style>.oracle-think-box { display: none !important; opacity: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: none; position: absolute; }</style>`);
                 }
 
                 // --------------------------------------------------------------------
-                // PHASE 6: FINAL SYNTHESIS & REAL-TIME STREAMING (Expanded Output Limits)
+                // PHASE 6: FINAL SYNTHESIS & REAL-TIME STREAMING
                 // --------------------------------------------------------------------
                 if (modelId === 'spark' && GROQ_KEY) {
                     const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.slice(-5)], stream: true, temperature: 0.2 }; 
@@ -289,7 +270,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         systemInstruction: { parts: [{ text: systemPrompt }] },
                         contents: geminiMessages,
                         // ORACLE: Massive 16,384 output limit to ensure extremely long code and essays don't cut off
-                        generationConfig: { maxOutputTokens: isOracle ? 16384 : 8192, temperature: isOracle ? 0.3 : 0.7 },
+                        generationConfig: { maxOutputTokens: modelId === 'oracle' ? 16384 : 8192, temperature: modelId === 'oracle' ? 0.3 : 0.7 },
                         safetySettings: [
                             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
                             { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
