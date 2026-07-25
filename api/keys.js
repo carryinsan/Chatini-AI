@@ -3,8 +3,8 @@ export const config = {
 };
 
 // ============================================================================
-// [ SAAS GATEWAY ] LEXIS API KEY GENERATOR & ADMIN BRIDGE
-// Creates custom keys tied to Device IDs and serves Admin telemetry
+// [ SAAS GATEWAY ] LEXIS API KEY GENERATOR & ADMIN TELEMETRY
+// Creates custom keys tied to Device IDs and serves real Admin analytics
 // ============================================================================
 
 const UPSTASH_URL = "https://immortal-eagle-36171.upstash.io";
@@ -49,10 +49,11 @@ export default async function handler(req) {
                 }
             };
 
-            // 4. Save to Upstash Redis (Pipeline to ensure both records save together)
+            // 4. Save to Upstash Redis and track total unique device count
             const multiExec = [
                 ["SET", `device:${deviceId}`, newApiKey],
-                ["SET", `apikey:${newApiKey}`, JSON.stringify(keyConfig)]
+                ["SET", `apikey:${newApiKey}`, JSON.stringify(keyConfig)],
+                ["INCR", "stats:total_devices"]
             ];
 
             await fetch(`${UPSTASH_URL}/pipeline`, {
@@ -71,19 +72,23 @@ export default async function handler(req) {
         }
 
         // --------------------------------------------------------------------
-        // ACTION: ADMIN TELEMETRY EXTRACTION
+        // ACTION: ADMIN TELEMETRY EXTRACTION (Real Data for Dashboard)
         // --------------------------------------------------------------------
         if (action === 'admin_stats') {
             if (adminSecret !== "Lexis-Admin-2026!") {
                 return new Response(JSON.stringify({ error: "Unauthorized Admin" }), { status: 401 });
             }
 
-            // Fetch high-level statistics from the database
-            // Note: In a full enterprise app, you'd use SCAN, but for edge speed we pull aggregated keys
+            // Fetch all global counters simultaneously via Upstash pipeline
             const multiExec = [
                 ["GET", "stats:total_requests"],
+                ["GET", "stats:total_success"],
                 ["GET", "stats:total_errors"],
-                ["GET", "stats:total_success"]
+                ["GET", "stats:total_devices"],
+                ["GET", "stats:errors:missing_key"],
+                ["GET", "stats:errors:invalid_key"],
+                ["GET", "stats:errors:rate_limit_model"],
+                ["GET", "stats:errors:rate_limit_feature"]
             ];
 
             const statsRes = await fetch(`${UPSTASH_URL}/pipeline`, {
@@ -93,12 +98,26 @@ export default async function handler(req) {
             });
             const statsData = await statsRes.json();
 
+            const totalReq = parseInt(statsData[0].result || "0", 10);
+            const totalSuccess = parseInt(statsData[1].result || "0", 10);
+            const totalErrors = parseInt(statsData[2].result || "0", 10);
+            const totalDevices = parseInt(statsData[3].result || "0", 10);
+            
+            const errMissing = parseInt(statsData[4].result || "0", 10);
+            const errInvalid = parseInt(statsData[5].result || "0", 10);
+            const errModel = parseInt(statsData[6].result || "0", 10);
+            const errFeature = parseInt(statsData[7].result || "0", 10);
+
             return new Response(JSON.stringify({
                 success: true,
                 analytics: {
-                    totalRequests: statsData[0].result || 0,
-                    totalErrors: statsData[1].result || 0,
-                    totalSuccess: statsData[2].result || 0,
+                    totalRequests: totalReq,
+                    totalSuccess: totalSuccess,
+                    totalErrors: totalErrors,
+                    totalDevices: totalDevices,
+                    errorAuth: errMissing + errInvalid,
+                    errorModelQuota: errModel,
+                    errorFeatureQuota: errFeature
                 }
             }), { status: 200 });
         }
@@ -109,5 +128,4 @@ export default async function handler(req) {
         return new Response(JSON.stringify({ error: error.message }), { status: 500 });
     }
 }
-
 
