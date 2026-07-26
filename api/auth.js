@@ -1,9 +1,9 @@
 // ============================================================================
-// [ SAAS GATEWAY ] UNIVERSAL RATE LIMITER & AUTHENTICATOR (FAIL-SAFE V2)
-// Intercepts requests, aggressively sanitizes keys, checks account status
+// [ SAAS GATEWAY ] UNIVERSAL RATE LIMITER & AUTHENTICATOR (ULTIMATE V3)
+// 100% Fail-Safe Upstash REST parsing using Direct POST Array Commands
 // ============================================================================
 
-const UPSTASH_URL = "https://immortal-eagle-36171.upstash.io";
+const UPSTASH_URL = "https://immortal-eagle-36171.upstash.io".replace(/\/$/, ''); // Strip trailing slashes
 const UPSTASH_TOKEN = "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw";
 
 // Your personal apps that get unlimited, free usage without an API key
@@ -11,66 +11,85 @@ const ALLOWED_ORIGINS = ['chatini-ai.vercel.app', 'lexis-ai-chatini.vercel.app',
 
 export async function verifyAndLimit(req, requestedModel, requestedFeature) {
     try {
-        const origin = req.headers.get('origin') || req.headers.get('referer') || '';
-        const isCreatorApp = ALLOWED_ORIGINS.some(allowed => origin.includes(allowed));
+        // --------------------------------------------------------------------
+        // 0. PREFLIGHT CORS BYPASS
+        // --------------------------------------------------------------------
+        if (req.method === 'OPTIONS') {
+            return { authorized: true, isCreator: false, isOptions: true };
+        }
 
         // --------------------------------------------------------------------
-        // 1. CREATOR BYPASS (Absolute Infinity Mode)
+        // 1. CREATOR BYPASS (Absolute Infinity Mode for Your Apps)
         // --------------------------------------------------------------------
+        const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+        let isCreatorApp = false;
+        
+        for (let i = 0; i < ALLOWED_ORIGINS.length; i++) {
+            if (origin.toLowerCase().includes(ALLOWED_ORIGINS[i].toLowerCase())) {
+                isCreatorApp = true;
+                break;
+            }
+        }
+
         if (isCreatorApp) {
-            // Silently log creator success without awaiting to keep it blazing fast
-            fetch(`${UPSTASH_URL}/INCR/stats:total_success`, { headers: { "Authorization": `Bearer ${UPSTASH_TOKEN}` } }).catch(()=>{});
+            // Silently log creator success using POST command
+            executeUpstashCommand(["INCR", "stats:total_success"]);
             return { authorized: true, isCreator: true };
         }
 
         // --------------------------------------------------------------------
-        // 2. EXTERNAL DEVELOPER EXTRACTION & AGGRESSIVE SANITIZATION
+        // 2. EXTERNAL DEVELOPER EXTRACTION & HYPER-SANITIZATION
         // --------------------------------------------------------------------
         const authHeader = req.headers.get('authorization');
         if (!authHeader) {
             await logError('missing_key');
-            return { authorized: false, status: 401, error: "Missing Authorization header. Use 'Bearer Lexis-...'" };
+            return { authorized: false, status: 401, error: "Authentication missing. Send 'Authorization: Bearer Lexis-...'" };
         }
 
-        // AGGRESSIVE SANITIZER: Removes spaces, line breaks, and extracts purely the key
-        // This permanently fixes the "Revoked or Invalid" copy-paste bug
-        const rawKey = authHeader.replace(/^Bearer\s+/i, '').trim();
-        const apiKey = rawKey.replace(/[^a-zA-Z0-9-]/g, ''); 
+        // Extremely aggressive regex to strip all invisible characters, tabs, newlines
+        let rawKey = authHeader.replace(/^Bearer\s+/i, '').trim();
+        let apiKey = rawKey.replace(/[^a-zA-Z0-9-]/g, ''); 
 
-        if (!apiKey.startsWith('Lexis-')) {
+        // Auto-fix if they accidentally stripped the hyphen
+        if (apiKey.startsWith('Lexis') && !apiKey.startsWith('Lexis-')) {
+            apiKey = apiKey.replace('Lexis', 'Lexis-');
+        }
+
+        if (!apiKey.startsWith('Lexis-') || apiKey.length < 15) {
             await logError('invalid_format');
-            return { authorized: false, status: 401, error: "Invalid Key Format. Must start with 'Lexis-'" };
+            return { authorized: false, status: 401, error: "Invalid Lexis API Key format." };
         }
 
         const endUserDeviceId = req.headers.get('x-end-user-device-id') || req.headers.get('user-agent') || 'anonymous_end_user';
 
         // --------------------------------------------------------------------
-        // 3. FETCH KEY CONFIG FROM UPSTASH (WITH FAIL-SAFE PARSING)
+        // 3. FAIL-SAFE UPSTASH FETCH (Direct POST Array Command)
         // --------------------------------------------------------------------
-        const keyRes = await fetch(`${UPSTASH_URL}/get/apikey:${apiKey}`, {
-            headers: { "Authorization": `Bearer ${UPSTASH_TOKEN}` }
-        });
+        const keyData = await executeUpstashCommand(["GET", `apikey:${apiKey}`]);
         
-        if (!keyRes.ok) throw new Error("Upstash Connection Timeout");
-        const keyData = await keyRes.json();
-        
-        if (!keyData.result) {
+        if (keyData === null || keyData === undefined || keyData === "") {
             await logError('invalid_key');
-            return { authorized: false, status: 401, error: "Lexis API Key does not exist or has been revoked." };
+            // Detailed error so you know exactly what string was searched
+            return { authorized: false, status: 401, error: `Key not found in database. Checked for: [${apiKey}]` };
         }
 
-        // DOUBLE-DECODE FAILSAFE: Handles both raw JSON and stringified JSON dynamically
+        // DOUBLE-DECODE FAILSAFE: Handles both raw JSON objects and double-stringified data
         let keyConfig;
         try {
-            keyConfig = typeof keyData.result === 'string' ? JSON.parse(keyData.result) : keyData.result;
-            if (typeof keyConfig === 'string') keyConfig = JSON.parse(keyConfig); // Catch double-encoding
+            keyConfig = typeof keyData === 'string' ? JSON.parse(keyData) : keyData;
+            if (typeof keyConfig === 'string') keyConfig = JSON.parse(keyConfig);
         } catch (e) {
             await logError('corrupt_key_data');
-            return { authorized: false, status: 500, error: "API Key data corrupted in registry." };
+            return { authorized: false, status: 500, error: "API Key payload corrupted. Contact admin." };
+        }
+
+        // Validate structure
+        if (!keyConfig || !keyConfig.limits) {
+            return { authorized: false, status: 500, error: "API Key missing limits configuration." };
         }
 
         // --------------------------------------------------------------------
-        // 4. ACCOUNT STATUS CHECK (Admin Blocking)
+        // 4. ACCOUNT STATUS CHECK
         // --------------------------------------------------------------------
         if (keyConfig.status === 'blocked') {
             await logError('blocked_account');
@@ -83,40 +102,46 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
         // --------------------------------------------------------------------
         // 5. VERIFY MODEL LIMITS
         // --------------------------------------------------------------------
-        if (requestedModel && requestedModel !== 'none' && keyConfig.limits.models && keyConfig.limits.models[requestedModel] !== undefined) {
-            const modelLimit = keyConfig.limits.models[requestedModel];
-            const modelTrackerKey = `usage:${apiKey}:${today}:model:${requestedModel}`;
+        if (requestedModel && requestedModel !== 'none') {
+            let modelLimit = 0;
+            if (keyConfig.limits.models && keyConfig.limits.models[requestedModel] !== undefined) {
+                modelLimit = parseInt(keyConfig.limits.models[requestedModel], 10);
+            }
 
-            const usageRes = await fetch(`${UPSTASH_URL}/get/${modelTrackerKey}`, { headers: { "Authorization": `Bearer ${UPSTASH_TOKEN}` } });
-            const usageData = await usageRes.json();
-            const currentUsage = parseInt(usageData.result || "0", 10);
+            const modelTrackerKey = `usage:${apiKey}:${today}:model:${requestedModel}`;
+            const usageData = await executeUpstashCommand(["GET", modelTrackerKey]);
+            const currentUsage = parseInt(usageData || "0", 10);
 
             if (currentUsage >= modelLimit) {
                 await logError('rate_limit_model');
-                return { authorized: false, status: 429, error: `[RATE LIMIT] Daily limit exceeded for model '${requestedModel}'. Limit is ${modelLimit}/day.` };
+                return { authorized: false, status: 429, error: `[RATE LIMIT] Daily limit exceeded for model '${requestedModel}'. Limit: ${modelLimit}/day.` };
             }
+            
             multiExec.push(["INCR", modelTrackerKey]);
-            multiExec.push(["EXPIRE", modelTrackerKey, 86400]);
+            multiExec.push(["EXPIRE", modelTrackerKey, "86400"]);
             multiExec.push(["SADD", "stats:models_used", requestedModel]);
         }
 
         // --------------------------------------------------------------------
         // 6. VERIFY FEATURE LIMITS
         // --------------------------------------------------------------------
-        if (requestedFeature && requestedFeature !== 'none' && keyConfig.limits.features && keyConfig.limits.features[requestedFeature] !== undefined) {
-            const featureLimit = keyConfig.limits.features[requestedFeature];
-            const featureTrackerKey = `usage:${apiKey}:${today}:feat:${requestedFeature}`;
+        if (requestedFeature && requestedFeature !== 'none') {
+            let featureLimit = 0;
+            if (keyConfig.limits.features && keyConfig.limits.features[requestedFeature] !== undefined) {
+                featureLimit = parseInt(keyConfig.limits.features[requestedFeature], 10);
+            }
 
-            const usageRes = await fetch(`${UPSTASH_URL}/get/${featureTrackerKey}`, { headers: { "Authorization": `Bearer ${UPSTASH_TOKEN}` } });
-            const usageData = await usageRes.json();
-            const currentUsage = parseInt(usageData.result || "0", 10);
+            const featureTrackerKey = `usage:${apiKey}:${today}:feat:${requestedFeature}`;
+            const usageData = await executeUpstashCommand(["GET", featureTrackerKey]);
+            const currentUsage = parseInt(usageData || "0", 10);
 
             if (currentUsage >= featureLimit) {
                 await logError('rate_limit_feature');
-                return { authorized: false, status: 429, error: `[RATE LIMIT] Daily limit exceeded for feature '${requestedFeature}'. Limit is ${featureLimit}/day.` };
+                return { authorized: false, status: 429, error: `[RATE LIMIT] Daily limit exceeded for feature '${requestedFeature}'. Limit: ${featureLimit}/day.` };
             }
+            
             multiExec.push(["INCR", featureTrackerKey]);
-            multiExec.push(["EXPIRE", featureTrackerKey, 86400]);
+            multiExec.push(["EXPIRE", featureTrackerKey, "86400"]);
             multiExec.push(["SADD", "stats:features_used", requestedFeature]);
         }
 
@@ -127,38 +152,61 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
         multiExec.push(["INCR", "stats:total_success"]);
         
         // This tracks the unique people using the external developer's app
-        const devUserKey = `dev_users:${apiKey}`;
-        multiExec.push(["SADD", devUserKey, endUserDeviceId]);
+        multiExec.push(["SADD", `dev_users:${apiKey}`, endUserDeviceId]);
 
         if (multiExec.length > 0) {
-            await fetch(`${UPSTASH_URL}/pipeline`, {
-                method: 'POST',
-                headers: { "Authorization": `Bearer ${UPSTASH_TOKEN}`, "Content-Type": "application/json" },
-                body: JSON.stringify(multiExec)
-            });
+            executeUpstashPipeline(multiExec); // Fire and forget (don't await) to keep API fast
         }
 
         return { authorized: true, isCreator: false, accountData: keyConfig };
 
     } catch (e) {
-        // Ultimate Failsafe: If Redis crashes, fail gracefully
-        return { authorized: false, status: 500, error: "Authentication Service Offline or Timed Out." };
+        // Ultimate Failsafe: If Redis completely crashes, log locally and block
+        console.error("Auth Exception:", e);
+        return { authorized: false, status: 500, error: "Lexis Authentication Service Timed Out." };
     }
 }
 
-// Helper to asynchronously log errors to Upstash without blocking the user
-async function logError(type) {
+// ============================================================================
+// [ CORE ] UPSTASH FAIL-SAFE COMMUNICATION HELPERS
+// ============================================================================
+
+async function executeUpstashCommand(commandArray) {
     try {
-        fetch(`${UPSTASH_URL}/pipeline`, {
+        const res = await fetch(UPSTASH_URL, {
             method: 'POST',
             headers: { "Authorization": `Bearer ${UPSTASH_TOKEN}`, "Content-Type": "application/json" },
-            body: JSON.stringify([
-                ["INCR", "stats:total_requests"],
-                ["INCR", "stats:total_errors"],
-                ["INCR", `stats:errors:${type}`]
-            ])
-        }).catch(()=>{});
-    } catch(e) {}
+            body: JSON.stringify(commandArray)
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data.result;
+    } catch(e) {
+        return null;
+    }
+}
+
+async function executeUpstashPipeline(pipelineArray) {
+    try {
+        const res = await fetch(`${UPSTASH_URL}/pipeline`, {
+            method: 'POST',
+            headers: { "Authorization": `Bearer ${UPSTASH_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify(pipelineArray)
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data; // Array of results
+    } catch(e) {
+        return null;
+    }
+}
+
+async function logError(type) {
+    executeUpstashPipeline([
+        ["INCR", "stats:total_requests"],
+        ["INCR", "stats:total_errors"],
+        ["INCR", `stats:errors:${type}`]
+    ]);
 }
 
 
