@@ -407,10 +407,9 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ================================================================
-                // CORE BUG FIX: THE ULTIMATE MEGA-PAYLOAD SANITIZER
-                // Intercepts BOTH Groq & Gemini. Drops empty packets to prevent 
-                // falsy bugs in the UI, and wraps the text in a universal JSON 
-                // structure that satisfies EVERY possible frontend parser.
+                // CORE BUG FIX: THE IRONCLAD SSE PARSER
+                // Splits chunks strictly by HTTP Standard Double-Newlines (\r?\n\r?\n)
+                // Prevents multi-line JSON payloads from getting chopped in half.
                 // ================================================================
                 const reader = llmRes.body.getReader();
                 const decoder = new TextDecoder();
@@ -418,53 +417,69 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
                 while (true) {
                     const { done, value } = await reader.read();
-                    if (done) break;
+                    
+                    if (done) {
+                        // Flush any remaining data before closing
+                        if (buffer.trim()) {
+                            const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
+                            if (jsonStr && jsonStr !== '[DONE]') {
+                                try {
+                                    const rawData = JSON.parse(jsonStr);
+                                    let cleanText = isGroq 
+                                        ? rawData.choices?.[0]?.delta?.content || "" 
+                                        : rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                                    
+                                    if (cleanText) {
+                                        const cleanPayload = { id: "chatcmpl-end", object: "chat.completion.chunk", created: Date.now(), model: modelId, text: cleanText, message: cleanText, choices: [{ index: 0, delta: { role: "assistant", content: cleanText }, finish_reason: null }], candidates: [{ index: 0, content: { role: "model", parts: [{ text: cleanText }] }, finishReason: null }] };
+                                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
+                                    }
+                                } catch (e) {}
+                            }
+                        }
+                        break;
+                    }
                     
                     buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split('\n');
-                    buffer = lines.pop(); // Keep incomplete chunk in buffer for next cycle
+                    
+                    // Strictly split by HTTP Server-Sent-Events boundary (double newline)
+                    const chunks = buffer.split(/\r?\n\r?\n/);
+                    buffer = chunks.pop(); // Keep the last incomplete chunk in memory for the next loop
 
-                    for (const line of lines) {
-                        const trimmedLine = line.trim();
-                        // Strictly only process complete data packets
-                        if (!trimmedLine || !trimmedLine.startsWith('data: ')) continue;
-
-                        const jsonStr = trimmedLine.substring(6).trim();
-                        if (jsonStr === '[DONE]') continue;
+                    for (const chunk of chunks) {
+                        // Clean out the "data: " prefix safely, even if it appears on multiple lines
+                        const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
+                        if (!jsonStr || jsonStr === '[DONE]') continue;
 
                         try {
                             const rawData = JSON.parse(jsonStr);
                             let cleanText = "";
                             
                             if (isGroq) {
-                                // Extract cleanly from Groq Structure
                                 if (rawData.choices && rawData.choices.length > 0 && rawData.choices[0].delta && rawData.choices[0].delta.content) {
                                     cleanText = rawData.choices[0].delta.content;
                                 }
                             } else {
-                                // Extract cleanly from Gemini Structure
                                 if (rawData.candidates && rawData.candidates.length > 0 && rawData.candidates[0].content && rawData.candidates[0].content.parts && rawData.candidates[0].content.parts.length > 0 && rawData.candidates[0].content.parts[0].text) {
                                     cleanText = rawData.candidates[0].content.parts[0].text;
                                 }
                             }
 
-                            // CORE FIX: Never send empty strings to prevent frontend falsy-fallback bugs!
+                            // Inject the successfully parsed text into our universal Mega-Payload
                             if (cleanText) {
-                                // THE MEGA-PAYLOAD: Satisfies OpenAI parsers, Gemini parsers, and custom parsers simultaneously.
                                 const cleanPayload = { 
                                     id: "chatcmpl-" + Math.random().toString(36).substring(2, 10),
                                     object: "chat.completion.chunk",
                                     created: Math.floor(Date.now() / 1000),
                                     model: modelId,
-                                    text: cleanText, // For custom text interceptors
-                                    message: cleanText, // For generic parsers
+                                    text: cleanText, 
+                                    message: cleanText, 
                                     choices: [{ index: 0, delta: { role: "assistant", content: cleanText }, finish_reason: null }],
                                     candidates: [{ index: 0, content: { role: "model", parts: [{ text: cleanText }] }, finishReason: null }]
                                 };
                                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
                             }
                         } catch (e) {
-                            // Silently ignore broken network chunks to protect the frontend parser
+                            // Only invalid partial JSON chunks will hit this catch block now. 
                         }
                     }
                 }
@@ -485,4 +500,5 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
 }
+
 
