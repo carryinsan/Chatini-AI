@@ -302,7 +302,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 // Extract ONLY the clean text delta from Groq's messy response
                                 if (rawData.choices && rawData.choices[0].delta && rawData.choices[0].delta.content) {
                                     const cleanText = rawData.choices[0].delta.content;
-                                    const cleanPayload = { choices: [{ delta: { content: cleanText } }] };
+                                    // THIS IS THE FIX: Translate Groq into Gemini structure so the frontend parses it perfectly
+                                    const cleanPayload = { candidates: [{ content: { parts: [{ text: cleanText }] } }] };
                                     controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
                                 }
                             } catch (e) {
