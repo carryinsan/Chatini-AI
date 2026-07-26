@@ -3,241 +3,316 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LexisAI | Developer Portal</title>
+    <title>LexisAI | Developer API Platform</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { colors: { background: '#050505', surface: '#0a0a0a', primary: '#22d3ee' } } }
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#030712',
+                        surface: '#111827',
+                        surface2: '#1f2937',
+                        border: '#374151',
+                        primary: '#0ea5e9'
+                    },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }
+                }
+            }
         }
     </script>
     <style>
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #050505; color: #fff; }
-        .glass-panel { background: rgba(15, 15, 15, 0.8); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.05); }
-        .glow-text { text-shadow: 0 0 20px rgba(34, 211, 238, 0.5); }
-        ::-webkit-scrollbar { width: 6px; }
+        body { background-color: #030712; color: #f9fafb; }
+        .glass-card { background: rgba(17, 24, 39, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .code-block { background: #000; border: 1px solid #1f2937; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; color: #a5b4fc; font-size: 0.875rem; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        .tab-active { border-bottom: 2px solid #22d3ee; color: #22d3ee; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
+        .tab-active { border-bottom: 2px solid #0ea5e9; color: #0ea5e9; }
         .tab-inactive { border-bottom: 2px solid transparent; color: #6b7280; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center py-12 px-4 selection:bg-cyan-500/30">
+<body class="min-h-screen flex flex-col items-center py-12 px-4 sm:px-6 lg:px-8 selection:bg-sky-500/30">
 
     <!-- Header -->
-    <div class="text-center mb-10 w-full max-w-5xl">
-        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-tr from-cyan-500 to-purple-600 shadow-[0_0_30px_rgba(6,182,212,0.3)] mb-4">
-            <i class="ph-fill ph-hexagon text-3xl text-white"></i>
+    <div class="text-center mb-12 w-full max-w-6xl">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-sky-400 to-indigo-500 shadow-[0_0_40px_rgba(14,165,233,0.3)] mb-6">
+            <i class="ph-fill ph-cpu text-4xl text-white"></i>
         </div>
-        <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight mb-3 glow-text">LexisAI API Gateway</h1>
-        <p class="text-gray-400 text-lg">Enterprise AI infrastructure. Register your <code class="text-cyan-400">@lexis.ai</code> account below.</p>
+        <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight mb-4 text-white">LexisAI API <span class="text-transparent bg-clip-text bg-gradient-to-r from-sky-400 to-indigo-400">Gateway</span></h1>
+        <p class="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto">Build the future. Claim your enterprise-grade API key and embed LexisAI's 3 advanced models and 7 cognitive features directly into your applications.</p>
     </div>
 
-    <!-- Auth Section (Login / Register) -->
-    <div id="auth-section" class="w-full max-w-md glass-panel rounded-3xl p-8 mb-12 shadow-2xl relative overflow-hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-purple-500"></div>
+    <!-- Account & Authentication Section -->
+    <div id="auth-section" class="w-full max-w-md glass-card rounded-3xl p-8 mb-16 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-sky-400 to-indigo-500"></div>
         
-        <div class="flex mb-6 border-b border-white/10">
-            <button onclick="switchTab('login')" id="tab-login" class="flex-1 pb-3 text-sm font-bold tab-active transition-colors">Sign In</button>
-            <button onclick="switchTab('register')" id="tab-register" class="flex-1 pb-3 text-sm font-bold tab-inactive transition-colors">Create Account</button>
+        <div class="flex mb-8 border-b border-gray-800">
+            <button onclick="switchTab('login')" id="tab-login" class="flex-1 pb-4 text-sm font-bold tab-active transition-colors">Developer Sign In</button>
+            <button onclick="switchTab('register')" id="tab-register" class="flex-1 pb-4 text-sm font-bold tab-inactive transition-colors">Create @lexis.ai Account</button>
         </div>
 
         <!-- Login Form -->
-        <div id="form-login" class="space-y-4">
+        <div id="form-login" class="space-y-5">
             <div>
-                <label class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1 block">Account Name</label>
+                <label class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2 block">Account Identity</label>
                 <div class="relative">
-                    <input type="text" id="log-username" placeholder="yourname" class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 transition-colors">
-                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">@lexis.ai</span>
+                    <input type="text" id="log-username" placeholder="yourname" class="w-full bg-[#030712] border border-gray-800 rounded-xl px-4 py-3.5 text-white outline-none focus:border-sky-500 transition-colors">
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-mono">@lexis.ai</span>
                 </div>
             </div>
             <div>
-                <label class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1 block">Password</label>
-                <input type="password" id="log-password" placeholder="••••••••" class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 transition-colors">
+                <label class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2 block">Secure Password</label>
+                <input type="password" id="log-password" placeholder="••••••••" class="w-full bg-[#030712] border border-gray-800 rounded-xl px-4 py-3.5 text-white outline-none focus:border-sky-500 transition-colors">
             </div>
-            <button onclick="handleAuth('login')" id="btn-login" class="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition-colors mt-2">Sign In</button>
+            <button onclick="handleAuth('login')" id="btn-login" class="w-full bg-white text-black font-bold py-3.5 rounded-xl hover:bg-gray-200 transition-colors mt-4 shadow-lg shadow-white/10">Access Gateway</button>
         </div>
 
         <!-- Register Form -->
-        <div id="form-register" class="space-y-4 hidden">
+        <div id="form-register" class="space-y-5 hidden">
+            <div class="bg-indigo-500/10 border border-indigo-500/20 p-4 rounded-xl mb-2 flex items-start gap-3">
+                <i class="ph-fill ph-info text-indigo-400 text-lg mt-0.5"></i>
+                <p class="text-xs text-indigo-200 leading-relaxed">Strict Policy: Only <strong>one API Key</strong> may be minted per physical device. Your hardware fingerprint will be permanently bound to this account.</p>
+            </div>
             <div>
-                <label class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1 block">Desired Account Name</label>
+                <label class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2 block">Desired Account ID</label>
                 <div class="relative">
-                    <input type="text" id="reg-username" placeholder="company" class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 transition-colors">
-                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm">@lexis.ai</span>
+                    <input type="text" id="reg-username" placeholder="company" class="w-full bg-[#030712] border border-gray-800 rounded-xl px-4 py-3.5 text-white outline-none focus:border-sky-500 transition-colors">
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-mono">@lexis.ai</span>
                 </div>
             </div>
             <div>
-                <label class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1 block">Secure Password</label>
-                <input type="password" id="reg-password" placeholder="••••••••" class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 transition-colors">
+                <label class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2 block">Master Password</label>
+                <input type="password" id="reg-password" placeholder="••••••••" class="w-full bg-[#030712] border border-gray-800 rounded-xl px-4 py-3.5 text-white outline-none focus:border-sky-500 transition-colors">
             </div>
             <div>
-                <label class="text-xs text-gray-400 uppercase tracking-wider font-bold mb-1 block">Your App's Website (Optional)</label>
-                <input type="text" id="reg-website" placeholder="https://myapp.com" class="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-cyan-500 transition-colors">
+                <label class="text-xs text-gray-400 uppercase tracking-widest font-bold mb-2 block">Your Application URL (Optional)</label>
+                <input type="url" id="reg-website" placeholder="https://yourapp.com" class="w-full bg-[#030712] border border-gray-800 rounded-xl px-4 py-3.5 text-white outline-none focus:border-sky-500 transition-colors">
             </div>
-            <button onclick="handleAuth('register')" id="btn-register" class="w-full bg-cyan-600 text-white font-bold py-3 rounded-xl hover:bg-cyan-500 transition-colors mt-2">Mint API Key</button>
+            <button onclick="handleAuth('register')" id="btn-register" class="w-full bg-sky-500 text-white font-bold py-3.5 rounded-xl hover:bg-sky-400 transition-colors mt-4 shadow-lg shadow-sky-500/20">Mint API Key</button>
         </div>
 
-        <p id="auth-error" class="text-red-400 text-xs mt-4 text-center hidden"></p>
+        <p id="auth-error" class="text-red-400 text-sm mt-5 text-center font-medium hidden bg-red-500/10 p-3 rounded-lg border border-red-500/20"></p>
     </div>
 
-    <!-- Dashboard (Hidden until logged in) -->
-    <div id="dashboard-section" class="w-full max-w-5xl glass-panel rounded-3xl p-8 mb-12 shadow-2xl relative overflow-hidden hidden">
-        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-cyan-500"></div>
+    <!-- Active Dashboard (Hidden until auth) -->
+    <div id="dashboard-section" class="w-full max-w-6xl glass-card rounded-3xl p-8 mb-16 relative overflow-hidden hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-400 to-sky-500"></div>
         
-        <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-gray-800 pb-6 gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-white mb-1">Developer Dashboard</h2>
-                <p class="text-sm text-emerald-400 flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> Authenticated as <span id="dash-email" class="font-bold text-white"></span></p>
+                <h2 class="text-3xl font-bold text-white mb-2">Lexis Command Center</h2>
+                <p class="text-sm text-emerald-400 flex items-center gap-1.5 bg-emerald-400/10 border border-emerald-400/20 w-fit px-3 py-1 rounded-full"><i class="ph-fill ph-shield-check"></i> Authenticated: <span id="dash-email" class="font-bold text-white ml-1"></span></p>
             </div>
-            <button onclick="logout()" class="text-sm text-gray-400 hover:text-white bg-white/5 px-4 py-2 rounded-lg transition-colors">Sign Out</button>
+            <button onclick="logout()" class="text-sm font-medium text-gray-400 hover:text-white bg-surface2 border border-border px-5 py-2.5 rounded-xl transition-colors">Sign Out</button>
         </div>
 
-        <div class="flex flex-col md:flex-row gap-8 items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <!-- Key Vault -->
-            <div class="flex-1 w-full">
-                <h3 class="text-lg font-bold mb-2 flex items-center gap-2"><i class="ph-fill ph-key text-cyan-400"></i> API Key Vault</h3>
-                <p class="text-sm text-gray-500 mb-4">Enter your Lexis account password to reveal your API Key.</p>
+            <div class="lg:col-span-2">
+                <h3 class="text-xl font-bold mb-3 flex items-center gap-2"><i class="ph-fill ph-key text-sky-400"></i> Secure Key Vault</h3>
+                <p class="text-sm text-gray-400 mb-6">Your API key provides unrestricted access to your quotas. Verify your master password below to unlock the vault and copy your key.</p>
                 
-                <div class="bg-black border border-white/10 rounded-xl p-4 flex items-center justify-between gap-4 mb-4">
-                    <code id="api-key-display" class="text-cyan-400 font-mono text-lg break-all blur-sm transition-all duration-300 select-none">Lexis-************************</code>
-                    <button onclick="copyKey()" class="bg-white/10 hover:bg-white/20 text-white p-3 rounded-lg transition-colors" title="Copy Key">
-                        <i class="ph-bold ph-copy"></i>
+                <div class="bg-black border border-gray-800 rounded-2xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4 mb-6 shadow-inner">
+                    <code id="api-key-display" class="text-sky-400 font-mono text-lg break-all blur-md transition-all duration-500 select-none flex-1 w-full text-center sm:text-left">Lexis-********************************</code>
+                    <button onclick="copyKey()" class="bg-surface2 hover:bg-gray-700 border border-gray-700 text-white p-3.5 rounded-xl transition-colors w-full sm:w-auto" title="Copy Key">
+                        <i class="ph-bold ph-copy text-lg"></i>
                     </button>
                 </div>
 
-                <div class="flex gap-2 w-full max-w-md">
-                    <input type="password" id="vault-password" placeholder="Verify password to reveal..." class="flex-1 bg-black border border-white/10 rounded-lg px-4 py-2 text-sm outline-none focus:border-cyan-500 transition-colors">
-                    <button onclick="revealKey()" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">Reveal</button>
+                <div class="flex flex-col sm:flex-row gap-3 w-full max-w-lg">
+                    <input type="password" id="vault-password" placeholder="Enter password to decrypt vault..." class="flex-1 bg-black border border-gray-800 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-sky-500 transition-colors">
+                    <button onclick="revealKey()" class="bg-indigo-500 hover:bg-indigo-400 text-white px-6 py-3 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-indigo-500/20 whitespace-nowrap">Decrypt Key</button>
                 </div>
-                <p id="vault-msg" class="text-xs mt-2 hidden"></p>
+                <p id="vault-msg" class="text-xs font-medium mt-3 hidden"></p>
             </div>
 
-            <!-- Limits Card -->
-            <div class="w-full md:w-1/3 bg-black/50 border border-white/5 rounded-2xl p-6">
-                <h3 class="text-sm font-bold uppercase tracking-widest text-gray-400 mb-4 flex justify-between items-center">
+            <!-- Limits & Quotas -->
+            <div class="bg-[#030712] border border-gray-800 rounded-2xl p-6 shadow-inner">
+                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-5 flex justify-between items-center border-b border-gray-800 pb-3">
                     <span>Daily Quotas</span> 
-                    <span id="dash-status" class="text-[10px] px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded">ACTIVE</span>
+                    <span id="dash-status" class="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider"></span>
                 </h3>
-                <div id="limits-container" class="space-y-2 text-sm font-mono text-gray-300">
+                <div id="limits-container" class="space-y-3 text-sm font-mono text-gray-300 overflow-y-auto max-h-64 pr-2">
                     <!-- Injected dynamically -->
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Documentation Guide -->
-    <div class="w-full max-w-5xl glass-panel rounded-3xl p-8 shadow-2xl">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-white/10 pb-6 gap-4">
+    <!-- Massive Documentation Hub -->
+    <div class="w-full max-w-6xl glass-card rounded-3xl p-8 md:p-12 shadow-2xl mb-12">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 border-b border-gray-800 pb-8 gap-6">
             <div>
-                <h2 class="text-2xl font-bold flex items-center gap-2"><i class="ph-bold ph-book-open-text text-purple-400"></i> The LexisAI Integration Guide</h2>
-                <p class="text-sm text-gray-400 mt-1">Super simple API documentation for your apps.</p>
+                <h2 class="text-3xl font-extrabold flex items-center gap-3 text-white"><i class="ph-bold ph-book-open-text text-indigo-400"></i> The Integration Master-Guide</h2>
+                <p class="text-base text-gray-400 mt-2">Learn how to route queries to 3 specific AI brains and leverage all 7 cognitive feature endpoints.</p>
             </div>
-            <a href="mailto:thestarsofstarsptpn@gmail.com" class="bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-6 py-3 rounded-xl font-bold shadow-lg hover:scale-105 transition-all flex items-center gap-2">
-                <i class="ph-fill ph-envelope-simple"></i> Need More Credits? Email Us
+            <a href="mailto:thestarsofstarsptpn@gmail.com" class="bg-white text-black px-6 py-3.5 rounded-xl font-bold shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:scale-105 transition-transform flex items-center gap-2 whitespace-nowrap">
+                <i class="ph-fill ph-envelope-simple"></i> Request Limit Increase
             </a>
         </div>
         
-        <div class="bg-blue-500/10 border border-blue-500/30 p-4 rounded-xl mb-8 text-sm text-blue-200">
-            <strong>Endpoint Base URLs:</strong><br>
-            Use either <code class="bg-black/50 px-1 rounded text-cyan-400">https://chatini-ai.vercel.app</code> or <code class="bg-black/50 px-1 rounded text-cyan-400">https://lexis-ai-chatini.vercel.app</code>
+        <div class="bg-indigo-500/10 border border-indigo-500/20 p-5 rounded-2xl mb-12 flex items-center gap-4">
+            <i class="ph-fill ph-link text-3xl text-indigo-400"></i>
+            <div>
+                <strong class="text-white text-lg block mb-1">Global Endpoint Base URLs</strong>
+                <p class="text-sm text-indigo-200">You may POST requests to either <code class="bg-black border border-indigo-500/30 px-2 py-0.5 rounded text-sky-300 font-mono">https://chatini-ai.vercel.app</code> or <code class="bg-black border border-indigo-500/30 px-2 py-0.5 rounded text-sky-300 font-mono">https://lexis-ai-chatini.vercel.app</code></p>
+            </div>
         </div>
 
-        <div class="space-y-12">
-            <!-- General Chat -->
-            <div>
-                <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="ph-fill ph-chat-circle text-cyan-400"></i> 1. AI Chat & Logic</h3>
-                <p class="text-sm text-gray-400 mb-3">Endpoint: <code class="text-gray-300">POST /api/chat</code></p>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                    <div class="bg-black/50 border border-white/5 p-4 rounded-xl">
-                        <strong class="text-white block">Spark</strong>
-                        <span class="text-xs text-gray-500">100 calls/day. Ultra-fast text logic.</span>
+        <div class="space-y-16">
+            
+            <!-- THE 3 MODELS -->
+            <section>
+                <h3 class="text-2xl font-bold text-white mb-6 flex items-center gap-3"><i class="ph-fill ph-brain text-sky-400"></i> Part 1: The 3 Cognitive Models</h3>
+                <p class="text-gray-400 mb-6">When hitting the general <code class="text-sky-400">/api/chat</code> endpoint, you must specify the <code>modelId</code> to dictate the AI's behavior and intelligence level.</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-black border border-gray-800 p-6 rounded-2xl relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3"><i class="ph-fill ph-lightning text-amber-400 text-2xl opacity-20"></i></div>
+                        <strong class="text-amber-400 text-lg block mb-2">1. "spark"</strong>
+                        <p class="text-sm text-gray-400 mb-4">Ultra-low latency, blazing fast text generation. Perfect for rapid conversational apps.</p>
+                        <div class="text-xs font-mono text-gray-500 bg-gray-900 p-2 rounded">Limit: 100/day</div>
                     </div>
-                    <div class="bg-black/50 border border-white/5 p-4 rounded-xl">
-                        <strong class="text-white block">Flux</strong>
-                        <span class="text-xs text-gray-500">20 calls/day. Balanced coding & logic.</span>
+                    <div class="bg-black border border-gray-800 p-6 rounded-2xl relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3"><i class="ph-fill ph-drop text-sky-400 text-2xl opacity-20"></i></div>
+                        <strong class="text-sky-400 text-lg block mb-2">2. "flux"</strong>
+                        <p class="text-sm text-gray-400 mb-4">Balanced model tailored for coding, syntax, and complex logical formatting.</p>
+                        <div class="text-xs font-mono text-gray-500 bg-gray-900 p-2 rounded">Limit: 20/day</div>
                     </div>
-                    <div class="bg-black/50 border border-white/5 p-4 rounded-xl">
-                        <strong class="text-white block">Oracle</strong>
-                        <span class="text-xs text-gray-500">5 calls/day. Deep logic + Tavily Web Search.</span>
+                    <div class="bg-black border border-gray-800 p-6 rounded-2xl relative overflow-hidden">
+                        <div class="absolute top-0 right-0 p-3"><i class="ph-fill ph-hexagon text-purple-400 text-2xl opacity-20"></i></div>
+                        <strong class="text-purple-400 text-lg block mb-2">3. "oracle"</strong>
+                        <p class="text-sm text-gray-400 mb-4">The ultimate brain. Activates deep implicit reasoning and autonomous real-time Tavily Web Search.</p>
+                        <div class="text-xs font-mono text-gray-500 bg-gray-900 p-2 rounded">Limit: 5/day</div>
                     </div>
                 </div>
-                <div class="bg-black border border-white/10 rounded-xl p-4 overflow-x-auto">
-<pre><code class="text-sm text-emerald-400 font-mono">const response = await fetch('https://chatini-ai.vercel.app/api/chat', {
+            </section>
+
+            <!-- THE 7 FEATURES -->
+            <section>
+                <h3 class="text-2xl font-bold text-white mb-6 flex items-center gap-3"><i class="ph-fill ph-rocket-launch text-emerald-400"></i> Part 2: The 7 Feature Endpoints</h3>
+                <p class="text-gray-400 mb-8">LexisAI offers 7 completely distinct endpoints. Every request to any endpoint requires the <code class="text-sky-400">Authorization: Bearer Lexis-...</code> header.</p>
+
+                <div class="space-y-8">
+                    <!-- Feature 1 -->
+                    <div class="bg-[#030712] border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="bg-surface2 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                            <strong class="text-white font-bold text-lg"><span class="text-sky-500">1.</span> General Intelligence Stream</strong>
+                            <code class="text-xs bg-black px-2 py-1 rounded text-gray-400">POST /api/chat</code>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-400 mb-4">Streams standard SSE text responses. Requires a message array and a modelId.</p>
+                            <pre class="code-block"><code>const res = await fetch('https://chatini-ai.vercel.app/api/chat', {
   method: 'POST',
-  headers: {
-    'Authorization': 'Bearer Lexis-YOUR_API_KEY', // <-- Very Important!
-    'Content-Type': 'application/json'
-  },
+  headers: { 'Authorization': 'Bearer Lexis-YOUR_KEY', 'Content-Type': 'application/json' },
   body: JSON.stringify({
-    modelId: "oracle", // spark, flux, or oracle
-    messages: [{ role: "user", content: "Analyze the latest AI news." }]
+    modelId: "oracle", 
+    messages: [{ role: "user", content: "Who won the superbowl yesterday?" }]
   })
 });</code></pre>
-                </div>
-            </div>
+                        </div>
+                    </div>
 
-            <!-- Image Generation -->
-            <div>
-                <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="ph-fill ph-aperture text-pink-400"></i> 2. Image Generation</h3>
-                <p class="text-sm text-gray-400 mb-3">Endpoint: <code class="text-gray-300">POST /api/image</code>. Limit: 5 images/day.</p>
-                <div class="bg-black border border-white/10 rounded-xl p-4 overflow-x-auto">
-<pre><code class="text-sm text-pink-400 font-mono">const response = await fetch('https://chatini-ai.vercel.app/api/image', {
+                    <!-- Feature 2 -->
+                    <div class="bg-[#030712] border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="bg-surface2 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                            <strong class="text-white font-bold text-lg"><span class="text-pink-500">2.</span> High-Res Image Generation</strong>
+                            <code class="text-xs bg-black px-2 py-1 rounded text-gray-400">POST /api/image</code>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-400 mb-4">Generates images using Gemini 2.5 Flash Image. Supports modifiers: <code>--ar 16:9</code>, <code>--style cinematic</code>, <code>--style anime</code>, <code>--style 3d</code>.</p>
+                            <pre class="code-block"><code>const res = await fetch('https://chatini-ai.vercel.app/api/image', {
   method: 'POST',
-  headers: {
-    'Authorization': 'Bearer Lexis-YOUR_API_KEY',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({
-    prompt: "/imagine A cyberpunk city --ar 16:9 --style cinematic"
-  })
+  headers: { 'Authorization': 'Bearer Lexis-YOUR_KEY', 'Content-Type': 'application/json' },
+  body: JSON.stringify({ prompt: "A cyberpunk city in the rain --ar 16:9 --style cinematic" })
 });</code></pre>
-                </div>
-            </div>
+                        </div>
+                    </div>
 
-            <!-- Deep Features -->
-            <div>
-                <h3 class="text-xl font-bold text-white mb-2 flex items-center gap-2"><i class="ph-fill ph-lightning text-amber-400"></i> 3. Advanced Modules</h3>
-                <p class="text-sm text-gray-400 mb-3">Ping these endpoints with your API key to get massive JSON/HTML payloads generated entirely by the AI.</p>
-                <ul class="space-y-4 text-sm text-gray-300">
-                    <li class="bg-black/50 p-4 border border-white/5 rounded-xl">
-                        <strong class="text-emerald-400 block mb-1">Cartesian Graphs: <code>POST /api/maths</code> (10/day)</strong>
-                        Body: <code>{ "query": "Graph y = x^2" }</code>
-                    </li>
-                    <li class="bg-black/50 p-4 border border-white/5 rounded-xl">
-                        <strong class="text-orange-400 block mb-1">Web Apps: <code>POST /api/app-builder</code> (10/day)</strong>
-                        Body: <code>{ "prompt": "Code a calculator" }</code>
-                    </li>
-                    <li class="bg-black/50 p-4 border border-white/5 rounded-xl">
-                        <strong class="text-amber-400 block mb-1">Presentations: <code>POST /api/presentation</code> (3/day)</strong>
-                        Body: <code>{ "topic": "Q3 Report" }</code>
-                    </li>
-                    <li class="bg-black/50 p-4 border border-white/5 rounded-xl">
-                        <strong class="text-red-400 block mb-1">Deep Research: <code>POST /api/research</code> (1/day)</strong>
-                        Body: <code>{ "query": "Quantum physics analysis" }</code>
-                    </li>
-                </ul>
-            </div>
+                    <!-- Feature 3 -->
+                    <div class="bg-[#030712] border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="bg-surface2 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                            <strong class="text-white font-bold text-lg"><span class="text-emerald-500">3.</span> Cartesian Math Engine</strong>
+                            <code class="text-xs bg-black px-2 py-1 rounded text-gray-400">POST /api/maths</code>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-400 mb-4">Returns a compiled JSON payload containing axis ranges, parametric coordinates, and expressions for you to plot on an HTML Canvas.</p>
+                            <pre class="code-block"><code>// Body Payload
+{ "query": "Graph the trajectory of a rocket launch with wind resistance" }</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Feature 4 -->
+                    <div class="bg-[#030712] border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="bg-surface2 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                            <strong class="text-white font-bold text-lg"><span class="text-orange-500">4.</span> Web App Builder</strong>
+                            <code class="text-xs bg-black px-2 py-1 rounded text-gray-400">POST /api/app-builder</code>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-400 mb-4">Generates a massive, single-file HTML/CSS/JS web application based on the user's prompt using Tailwind.</p>
+                            <pre class="code-block"><code>// Body Payload
+{ "prompt": "Create a fully functional Pomodoro timer with a dark mode toggle" }</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Feature 5 -->
+                    <div class="bg-[#030712] border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="bg-surface2 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                            <strong class="text-white font-bold text-lg"><span class="text-amber-500">5.</span> Slide Deck Generator</strong>
+                            <code class="text-xs bg-black px-2 py-1 rounded text-gray-400">POST /api/presentation</code>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-400 mb-4">Returns a JSON schema containing slides, titles, bullet points, and AI-selected imagery layouts ready to be converted into .PPTX.</p>
+                            <pre class="code-block"><code>// Body Payload
+{ "topic": "Q3 Financial Earnings Report for Tesla" }</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Feature 6 -->
+                    <div class="bg-[#030712] border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="bg-surface2 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                            <strong class="text-white font-bold text-lg"><span class="text-red-500">6.</span> Deep Auto-Pilot Research</strong>
+                            <code class="text-xs bg-black px-2 py-1 rounded text-gray-400">POST /api/research</code>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-400 mb-4">Triggers an autonomous agent that scrapes the web, compiles massive data, and returns a hyper-condensed research JSON context.</p>
+                            <pre class="code-block"><code>// Body Payload
+{ "query": "Comprehensive analysis of quantum computing advancements in 2026" }</code></pre>
+                        </div>
+                    </div>
+
+                    <!-- Feature 7 -->
+                    <div class="bg-[#030712] border border-gray-800 rounded-2xl overflow-hidden">
+                        <div class="bg-surface2 px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                            <strong class="text-white font-bold text-lg"><span class="text-indigo-500">7.</span> Study Deck / Flashcards</strong>
+                            <code class="text-xs bg-black px-2 py-1 rounded text-gray-400">POST /api/study-deck</code>
+                        </div>
+                        <div class="p-6">
+                            <p class="text-sm text-gray-400 mb-4">Extracts key facts from text and returns a JSON array of Question/Answer flashcards.</p>
+                            <pre class="code-block"><code>// Body Payload
+{ "textContext": "Photosynthesis is the process used by plants... [long text here]" }</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
-
-    <!-- Toast Notification -->
-    <div id="toast" class="fixed bottom-5 bg-cyan-500 text-black px-6 py-3 rounded-full text-sm font-bold shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300 opacity-0 translate-y-10 pointer-events-none z-50">Copied!</div>
 
     <script>
         let currentUserMemoryPwd = "";
         let currentApiKey = "";
 
-        // UI Helpers
         function switchTab(tab) {
             document.getElementById('form-login').classList.add('hidden');
             document.getElementById('form-register').classList.add('hidden');
-            document.getElementById('tab-login').className = "flex-1 pb-3 text-sm font-bold tab-inactive transition-colors";
-            document.getElementById('tab-register').className = "flex-1 pb-3 text-sm font-bold tab-inactive transition-colors";
+            document.getElementById('tab-login').className = "flex-1 pb-4 text-sm font-bold tab-inactive transition-colors";
+            document.getElementById('tab-register').className = "flex-1 pb-4 text-sm font-bold tab-inactive transition-colors";
             
             document.getElementById(`form-${tab}`).classList.remove('hidden');
-            document.getElementById(`tab-${tab}`).className = "flex-1 pb-3 text-sm font-bold tab-active transition-colors";
+            document.getElementById(`tab-${tab}`).className = "flex-1 pb-4 text-sm font-bold tab-active transition-colors";
         }
 
         function showToast(msg) {
@@ -247,22 +322,30 @@
             setTimeout(() => toast.classList.add('opacity-0', 'translate-y-10'), 2500);
         }
 
+        // STRICT HARDWARE LOCKING
         function getDeviceId() {
-            let id = localStorage.getItem('lexis_hw_id');
+            let id = localStorage.getItem('lexis_hw_id_v2');
             if (!id) {
                 const entropy = navigator.hardwareConcurrency + "-" + screen.width + "x" + screen.height + "-" + Math.random().toString(36);
                 id = btoa(entropy).replace(/=/g, '');
-                localStorage.setItem('lexis_hw_id', id);
+                localStorage.setItem('lexis_hw_id_v2', id);
             }
             return id;
         }
 
-        // Authentication Matrix
         async function handleAuth(action) {
             const errEl = document.getElementById('auth-error');
             const btn = document.getElementById(`btn-${action}`);
             errEl.classList.add('hidden');
             btn.innerText = "Processing...";
+
+            // Check if device already registered a key locally to prevent spam
+            if (action === 'register' && localStorage.getItem('lexis_account_created')) {
+                errEl.innerText = "HARDWARE LOCK: This device has already registered a @lexis.ai account. Please sign in.";
+                errEl.classList.remove('hidden');
+                btn.innerText = "Mint API Key";
+                return;
+            }
 
             let payload = { action: action };
             
@@ -284,7 +367,8 @@
                 const data = await res.json();
 
                 if (res.ok && data.success) {
-                    currentUserMemoryPwd = payload.password; // Keep in RAM for vault reveal
+                    if (action === 'register') localStorage.setItem('lexis_account_created', 'true');
+                    currentUserMemoryPwd = payload.password; 
                     currentApiKey = data.apiKey;
                     loadDashboard(data.config);
                 } else {
@@ -296,7 +380,7 @@
                 errEl.classList.remove('hidden');
             }
             
-            btn.innerText = action === 'register' ? "Mint API Key" : "Sign In";
+            btn.innerText = action === 'register' ? "Mint API Key" : "Access Gateway";
         }
 
         function loadDashboard(config) {
@@ -307,27 +391,31 @@
             
             const statusEl = document.getElementById('dash-status');
             if(config.status === 'blocked') {
-                statusEl.className = "text-[10px] px-2 py-1 bg-red-500/20 text-red-400 rounded";
+                statusEl.className = "px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-full text-[10px] font-bold tracking-widest";
                 statusEl.innerText = "BLOCKED BY ADMIN";
             } else {
-                statusEl.className = "text-[10px] px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded";
-                statusEl.innerText = "ACTIVE";
+                statusEl.className = "px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-bold tracking-widest";
+                statusEl.innerText = "ACTIVE STATUS";
             }
 
-            // Build Limits List
             let limitsHtml = "";
-            const models = config.limits.models || {};
-            const feats = config.limits.features || {};
+            const m = config.limits.models || {};
+            const f = config.limits.features || {};
             
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>Spark Model</span> <span class="text-cyan-400">${models.spark||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>Flux Model</span> <span class="text-cyan-400">${models.flux||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>Oracle (Search)</span> <span class="text-purple-400">${models.oracle||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>General Chat</span> <span class="text-gray-400">${feats.chat||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>Maths/Graphs</span> <span class="text-emerald-400">${feats.maths||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>App Builder</span> <span class="text-orange-400">${feats.app||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>Image Gen</span> <span class="text-pink-400">${feats.image||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between border-b border-white/5 pb-1"><span>Slide Decks</span> <span class="text-amber-400">${feats.slides||0}/day</span></div>`;
-            limitsHtml += `<div class="flex justify-between"><span>Deep Research</span> <span class="text-red-400">${feats.research||0}/day</span></div>`;
+            const row = (name, val, color) => `<div class="flex justify-between items-center bg-[#030712] p-3 rounded-lg border border-gray-800"><span>${name}</span> <span class="font-bold text-${color} bg-${color}/10 px-2 py-0.5 rounded">${val}/day</span></div>`;
+
+            limitsHtml += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">`;
+            limitsHtml += row('Spark Model', m.spark||0, 'amber-400');
+            limitsHtml += row('Flux Model', m.flux||0, 'sky-400');
+            limitsHtml += row('Oracle (Search)', m.oracle||0, 'purple-400');
+            limitsHtml += row('General Chat', f.chat||0, 'gray-300');
+            limitsHtml += row('Image Gen', f.image||0, 'pink-400');
+            limitsHtml += row('Deep Research', f.research||0, 'red-400');
+            limitsHtml += row('Slide Decks', f.slides||0, 'amber-500');
+            limitsHtml += row('Maths/Graphs', f.maths||0, 'emerald-400');
+            limitsHtml += row('App Builder', f.app||0, 'orange-400');
+            limitsHtml += row('Study Decks', f.study||0, 'indigo-400');
+            limitsHtml += `</div>`;
             
             document.getElementById('limits-container').innerHTML = limitsHtml;
         }
@@ -338,31 +426,31 @@
             const display = document.getElementById('api-key-display');
 
             if (pwdInput === currentUserMemoryPwd) {
-                if (display.classList.contains('blur-sm')) {
+                if (display.classList.contains('blur-md')) {
                     display.innerText = currentApiKey;
-                    display.classList.remove('blur-sm', 'select-none');
-                    msg.innerText = "Key Revealed. Keep it safe.";
-                    msg.className = "text-xs mt-2 text-emerald-400";
+                    display.classList.remove('blur-md', 'select-none');
+                    msg.innerText = "Vault Decrypted. Keep your key safe.";
+                    msg.className = "text-xs font-bold mt-3 text-emerald-400";
                 } else {
-                    display.innerText = "Lexis-" + "*".repeat(24);
-                    display.classList.add('blur-sm', 'select-none');
-                    msg.innerText = "Key Hidden.";
-                    msg.className = "text-xs mt-2 text-gray-500";
+                    display.innerText = "Lexis-" + "*".repeat(32);
+                    display.classList.add('blur-md', 'select-none');
+                    msg.innerText = "Vault Locked.";
+                    msg.className = "text-xs font-bold mt-3 text-gray-500";
                 }
                 document.getElementById('vault-password').value = "";
             } else {
-                msg.innerText = "Incorrect Password!";
-                msg.className = "text-xs mt-2 text-red-400";
+                msg.innerText = "Cryptographic mismatch. Incorrect Password!";
+                msg.className = "text-xs font-bold mt-3 text-red-400";
             }
         }
 
         function copyKey() {
-            if (document.getElementById('api-key-display').classList.contains('blur-sm')) {
-                showToast("Reveal your key first!");
+            if (document.getElementById('api-key-display').classList.contains('blur-md')) {
+                showToast("Decrypt vault first!");
                 return;
             }
             navigator.clipboard.writeText(currentApiKey);
-            showToast("API Key Copied to Clipboard!");
+            showToast("Copied to Clipboard!");
         }
 
         function logout() {
@@ -372,7 +460,7 @@
             document.getElementById('dashboard-section').classList.add('hidden');
             document.getElementById('log-password').value = "";
             document.getElementById('reg-password').value = "";
-            showToast("Logged out successfully.");
+            showToast("Session Terminated.");
         }
     </script>
 </body>
