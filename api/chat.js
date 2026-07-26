@@ -4,6 +4,10 @@ export const config = {
     runtime: 'edge', 
 };
 
+// Supabase HD-Extraction Credentials
+const SUPABASE_URL = "https://vvcpdfdofihdmzshglxr.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ";
+
 // Aggressive context compressor to prevent token-limit crashes on massive attachments
 function hyperCondense(text, maxChars) {
     if (!text || text.length <= maxChars) return text;
@@ -22,6 +26,48 @@ function hyperCondense(text, maxChars) {
         const bottom = Math.floor(charsPerBlock * 0.3);
         return block.substring(0, top) + "\n...[TRUNC]...\n" + block.substring(block.length - bottom);
     }).join('\n');
+}
+
+// FINAL BYPASS OPTION: High-Density Local Extraction for >600k tokens if Supabase fails
+function advancedHDBypass(text, query, maxChars) {
+    if (!text || text.length <= maxChars) return text;
+    
+    // 1. Extract keywords from user query
+    const keywords = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
+    if (keywords.length === 0) return hyperCondense(text, maxChars);
+
+    // 2. Chunk text into manageable blocks (~10,000 chars) to simulate vector windows
+    const chunks = text.match(/[\s\S]{1,10000}(?=\s|$)/g) || [text];
+    
+    // 3. Score chunks based on keyword proximity and density
+    const scoredChunks = chunks.map((chunk, index) => {
+        const lowerChunk = chunk.toLowerCase();
+        let score = 0;
+        keywords.forEach(kw => {
+            let occurrences = (lowerChunk.match(new RegExp(kw, 'g')) || []).length;
+            score += occurrences * (kw.length); // Weight longer keywords heavier
+        });
+        // Slight boost to earlier chunks (often abstracts/intros)
+        if (index < 5) score += 5; 
+        return { chunk, score };
+    });
+
+    // 4. Sort by score descending (highest density first)
+    scoredChunks.sort((a, b) => b.score - a.score);
+
+    // 5. Reassemble top chunks until safely under maxChars
+    let result = "--- SYSTEM: LOCAL HD BYPASS ACTIVATED (High Density Chunks) ---\n";
+    for (const item of scoredChunks) {
+        if (item.score === 0 && result.length > maxChars * 0.5) continue; // Skip zero-score chunks if we have enough data
+        
+        if (result.length + item.chunk.length > maxChars) {
+            result += "\n" + item.chunk.substring(0, maxChars - result.length) + "...[TRUNC]...";
+            break;
+        }
+        result += "\n...\n" + item.chunk;
+    }
+
+    return result;
 }
 
 export default async function handler(req) {
@@ -205,9 +251,71 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                 }
 
-                // Hyper-Condense Context
-                const MAX_CHARS = modelId === 'oracle' ? 150000 : (modelId === 'spark' ? 15000 : 80000); 
-                const condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
+                // ====================================================================
+                // PHASE 3.5: SUPABASE HD-EXTRACTION ALGORITHM (> 600k Tokens Threshold)
+                // ====================================================================
+                let condensedKnowledge = "";
+                // Approximate tokens = characters / 4
+                const tokenEstimate = Math.ceil(massiveKnowledgeBase.length / 4);
+
+                if (tokenEstimate > 600000 && modelId !== 'spark') {
+                    if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-fuchsia-500/30 text-fuchsia-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-database"></i> 4M+ Token Threshold Detected. Engaging HD-Extraction...</div>`);
+                    
+                    try {
+                        // Step 1: Groq Intent Extraction (Llama-3.1-8b)
+                        let searchIntents = userQuery;
+                        if (GROQ_KEY) {
+                            try {
+                                const intentRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                                    method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        model: 'llama-3.1-8b-instant',
+                                        messages: [{ role: 'system', content: 'Extract 3-5 core search keywords from the query. Return ONLY space-separated keywords.' }, { role: 'user', content: userQuery }],
+                                        temperature: 0.1
+                                    })
+                                });
+                                if (intentRes.ok) {
+                                    const intentData = await intentRes.json();
+                                    searchIntents = intentData.choices[0].message.content.trim();
+                                }
+                            } catch(e) {} // Fallback to raw user query if Groq fails
+                        }
+
+                        // Step 2: Query Supabase pgvector (Try-Catch Loop for absolute fail-safety)
+                        let supaSuccess = false;
+                        for (let attempt = 1; attempt <= 2; attempt++) {
+                            try {
+                                const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/rpc/match_chunks`, {
+                                    method: 'POST', 
+                                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ query_text: searchIntents, match_threshold: 0.70, match_count: 1500 })
+                                });
+                                
+                                if (supaRes.ok) {
+                                    const data = await supaRes.json();
+                                    if (data && data.length > 0) {
+                                        condensedKnowledge = JSON.stringify(data);
+                                        supaSuccess = true;
+                                        if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Supabase HD-Extraction Successful. Context highly compressed.</div>`);
+                                        break;
+                                    }
+                                }
+                            } catch(e) { } // Silent catch for retry
+                        }
+
+                        // FINAL BYPASS OPTION: If Supabase fails (e.g. dynamic live uploads not yet indexed in DB)
+                        if (!supaSuccess) throw new Error("Supabase unavailable or empty for this specific dataset.");
+
+                    } catch (err) {
+                        // Local HD Bypass Strategy (Squeezes on the fly in Edge memory)
+                        if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-amber-500/30 text-amber-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-warning"></i> Engaging Local HD Bypass Matrix...</div>`);
+                        condensedKnowledge = advancedHDBypass(massiveKnowledgeBase, userQuery, 2400000); // 2.4M chars safely fits under 600k tokens
+                    }
+                } else {
+                    // Standard Hyper-Condense for normal queries or Spark
+                    const MAX_CHARS = modelId === 'oracle' ? 150000 : (modelId === 'spark' ? 15000 : 80000); 
+                    condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
+                }
 
                 if (condensedKnowledge.trim().length > 0) {
                     systemPrompt += `\n\n[KNOWLEDGE BASE (HYPER-CONDENSED)]:\n${condensedKnowledge}\n\n[CRITICAL: Base your answer on the above data and expand deeply.]`;
@@ -377,5 +485,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
 }
-
 
