@@ -3,99 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LexisAI | Admin</title>
+    <title>LexisAI | Admin Command Center</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
-            theme: { extend: { colors: { background: '#050505', surface: '#0f0f0f', border: '#1f1f1f', primary: '#22d3ee' } } }
+            theme: {
+                extend: {
+                    colors: { background: '#f8fafc', surface: '#ffffff', border: '#e5e7eb', darkbg: '#0f172a', darksurf: '#1e293b' },
+                    fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] }
+                }
+            }
         }
     </script>
     <style>
-        body { background-color: #050505; color: #ededed; font-family: 'Inter', system-ui, sans-serif; }
-        .glass-card { background: #0f0f0f; border: 1px solid #1f1f1f; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
+        body { background-color: #0f172a; color: #f1f5f9; }
+        .saas-card { background: #1e293b; border: 1px solid #334155; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3); border-radius: 1rem; }
+        .table-row:hover { background-color: rgba(255,255,255,0.03); }
     </style>
 </head>
-<body class="min-h-screen selection:bg-cyan-500/30 flex flex-col">
+<body class="min-h-screen font-sans selection:bg-sky-500/30 flex flex-col">
 
     <!-- LOGIN SCREEN -->
     <div id="login-screen" class="flex-1 flex items-center justify-center p-4">
-        <div class="glass-card p-8 rounded-2xl max-w-sm w-full text-center">
-            <div class="w-12 h-12 bg-cyan-500/10 border border-cyan-500/20 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <i class="ph-bold ph-shield-check text-2xl text-cyan-400"></i>
+        <div class="saas-card p-10 max-w-sm w-full text-center">
+            <div class="w-14 h-14 bg-sky-500/10 border border-sky-500/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <i class="ph-bold ph-shield-check text-3xl text-sky-400"></i>
             </div>
-            <h1 class="text-xl font-bold text-white mb-2">LexisAI Admin</h1>
-            <p class="text-sm text-gray-500 mb-6">Enter root password to access global user telemetry.</p>
+            <h1 class="text-2xl font-extrabold text-white mb-2">Lexis Admin</h1>
+            <p class="text-sm text-gray-400 mb-8">Secure root access required.</p>
             
-            <input type="password" id="admin-pwd" class="w-full bg-[#050505] border border-border rounded-xl px-4 py-3 text-white text-center mb-4" placeholder="Password" onkeypress="if(event.key === 'Enter') authenticate()">
+            <input type="password" id="admin-pwd" class="w-full bg-[#0f172a] border border-gray-700 rounded-xl px-4 py-3.5 text-white text-center mb-6 focus:border-sky-500 outline-none transition-colors" placeholder="Master Password" onkeypress="if(event.key === 'Enter') authenticate()">
             
-            <button onclick="authenticate()" id="btn-login" class="w-full bg-white text-black hover:bg-gray-200 font-bold py-3 rounded-xl transition-colors">Authorize Access</button>
-            <p id="login-error" class="text-red-400 text-sm mt-4 hidden"></p>
+            <button onclick="authenticate()" id="btn-login" class="w-full bg-white text-black hover:bg-gray-200 font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-white/10">Authorize Access</button>
+            <p id="login-error" class="text-red-400 text-sm font-medium mt-5 hidden"></p>
         </div>
     </div>
 
     <!-- MAIN DASHBOARD -->
-    <div id="dashboard" class="hidden flex-col min-h-screen w-full pb-10">
+    <div id="dashboard" class="hidden flex-col min-h-screen w-full pb-12">
         
         <!-- Navbar -->
-        <header class="border-b border-border bg-surface px-6 py-4 flex items-center justify-between sticky top-0 z-20 shadow-lg">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-purple-500 rounded-lg flex items-center justify-center">
-                    <i class="ph-bold ph-cpu text-white"></i>
-                </div>
-                <h1 class="text-lg font-bold text-white tracking-tight">Root Telemetry</h1>
-            </div>
+        <header class="border-b border-gray-800 bg-[#1e293b] px-8 py-5 flex items-center justify-between sticky top-0 z-20 shadow-md">
             <div class="flex items-center gap-4">
-                <button onclick="fetchData()" class="text-xs bg-white/5 hover:bg-white/10 border border-border px-3 py-1.5 rounded text-gray-300 transition-colors flex items-center gap-2">
-                    <i class="ph-bold ph-arrows-clockwise"></i> Refresh DB
+                <div class="w-10 h-10 bg-gradient-to-tr from-sky-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg">
+                    <i class="ph-bold ph-cpu text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-white tracking-tight leading-tight">LexisAI SaaS Platform</h1>
+                    <p class="text-[10px] text-sky-400 font-mono uppercase tracking-widest">Global Telemetry Link Active</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-5">
+                <button onclick="fetchData()" class="text-sm bg-gray-800 hover:bg-gray-700 border border-gray-700 px-4 py-2 rounded-lg text-gray-300 transition-colors flex items-center gap-2 font-medium">
+                    <i class="ph-bold ph-arrows-clockwise"></i> Sync Database
                 </button>
-                <button onclick="location.reload()" class="text-sm text-red-400 hover:text-red-300 transition-colors font-bold">Terminate Session</button>
+                <button onclick="location.reload()" class="text-sm text-red-400 hover:text-red-300 transition-colors font-bold flex items-center gap-1.5"><i class="ph-bold ph-power"></i> Terminate</button>
             </div>
         </header>
 
-        <!-- KPI Grid -->
-        <main class="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="glass-card p-5 rounded-2xl">
-                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total System Calls</p>
-                    <span id="stat-total" class="text-3xl font-bold text-white">0</span>
+        <main class="flex-1 p-8 max-w-[1400px] mx-auto w-full space-y-8">
+            
+            <!-- KPI Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div class="saas-card p-6 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-sky-500/10"><i class="ph-fill ph-globe-hemisphere-east text-9xl"></i></div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-2 z-10">Total API Calls</p>
+                    <span id="stat-total" class="text-4xl font-extrabold text-white z-10">0</span>
                 </div>
-                <div class="glass-card p-5 rounded-2xl">
-                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Successful Executes</p>
-                    <span id="stat-success" class="text-3xl font-bold text-emerald-400">0</span>
+                <div class="saas-card p-6 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-emerald-500/10"><i class="ph-fill ph-check-circle text-9xl"></i></div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-2 z-10">Successful Renders</p>
+                    <span id="stat-success" class="text-4xl font-extrabold text-emerald-400 z-10">0</span>
                 </div>
-                <div class="glass-card p-5 rounded-2xl">
-                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Firewall Blocks</p>
-                    <span id="stat-errors" class="text-3xl font-bold text-red-400">0</span>
+                <div class="saas-card p-6 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-red-500/10"><i class="ph-fill ph-shield-warning text-9xl"></i></div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-2 z-10">Firewall Blocks</p>
+                    <span id="stat-errors" class="text-4xl font-extrabold text-red-400 z-10">0</span>
                 </div>
-                <div class="glass-card p-5 rounded-2xl">
-                    <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total Active Devs</p>
-                    <span id="stat-users" class="text-3xl font-bold text-cyan-400">0</span>
+                <div class="saas-card p-6 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-indigo-500/10"><i class="ph-fill ph-users-three text-9xl"></i></div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-widest mb-2 z-10">Registered Devs</p>
+                    <span id="stat-users" class="text-4xl font-extrabold text-indigo-400 z-10">0</span>
                 </div>
             </div>
 
-            <!-- User Management Table -->
-            <div class="glass-card rounded-2xl overflow-hidden">
-                <div class="p-6 border-b border-border bg-[#0a0a0a]">
-                    <h2 class="text-lg font-bold text-white flex items-center gap-2"><i class="ph-fill ph-users-three text-purple-400"></i> API User Management</h2>
-                    <p class="text-sm text-gray-500">Monitor external apps, view their end-user counts, block abusers, and override limits.</p>
+            <!-- Developer Management Table -->
+            <div class="saas-card overflow-hidden">
+                <div class="p-6 border-b border-gray-800 bg-[#162032] flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2"><i class="ph-fill ph-database text-sky-400"></i> Client Ecosystem</h2>
+                        <p class="text-sm text-gray-400 mt-1">Manage API keys, track end-users, and adjust exact quotas per developer.</p>
+                    </div>
                 </div>
                 
                 <div class="overflow-x-auto">
                     <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="text-gray-400 bg-[#050505] border-b border-border">
+                        <thead class="text-gray-400 bg-[#0f172a] border-b border-gray-800">
                             <tr>
-                                <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">Account & Website</th>
-                                <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs">API Key</th>
-                                <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">End-Users</th>
-                                <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-center">Status</th>
-                                <th class="px-6 py-4 font-medium uppercase tracking-wider text-xs text-right">Admin Actions</th>
+                                <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs">Account ID</th>
+                                <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs">API Key (Encrypted)</th>
+                                <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs text-center">End-Users Logged</th>
+                                <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs text-center">Status</th>
+                                <th class="px-6 py-4 font-bold uppercase tracking-wider text-xs text-right">Admin Override</th>
                             </tr>
                         </thead>
-                        <tbody id="user-table-body" class="text-gray-200 divide-y divide-border">
-                            <!-- Injected dynamically -->
-                            <tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">Fetching telemetry from Upstash...</td></tr>
+                        <tbody id="user-table-body" class="text-gray-300 divide-y divide-gray-800">
+                            <tr><td colspan="5" class="px-6 py-12 text-center text-gray-500"><i class="ph-bold ph-spinner animate-spin text-2xl mb-2"></i><br>Pulling telemetry from Upstash...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -103,44 +118,52 @@
         </main>
     </div>
 
-    <!-- Edit Limits Modal -->
-    <div id="edit-modal" class="fixed inset-0 bg-black/90 backdrop-blur-sm z-50 hidden flex-items-center justify-center p-4 pt-20 overflow-y-auto">
-        <div class="glass-card rounded-2xl p-6 w-full max-w-md my-auto relative">
-            <h2 class="text-xl font-bold text-white mb-2">Edit User Limits</h2>
-            <p id="edit-modal-email" class="text-sm text-cyan-400 mb-6 font-mono"></p>
+    <!-- Admin Edit Modal -->
+    <div id="edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex-items-center justify-center p-4 pt-10 overflow-y-auto">
+        <div class="saas-card p-8 w-full max-w-2xl my-auto relative shadow-2xl shadow-sky-500/10">
+            <button onclick="closeModal()" class="absolute top-6 right-6 text-gray-400 hover:text-white"><i class="ph-bold ph-x text-xl"></i></button>
+            
+            <h2 class="text-2xl font-bold text-white mb-1">Override Quotas</h2>
+            <p id="edit-modal-email" class="text-sm text-sky-400 mb-8 font-mono bg-sky-500/10 w-fit px-3 py-1 rounded"></p>
             
             <input type="hidden" id="edit-api-key">
 
-            <div class="space-y-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <!-- Models -->
-                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 border-b border-border pb-1">AI Models (Per Day)</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs text-gray-400 block mb-1">Spark</label><input type="number" id="mod-spark" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
-                    <div><label class="text-xs text-gray-400 block mb-1">Flux</label><input type="number" id="mod-flux" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
-                    <div><label class="text-xs text-gray-400 block mb-1">Oracle</label><input type="number" id="mod-oracle" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-sky-500 border-b border-gray-700 pb-2 mb-4 flex items-center gap-2"><i class="ph-fill ph-brain"></i> AI Models (Per Day)</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Spark (Fast)</label><input type="number" id="mod-spark" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-sky-500 text-center font-mono"></div>
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Flux (Balanced)</label><input type="number" id="mod-flux" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-sky-500 text-center font-mono"></div>
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Oracle (Search)</label><input type="number" id="mod-oracle" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-sky-500 text-center font-mono"></div>
+                    </div>
                 </div>
 
                 <!-- Features -->
-                <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 border-b border-border pb-1 mt-6">Features (Per Day)</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="text-xs text-gray-400 block mb-1">General Chat</label><input type="number" id="feat-chat" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
-                    <div><label class="text-xs text-gray-400 block mb-1">Image Gen</label><input type="number" id="feat-img" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
-                    <div><label class="text-xs text-gray-400 block mb-1">Deep Research</label><input type="number" id="feat-res" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
-                    <div><label class="text-xs text-gray-400 block mb-1">Slide Decks</label><input type="number" id="feat-slides" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
-                    <div><label class="text-xs text-gray-400 block mb-1">Maths/Graphs</label><input type="number" id="feat-math" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
-                    <div><label class="text-xs text-gray-400 block mb-1">App Builder</label><input type="number" id="feat-app" class="w-full bg-[#050505] border border-border rounded p-2 text-white outline-none"></div>
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-emerald-500 border-b border-gray-700 pb-2 mb-4 flex items-center gap-2"><i class="ph-fill ph-rocket-launch"></i> Features (Per Day)</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Chat Core</label><input type="number" id="feat-chat" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-emerald-500 text-center font-mono"></div>
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Image Gen</label><input type="number" id="feat-img" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-emerald-500 text-center font-mono"></div>
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Deep Research</label><input type="number" id="feat-res" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-emerald-500 text-center font-mono"></div>
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Slide Decks</label><input type="number" id="feat-slides" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-emerald-500 text-center font-mono"></div>
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">Maths/Graphs</label><input type="number" id="feat-math" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-emerald-500 text-center font-mono"></div>
+                        <div class="flex items-center justify-between"><label class="text-sm text-gray-300 font-medium">App Builder</label><input type="number" id="feat-app" class="w-24 bg-[#0f172a] border border-gray-700 rounded-lg p-2 text-white outline-none focus:border-emerald-500 text-center font-mono"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="flex justify-end gap-3">
-                <button onclick="closeModal()" class="px-4 py-2 rounded-lg text-sm text-gray-400 hover:bg-white/5 transition-colors">Cancel</button>
-                <button onclick="saveLimits()" id="btn-save-limits" class="bg-cyan-600 hover:bg-cyan-500 text-white px-6 py-2 rounded-lg text-sm font-bold transition-colors">Save Overrides</button>
+            <div class="flex justify-end gap-3 pt-6 border-t border-gray-800">
+                <button onclick="closeModal()" class="px-6 py-3 rounded-xl text-sm font-bold text-gray-400 hover:bg-white/5 transition-colors">Cancel</button>
+                <button onclick="saveLimits()" id="btn-save-limits" class="bg-sky-500 hover:bg-sky-400 text-white px-8 py-3 rounded-xl text-sm font-bold transition-colors shadow-lg shadow-sky-500/20">Commit Overrides</button>
             </div>
         </div>
     </div>
 
-    <!-- Toast -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-emerald-500 text-black px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all duration-300 opacity-0 translate-y-10 pointer-events-none z-50">Action Success!</div>
+    <!-- Action Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-emerald-500 text-black px-8 py-4 rounded-2xl text-sm font-extrabold shadow-2xl transition-all duration-300 opacity-0 translate-y-10 pointer-events-none z-[100] flex items-center gap-3">
+        <i class="ph-bold ph-check-circle text-xl"></i> <span id="toast-msg">Success!</span>
+    </div>
 
     <script>
         let adminSecret = "";
@@ -148,8 +171,16 @@
 
         function showToast(msg, isError=false) {
             const toast = document.getElementById('toast');
-            toast.innerText = msg;
-            toast.className = `fixed bottom-5 right-5 ${isError ? 'bg-red-500 text-white' : 'bg-emerald-500 text-black'} px-6 py-3 rounded-xl text-sm font-bold shadow-lg transition-all duration-300 z-50`;
+            document.getElementById('toast-msg').innerText = msg;
+            
+            if(isError) {
+                toast.className = `fixed bottom-6 right-6 bg-red-500 text-white px-8 py-4 rounded-2xl text-sm font-extrabold shadow-2xl transition-all duration-300 z-[100] flex items-center gap-3`;
+                toast.innerHTML = `<i class="ph-bold ph-warning-circle text-xl"></i> <span id="toast-msg">${msg}</span>`;
+            } else {
+                toast.className = `fixed bottom-6 right-6 bg-emerald-400 text-black px-8 py-4 rounded-2xl text-sm font-extrabold shadow-2xl transition-all duration-300 z-[100] flex items-center gap-3`;
+                toast.innerHTML = `<i class="ph-bold ph-check-circle text-xl"></i> <span id="toast-msg">${msg}</span>`;
+            }
+
             toast.classList.remove('opacity-0', 'translate-y-10');
             setTimeout(() => toast.classList.add('opacity-0', 'translate-y-10'), 3000);
         }
@@ -180,7 +211,7 @@
                     err.classList.remove('hidden');
                 }
             } catch (error) {
-                err.innerText = "Backend Connection Failed.";
+                err.innerText = "Database Connection Failed.";
                 err.classList.remove('hidden');
             }
             btn.innerText = "Authorize Access";
@@ -199,54 +230,55 @@
         }
 
         function renderDashboard(data) {
-            // Stats
             document.getElementById('stat-total').innerText = (data.analytics.totalRequests || "0").toLocaleString();
             document.getElementById('stat-success').innerText = (data.analytics.totalSuccess || "0").toLocaleString();
             document.getElementById('stat-errors').innerText = (data.analytics.totalErrors || "0").toLocaleString();
             document.getElementById('stat-users').innerText = (data.users ? data.users.length : "0").toLocaleString();
 
-            // Users Table
             activeUsersData = data.users || [];
             const tbody = document.getElementById('user-table-body');
             
             if (activeUsersData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-gray-500">No developer accounts registered yet.</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-500 font-medium">No developers registered in database.</td></tr>`;
                 return;
             }
 
             tbody.innerHTML = activeUsersData.map(u => {
                 const isBlocked = u.status === 'blocked';
                 const statusBadge = isBlocked 
-                    ? `<span class="px-2.5 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-full text-[10px] font-bold tracking-widest">BLOCKED</span>` 
-                    : `<span class="px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full text-[10px] font-bold tracking-widest">ACTIVE</span>`;
+                    ? `<span class="px-3 py-1 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-xs font-bold shadow-inner flex items-center gap-1.5 w-fit mx-auto"><span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> SUSPENDED</span>` 
+                    : `<span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-bold shadow-inner flex items-center gap-1.5 w-fit mx-auto"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> ACTIVE</span>`;
                 
                 const toggleAction = isBlocked ? 'active' : 'blocked';
-                const toggleColor = isBlocked ? 'text-emerald-400 hover:text-emerald-300' : 'text-red-400 hover:text-red-300';
+                const toggleColor = isBlocked ? 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border-emerald-500/20' : 'text-red-400 hover:text-red-300 hover:bg-red-500/10 border-red-500/20';
                 const toggleIcon = isBlocked ? 'ph-check-circle' : 'ph-x-circle';
-                const toggleText = isBlocked ? 'Unblock' : 'Block API';
+                const toggleText = isBlocked ? 'Unblock' : 'Suspend';
 
                 return `
-                <tr class="hover:bg-white/[0.02] transition-colors group">
-                    <td class="px-6 py-4">
-                        <div class="font-bold text-white mb-0.5">${u.email}</div>
-                        <div class="text-[10px] text-cyan-400 font-mono flex items-center gap-1"><i class="ph-bold ph-link"></i> ${u.website || "No site provided"}</div>
+                <tr class="table-row border-b border-gray-800 transition-colors">
+                    <td class="px-6 py-5">
+                        <div class="font-extrabold text-white text-base">${u.email}</div>
+                        <div class="text-[11px] text-gray-500 font-medium mt-1 flex items-center gap-1.5"><i class="ph-bold ph-link text-sky-400"></i> ${u.website || "Local App"}</div>
                     </td>
-                    <td class="px-6 py-4 font-mono text-xs text-gray-400 blur-sm group-hover:blur-none transition-all duration-300 select-all">${u.apiKey}</td>
-                    <td class="px-6 py-4 text-center">
-                        <span class="bg-[#111] border border-border px-3 py-1 rounded-lg font-mono text-purple-400">${u.endUsersVisitingApp}</span>
+                    <td class="px-6 py-5">
+                        <div class="bg-[#030712] border border-gray-800 px-3 py-1.5 rounded-lg text-xs font-mono text-sky-400 w-fit">
+                            <span class="blur-sm hover:blur-none transition-all duration-300 select-all cursor-pointer">Lexis-******************</span>
+                        </div>
                     </td>
-                    <td class="px-6 py-4 text-center">${statusBadge}</td>
-                    <td class="px-6 py-4 text-right space-x-3">
-                        <button onclick="openEditModal('${u.apiKey}')" class="text-blue-400 hover:text-blue-300 font-medium text-xs transition-colors"><i class="ph-bold ph-pencil-simple"></i> Edit Limits</button>
-                        <button onclick="toggleUserStatus('${u.apiKey}', '${toggleAction}')" class="${toggleColor} font-bold text-xs transition-colors"><i class="ph-bold ${toggleIcon}"></i> ${toggleText}</button>
+                    <td class="px-6 py-5 text-center">
+                        <span class="bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 px-4 py-1.5 rounded-lg font-mono text-sm font-bold shadow-inner">${u.endUsersVisitingApp}</span>
+                    </td>
+                    <td class="px-6 py-5 text-center">${statusBadge}</td>
+                    <td class="px-6 py-5 text-right space-x-2">
+                        <button onclick="openEditModal('${u.apiKey}')" class="text-sky-400 hover:text-sky-300 bg-surface border border-gray-700 hover:border-sky-500/50 px-3 py-2 rounded-lg font-bold text-xs transition-all shadow-sm"><i class="ph-bold ph-faders"></i> Edit Quotas</button>
+                        <button onclick="toggleUserStatus('${u.apiKey}', '${toggleAction}')" class="${toggleColor} bg-surface border px-3 py-2 rounded-lg font-bold text-xs transition-all shadow-sm"><i class="ph-bold ${toggleIcon}"></i> ${toggleText}</button>
                     </td>
                 </tr>`;
             }).join("");
         }
 
-        // Action: Toggle Block/Active
         async function toggleUserStatus(apiKey, newStatus) {
-            if(!confirm(`Are you sure you want to ${newStatus === 'blocked' ? 'BLOCK' : 'UNBLOCK'} this account?`)) return;
+            if(!confirm(`SYSTEM OVERRIDE:\nAre you sure you want to ${newStatus === 'blocked' ? 'SUSPEND' : 'UNBLOCK'} this account?`)) return;
             
             try {
                 const res = await fetch('/api/keys', {
@@ -255,18 +287,17 @@
                 });
                 if (res.ok) {
                     showToast(`Account successfully ${newStatus}!`);
-                    fetchData(); // Refresh UI
-                } else { showToast("Failed to modify user.", true); }
-            } catch(e) { showToast("Network Error.", true); }
+                    fetchData(); 
+                } else { showToast("Failed to modify database.", true); }
+            } catch(e) { showToast("Network Disconnected.", true); }
         }
 
-        // Action: Edit Limits Modal
         function openEditModal(apiKey) {
             const user = activeUsersData.find(u => u.apiKey === apiKey);
             if(!user) return;
 
             document.getElementById('edit-api-key').value = apiKey;
-            document.getElementById('edit-modal-email').innerText = `Target: ${user.email}`;
+            document.getElementById('edit-modal-email').innerText = `Editing Rules For: ${user.email}`;
 
             const m = user.limits.models || {};
             const f = user.limits.features || {};
@@ -294,7 +325,7 @@
         async function saveLimits() {
             const apiKey = document.getElementById('edit-api-key').value;
             const btn = document.getElementById('btn-save-limits');
-            btn.innerText = "Saving...";
+            btn.innerText = "Commiting to DB...";
 
             const newLimits = {
                 models: {
@@ -318,13 +349,13 @@
                     body: JSON.stringify({ action: 'admin_modify', adminSecret: adminSecret, targetKey: apiKey, newLimits: newLimits })
                 });
                 if (res.ok) {
-                    showToast(`Limits updated for ${apiKey.substring(0,10)}...`);
+                    showToast(`Quotas updated in database.`);
                     closeModal();
-                    fetchData(); // Refresh UI to show new limits internally
-                } else { showToast("Failed to save limits.", true); }
-            } catch(e) { showToast("Network Error.", true); }
+                    fetchData(); 
+                } else { showToast("Failed to write to database.", true); }
+            } catch(e) { showToast("Network Disconnected.", true); }
             
-            btn.innerText = "Save Overrides";
+            btn.innerText = "Commit Overrides";
         }
     </script>
 </body>
