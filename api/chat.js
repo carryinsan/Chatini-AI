@@ -32,41 +32,33 @@ function hyperCondense(text, maxChars) {
 function advancedHDBypass(text, query, maxChars) {
     if (!text || text.length <= maxChars) return text;
     
-    // 1. Extract keywords from user query
     const keywords = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
     if (keywords.length === 0) return hyperCondense(text, maxChars);
 
-    // 2. Chunk text into manageable blocks (~10,000 chars) to simulate vector windows
     const chunks = text.match(/[\s\S]{1,10000}(?=\s|$)/g) || [text];
     
-    // 3. Score chunks based on keyword proximity and density
     const scoredChunks = chunks.map((chunk, index) => {
         const lowerChunk = chunk.toLowerCase();
         let score = 0;
         keywords.forEach(kw => {
             let occurrences = (lowerChunk.match(new RegExp(kw, 'g')) || []).length;
-            score += occurrences * (kw.length); // Weight longer keywords heavier
+            score += occurrences * (kw.length); 
         });
-        // Slight boost to earlier chunks (often abstracts/intros)
         if (index < 5) score += 5; 
         return { chunk, score };
     });
 
-    // 4. Sort by score descending (highest density first)
     scoredChunks.sort((a, b) => b.score - a.score);
 
-    // 5. Reassemble top chunks until safely under maxChars
-    let result = "--- SYSTEM: LOCAL HD BYPASS ACTIVATED (High Density Chunks) ---\n";
+    let result = "--- LOCAL HD BYPASS (High Density Data) ---\n";
     for (const item of scoredChunks) {
-        if (item.score === 0 && result.length > maxChars * 0.5) continue; // Skip zero-score chunks if we have enough data
-        
+        if (item.score === 0 && result.length > maxChars * 0.5) continue; 
         if (result.length + item.chunk.length > maxChars) {
             result += "\n" + item.chunk.substring(0, maxChars - result.length) + "...[TRUNC]...";
             break;
         }
         result += "\n...\n" + item.chunk;
     }
-
     return result;
 }
 
@@ -77,7 +69,6 @@ export default async function handler(req) {
     
     const stream = new ReadableStream({
         async start(controller) {
-            // Helper to manually inject self-contained UI chunks
             const sendUIChunk = (htmlString) => {
                 const chunk = JSON.stringify({ candidates: [{ content: { parts: [{ text: htmlString + '\n\n' }] } }] });
                 controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
@@ -92,7 +83,7 @@ export default async function handler(req) {
                 const { messages, modelId, researchContext, userProfile } = await req.json();
                 
                 // ====================================================================
-                // 0. FIREWALL & RATE LIMITING (SaaS Gateway)
+                // 0. FIREWALL & RATE LIMITING
                 // ====================================================================
                 const auth = await verifyAndLimit(req, modelId, 'none');
                 if (!auth.authorized && !auth.isCreator) {
@@ -100,7 +91,7 @@ export default async function handler(req) {
                     return; 
                 }
 
-                // 1. STRICT KEY SANITIZATION (Prevents "Invalid URL" crashes & Whitespace errors)
+                // 1. STRICT KEY SANITIZATION
                 const GROQ_KEYS = [
                     process.env.GROQ_API_KEY,
                     process.env.GROQ_KEY_2,
@@ -126,17 +117,15 @@ export default async function handler(req) {
 
                 if (GEMINI_KEYS.length === 0) throw new Error("CRITICAL: No Gemini Keys Configured on Server.");
 
-                // CORE FIX: Apply Decent Thinking UI to both Oracle and Flux models
                 const isThinkingEnabled = (modelId === 'oracle' || modelId === 'flux') && !researchContext;
 
-                // Professional UI Helper
+                // Ultra-clean, professional UI text logging
                 const sendThinkStep = (msg) => {
                     if (!isThinkingEnabled) return;
-                    const html = `<div class="think-step border-l-2 border-gray-500 pl-3 py-1.5 mb-2 text-xs text-gray-500 font-mono tracking-tight bg-gray-900/20 rounded-r-md">${msg}</div>`;
+                    const html = `<div class="think-step border-l-[2px] border-gray-400 pl-3 py-1 mb-1.5 text-[12.5px] text-gray-500 font-sans tracking-wide bg-transparent opacity-90">${msg}</div>`;
                     sendUIChunk(html);
                 };
 
-                // Helper for multiple Groq API calls with strict fallback
                 const callGroqAPI = async (systemPrompt, userPrompt) => {
                     if (GROQ_KEYS.length === 0) return null;
                     for (let i = 0; i < GROQ_KEYS.length; i++) {
@@ -162,10 +151,9 @@ export default async function handler(req) {
                     return null;
                 };
 
-                // Subconscious Memory Hook
                 let memoryString = "";
                 if (userProfile && Object.keys(userProfile).length > 0) {
-                    memoryString = `\n\n[USER PROFILE/MEMORY DETECTED]: ${JSON.stringify(userProfile)}. Tailor response perfectly to their preferences without mentioning this profile explicitly.`;
+                    memoryString = `\n\n[USER PROFILE DETECTED]: ${JSON.stringify(userProfile)}. Tailor response perfectly to their preferences without mentioning this profile explicitly.`;
                 }
 
                 let systemPrompt = `# ROLE & IDENTITY
@@ -197,7 +185,6 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
                 const userQuery = processedMessages[processedMessages.length - 1].content;
 
-                // Handle Knowledge Extensions
                 if (processedMessages.length > 0 && processedMessages[0].content.includes('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]')) {
                     const parts = processedMessages[0].content.split('[USER QUERY:]\n');
                     if (parts.length > 1) {
@@ -212,78 +199,97 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ====================================================================
-                // PHASE 2 & 3: MULTI-PASS COGNITIVE ROUTING & TAVILY GROUNDING
+                // PHASE 2 & 3: DYNAMIC MULTI-PASS COGNITIVE ROUTING & GROUNDING
                 // ====================================================================
-                let intentPlan = { needs_search: false, search_queries: [] };
+                let maxGroqPasses = modelId === 'oracle' ? 10 : (modelId === 'flux' ? 7 : (modelId === 'spark' ? 2 : 0));
+                let maxSearches = modelId === 'oracle' ? 5 : (modelId === 'flux' ? 3 : (modelId === 'spark' ? 1 : 0));
+                let maxResultsPerSearch = modelId === 'oracle' ? 20 : (modelId === 'flux' ? 15 : 3);
                 
-                if (isThinkingEnabled) {
-                    sendThinkStep("[System] Initiating cognitive pipeline...");
+                let currentPass = 0;
+                let searchesPerformed = 0;
+                let cognitiveContext = ""; 
+                let needsMoreAnalysis = true;
+
+                if (!researchContext && GROQ_KEYS.length > 0) {
                     
-                    // GROQ PASS 1: Intent Analysis & Search Formulation
-                    const p1SysPrompt = `You are a Cognitive Router. Analyze the query. Output JSON: {"thought": "1 brief sentence summarizing user intent", "needs_search": boolean, "search_queries": ["query1", "query2"]} (Provide up to 4 highly targeted search queries if context is missing or requires real-time data, else empty array)`;
-                    const p1Data = await callGroqAPI(p1SysPrompt, `User Query: ${userQuery}`);
-                    
-                    if (p1Data) {
-                        intentPlan = { ...intentPlan, ...p1Data };
-                        if (p1Data.thought) sendThinkStep(`[Analysis] ${p1Data.thought}`);
-                    }
-                }
-
-                const genericNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
-                const shouldSearch = !researchContext && TAVILY_KEYS.length > 0 && (intentPlan.needs_search || genericNeedsSearch);
-
-                if (shouldSearch) {
-                    let queries = intentPlan.search_queries && Array.isArray(intentPlan.search_queries) && intentPlan.search_queries.length > 0 
-                        ? intentPlan.search_queries.slice(0, 4) 
-                        : [userQuery];
-
-                    const maxResults = modelId === 'oracle' ? 20 : (modelId === 'flux' ? 15 : 3);
-                    let successfulSearches = 0;
-
-                    for (let q = 0; q < queries.length; q++) {
-                        if (!queries[q]) continue;
+                    while (needsMoreAnalysis && currentPass < maxGroqPasses) {
+                        let contextSample = massiveKnowledgeBase.length > 12000 ? massiveKnowledgeBase.substring(0, 12000) + "\n...[TRUNCATED]" : massiveKnowledgeBase;
                         
-                        sendThinkStep(`[Web Search] Querying: "${queries[q]}"...`);
+                        let groqSys = `You are the underlying logic processor determining facts prior to final generation.
+Task: Identify knowledge gaps, break down logic structurally, and pull real facts from context to strictly prevent hallucinations.
+Output STRICT JSON:
+{
+  "thought": "A single, professional sentence describing the current analytical action (e.g. 'Evaluating historical variables...' or 'Correlating data points...'). DO NOT use words like 'pass', 'system', 'loop', 'AI', or 'processor'.",
+  "search_queries": ["highly targeted query"],
+  "extracted_logic": "Summarize absolute hard facts/logic derived so far.",
+  "needs_more": boolean,
+  "needs_search": boolean
+}`;
                         
-                        for (let k = 0; k < TAVILY_KEYS.length; k++) {
-                            let tKey = TAVILY_KEYS[(q + k) % TAVILY_KEYS.length]; 
-                            try {
-                                const tavilyRes = await fetch('https://api.tavily.com/search', {
-                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ api_key: tKey, query: queries[q], search_depth: "advanced", max_results: maxResults, include_answer: true })
-                                });
-                                if (tavilyRes.ok) {
-                                    const tavData = await tavilyRes.json();
-                                    const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
-                                    massiveKnowledgeBase += `\n--- SECURE SEARCH CONTEXT (Query: ${queries[q]}) ---\n${searchResults}\n`;
-                                    successfulSearches++;
-                                    break; 
+                        let pData = await callGroqAPI(groqSys, `Query: ${userQuery}\nContext so far: ${contextSample}\nVerified Logic: ${cognitiveContext}`);
+                        currentPass++;
+                        
+                        if (pData) {
+                            if (pData.thought) sendThinkStep(pData.thought);
+                            
+                            if (pData.extracted_logic) cognitiveContext += `\n- ${pData.extracted_logic}`;
+                            
+                            let willSearch = pData.needs_search && searchesPerformed < maxSearches && TAVILY_KEYS.length > 0;
+                            
+                            if (willSearch && pData.search_queries && Array.isArray(pData.search_queries)) {
+                                for (let q of pData.search_queries) {
+                                    if (searchesPerformed >= maxSearches) break;
+                                    if (!q) continue;
+                                    
+                                    sendThinkStep(`Searching web for "${q}"...`);
+                                    
+                                    for (let k = 0; k < TAVILY_KEYS.length; k++) {
+                                        let tKey = TAVILY_KEYS[(searchesPerformed + k) % TAVILY_KEYS.length]; 
+                                        try {
+                                            const tavilyRes = await fetch('https://api.tavily.com/search', {
+                                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ api_key: tKey, query: q, search_depth: "advanced", max_results: maxResultsPerSearch, include_answer: true })
+                                            });
+                                            if (tavilyRes.ok) {
+                                                const tavData = await tavilyRes.json();
+                                                const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
+                                                massiveKnowledgeBase += `\n--- WEB SEARCH (Query: ${q}) ---\n${searchResults}\n`;
+                                                break; 
+                                            }
+                                        } catch (e) {}
+                                    }
+                                    searchesPerformed++;
                                 }
-                            } catch (e) {}
+                            }
+                            
+                            // Accelerate termination if query is simple or search caps are reached
+                            if (!pData.needs_more || (!willSearch && currentPass >= (modelId === 'oracle' ? 4 : 2))) {
+                                needsMoreAnalysis = false;
+                            }
+                        } else {
+                            needsMoreAnalysis = false; 
                         }
                     }
-                    if (successfulSearches > 0) {
-                        sendThinkStep(`[Context] Acquired data from ${successfulSearches} search operations.`);
+                    
+                    if (cognitiveContext.trim().length > 0) {
+                        systemPrompt += `\n\n[PRE-COMPUTED VERIFIED LOGIC (USE THIS STRICTLY TO PREVENT HALLUCINATIONS)]:\n${cognitiveContext}`;
                     }
                 }
-
-                if (isThinkingEnabled) {
-                    // GROQ PASS 2: Synthesis & Execution Strategy
-                    let contextSample = massiveKnowledgeBase.substring(0, 15000); // Send slice to save time/tokens
-                    let p2Prompt = contextSample.length > 0 
-                        ? `Context Provided: ${contextSample}\n\nUser Query: ${userQuery}` 
-                        : `User Query: ${userQuery}`;
-
-                    const p2SysPrompt = `You are a Lead AI Architect. Analyze the query and provided context. Output JSON: {"thought": "1 brief sentence summarizing the retrieved data or logic", "persona": "Ideal expert persona to adopt", "plan": "1 sentence step-by-step execution strategy"}`;
-                    const p2Data = await callGroqAPI(p2SysPrompt, p2Prompt);
-
-                    if (p2Data) {
-                        if (p2Data.thought) sendThinkStep(`[Synthesis] ${p2Data.thought}`);
-                        if (p2Data.plan) {
-                            sendThinkStep(`[Strategy] Persona locked as ${p2Data.persona || 'Expert'}. Executing plan: ${p2Data.plan}`);
-                            systemPrompt += `\n\n[PERSONA ASSIGNED]: Act as an ${p2Data.persona || 'Expert'}.\n[EXECUTION PLAN]: ${p2Data.plan}`;
+                
+                // Fallback for Spark/Failed Groq
+                const genericNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
+                if (!researchContext && searchesPerformed === 0 && TAVILY_KEYS.length > 0 && genericNeedsSearch) {
+                    try {
+                        const tavilyRes = await fetch('https://api.tavily.com/search', {
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: TAVILY_KEYS[0], query: userQuery, search_depth: "basic", max_results: 3, include_answer: true })
+                        });
+                        if (tavilyRes.ok) {
+                            const tavData = await tavilyRes.json();
+                            const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
+                            massiveKnowledgeBase += `\n--- WEB SEARCH ---\n${searchResults}\n`;
                         }
-                    }
+                    } catch (e) {}
                 }
 
                 // Extract PDF/Files from Attachments
@@ -313,7 +319,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 const tokenEstimate = Math.ceil(massiveKnowledgeBase.length / 4);
 
                 if (tokenEstimate > 600000 && modelId !== 'spark') {
-                    sendThinkStep("[System] Massive context detected (>600k tokens). Engaging HD-Extraction...");
+                    sendThinkStep("Massive dataset detected. Initiating high-density extraction...");
                     
                     try {
                         let searchIntents = userQuery;
@@ -334,17 +340,17 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                     if (data && data.length > 0) {
                                         condensedKnowledge = JSON.stringify(data);
                                         supaSuccess = true;
-                                        sendThinkStep("[Database] Supabase HD-Extraction Successful. Context compressed.");
+                                        sendThinkStep("High-density extraction successful. Compressing vector space...");
                                         break;
                                     }
                                 }
                             } catch(e) { } 
                         }
 
-                        if (!supaSuccess) throw new Error("Supabase unavailable or empty for this specific dataset.");
+                        if (!supaSuccess) throw new Error("Database unavailable for target dataset.");
 
                     } catch (err) {
-                        sendThinkStep("[Warning] HD Extraction bypass active. Using local matrix compression...");
+                        sendThinkStep("Matrix compression active (local bounds bypass)...");
                         condensedKnowledge = advancedHDBypass(massiveKnowledgeBase, userQuery, 2400000); 
                     }
                 } else {
@@ -365,13 +371,13 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 });
 
                 // ====================================================================
-                // PHASE 4: INTERNAL GEMINI CRITIQUE (Pass 3 - Oracle Only)
+                // PHASE 4: INTERNAL GEMINI CRITIQUE (Oracle Only)
                 // ====================================================================
                 if (modelId === 'oracle' && !researchContext && GEMINI_KEYS.length > 0) {
-                    sendThinkStep("[Verification] Executing internal architectural red-team critique...");
+                    sendThinkStep("Evaluating logical consistency of proposed structures...");
                     try {
                         const pass1Payload = {
-                            systemInstruction: { parts: [{ text: systemPrompt + "\n\n[INTERNAL PASS 1 DIRECTIVE]: Generate a fast internal draft solution. Then ruthlessly critique it for math errors, code bugs, and missing citations. Output strictly JSON: {\"critique\": \"your strict feedback on how to make the final answer flawless\"}" }] },
+                            systemInstruction: { parts: [{ text: systemPrompt + "\n\n[INTERNAL DIRECTIVE]: Generate a fast internal draft solution. Then ruthlessly critique it for math errors, code bugs, and missing citations. Output strictly JSON: {\"critique\": \"your strict feedback on how to make the final answer flawless\"}" }] },
                             contents: geminiMessages,
                             generationConfig: { responseMimeType: "application/json", temperature: 0.1, maxOutputTokens: 2048 }
                         };
@@ -389,7 +395,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 break;
                             }
                         }
-                        if (p1Success) sendThinkStep("[Red-Team] Logical critique generated. Calibrating final output.");
+                        if (p1Success) sendThinkStep("Logical vectors verified. Formatting final output.");
                     } catch(e) {}
                 }
 
@@ -440,7 +446,6 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         if (llmRes.status >= 400 && llmRes.status < 500 && llmRes.status !== 429) break; 
                     }
 
-                    // MISTRAL FALLBACK PROTOCOL (Flux Model Priority Guard)
                     if ((!llmRes || !llmRes.ok) && modelId === 'flux' && MISTRAL_KEY) {
                         isMistral = true;
                         const mistralPayload = {
