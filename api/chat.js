@@ -77,7 +77,7 @@ export default async function handler(req) {
     
     const stream = new ReadableStream({
         async start(controller) {
-            // Helper to manually inject self-contained UI chunks (Consumes 0 Gemini Tokens)
+            // Helper to manually inject self-contained UI chunks
             const sendUIChunk = (htmlString) => {
                 const chunk = JSON.stringify({ candidates: [{ content: { parts: [{ text: htmlString + '\n\n' }] } }] });
                 controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
@@ -97,12 +97,26 @@ export default async function handler(req) {
                 const auth = await verifyAndLimit(req, modelId, 'none');
                 if (!auth.authorized && !auth.isCreator) {
                     sendError(auth.error);
-                    return; // Stop execution if they hit their daily limit or lack a key
+                    return; 
                 }
 
-                // 1. STRICT KEY SANITIZATION (Prevents "Invalid URL" crashes)
-                const GROQ_KEY = process.env.GROQ_API_KEY ? process.env.GROQ_API_KEY.replace(/[\r\n\s]/g, '') : null;
-                const TAVILY_KEY = process.env.TAVILY_API_KEY ? process.env.TAVILY_API_KEY.replace(/[\r\n\s]/g, '') : null;
+                // 1. STRICT KEY SANITIZATION (Prevents "Invalid URL" crashes & Whitespace errors)
+                const GROQ_KEYS = [
+                    process.env.GROQ_API_KEY,
+                    process.env.GROQ_KEY_2,
+                    process.env.GROQ_KEY_3
+                ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
+
+                const TAVILY_KEYS = [
+                    process.env.TAVILY_API_KEY,
+                    process.env.TAVILY_KEY_2,
+                    process.env.TAVILY_KEY_3,
+                    process.env.TAVILY_KEY_4,
+                    process.env.TAVILY_KEY_5
+                ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
+
+                const MISTRAL_KEY = process.env.MISTRAL_API_KEY ? process.env.MISTRAL_API_KEY.replace(/[\r\n\s]/g, '') : null;
+
                 const GEMINI_KEYS = [
                     process.env.GEMINI_API_KEY_1,
                     process.env.GEMINI_API_KEY_2,
@@ -112,16 +126,41 @@ export default async function handler(req) {
 
                 if (GEMINI_KEYS.length === 0) throw new Error("CRITICAL: No Gemini Keys Configured on Server.");
 
-                // CORE FIX: Prevents overlapping. If Research is active, Oracle skips its extra thinking steps.
-                const isOracleThinkingEnabled = modelId === 'oracle' && !researchContext;
+                // CORE FIX: Apply Decent Thinking UI to both Oracle and Flux models
+                const isThinkingEnabled = (modelId === 'oracle' || modelId === 'flux') && !researchContext;
 
-                // --------------------------------------------------------------------
-                // PHASE 1: INJECT VISIBLE THINKING UI (Backend Only, Auto-Vanishing)
-                // We use self-contained DIVs to prevent Markdown parser breakage.
-                // --------------------------------------------------------------------
-                if (isOracleThinkingEnabled) {
-                    sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-cyan-500/30 text-cyan-400 px-4 py-3 rounded-xl text-xs font-mono mb-3 shadow-[0_0_15px_rgba(6,182,212,0.15)] flex items-center gap-3 animate-pulse"><svg class="animate-spin h-4 w-4 text-cyan-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Oracle Cognitive Pipeline Initiated...</div>`);
-                }
+                // Professional UI Helper
+                const sendThinkStep = (msg) => {
+                    if (!isThinkingEnabled) return;
+                    const html = `<div class="think-step border-l-2 border-gray-500 pl-3 py-1.5 mb-2 text-xs text-gray-500 font-mono tracking-tight bg-gray-900/20 rounded-r-md">${msg}</div>`;
+                    sendUIChunk(html);
+                };
+
+                // Helper for multiple Groq API calls with strict fallback
+                const callGroqAPI = async (systemPrompt, userPrompt) => {
+                    if (GROQ_KEYS.length === 0) return null;
+                    for (let i = 0; i < GROQ_KEYS.length; i++) {
+                        try {
+                            const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                                method: 'POST',
+                                headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    model: 'llama-3.1-8b-instant',
+                                    response_format: { type: "json_object" },
+                                    messages: [
+                                        { role: 'system', content: systemPrompt },
+                                        { role: 'user', content: userPrompt }
+                                    ]
+                                })
+                            });
+                            if (res.ok) {
+                                const data = await res.json();
+                                return JSON.parse(data.choices[0].message.content);
+                            }
+                        } catch (e) {} 
+                    }
+                    return null;
+                };
 
                 // Subconscious Memory Hook
                 let memoryString = "";
@@ -167,67 +206,83 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                 }
 
-                // If Deep Research is active, we just absorb the context and skip thinking.
                 if (researchContext) {
                     massiveKnowledgeBase += "\n--- COMPILED RESEARCH CONTEXT ---\n" + researchContext + "\n";
                     systemPrompt += `\n\n[CRITICAL DIRECTIVE: Synthesize the provided Master Research Document into an exhaustive, deeply comprehensive final response.]`;
                 }
 
-                // --------------------------------------------------------------------
-                // PHASE 2: COGNITIVE ROUTING (Oracle Router via Groq)
-                // --------------------------------------------------------------------
-                let oraclePlan = { persona: "Elite AI Expert", plan: "Synthesizing optimal data.", needs_more_search: false, search_query: null };
+                // ====================================================================
+                // PHASE 2 & 3: MULTI-PASS COGNITIVE ROUTING & TAVILY GROUNDING
+                // ====================================================================
+                let intentPlan = { needs_search: false, search_queries: [] };
                 
-                if (isOracleThinkingEnabled && GROQ_KEY) {
-                    try {
-                        const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                            method: 'POST',
-                            headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                model: 'llama-3.1-8b-instant', // Hidden from user
-                                response_format: { type: "json_object" },
-                                messages: [
-                                    { role: 'system', content: `You are the Oracle Cognitive Router. Analyze the query. Output strictly JSON: {"persona": "Ideal Role (e.g. Senior Architect, Data Analyst)", "plan": "Brief 1-sentence step-by-step logic", "needs_more_search": boolean, "search_query": "Targeted query if context missing, else null"}` },
-                                    { role: 'user', content: `User Query: ${userQuery}` }
-                                ]
-                            })
-                        });
-                        
-                        if (groqRes.ok) {
-                            const groqData = await groqRes.json();
-                            try {
-                                const parsedPlan = JSON.parse(groqData.choices[0].message.content);
-                                oraclePlan = { ...oraclePlan, ...parsedPlan };
-                                systemPrompt += `\n\n[ORACLE PERSONA ASSIGNED]: Act as an ${oraclePlan.persona}.\n[EXECUTION PLAN]: ${oraclePlan.plan}`;
-                                sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-purple-500/30 text-purple-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Persona Locked: ${oraclePlan.persona}</div>`);
-                            } catch(e) {}
-                        }
-                    } catch(e) { 
-                        sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-amber-500/30 text-amber-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-warning"></i> Router optimization bypassed. Proceeding to main core.</div>`);
+                if (isThinkingEnabled) {
+                    sendThinkStep("[System] Initiating cognitive pipeline...");
+                    
+                    // GROQ PASS 1: Intent Analysis & Search Formulation
+                    const p1SysPrompt = `You are a Cognitive Router. Analyze the query. Output JSON: {"thought": "1 brief sentence summarizing user intent", "needs_search": boolean, "search_queries": ["query1", "query2"]} (Provide up to 4 highly targeted search queries if context is missing or requires real-time data, else empty array)`;
+                    const p1Data = await callGroqAPI(p1SysPrompt, `User Query: ${userQuery}`);
+                    
+                    if (p1Data) {
+                        intentPlan = { ...intentPlan, ...p1Data };
+                        if (p1Data.thought) sendThinkStep(`[Analysis] ${p1Data.thought}`);
                     }
                 }
 
-                // --------------------------------------------------------------------
-                // PHASE 3: TAVILY GROUNDING SEARCH
-                // --------------------------------------------------------------------
-                const fluxNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
-                const shouldSearch = !researchContext && TAVILY_KEY && (oraclePlan.needs_more_search || (modelId === 'flux' && fluxNeedsSearch));
+                const genericNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
+                const shouldSearch = !researchContext && TAVILY_KEYS.length > 0 && (intentPlan.needs_search || genericNeedsSearch);
 
                 if (shouldSearch) {
-                    if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-blue-500/30 text-blue-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-globe"></i> Querying secure web index...</div>`);
-                    try {
-                        const tavilyRes = await fetch('https://api.tavily.com/search', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ api_key: TAVILY_KEY, query: oraclePlan.search_query || userQuery, search_depth: "advanced", max_results: modelId === 'oracle' ? 12 : 5, include_answer: true })
-                        });
-                        if (tavilyRes.ok) {
-                            const tavData = await tavilyRes.json();
-                            const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
-                            massiveKnowledgeBase += `\n--- SECURE SEARCH CONTEXT ---\n${searchResults}\n`;
-                            if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Grounding context acquired.</div>`);
+                    let queries = intentPlan.search_queries && Array.isArray(intentPlan.search_queries) && intentPlan.search_queries.length > 0 
+                        ? intentPlan.search_queries.slice(0, 4) 
+                        : [userQuery];
+
+                    const maxResults = modelId === 'oracle' ? 20 : (modelId === 'flux' ? 15 : 3);
+                    let successfulSearches = 0;
+
+                    for (let q = 0; q < queries.length; q++) {
+                        if (!queries[q]) continue;
+                        
+                        sendThinkStep(`[Web Search] Querying: "${queries[q]}"...`);
+                        
+                        for (let k = 0; k < TAVILY_KEYS.length; k++) {
+                            let tKey = TAVILY_KEYS[(q + k) % TAVILY_KEYS.length]; 
+                            try {
+                                const tavilyRes = await fetch('https://api.tavily.com/search', {
+                                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ api_key: tKey, query: queries[q], search_depth: "advanced", max_results: maxResults, include_answer: true })
+                                });
+                                if (tavilyRes.ok) {
+                                    const tavData = await tavilyRes.json();
+                                    const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
+                                    massiveKnowledgeBase += `\n--- SECURE SEARCH CONTEXT (Query: ${queries[q]}) ---\n${searchResults}\n`;
+                                    successfulSearches++;
+                                    break; 
+                                }
+                            } catch (e) {}
                         }
-                    } catch (e) {
-                         if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-red-500/30 text-red-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-warning"></i> Web grounding timeout. Using internal state.</div>`);
+                    }
+                    if (successfulSearches > 0) {
+                        sendThinkStep(`[Context] Acquired data from ${successfulSearches} search operations.`);
+                    }
+                }
+
+                if (isThinkingEnabled) {
+                    // GROQ PASS 2: Synthesis & Execution Strategy
+                    let contextSample = massiveKnowledgeBase.substring(0, 15000); // Send slice to save time/tokens
+                    let p2Prompt = contextSample.length > 0 
+                        ? `Context Provided: ${contextSample}\n\nUser Query: ${userQuery}` 
+                        : `User Query: ${userQuery}`;
+
+                    const p2SysPrompt = `You are a Lead AI Architect. Analyze the query and provided context. Output JSON: {"thought": "1 brief sentence summarizing the retrieved data or logic", "persona": "Ideal expert persona to adopt", "plan": "1 sentence step-by-step execution strategy"}`;
+                    const p2Data = await callGroqAPI(p2SysPrompt, p2Prompt);
+
+                    if (p2Data) {
+                        if (p2Data.thought) sendThinkStep(`[Synthesis] ${p2Data.thought}`);
+                        if (p2Data.plan) {
+                            sendThinkStep(`[Strategy] Persona locked as ${p2Data.persona || 'Expert'}. Executing plan: ${p2Data.plan}`);
+                            systemPrompt += `\n\n[PERSONA ASSIGNED]: Act as an ${p2Data.persona || 'Expert'}.\n[EXECUTION PLAN]: ${p2Data.plan}`;
+                        }
                     }
                 }
 
@@ -255,33 +310,16 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 // PHASE 3.5: SUPABASE HD-EXTRACTION ALGORITHM (> 600k Tokens Threshold)
                 // ====================================================================
                 let condensedKnowledge = "";
-                // Approximate tokens = characters / 4
                 const tokenEstimate = Math.ceil(massiveKnowledgeBase.length / 4);
 
                 if (tokenEstimate > 600000 && modelId !== 'spark') {
-                    if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-fuchsia-500/30 text-fuchsia-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-database"></i> 4M+ Token Threshold Detected. Engaging HD-Extraction...</div>`);
+                    sendThinkStep("[System] Massive context detected (>600k tokens). Engaging HD-Extraction...");
                     
                     try {
-                        // Step 1: Groq Intent Extraction (Llama-3.1-8b)
                         let searchIntents = userQuery;
-                        if (GROQ_KEY) {
-                            try {
-                                const intentRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                                    method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                        model: 'llama-3.1-8b-instant',
-                                        messages: [{ role: 'system', content: 'Extract 3-5 core search keywords from the query. Return ONLY space-separated keywords.' }, { role: 'user', content: userQuery }],
-                                        temperature: 0.1
-                                    })
-                                });
-                                if (intentRes.ok) {
-                                    const intentData = await intentRes.json();
-                                    searchIntents = intentData.choices[0].message.content.trim();
-                                }
-                            } catch(e) {} // Fallback to raw user query if Groq fails
-                        }
+                        const intentData = await callGroqAPI('Extract 3-5 core search keywords from the query. Return ONLY space-separated keywords in JSON: {"keywords": "..."}', userQuery);
+                        if (intentData && intentData.keywords) searchIntents = intentData.keywords;
 
-                        // Step 2: Query Supabase pgvector (Try-Catch Loop for absolute fail-safety)
                         let supaSuccess = false;
                         for (let attempt = 1; attempt <= 2; attempt++) {
                             try {
@@ -296,23 +334,20 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                     if (data && data.length > 0) {
                                         condensedKnowledge = JSON.stringify(data);
                                         supaSuccess = true;
-                                        if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Supabase HD-Extraction Successful. Context highly compressed.</div>`);
+                                        sendThinkStep("[Database] Supabase HD-Extraction Successful. Context compressed.");
                                         break;
                                     }
                                 }
-                            } catch(e) { } // Silent catch for retry
+                            } catch(e) { } 
                         }
 
-                        // FINAL BYPASS OPTION: If Supabase fails (e.g. dynamic live uploads not yet indexed in DB)
                         if (!supaSuccess) throw new Error("Supabase unavailable or empty for this specific dataset.");
 
                     } catch (err) {
-                        // Local HD Bypass Strategy (Squeezes on the fly in Edge memory)
-                        if (isOracleThinkingEnabled) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-amber-500/30 text-amber-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-warning"></i> Engaging Local HD Bypass Matrix...</div>`);
-                        condensedKnowledge = advancedHDBypass(massiveKnowledgeBase, userQuery, 2400000); // 2.4M chars safely fits under 600k tokens
+                        sendThinkStep("[Warning] HD Extraction bypass active. Using local matrix compression...");
+                        condensedKnowledge = advancedHDBypass(massiveKnowledgeBase, userQuery, 2400000); 
                     }
                 } else {
-                    // Standard Hyper-Condense for normal queries or Spark
                     const MAX_CHARS = modelId === 'oracle' ? 150000 : (modelId === 'spark' ? 15000 : 80000); 
                     condensedKnowledge = hyperCondense(massiveKnowledgeBase, MAX_CHARS);
                 }
@@ -329,11 +364,11 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     return { role: m.role === 'user' ? 'user' : 'model', parts };
                 });
 
-                // --------------------------------------------------------------------
-                // PHASE 4: INTERNAL GEMINI CRITIQUE (Pass 1 - Oracle Only)
-                // --------------------------------------------------------------------
-                if (isOracleThinkingEnabled && GEMINI_KEYS.length > 0) {
-                    sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-indigo-500/30 text-indigo-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2 animate-pulse"><i class="ph-fill ph-shield-check"></i> Executing internal red-team critique...</div>`);
+                // ====================================================================
+                // PHASE 4: INTERNAL GEMINI CRITIQUE (Pass 3 - Oracle Only)
+                // ====================================================================
+                if (modelId === 'oracle' && !researchContext && GEMINI_KEYS.length > 0) {
+                    sendThinkStep("[Verification] Executing internal architectural red-team critique...");
                     try {
                         const pass1Payload = {
                             systemInstruction: { parts: [{ text: systemPrompt + "\n\n[INTERNAL PASS 1 DIRECTIVE]: Generate a fast internal draft solution. Then ruthlessly critique it for math errors, code bugs, and missing citations. Output strictly JSON: {\"critique\": \"your strict feedback on how to make the final answer flawless\"}" }] },
@@ -354,37 +389,38 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 break;
                             }
                         }
-                        if (p1Success) sendUIChunk(`<div class="oracle-think-box bg-[#0a0a0a] border border-emerald-500/30 text-emerald-400 px-4 py-2 rounded-xl text-[11px] font-mono mb-2 flex items-center gap-2"><i class="ph-fill ph-check-circle"></i> Logical critique verified.</div>`);
-                    } catch(e) { 
-                        // Fallback gracefully, don't crash
-                    }
+                        if (p1Success) sendThinkStep("[Red-Team] Logical critique generated. Calibrating final output.");
+                    } catch(e) {}
                 }
 
-                // --------------------------------------------------------------------
-                // PHASE 5: THE VANISHING ACT
-                // --------------------------------------------------------------------
-                if (isOracleThinkingEnabled) {
-                    // This CSS injection instantly hides all thinking boxes seamlessly
-                    // preventing the markdown parser from breaking it.
-                    sendUIChunk(`<style>.oracle-think-box { display: none !important; opacity: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: none; position: absolute; }</style>`);
+                // ====================================================================
+                // PHASE 5: THE VANISHING ACT (Hides the thinking UI seamlessly)
+                // ====================================================================
+                if (isThinkingEnabled) {
+                    sendUIChunk(`<style>.think-step { display: none !important; opacity: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: none; position: absolute; }</style>`);
                 }
 
-                // --------------------------------------------------------------------
+                // ====================================================================
                 // PHASE 6: FINAL SYNTHESIS & REAL-TIME STREAMING
-                // --------------------------------------------------------------------
+                // ====================================================================
                 let llmRes;
                 let isGroq = false;
+                let isMistral = false;
 
-                if (modelId === 'spark' && GROQ_KEY) {
+                if (modelId === 'spark' && GROQ_KEYS.length > 0) {
                     isGroq = true;
-                    const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.slice(-5)], stream: true, temperature: 0.2 }; 
-                    llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!llmRes.ok) throw new Error(await llmRes.text());
+                    let lastErr = "";
+                    for (let i = 0; i < GROQ_KEYS.length; i++) {
+                        const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.slice(-5)], stream: true, temperature: 0.2 }; 
+                        llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                        if (llmRes.ok) break;
+                        lastErr = await llmRes.text();
+                    }
+                    if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All Groq API keys exhausted.");
                 } else {
                     const finalPayload = {
                         systemInstruction: { parts: [{ text: systemPrompt }] },
                         contents: geminiMessages,
-                        // ORACLE: Massive 16,384 output limit to ensure extremely long code and essays don't cut off
                         generationConfig: { maxOutputTokens: modelId === 'oracle' ? 16384 : 8192, temperature: modelId === 'oracle' ? 0.3 : 0.7 },
                         safetySettings: [
                             { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
@@ -403,13 +439,29 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         lastErr = await llmRes.text();
                         if (llmRes.status >= 400 && llmRes.status < 500 && llmRes.status !== 429) break; 
                     }
-                    if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All Gemini API keys exhausted or rate-limited.");
+
+                    // MISTRAL FALLBACK PROTOCOL (Flux Model Priority Guard)
+                    if ((!llmRes || !llmRes.ok) && modelId === 'flux' && MISTRAL_KEY) {
+                        isMistral = true;
+                        const mistralPayload = {
+                            model: 'mistral-large-latest',
+                            messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
+                            stream: true,
+                            temperature: 0.7
+                        };
+                        llmRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${MISTRAL_KEY}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify(mistralPayload)
+                        });
+                        if (!llmRes.ok) lastErr = await llmRes.text();
+                    }
+
+                    if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All API keys exhausted or rate-limited.");
                 }
 
                 // ================================================================
                 // CORE BUG FIX: THE IRONCLAD SSE PARSER
-                // Splits chunks strictly by HTTP Standard Double-Newlines (\r?\n\r?\n)
-                // Prevents multi-line JSON payloads from getting chopped in half.
                 // ================================================================
                 const reader = llmRes.body.getReader();
                 const decoder = new TextDecoder();
@@ -419,13 +471,12 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     const { done, value } = await reader.read();
                     
                     if (done) {
-                        // Flush any remaining data before closing
                         if (buffer.trim()) {
                             const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
                             if (jsonStr && jsonStr !== '[DONE]') {
                                 try {
                                     const rawData = JSON.parse(jsonStr);
-                                    let cleanText = isGroq 
+                                    let cleanText = (isGroq || isMistral)
                                         ? rawData.choices?.[0]?.delta?.content || "" 
                                         : rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
                                     
@@ -440,13 +491,10 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                     
                     buffer += decoder.decode(value, { stream: true });
-                    
-                    // Strictly split by HTTP Server-Sent-Events boundary (double newline)
                     const chunks = buffer.split(/\r?\n\r?\n/);
-                    buffer = chunks.pop(); // Keep the last incomplete chunk in memory for the next loop
+                    buffer = chunks.pop(); 
 
                     for (const chunk of chunks) {
-                        // Clean out the "data: " prefix safely, even if it appears on multiple lines
                         const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
                         if (!jsonStr || jsonStr === '[DONE]') continue;
 
@@ -454,7 +502,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                             const rawData = JSON.parse(jsonStr);
                             let cleanText = "";
                             
-                            if (isGroq) {
+                            if (isGroq || isMistral) {
                                 if (rawData.choices && rawData.choices.length > 0 && rawData.choices[0].delta && rawData.choices[0].delta.content) {
                                     cleanText = rawData.choices[0].delta.content;
                                 }
@@ -464,7 +512,6 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 }
                             }
 
-                            // Inject the successfully parsed text into our universal Mega-Payload
                             if (cleanText) {
                                 const cleanPayload = { 
                                     id: "chatcmpl-" + Math.random().toString(36).substring(2, 10),
@@ -479,7 +526,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
                             }
                         } catch (e) {
-                            // Only invalid partial JSON chunks will hit this catch block now. 
+                            // Suppress partial chunk errors
                         }
                     }
                 }
