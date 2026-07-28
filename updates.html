@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexisAI Updates</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Space Grotesk', 'sans-serif'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'glow': 'glow 3s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        glow: {
+                            '0%': { opacity: 0.5 },
+                            '100%': { opacity: 1 },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050505;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(17, 24, 39, 1) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(17, 24, 39, 1) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #ffffff;
+        }
+        .glass-card {
+            background: rgba(20, 20, 20, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.5);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="min-h-screen selection:bg-cyan-500/30 selection:text-cyan-200 antialiased overflow-x-hidden">
+
+    <!-- Ambient Background Glows -->
+    <div class="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none z-0"></div>
+    <div class="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-cyan-600/10 blur-[120px] pointer-events-none z-0"></div>
+
+    <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        
+        <!-- Header Section -->
+        <div class="text-center mb-20 animate-fade-in-up">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-gray-800/50 border border-gray-700 text-sm font-medium text-gray-300 mb-6">
+                <i class="ph-fill ph-rocket-launch text-cyan-400"></i> The Next Generation
+            </div>
+            <h1 class="text-5xl md:text-7xl font-display font-bold tracking-tight mb-6">
+                A Massive Leap in <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-400 to-purple-400 animate-glow">
+                    Intelligence.
+                </span>
+            </h1>
+            <p class="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto font-sans">
+                We've completely re-engineered our core models. Experience unprecedented depth, real-time awareness, and lightning-fast insights. Meet the new LexisAI.
+            </p>
+        </div>
+
+        <!-- Models Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <!-- Oracle 2.0 -->
+            <div class="glass-card rounded-3xl p-8 relative overflow-hidden group hover:border-purple-500/50">
+                <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <i class="ph-fill ph-brain text-8xl text-purple-500"></i>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 mb-6 group-hover:scale-110 transition-transform">
+                    <i class="ph-bold ph-brain text-2xl text-purple-400"></i>
+                </div>
+                <h2 class="text-3xl font-display font-bold mb-2">Oracle <span class="text-purple-400">2.0</span></h2>
+                <p class="text-gray-400 text-sm mb-6 h-12">The ultimate deep-thinker. Built for complex analysis, coding, and flawless logic.</p>
+                
+                <ul class="space-y-4 font-sans text-sm text-gray-300">
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-purple-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Deep Cognitive Architecture</span>
+                            Oracle 2.0 now literally "thinks" before it answers, analyzing every angle of your problem to ensure maximum accuracy.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-purple-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Bulletproof Accuracy</span>
+                            Self-corrects and red-teams its own logic in real-time. Say goodbye to hallucinations and hello to pure, factual answers.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-purple-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Massive Data Mastery</span>
+                            Upload entire textbooks or massive datasets. Oracle reads, compresses, and perfectly understands impossible amounts of data.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Flux 1.5 -->
+            <div class="glass-card rounded-3xl p-8 relative overflow-hidden group hover:border-cyan-500/50">
+                <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <i class="ph-fill ph-globe-hemisphere-west text-8xl text-cyan-500"></i>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center border border-cyan-500/30 mb-6 group-hover:scale-110 transition-transform">
+                    <i class="ph-bold ph-globe-hemisphere-west text-2xl text-cyan-400"></i>
+                </div>
+                <h2 class="text-3xl font-display font-bold mb-2">Flux <span class="text-cyan-400">1.5</span></h2>
+                <p class="text-gray-400 text-sm mb-6 h-12">Your live connection to the world. Perfect for research, current events, and adaptive tasks.</p>
+                
+                <ul class="space-y-4 font-sans text-sm text-gray-300">
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-cyan-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Live Web Intelligence</span>
+                            Flux dynamically browses the live internet across multiple sources to bring you the freshest news, stock prices, and research.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-cyan-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Adaptive Brainpower</span>
+                            It instantly senses how complex your question is and scales its intelligence—using just the right amount of power for the perfect answer.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-cyan-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">See The Thought Process</span>
+                            Watch Flux's brilliant mind at work. See its live thoughts, web searches, and logic forming right on your screen before the answer arrives.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Spark -->
+            <div class="glass-card rounded-3xl p-8 relative overflow-hidden group hover:border-amber-500/50">
+                <div class="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <i class="ph-fill ph-lightning text-8xl text-amber-500"></i>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center border border-amber-500/30 mb-6 group-hover:scale-110 transition-transform">
+                    <i class="ph-bold ph-lightning text-2xl text-amber-400"></i>
+                </div>
+                <h2 class="text-3xl font-display font-bold mb-2">Spark <span class="text-amber-400">Upgraded</span></h2>
+                <p class="text-gray-400 text-sm mb-6 h-12">The speed demon. Best for quick drafts, instant answers, and daily brainstorming.</p>
+                
+                <ul class="space-y-4 font-sans text-sm text-gray-300">
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-amber-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Smarter, Not Just Faster</span>
+                            We've injected a massive upgrade to Spark's reasoning capabilities. It now thinks deeply but delivers answers at lightning speed.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-amber-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Zero Wait Time</span>
+                            Optimized for instantaneous generation. When you need an email drafted or a quick concept explained, Spark materializes thoughts instantly.
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <i class="ph-fill ph-check-circle text-amber-400 text-lg shrink-0 mt-0.5"></i>
+                        <div>
+                            <span class="font-semibold text-white block">Seamless Context</span>
+                            Despite its blistering speed, Spark effortlessly remembers your chat history, ensuring every quick reply is perfectly tailored to you.
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+
+        <!-- Call to Action -->
+        <div class="mt-20 text-center">
+            <button onclick="window.history.back()" class="group relative inline-flex items-center justify-center px-8 py-4 font-display font-bold text-white transition-all duration-200 bg-gray-100/10 border border-gray-100/20 rounded-full hover:bg-gray-100/20 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 overflow-hidden">
+                <span class="relative z-10 flex items-center gap-2">
+                    Experience The Update <i class="ph-bold ph-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                </span>
+                <div class="absolute inset-0 h-full w-full bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
+            </button>
+        </div>
+
+    </div>
+</body>
+</html>
+
