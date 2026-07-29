@@ -81,6 +81,10 @@ export default async function handler(req) {
             };
 
             try {
+                // START EDGE FAIL-SAFE TIMER
+                const executionStartTime = Date.now();
+                const MAX_SILENT_TIME = 22000; // 22 seconds to prevent serverless timeout crashes
+
                 const { messages, modelId, researchContext, userProfile } = await req.json();
                 
                 // ====================================================================
@@ -133,13 +137,19 @@ export default async function handler(req) {
                     sendUIChunk(html);
                 };
 
+                // FAIL-SAFE GROQ ALGORITHM WITH TIMEOUTS & DYNAMIC KEY ROTATION
                 const callGroqAPI = async (systemPrompt, userPrompt) => {
                     if (GROQ_KEYS.length === 0) return null;
+                    let startIdx = Math.floor(Math.random() * GROQ_KEYS.length);
                     for (let i = 0; i < GROQ_KEYS.length; i++) {
+                        let key = GROQ_KEYS[(startIdx + i) % GROQ_KEYS.length];
                         try {
+                            const abortCtrl = new AbortController();
+                            const timeoutId = setTimeout(() => abortCtrl.abort(), 6000); // 6s strict timeout per call
+                            
                             const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                                 method: 'POST',
-                                headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
+                                headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     model: 'llama-3.1-8b-instant',
                                     response_format: { type: "json_object" },
@@ -148,13 +158,21 @@ export default async function handler(req) {
                                         { role: 'system', content: systemPrompt },
                                         { role: 'user', content: userPrompt }
                                     ]
-                                })
+                                }),
+                                signal: abortCtrl.signal
                             });
+                            
+                            clearTimeout(timeoutId);
+                            
                             if (res.ok) {
                                 const data = await res.json();
                                 return JSON.parse(data.choices[0].message.content);
+                            } else if (res.status === 429) {
+                                continue; // Immediately jump to next key on rate limit
                             }
-                        } catch (e) {} 
+                        } catch (e) {
+                            continue; // Instantly jump to next key on timeout or crash
+                        } 
                     }
                     return null;
                 };
@@ -310,7 +328,10 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     if (triageData) {
                         if (!isAdminTrigger && triageData.complexity) dynamicPlan.complexity = triageData.complexity;
                         if (triageData.search_queries) dynamicPlan.search_queries = triageData.search_queries;
-                        if (triageData.thought) sendThinkStep(triageData.thought);
+                        if (triageData.thought) {
+                            let cl = triageData.thought.replace(/[0-9]/g, '').replace(/Pass|Step/gi, '').trim();
+                            sendThinkStep(cl);
+                        }
                     }
                 }
 
@@ -330,11 +351,13 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
                     for (let q = 0; q < queries.length; q++) {
                         if (!queries[q]) continue;
+                        if (Date.now() - executionStartTime > MAX_SILENT_TIME) break; // EDGE TIMEOUT GUARD
                         
                         sendThinkStep(`Searching network for "${queries[q]}"...`);
                         
+                        let tStartIdx = Math.floor(Math.random() * TAVILY_KEYS.length);
                         for (let k = 0; k < TAVILY_KEYS.length; k++) {
-                            let tKey = TAVILY_KEYS[(q + k) % TAVILY_KEYS.length]; 
+                            let tKey = TAVILY_KEYS[(q + tStartIdx + k) % TAVILY_KEYS.length]; 
                             try {
                                 const tavilyRes = await fetch('https://api.tavily.com/search', {
                                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -432,7 +455,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         "Optimize the logic strictly for absolute factual correctness and zero hallucination.",
                         "Optimize the solution for speed, execution, and practical efficiency.",
                         "Optimize the solution for extreme simplicity, elegance, and readability.",
-                        "Review strictly through the lens of an expert mathematician (logic, proofs, numbers).",
+                        "Review strictly through the lens of an expert mathematics processor (logic, proofs, numbers).",
                         "Review strictly through the lens of an expert programmer (architecture, edge cases, code robustness).",
                         "Review strictly through the lens of an expert researcher (sources, citations, academic validity).",
                         "Review strictly through the lens of an expert writer (clarity, flow, structural coherence).",
@@ -459,6 +482,12 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         let logicalFramework = "";
 
                         for (let pass = 0; pass < actualPasses; pass++) {
+                            // CRITICAL EDGE TIMEOUT GUARD - PREVENTS THE CRASH BUG
+                            if (Date.now() - executionStartTime > MAX_SILENT_TIME) {
+                                sendThinkStep("Optimal cognitive threshold reached. Finalizing logic bridge...");
+                                break;
+                            }
+
                             let roleFocus = modelId === 'oracle' ? oracleThinkers[pass] : `Analyze constraints, optimize correctness, and structure a bulletproof output. (Focus depth level: ${pass + 1})`;
                             
                             let passPrompt = `You are an elite cognitive sub-module executing a rigorous reasoning pass.
@@ -481,7 +510,6 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                             
                             if (reasoningData) {
                                 if (reasoningData.ui_thought) {
-                                    // Strip any accidental numbers or 'Pass' words just in case Groq hallucinates them
                                     let cleanThought = reasoningData.ui_thought.replace(/[0-9]/g, '').replace(/Pass|Step/gi, '').trim();
                                     if(cleanThought.length > 5) sendThinkStep(cleanThought);
                                 }
@@ -512,15 +540,6 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     if (i === processedMessages.length - 1 && geminiInlineParts.length > 0) parts.push(...geminiInlineParts);
                     return { role: m.role === 'user' ? 'user' : 'model', parts };
                 });
-
-                // ====================================================================
-                // PHASE 5: THE PERSISTENT UI FIX
-                // Hides ONLY the spinning loader wheel. The actual thinking steps 
-                // (.think-step) REMAIN VISIBLE permanently for the user to read.
-                // ====================================================================
-                if (isThinkingEnabled) {
-                    sendUIChunk(`<style>#lexis-persistent-loader { display: none !important; }</style>`);
-                }
 
                 // ====================================================================
                 // PHASE 6: FINAL SYNTHESIS & REAL-TIME STREAMING
@@ -608,6 +627,12 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 } catch (e) {}
                             }
                         }
+                        
+                        // PHASE 5 (UI FIX): Hides the loader ONLY when the final answer is completely done streaming.
+                        if (isThinkingEnabled) {
+                            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: `\n\n<style>#lexis-persistent-loader { display: none !important; }</style>` }] } }] })}\n\n`));
+                        }
+                        
                         break;
                     }
                     
@@ -667,4 +692,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
     });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
-                    }
+            }
