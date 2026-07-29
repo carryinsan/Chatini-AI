@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexisAI | Admin Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; }
+        .glass-panel { background: rgba(15, 15, 15, 0.7); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .neon-glow { box-shadow: 0 0 20px rgba(6, 182, 212, 0.2); }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0a; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="glass-panel p-8 rounded-2xl w-full max-w-md text-center neon-glow">
+        <i class="ph-fill ph-shield-check text-5xl text-cyan-500 mb-4 inline-block"></i>
+        <h1 class="text-2xl font-bold text-white mb-2">Admin Authentication</h1>
+        <p class="text-gray-400 text-sm mb-6">Enter master password to access LexisAI Quota Management.</p>
+        <input type="password" id="admin-pass" class="w-full bg-[#111] border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-cyan-500 mb-4 text-center tracking-widest" placeholder="••••••••••••">
+        <button onclick="login()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-semibold py-3 rounded-lg transition-colors">Authenticate</button>
+        <p id="login-error" class="text-red-400 text-sm mt-3 hidden"></p>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboard" class="hidden w-full h-screen flex flex-col">
+        <header class="glass-panel border-b border-gray-800 px-6 py-4 flex justify-between items-center sticky top-0 z-10">
+            <div class="flex items-center gap-3">
+                <i class="ph-fill ph-crown text-2xl text-cyan-400"></i>
+                <h1 class="text-xl font-bold text-white tracking-wide">LexisAI <span class="text-gray-500 font-normal">Subscription Matrix</span></h1>
+            </div>
+            <button onclick="logout()" class="text-gray-400 hover:text-white flex items-center gap-2 text-sm"><i class="ph ph-sign-out"></i> Logout</button>
+        </header>
+
+        <main class="flex-1 overflow-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto w-full">
+            
+            <!-- LEFT COLUMN: Pending Requests -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-lg font-semibold text-white flex items-center gap-2"><i class="ph-fill ph-tray"></i> Pending User Requests</h2>
+                    <button onclick="fetchData()" class="text-cyan-400 text-sm hover:text-cyan-300"><i class="ph ph-arrows-clockwise"></i> Refresh Queue</button>
+                </div>
+                
+                <div id="requests-container" class="flex flex-col gap-3">
+                    <div class="text-gray-500 text-center py-10 glass-panel rounded-xl italic">Loading requests...</div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Manual Override & Active List -->
+            <div class="flex flex-col gap-6">
+                <!-- Manual Override Tool -->
+                <div class="glass-panel p-5 rounded-xl border border-gray-800">
+                    <h2 class="text-md font-semibold text-white mb-4 flex items-center gap-2"><i class="ph-fill ph-terminal-window"></i> User Override Tool</h2>
+                    <div class="flex flex-col gap-3">
+                        <input type="text" id="override-userId" placeholder="Enter Target User ID / IP" class="w-full bg-[#111] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:border-cyan-500 outline-none">
+                        <select id="override-type" class="w-full bg-[#111] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none">
+                            <option value="premium_2x">Upgrade: 2x Quota</option>
+                            <option value="premium_10x">Upgrade: 10x Quota</option>
+                            <option value="unlimited">Upgrade: Unlimited (VIP)</option>
+                            <option value="blocked">Restrict: BLOCK User</option>
+                            <option value="reset">Reset to Default Free Tier</option>
+                        </select>
+                        <input type="number" id="override-hours" placeholder="Hours (Leave blank for permanent)" class="w-full bg-[#111] border border-gray-700 rounded-lg px-3 py-2 text-xs text-white outline-none">
+                        <button onclick="executeOverride()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 rounded-lg text-sm transition-colors mt-2">Execute Command</button>
+                    </div>
+                </div>
+
+                <!-- Active Database Stats -->
+                <div class="glass-panel p-5 rounded-xl border border-gray-800 flex-1">
+                    <h2 class="text-md font-semibold text-white mb-4 flex items-center gap-2"><i class="ph-fill ph-database"></i> Active Overrides</h2>
+                    <div id="active-overrides" class="flex flex-col gap-2 overflow-y-auto max-h-[400px]">
+                        <p class="text-xs text-gray-500">Fetching active overrides...</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let adminPass = '';
+
+        async function login() {
+            const pass = document.getElementById('admin-pass').value;
+            const err = document.getElementById('login-error');
+            err.classList.add('hidden');
+            if(!pass) return;
+            try {
+                const res = await fetch('/api/subscription', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'get_requests', password: pass })
+                });
+                if(res.ok) {
+                    adminPass = pass;
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('dashboard').classList.remove('hidden');
+                    document.body.classList.remove('items-center', 'justify-center');
+                    fetchData();
+                } else { err.innerText = "Access Denied."; err.classList.remove('hidden'); }
+            } catch(e) { err.innerText = "Network Error."; err.classList.remove('hidden'); }
+        }
+
+        function logout() {
+            adminPass = ''; document.getElementById('admin-pass').value = '';
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.body.classList.add('items-center', 'justify-center');
+        }
+
+        async function fetchData() {
+            if(!adminPass) return;
+            const reqContainer = document.getElementById('requests-container');
+            const actContainer = document.getElementById('active-overrides');
+            reqContainer.innerHTML = '<div class="text-cyan-500 text-center py-4"><i class="ph ph-spinner animate-spin text-2xl"></i></div>';
+
+            try {
+                const res = await fetch('/api/subscription', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ action: 'get_requests', password: adminPass })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    if(data.requests.length === 0) {
+                        reqContainer.innerHTML = '<div class="text-gray-500 text-center py-10 glass-panel rounded-xl italic">No pending requests. Inbox zero!</div>';
+                    } else {
+                        reqContainer.innerHTML = data.requests.map(req => `
+                            <div class="glass-panel p-4 rounded-xl border border-gray-800 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-gray-800 text-gray-300 text-[10px] px-2 py-1 rounded-md font-mono">${req.userId}</span>
+                                        <span class="text-gray-500 text-xs">${new Date(req.timestamp).toLocaleString()}</span>
+                                    </div>
+                                    <p class="text-gray-200 text-sm">"${req.message}"</p>
+                                </div>
+                                <div class="flex gap-2 w-full md:w-auto shrink-0">
+                                    <button onclick="processRequest('${req.userId}', 'premium_10x', '${encodeURIComponent(JSON.stringify(req))}')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3 py-2 rounded-lg transition-colors flex-1 md:flex-none">Accept & Upgrade</button>
+                                    <button onclick="deleteRequest('${encodeURIComponent(JSON.stringify(req))}')" class="bg-gray-800 hover:bg-red-900/50 hover:text-red-400 text-gray-400 text-xs px-3 py-2 rounded-lg transition-colors flex-1 md:flex-none">Dismiss</button>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+
+                    const overrides = data.activeOverrides;
+                    if(Object.keys(overrides).length === 0) {
+                        actContainer.innerHTML = '<p class="text-xs text-gray-600 italic">No custom rules active.</p>';
+                    } else {
+                        actContainer.innerHTML = Object.entries(overrides).map(([uid, config]) => {
+                            let badgeColor = config.type === 'blocked' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30';
+                            let expText = config.expiresAt ? `Expires: ${new Date(config.expiresAt).toLocaleDateString()}` : 'Permanent';
+                            return `
+                                <div class="bg-[#0a0a0a] border border-gray-800 p-3 rounded-lg flex flex-col gap-1">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-gray-300 text-xs font-mono truncate mr-2">${uid}</span>
+                                        <span class="border text-[9px] px-1.5 py-0.5 rounded ${badgeColor} uppercase tracking-wider">${config.type.replace('_', ' ')}</span>
+                                    </div>
+                                    <span class="text-gray-600 text-[10px]">${expText}</span>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+            } catch(e) { reqContainer.innerHTML = `<div class="text-red-500 text-center py-4">Failed to fetch data.</div>`; }
+        }
+
+        async function executeOverride() {
+            const uid = document.getElementById('override-userId').value;
+            const type = document.getElementById('override-type').value;
+            const hours = document.getElementById('override-hours').value;
+            if(!uid) return alert("Please enter a User ID");
+            const res = await fetch('/api/subscription', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'set_override', password: adminPass, userId: uid, overrideType: type, expirationHours: hours ? parseInt(hours) : null })
+            });
+            if(res.ok) { document.getElementById('override-userId').value = ''; document.getElementById('override-hours').value = ''; fetchData(); } 
+            else alert("Action failed.");
+        }
+
+        async function deleteRequest(rawJsonEncoded) {
+            await fetch('/api/subscription', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'delete_request', password: adminPass, message: decodeURIComponent(rawJsonEncoded) })
+            });
+            fetchData();
+        }
+
+        async function processRequest(uid, type, rawJsonEncoded) {
+            await fetch('/api/subscription', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'set_override', password: adminPass, userId: uid, overrideType: type })
+            });
+            await deleteRequest(rawJsonEncoded);
+        }
+    </script>
+</body>
+</html>
+
+
