@@ -14,6 +14,87 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
+<!-- ====== PASTE THIS NEW QUOTA INJECTION BLOCK HERE ====== -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Inject Modal HTML safely into the body
+    document.body.insertAdjacentHTML('beforeend', `
+    <div id="quota-modal" class="fixed inset-0 bg-black/95 z-[150] hidden items-center justify-center backdrop-blur-md px-4 transition-opacity">
+        <div class="p-8 max-w-md w-full text-center rounded-3xl border border-red-500/30 bg-[#0a0a0a] shadow-[0_0_40px_rgba(239,68,68,0.15)] relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 to-orange-500"></div>
+            <i class="ph-fill ph-warning-circle text-5xl text-red-500 mb-4 inline-block animate-pulse"></i>
+            <h2 class="text-2xl font-bold text-white mb-2">Usage Limit Reached</h2>
+            <p class="text-gray-400 text-sm mb-6 leading-relaxed">You have exhausted your premium allocation for <strong id="quota-feature-name" class="text-white">this feature</strong>. You can request a limit increase or continue chatting for free.</p>
+            
+            <div class="flex flex-col gap-3">
+                <button id="quota-req-btn" onclick="requestMoreLimits()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-paper-plane-tilt"></i> Request Limit Increase
+                </button>
+                <button onclick="switchToSpark()" class="w-full bg-white/5 hover:bg-white/10 text-gray-300 font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2 border border-white/10">
+                    <i class="ph-bold ph-lightning text-amber-400"></i> Continue with Spark (Free)
+                </button>
+            </div>
+        </div>
+    </div>`);
+
+    // 2. Global Quota Interceptor Logic (Catches all backend limits automatically)
+    const originalFetch = window.fetch;
+    window.fetch = async function(...args) {
+        const response = await originalFetch(...args);
+        
+        // Clone response to safely read text without breaking normal app streaming flow
+        const clone = response.clone();
+        clone.text().then(text => {
+            if (text.includes("QUOTA_EXCEEDED")) {
+                const match = text.match(/Feature:\s*([^|"}]+)/i);
+                const featureName = match ? match[1].trim() : "Premium Tool";
+                document.getElementById('quota-feature-name').innerText = featureName;
+                document.getElementById('quota-modal').classList.remove('hidden');
+                document.getElementById('quota-modal').classList.add('flex');
+            }
+        }).catch(()=>{});
+
+        return response;
+    };
+});
+
+window.switchToSpark = function() {
+    document.getElementById('quota-modal').classList.add('hidden');
+    document.getElementById('quota-modal').classList.remove('flex');
+    activeModelId = 'spark'; // Bypass UI restrictions instantly
+    updateUIState();
+    handleSend(); // Auto-Resubmit their exact prompt to the free engine
+};
+
+window.requestMoreLimits = async function() {
+    const btn = document.getElementById('quota-req-btn');
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Submitting Request...';
+    btn.disabled = true;
+    try {
+        const deviceId = typeof getDeviceId === 'function' ? getDeviceId() : (localStorage.getItem('lexis_device_id') || 'Anonymous');
+        await fetch('/api/subscription', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ action: 'request_limit', userId: deviceId, message: "User requested limit increase from modal." })
+        });
+        btn.className = "w-full bg-emerald-600 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2";
+        btn.innerHTML = '<i class="ph-bold ph-check-circle"></i> Request Sent to Admin!';
+        
+        setTimeout(() => {
+            document.getElementById('quota-modal').classList.add('hidden');
+            document.getElementById('quota-modal').classList.remove('flex');
+            btn.className = "w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-red-600/20 flex items-center justify-center gap-2";
+            btn.innerHTML = origHtml;
+            btn.disabled = false;
+        }, 2500);
+    } catch(e) {
+        btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error. Try Again.';
+        btn.disabled = false;
+    }
+};
+</script>
+<!-- ======================================================== -->
+
 <!-- Tailwind Config -->
 <script>
 tailwind.config = { 
