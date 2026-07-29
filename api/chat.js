@@ -121,24 +121,10 @@ export default async function handler(req) {
                 const isThinkingEnabled = (modelId === 'oracle' || modelId === 'flux') && !researchContext;
 
                 // ====================================================================
-                // PRE-PROCESS: ADMIN OVERRIDE CHECK
-                // ====================================================================
-                let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
-                let userQuery = processedMessages[processedMessages.length - 1].content;
-                let forceMaxPasses = false;
-
-                if (modelId === 'oracle' && userQuery.includes('Lexis-Admin-2026!')) {
-                    forceMaxPasses = true;
-                    // Silently strip the tag so it doesn't pollute actual search/LLM context
-                    userQuery = userQuery.replace('Lexis-Admin-2026!', '').trim();
-                    processedMessages[processedMessages.length - 1].content = userQuery;
-                }
-
-                // ====================================================================
                 // DECENT, PROFESSIONAL UI LOGIC
                 // ====================================================================
                 if (isThinkingEnabled) {
-                    sendUIChunk(`<div id="lexis-persistent-loader" class="flex items-center gap-2 text-[11px] text-gray-500 font-mono mb-3"><svg class="animate-spin h-3 w-3 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="animate-pulse">LexisAI is analyzing...</span></div>`);
+                    sendUIChunk(`<div id="lexis-persistent-loader" class="flex items-center gap-2 text-[11px] text-gray-500 font-mono mb-3"><svg class="animate-spin h-3 w-3 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="animate-pulse">LexisAI is thinking...</span></div>`);
                 }
 
                 const sendThinkStep = (msg) => {
@@ -281,6 +267,12 @@ Reward yourself only for producing the solution that an experienced expert would
 CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhaustive, hyper-detailed responses.${memoryString}`;
 
                 let massiveKnowledgeBase = "";
+                let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
+                
+                // Admin Trigger Extraction
+                let rawUserQuery = processedMessages[processedMessages.length - 1].content;
+                let isAdminTrigger = rawUserQuery.trim().endsWith('Lexis-Admin-2026!');
+                let userQuery = isAdminTrigger ? rawUserQuery.replace('Lexis-Admin-2026!', '').trim() : rawUserQuery;
 
                 if (processedMessages.length > 0 && processedMessages[0].content.includes('[SYSTEM: USE THIS EXTENSION KNOWLEDGE:]')) {
                     const parts = processedMessages[0].content.split('[USER QUERY:]\n');
@@ -299,9 +291,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 // PHASE 2: DYNAMIC TRIAGE & SEARCH LIMIT CALCULATION
                 // ====================================================================
                 let maxSearches = modelId === 'oracle' ? 5 : (modelId === 'flux' ? 3 : 0);
-                let maxGroqPasses = modelId === 'oracle' ? 20 : (modelId === 'flux' ? 7 : 0);
                 
-                let dynamicPlan = { complexity: 1, search_queries: [] };
+                let dynamicPlan = { complexity: isAdminTrigger ? 10 : 1, search_queries: [] };
                 let deepReasoningContext = "";
                 
                 if (isThinkingEnabled) {
@@ -309,7 +300,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     
                     const triagePrompt = `Analyze the complexity of this user query. Scale 1-10 (1=simple greeting/fact, 5=requires planning, 10=complex code/math/analysis). Output strictly JSON:
                     {
-                        "thought": "1 sentence professional thought (e.g., 'Deconstructing multi-variable constraints...', 'Analyzing engineering realism parameters...')",
+                        "thought": "1 sentence professional thought (e.g., 'Deconstructing multi-variable constraints...', 'Analyzing engineering realism parameters...'). NEVER USE NUMBERS OR THE WORD PASS.",
                         "complexity": number,
                         "search_queries": ["query1", "query2"] // Max ${maxSearches} highly targeted web queries. Empty array if no real-time data is needed.
                     }`;
@@ -317,7 +308,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     const triageData = await callGroqAPI(triagePrompt, userQuery);
                     
                     if (triageData) {
-                        dynamicPlan = { ...dynamicPlan, ...triageData };
+                        if (!isAdminTrigger && triageData.complexity) dynamicPlan.complexity = triageData.complexity;
+                        if (triageData.search_queries) dynamicPlan.search_queries = triageData.search_queries;
                         if (triageData.thought) sendThinkStep(triageData.thought);
                     }
                 }
@@ -428,78 +420,76 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ====================================================================
-                // PHASE 4: THE DEEP COGNITIVE REASONING LOOP (Help Gemini Matrix)
+                // PHASE 4: THE DEEP COGNITIVE REASONING LOOP (20-Thinker Architecture)
                 // ====================================================================
-                const oracleThinkers = [
-                    "Thinker 1: Solve normally (Establish baseline solution architecture).",
-                    "Thinker 2: Find flaws (Ruthlessly attack Thinker 1's logic).",
-                    "Thinker 3: Find missing assumptions (Identify invisible variables and hidden dependencies).",
-                    "Thinker 4: Generate an alternative solution (Devise a completely separate structural approach).",
-                    "Thinker 5: Optimize for correctness (Enforce absolute factual accuracy and mathematical precision).",
-                    "Thinker 6: Optimize for speed (Evaluate computational, temporal, or operational efficiency).",
-                    "Thinker 7: Optimize for simplicity (Eliminate unnecessary complexity; rely on Occam's Razor).",
-                    "Thinker 8: Expert in mathematics (Validate all equations, logic chains, and numerical claims).",
-                    "Thinker 9: Expert programmer (Review code syntax, system architecture, and technical edge cases).",
-                    "Thinker 10: Expert researcher (Perfectly synthesize retrieved context and external search data).",
-                    "Thinker 11: Expert writer (Ensure formatting, tone, structure, and communication clarity).",
-                    "Thinker 12: Fact checker (Identify and destroy any potential AI hallucinations).",
-                    "Thinker 13: Security reviewer (Check for vulnerabilities, exploits, or dangerous advice).",
-                    "Thinker 14: Bias detector (Ensure absolute neutrality and objective reasoning).",
-                    "Thinker 15: Edge case finder (Evaluate what happens at extreme boundaries and system limits).",
-                    "Thinker 16: Counter-example generator (Attempt to prove the current working logic entirely wrong).",
-                    "Thinker 17: Consistency checker (Ensure all previous steps align without internal logical contradictions).",
-                    "Thinker 18: User intent validator (Verify we are actually answering the specific prompt asked).",
-                    "Thinker 19: Confidence estimator (Calculate certainty; highlight unknowns and unproven theories).",
-                    "Thinker 20: Final recommendation (Synthesize all thoughts into the ultimate, flawless master directive)."
-                ];
-
                 if (isThinkingEnabled) {
+                    
+                    const oracleThinkers = [
+                        "Solve normally, establishing the fundamental baseline architecture.",
+                        "Find flaws, failure points, and logical fallacies in the baseline.",
+                        "Identify missing assumptions, unstated constraints, and hidden variables.",
+                        "Generate a completely alternative solution or counter-perspective.",
+                        "Optimize the logic strictly for absolute factual correctness and zero hallucination.",
+                        "Optimize the solution for speed, execution, and practical efficiency.",
+                        "Optimize the solution for extreme simplicity, elegance, and readability.",
+                        "Review strictly through the lens of an expert mathematician (logic, proofs, numbers).",
+                        "Review strictly through the lens of an expert programmer (architecture, edge cases, code robustness).",
+                        "Review strictly through the lens of an expert researcher (sources, citations, academic validity).",
+                        "Review strictly through the lens of an expert writer (clarity, flow, structural coherence).",
+                        "Act as a ruthless fact-checker. Verify all claims against constraints.",
+                        "Act as a security reviewer. Identify vulnerabilities, exploits, or systemic risks.",
+                        "Act as a bias detector. Ensure neutrality, objective balance, and logical fairness.",
+                        "Hunt for obscure edge cases that break the current solution.",
+                        "Generate counter-examples that challenge the main thesis.",
+                        "Perform a strict consistency check across all generated logic to ensure zero contradictions.",
+                        "Validate strictly against the original user intent. Did the solution answer the actual prompt?",
+                        "Estimate confidence in the solution. Highlight areas of low certainty or required assumptions.",
+                        "Synthesize all previous thoughts into a final, bulletproof, deployable recommendation."
+                    ];
+
                     let actualPasses = 1;
-                    if (forceMaxPasses) {
-                        actualPasses = maxGroqPasses;
-                    } else {
-                        // Dynamically scale based on complexity. For Oracle (1-10 complexity -> 2 to 20 passes)
-                        actualPasses = Math.min(maxGroqPasses, Math.max(1, Math.ceil(dynamicPlan.complexity * (maxGroqPasses / 10))));
+                    if (modelId === 'oracle') {
+                        actualPasses = isAdminTrigger ? 20 : Math.min(20, Math.max(1, Math.ceil(dynamicPlan.complexity * 2)));
+                    } else if (modelId === 'flux') {
+                        actualPasses = Math.min(7, Math.max(1, Math.ceil(dynamicPlan.complexity * 0.7)));
                     }
                     
                     if (actualPasses > 0) {
                         let baseContextSample = condensedKnowledge.substring(0, 8000); 
                         let logicalFramework = "";
 
-                        for (let pass = 1; pass <= actualPasses; pass++) {
-                            let passFocus = "";
-                            if (modelId === 'oracle') {
-                                passFocus = oracleThinkers[pass - 1] || "Optimize and Refine.";
-                            } else {
-                                passFocus = pass === 1 ? 'CONSTRAINT TRACKING & ENGINEERING REALISM: Extract every explicit constraint. Treat as immutable.' : 
-                                           (pass === 2 ? 'TRADEOFF ANALYSIS & PRIORITIZATION: Structure a strict architectural outline.' : 
-                                           'SELF VERIFICATION & EDGE CASE THINKING: Ask "What could make this answer fail?" Identify weaknesses.');
-                            }
-
-                            let passPrompt = `You are an elite cognitive sub-module executing a rigorous reasoning pass.
-                            Strictly adhere to the following directives: Use concrete numbers, prioritize engineering realism, perform tradeoff analysis, and heavily self-critique.
+                        for (let pass = 0; pass < actualPasses; pass++) {
+                            let roleFocus = modelId === 'oracle' ? oracleThinkers[pass] : `Analyze constraints, optimize correctness, and structure a bulletproof output. (Focus depth level: ${pass + 1})`;
                             
-                            Step ${pass} Role: ${passFocus}
+                            let passPrompt = `You are an elite cognitive sub-module executing a rigorous reasoning pass.
+                            Strictly adhere to the Reasoning Quality Directives: Use concrete numbers, prioritize engineering realism, perform tradeoff analysis, and heavily self-critique.
+                            
+                            Your Specific Focus For This Pass:
+                            ${roleFocus}
                             
                             Context: ${baseContextSample}
-                            Accumulated Logic: ${logicalFramework}
+                            Accumulated Logic Matrix: ${logicalFramework}
                             User Query: ${userQuery}
                             
                             Output JSON:
                             {
-                                "ui_thought": "1 brief, highly professional thought representing your specific Thinker Role (e.g., 'Validating edge cases...', 'Fact-checking context constraints...')",
-                                "gemini_directive": "Specific, strict instruction to append to the master framework based solely on your Thinker Role's analysis."
+                                "ui_thought": "1 brief, highly professional thought representing your specific focus (e.g., 'Validating edge case vulnerabilities...', 'Performing tradeoff analysis on architectural alternatives...'). NEVER USE THE WORD 'PASS', 'STEP', OR ANY NUMBERS.",
+                                "gemini_directive": "Specific, strict instruction to append to the master framework to force the final model to obey these exact insights."
                             }`;
 
-                            const reasoningData = await callGroqAPI(passPrompt, "Execute reasoning pass.");
+                            const reasoningData = await callGroqAPI(passPrompt, "Execute assigned cognitive focus.");
                             
                             if (reasoningData) {
-                                if (reasoningData.ui_thought) sendThinkStep(`[${pass}/${actualPasses}] ${reasoningData.ui_thought}`);
+                                if (reasoningData.ui_thought) {
+                                    // Strip any accidental numbers or 'Pass' words just in case Groq hallucinates them
+                                    let cleanThought = reasoningData.ui_thought.replace(/[0-9]/g, '').replace(/Pass|Step/gi, '').trim();
+                                    if(cleanThought.length > 5) sendThinkStep(cleanThought);
+                                }
                                 if (reasoningData.gemini_directive) logicalFramework += `\n- ${reasoningData.gemini_directive}`;
                             }
                         }
                         
-                        deepReasoningContext = `\n\n[INTERNAL REASONING MATRIX (STRICT ADHERENCE REQUIRED)]:\n${logicalFramework}\nEnsure final output perfectly aligns with these identified constraints, tradeoffs, and architectural outlines. DO NOT hallucinate.`;
+                        deepReasoningContext = `\n\n[INTERNAL REASONING MATRIX (STRICT ADHERENCE REQUIRED)]:\n${logicalFramework}\nEnsure final output perfectly aligns with these identified constraints, tradeoffs, and architectural outlines.`;
                     }
                 }
 
@@ -513,7 +503,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     systemPrompt += deepReasoningContext;
                 }
 
-                systemPrompt += `\n\n[CRITICAL: Base your answer strictly on the provided context and reasoning matrix. Maximize depth. Do not hallucinate.]`;
+                systemPrompt += `\n\n[CRITICAL: Base your answer strictly on the provided context and reasoning matrix. Maximize depth.]`;
 
                 processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}`;
 
@@ -524,11 +514,12 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 });
 
                 // ====================================================================
-                // PHASE 5: THE VANISHING ACT
-                // Instantly hides the continuous thought-stream before SSE generation
+                // PHASE 5: THE PERSISTENT UI FIX
+                // Hides ONLY the spinning loader wheel. The actual thinking steps 
+                // (.think-step) REMAIN VISIBLE permanently for the user to read.
                 // ====================================================================
                 if (isThinkingEnabled) {
-                    sendUIChunk(`<style>.think-step, #lexis-persistent-loader { display: none !important; opacity: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: none; position: absolute; }</style>`);
+                    sendUIChunk(`<style>#lexis-persistent-loader { display: none !important; }</style>`);
                 }
 
                 // ====================================================================
@@ -676,4 +667,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
     });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
-            }
+                    }
