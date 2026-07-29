@@ -1,12 +1,12 @@
 // ============================================================================
-// [ SAAS GATEWAY ] UNIVERSAL RATE LIMITER & AUTHENTICATOR (ULTIMATE V3)
-// 100% Fail-Safe Upstash REST parsing using Direct POST Array Commands
+// [ SAAS GATEWAY ] UNIVERSAL RATE LIMITER & AUTHENTICATOR (ULTIMATE V4)
+// Integrates Lexis Subscription Dashboard & API Key Developer Platform
 // ============================================================================
 
-const UPSTASH_URL = "https://immortal-eagle-36171.upstash.io".replace(/\/$/, ''); // Strip trailing slashes
+const UPSTASH_URL = "https://immortal-eagle-36171.upstash.io".replace(/\/$/, '');
 const UPSTASH_TOKEN = "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw";
 
-// Your personal apps that get unlimited, free usage without an API key
+// Origins that trigger the Web App (Modal) Quota System instead of requiring API Keys
 const ALLOWED_ORIGINS = ['chatini-ai.vercel.app', 'lexis-ai-chatini.vercel.app', 'localhost', '127.0.0.1'];
 
 export async function verifyAndLimit(req, requestedModel, requestedFeature) {
@@ -19,61 +19,123 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
         }
 
         // --------------------------------------------------------------------
-        // 1. CREATOR BYPASS (Absolute Infinity Mode for Your Apps)
+        // 1. SPARK BYPASS (Always 100% Free & Unlimited for Everyone)
         // --------------------------------------------------------------------
+        if (requestedModel === 'spark') {
+            return { authorized: true, isCreator: false };
+        }
+
         const origin = req.headers.get('origin') || req.headers.get('referer') || '';
-        let isCreatorApp = false;
+        let isWebAppOrigin = false;
         
         for (let i = 0; i < ALLOWED_ORIGINS.length; i++) {
             if (origin.toLowerCase().includes(ALLOWED_ORIGINS[i].toLowerCase())) {
-                isCreatorApp = true;
+                isWebAppOrigin = true;
                 break;
             }
         }
 
-        if (isCreatorApp) {
-            // Silently log creator success using POST command
+        const today = new Date().toISOString().split('T')[0];
+        const multiExec = [];
+
+        // ====================================================================
+        // PATH A: WEB APP USERS (Triggers the Pop-up Modal)
+        // ====================================================================
+        if (isWebAppOrigin) {
+            let userId = req.headers.get('x-forwarded-for') || 'unknown_ip';
+            try {
+                const body = await req.clone().json();
+                if (body.deviceId) userId = body.deviceId;
+                else if (body.userProfile && body.userProfile.deviceId) userId = body.userProfile.deviceId;
+            } catch(e) {}
+
+            // 1. Check Admin Dashboard Overrides
+            const overrideRaw = await executeUpstashCommand(["HGET", "lexis:quota_overrides", userId]);
+            let multiplier = 1;
+            
+            if (overrideRaw) {
+                try {
+                    const config = typeof overrideRaw === 'string' ? JSON.parse(overrideRaw) : overrideRaw;
+                    if (config.type === 'blocked') return { authorized: false, error: "QUOTA_EXCEEDED | Feature: Account Suspended | Contact: thestarsofstarsptpn@gmail.com" };
+                    if (config.type === 'unlimited') {
+                        executeUpstashCommand(["INCR", "stats:total_success"]);
+                        return { authorized: true, isCreator: true };
+                    }
+                    if (config.type === 'premium_2x') multiplier = 2;
+                    if (config.type === 'premium_10x') multiplier = 10;
+                } catch(e) {}
+            }
+
+            // 2. Strict Usage Limits Matrix (UPDATED)
+            const targetFeature = (requestedFeature && requestedFeature !== 'none') ? requestedFeature : requestedModel;
+            const LIMITS = {
+                'oracle': 2 * multiplier,    // Strictly 2 requests
+                'flux': 5 * multiplier,      // Strictly 5 requests
+                'image': 5 * multiplier,
+                'presentation': 5 * multiplier,
+                'research': 3 * multiplier,
+                'podcast': 5 * multiplier,
+                'app': 5 * multiplier,
+                'study': 5 * multiplier
+            };
+
+            const maxLimit = LIMITS[targetFeature] || (5 * multiplier);
+            const redisKey = `lexis:usage:${userId}:${today}:${targetFeature}`;
+            
+            const currentUsage = await executeUpstashCommand(["INCR", redisKey]);
+            if (currentUsage === 1) await executeUpstashCommand(["EXPIRE", redisKey, 86400]);
+
+            // 3. Trigger Modal if Limit Exceeded
+            if (currentUsage > maxLimit) {
+                const displayNames = {
+                    'oracle': 'Oracle 2.0 Mode',
+                    'flux': 'Flux 1.5 Mode',
+                    'image': 'Visual Engine',
+                    'presentation': 'Premium Slides',
+                    'research': 'Deep Research',
+                    'podcast': 'Audio Producer',
+                    'app': 'App Builder',
+                    'study': 'Study Deck Generator'
+                };
+                const fName = displayNames[targetFeature] || 'Premium Feature';
+                
+                // This exact string is caught by the frontend interceptor to show the modal
+                return { 
+                    authorized: false, 
+                    isCreator: false,
+                    error: `QUOTA_EXCEEDED | Feature: ${fName} | Contact: thestarsofstarsptpn@gmail.com`
+                };
+            }
+
             executeUpstashCommand(["INCR", "stats:total_success"]);
-            return { authorized: true, isCreator: true };
+            return { authorized: true, isCreator: false };
         }
 
-        // --------------------------------------------------------------------
-        // 2. EXTERNAL DEVELOPER EXTRACTION & HYPER-SANITIZATION
-        // --------------------------------------------------------------------
+        // ====================================================================
+        // PATH B: EXTERNAL DEVELOPERS (Requires 'Lexis-' API Key)
+        // ====================================================================
         const authHeader = req.headers.get('authorization');
         if (!authHeader) {
             await logError('missing_key');
             return { authorized: false, status: 401, error: "Authentication missing. Send 'Authorization: Bearer Lexis-...'" };
         }
 
-        // Extremely aggressive regex to strip all invisible characters, tabs, newlines
         let rawKey = authHeader.replace(/^Bearer\s+/i, '').trim();
         let apiKey = rawKey.replace(/[^a-zA-Z0-9-]/g, ''); 
-
-        // Auto-fix if they accidentally stripped the hyphen
-        if (apiKey.startsWith('Lexis') && !apiKey.startsWith('Lexis-')) {
-            apiKey = apiKey.replace('Lexis', 'Lexis-');
-        }
+        if (apiKey.startsWith('Lexis') && !apiKey.startsWith('Lexis-')) apiKey = apiKey.replace('Lexis', 'Lexis-');
 
         if (!apiKey.startsWith('Lexis-') || apiKey.length < 15) {
             await logError('invalid_format');
             return { authorized: false, status: 401, error: "Invalid Lexis API Key format." };
         }
 
-        const endUserDeviceId = req.headers.get('x-end-user-device-id') || req.headers.get('user-agent') || 'anonymous_end_user';
-
-        // --------------------------------------------------------------------
-        // 3. FAIL-SAFE UPSTASH FETCH (Direct POST Array Command)
-        // --------------------------------------------------------------------
         const keyData = await executeUpstashCommand(["GET", `apikey:${apiKey}`]);
         
-        if (keyData === null || keyData === undefined || keyData === "") {
+        if (!keyData) {
             await logError('invalid_key');
-            // Detailed error so you know exactly what string was searched
             return { authorized: false, status: 401, error: `Key not found in database. Checked for: [${apiKey}]` };
         }
 
-        // DOUBLE-DECODE FAILSAFE: Handles both raw JSON objects and double-stringified data
         let keyConfig;
         try {
             keyConfig = typeof keyData === 'string' ? JSON.parse(keyData) : keyData;
@@ -83,31 +145,14 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
             return { authorized: false, status: 500, error: "API Key payload corrupted. Contact admin." };
         }
 
-        // Validate structure
-        if (!keyConfig || !keyConfig.limits) {
-            return { authorized: false, status: 500, error: "API Key missing limits configuration." };
-        }
-
-        // --------------------------------------------------------------------
-        // 4. ACCOUNT STATUS CHECK
-        // --------------------------------------------------------------------
+        if (!keyConfig || !keyConfig.limits) return { authorized: false, status: 500, error: "API Key missing limits configuration." };
         if (keyConfig.status === 'blocked') {
             await logError('blocked_account');
             return { authorized: false, status: 403, error: "This Lexis Account has been suspended by the Administrator." };
         }
 
-        const today = new Date().toISOString().split('T')[0];
-        const multiExec = [];
-
-        // --------------------------------------------------------------------
-        // 5. VERIFY MODEL LIMITS
-        // --------------------------------------------------------------------
         if (requestedModel && requestedModel !== 'none') {
-            let modelLimit = 0;
-            if (keyConfig.limits.models && keyConfig.limits.models[requestedModel] !== undefined) {
-                modelLimit = parseInt(keyConfig.limits.models[requestedModel], 10);
-            }
-
+            let modelLimit = keyConfig.limits.models?.[requestedModel] ? parseInt(keyConfig.limits.models[requestedModel], 10) : 0;
             const modelTrackerKey = `usage:${apiKey}:${today}:model:${requestedModel}`;
             const usageData = await executeUpstashCommand(["GET", modelTrackerKey]);
             const currentUsage = parseInt(usageData || "0", 10);
@@ -116,21 +161,11 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
                 await logError('rate_limit_model');
                 return { authorized: false, status: 429, error: `[RATE LIMIT] Daily limit exceeded for model '${requestedModel}'. Limit: ${modelLimit}/day.` };
             }
-            
-            multiExec.push(["INCR", modelTrackerKey]);
-            multiExec.push(["EXPIRE", modelTrackerKey, "86400"]);
-            multiExec.push(["SADD", "stats:models_used", requestedModel]);
+            multiExec.push(["INCR", modelTrackerKey], ["EXPIRE", modelTrackerKey, "86400"], ["SADD", "stats:models_used", requestedModel]);
         }
 
-        // --------------------------------------------------------------------
-        // 6. VERIFY FEATURE LIMITS
-        // --------------------------------------------------------------------
         if (requestedFeature && requestedFeature !== 'none') {
-            let featureLimit = 0;
-            if (keyConfig.limits.features && keyConfig.limits.features[requestedFeature] !== undefined) {
-                featureLimit = parseInt(keyConfig.limits.features[requestedFeature], 10);
-            }
-
+            let featureLimit = keyConfig.limits.features?.[requestedFeature] ? parseInt(keyConfig.limits.features[requestedFeature], 10) : 0;
             const featureTrackerKey = `usage:${apiKey}:${today}:feat:${requestedFeature}`;
             const usageData = await executeUpstashCommand(["GET", featureTrackerKey]);
             const currentUsage = parseInt(usageData || "0", 10);
@@ -139,29 +174,17 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
                 await logError('rate_limit_feature');
                 return { authorized: false, status: 429, error: `[RATE LIMIT] Daily limit exceeded for feature '${requestedFeature}'. Limit: ${featureLimit}/day.` };
             }
-            
-            multiExec.push(["INCR", featureTrackerKey]);
-            multiExec.push(["EXPIRE", featureTrackerKey, "86400"]);
-            multiExec.push(["SADD", "stats:features_used", requestedFeature]);
+            multiExec.push(["INCR", featureTrackerKey], ["EXPIRE", featureTrackerKey, "86400"], ["SADD", "stats:features_used", requestedFeature]);
         }
 
-        // --------------------------------------------------------------------
-        // 7. EXECUTE PIPELINE & TRACK END-USER TELEMETRY
-        // --------------------------------------------------------------------
-        multiExec.push(["INCR", "stats:total_requests"]);
-        multiExec.push(["INCR", "stats:total_success"]);
-        
-        // This tracks the unique people using the external developer's app
-        multiExec.push(["SADD", `dev_users:${apiKey}`, endUserDeviceId]);
+        const endUserDeviceId = req.headers.get('x-end-user-device-id') || req.headers.get('user-agent') || 'anonymous_end_user';
+        multiExec.push(["INCR", "stats:total_requests"], ["INCR", "stats:total_success"], ["SADD", `dev_users:${apiKey}`, endUserDeviceId]);
 
-        if (multiExec.length > 0) {
-            executeUpstashPipeline(multiExec); // Fire and forget (don't await) to keep API fast
-        }
+        if (multiExec.length > 0) executeUpstashPipeline(multiExec);
 
         return { authorized: true, isCreator: false, accountData: keyConfig };
 
     } catch (e) {
-        // Ultimate Failsafe: If Redis completely crashes, log locally and block
         console.error("Auth Exception:", e);
         return { authorized: false, status: 500, error: "Lexis Authentication Service Timed Out." };
     }
@@ -195,7 +218,7 @@ async function executeUpstashPipeline(pipelineArray) {
         });
         if (!res.ok) return null;
         const data = await res.json();
-        return data; // Array of results
+        return data; 
     } catch(e) {
         return null;
     }
@@ -207,6 +230,4 @@ async function logError(type) {
         ["INCR", "stats:total_errors"],
         ["INCR", `stats:errors:${type}`]
     ]);
-}
-
-
+                    }
