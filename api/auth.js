@@ -1,6 +1,6 @@
 // ============================================================================
-// [ SAAS GATEWAY ] UNIVERSAL RATE LIMITER & AUTHENTICATOR (ULTIMATE V4)
-// Integrates Lexis Subscription Dashboard & API Key Developer Platform
+// [ SAAS GATEWAY ] UNIVERSAL RATE LIMITER & AUTHENTICATOR (ULTIMATE V4.1)
+// Perfectly Synchronized with Admin Subscription Overrides
 // ============================================================================
 
 const UPSTASH_URL = "https://immortal-eagle-36171.upstash.io".replace(/\/$/, '');
@@ -11,19 +11,10 @@ const ALLOWED_ORIGINS = ['chatini-ai.vercel.app', 'lexis-ai-chatini.vercel.app',
 
 export async function verifyAndLimit(req, requestedModel, requestedFeature) {
     try {
-        // --------------------------------------------------------------------
-        // 0. PREFLIGHT CORS BYPASS
-        // --------------------------------------------------------------------
-        if (req.method === 'OPTIONS') {
-            return { authorized: true, isCreator: false, isOptions: true };
-        }
+        if (req.method === 'OPTIONS') return { authorized: true, isCreator: false, isOptions: true };
 
-        // --------------------------------------------------------------------
         // 1. SPARK BYPASS (Always 100% Free & Unlimited for Everyone)
-        // --------------------------------------------------------------------
-        if (requestedModel === 'spark') {
-            return { authorized: true, isCreator: false };
-        }
+        if (requestedModel === 'spark') return { authorized: true, isCreator: false };
 
         const origin = req.headers.get('origin') || req.headers.get('referer') || '';
         let isWebAppOrigin = false;
@@ -42,12 +33,9 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
         // PATH A: WEB APP USERS (Triggers the Pop-up Modal)
         // ====================================================================
         if (isWebAppOrigin) {
-            let userId = req.headers.get('x-forwarded-for') || 'unknown_ip';
-            try {
-                const body = await req.clone().json();
-                if (body.deviceId) userId = body.deviceId;
-                else if (body.userProfile && body.userProfile.deviceId) userId = body.userProfile.deviceId;
-            } catch(e) {}
+            // CORE FIX: Always track by true Network IP to match the Admin Dashboard.
+            const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown_ip';
+            const userId = clientIp.split(',')[0].trim();
 
             // 1. Check Admin Dashboard Overrides
             const overrideRaw = await executeUpstashCommand(["HGET", "lexis:quota_overrides", userId]);
@@ -55,22 +43,30 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
             
             if (overrideRaw) {
                 try {
-                    const config = typeof overrideRaw === 'string' ? JSON.parse(overrideRaw) : overrideRaw;
-                    if (config.type === 'blocked') return { authorized: false, error: "QUOTA_EXCEEDED | Feature: Account Suspended | Contact: thestarsofstarsptpn@gmail.com" };
-                    if (config.type === 'unlimited') {
-                        executeUpstashCommand(["INCR", "stats:total_success"]);
-                        return { authorized: true, isCreator: true };
+                    // Upstash REST sometimes double-encodes JSON in Hashes. This safely unwraps it.
+                    let config = typeof overrideRaw === 'string' ? JSON.parse(overrideRaw) : overrideRaw;
+                    if (typeof config === 'string') config = JSON.parse(config); 
+
+                    // Check if temporary boost expired
+                    if (config.expiresAt && Date.now() > config.expiresAt) {
+                        executeUpstashCommand(["HDEL", "lexis:quota_overrides", userId]); // Auto-Cleanup
+                    } else {
+                        if (config.type === 'blocked') return { authorized: false, error: "QUOTA_EXCEEDED | Feature: Account Suspended | Contact: thestarsofstarsptpn@gmail.com" };
+                        if (config.type === 'unlimited') {
+                            executeUpstashCommand(["INCR", "stats:total_success"]);
+                            return { authorized: true, isCreator: true };
+                        }
+                        if (config.type === 'premium_2x') multiplier = 2;
+                        if (config.type === 'premium_10x') multiplier = 10;
                     }
-                    if (config.type === 'premium_2x') multiplier = 2;
-                    if (config.type === 'premium_10x') multiplier = 10;
-                } catch(e) {}
+                } catch(e) { console.error("Override Parse Error", e); }
             }
 
-            // 2. Strict Usage Limits Matrix (UPDATED)
+            // 2. Strict Usage Limits Matrix
             const targetFeature = (requestedFeature && requestedFeature !== 'none') ? requestedFeature : requestedModel;
             const LIMITS = {
-                'oracle': 2 * multiplier,    // Strictly 2 requests
-                'flux': 5 * multiplier,      // Strictly 5 requests
+                'oracle': 2 * multiplier,    // Strict 2 (Multiplied by admin dashboard)
+                'flux': 5 * multiplier,      // Strict 5
                 'image': 5 * multiplier,
                 'presentation': 5 * multiplier,
                 'research': 3 * multiplier,
@@ -99,7 +95,6 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
                 };
                 const fName = displayNames[targetFeature] || 'Premium Feature';
                 
-                // This exact string is caught by the frontend interceptor to show the modal
                 return { 
                     authorized: false, 
                     isCreator: false,
@@ -190,10 +185,6 @@ export async function verifyAndLimit(req, requestedModel, requestedFeature) {
     }
 }
 
-// ============================================================================
-// [ CORE ] UPSTASH FAIL-SAFE COMMUNICATION HELPERS
-// ============================================================================
-
 async function executeUpstashCommand(commandArray) {
     try {
         const res = await fetch(UPSTASH_URL, {
@@ -230,4 +221,4 @@ async function logError(type) {
         ["INCR", "stats:total_errors"],
         ["INCR", `stats:errors:${type}`]
     ]);
-                    }
+                                                         }
