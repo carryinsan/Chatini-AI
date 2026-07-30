@@ -36,11 +36,14 @@ export default async function handler(req) {
         // PUBLIC ACTION: User requests more limits directly from App Modal
         // ========================================================================
         if (action === 'request_limit') {
-            if (!userId) throw new Error("Missing user identification");
+            // CORE FIX: Extract true Network IP to sync perfectly with auth.js
+            const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown_ip';
+            const pureIp = clientIp.split(',')[0].trim();
+
             const requestPayload = {
                 id: 'req_' + Math.random().toString(36).substring(2, 9),
-                userId: userId,
-                message: message || "Standard limit increase request",
+                userId: pureIp, // Admin dashboard will now show and approve their IP!
+                message: message + ` [Local Device: ${userId || 'Unknown'}]`,
                 timestamp: Date.now(),
                 status: 'pending'
             };
@@ -78,15 +81,14 @@ export default async function handler(req) {
             if (!userId || !overrideType) throw new Error("Missing userId or overrideType");
             
             if (overrideType === 'reset') {
-                // Remove override, back to normal free tier
                 await redisCommand(["HDEL", "lexis:quota_overrides", userId]);
                 return new Response(JSON.stringify({ success: true, message: "User reset to default limits." }), { status: 200 });
             }
 
             const overridePayload = {
-                type: overrideType, // 'blocked', 'premium_2x', 'premium_10x', 'unlimited'
+                type: overrideType, 
                 timestamp: Date.now(),
-                expiresAt: expirationHours ? Date.now() + (expirationHours * 3600000) : null // null = permanent
+                expiresAt: expirationHours ? Date.now() + (expirationHours * 3600000) : null 
             };
 
             await redisCommand(["HSET", "lexis:quota_overrides", userId, JSON.stringify(overridePayload)]);
@@ -96,7 +98,6 @@ export default async function handler(req) {
         // 3. Dismiss/Delete Request
         if (action === 'delete_request') {
             if (!message) throw new Error("Missing exact request string to delete");
-            // Delete exact JSON string match from list
             await redisCommand(["LREM", "lexis:subscription_requests", "0", message]);
             return new Response(JSON.stringify({ success: true }), { status: 200 });
         }
@@ -106,4 +107,4 @@ export default async function handler(req) {
     } catch (err) {
         return new Response(JSON.stringify({ success: false, error: err.message }), { status: 500 });
     }
-                                            }
+}
