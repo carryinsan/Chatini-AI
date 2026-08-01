@@ -285,6 +285,7 @@ tailwind.config = {
         <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-plus"></i> New Conversation</button>
         <button onclick="openExtModal()" class="w-full flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-brain"></i> Manage Extensions</button>
         <button onclick="generateBrainMap()" class="w-full flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-graph"></i> Constellation Map</button>
+        <button onclick="shareFullChat()" class="w-full flex items-center justify-center gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-share-network"></i> Share Chat </button>
         <div class="relative w-full">
             <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none appearance-none cursor-pointer hover:border-white/20 transition-colors">
                 <option value="">No Extension Active</option>
@@ -642,10 +643,39 @@ window.onload = async () => {
     const urlParams = new URLSearchParams(window.location.search);
     const shareId = urlParams.get('share');
     const roomId = urlParams.get('room');
+    const fullChatId = urlParams.get('chat');
 
     if (roomId) {
         joinMultiplayerRoom(roomId);
+    } else if (fullChatId) {
+        // --- NEW: Load Shared Chat from Supabase Branch ---
+        try {
+            showToast("Loading Shared Branch...");
+            const res = await fetch(`/api/chatshare?id=${fullChatId}`);
+            const data = await res.json();
+            
+            if (data.success && data.chat) {
+                // Fork it: Assign a brand new local ID so it doesn't overwrite anything
+                currentChatId = Date.now().toString(); 
+                messages = data.chat.messages || [];
+                
+                // Add an indicator message so the user knows they imported a branch
+                messages.push({ role: 'assistant', content: '> *You have successfully cloned a shared chat branch. Your new messages here remain strictly private.*', id: 'sys_branch', modelId: 'oracle' });
+                
+                renderMessagesToUI();
+                saveCurrentChat();
+                renderHistoryList();
+                
+                // Strip the URL so refreshing doesn't reload the same snapshot
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showToast("Chat Branch Cloned!");
+            } else {
+                showToast("Shared Chat Expired or Invalid");
+                createNewChat();
+            }
+        } catch(e) { createNewChat(); }
     } else if (shareId) {
+
         try {
             const res = await fetch(`/api/share?id=${shareId}`);
             const d = await res.json();
