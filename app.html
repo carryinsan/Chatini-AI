@@ -292,9 +292,34 @@ tailwind.config = {
             </select>
             <i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-xs"></i>
         </div>
+        
+        <div class="w-full bg-[#0a0a0a] border border-white/10 rounded-xl p-3 flex flex-col gap-3 mt-2 shadow-inner">
+            <div class="flex justify-between items-center w-full group">
+                <div class="flex items-center gap-2 text-gray-400 group-hover:text-cyan-400 transition-colors">
+                    <i class="ph-bold ph-brain text-sm"></i>
+                    <span class="text-xs font-semibold tracking-wide">Use Global Memory</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-use-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
+                    <div class="w-8 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-cyan-500 shadow-inner"></div>
+                </label>
+            </div>
+            <div class="w-full h-px bg-white/5"></div>
+            <div class="flex justify-between items-center w-full group">
+                <div class="flex items-center gap-2 text-gray-400 group-hover:text-purple-400 transition-colors">
+                    <i class="ph-bold ph-floppy-disk text-sm"></i>
+                    <span class="text-xs font-semibold tracking-wide">Save to Memory</span>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="toggle-save-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
+                    <div class="w-8 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
+                </label>
+            </div>
+        </div>
     </div>
     <div class="p-4 flex justify-between items-center border-b border-white/10">
         <h2 class="text-xs font-bold tracking-widest text-gray-400 uppercase">Chat History</h2>
+
         <button onclick="toggleSidebar()" class="text-gray-400 hover:text-white p-1"><i class="ph-bold ph-x text-sm"></i></button>
     </div>
     <div id="history-list" class="flex-1 overflow-y-auto px-2 space-y-1 pb-safe pt-2"></div>
@@ -2208,11 +2233,16 @@ async function handleSend() {
     renderStagingArea();
     isProcessing = true; 
     updateUIState();
-
     msgCountForMemory++;
-    if (msgCountForMemory % 5 === 0) updateMemoryAsync();
+    
+    // NEW: Check if user wants to contribute this chat to their global memory profile
+    const shouldSaveToMemory = document.getElementById('toggle-save-memory') ? document.getElementById('toggle-save-memory').checked : true;
+    if (shouldSaveToMemory && msgCountForMemory % 5 === 0) {
+        updateMemoryAsync();
+    }
 
     if (isMathMode) {
+
         els.indicator.classList.add('hidden');
         const logContainer = appendResearchTerminal('Initializing Cartesian Core...', 'math');
         
@@ -2586,6 +2616,9 @@ async function handleSend() {
             }
         }
 
+                // NEW: Check if user wants to retrieve past global memory for this prompt
+        const shouldReadMemory = document.getElementById('toggle-use-memory') ? document.getElementById('toggle-use-memory').checked : true;
+
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -2593,9 +2626,12 @@ async function handleSend() {
                 messages: contextMessages.slice(-1000), 
                 modelId: activeModelId,
                 researchContext: compiledResearchContext, 
-                userProfile: userProfile 
+                userProfile: userProfile,
+                useGlobalMemory: shouldReadMemory,     // Sent to backend
+                contributeToMemory: shouldSaveToMemory // Sent to backend
             })
         });
+
 
         els.indicator.classList.add('hidden');
 
