@@ -2721,11 +2721,52 @@ async function generateBrainMap() {
     isProcessing = false; updateUIState();
 }
 
+// ====== PASTE shareFullChat HERE ======
+async function shareFullChat() {
+    if (messages.length === 0) return showToast("Cannot share an empty chat.");
+    showToast("Generating Share Link...");
+    
+    // Grab the current state of the chat to send to Supabase
+    const chatData = {
+        title: chats.find(c => c.id === currentChatId)?.title || "Shared Chat",
+        messages: messages.map(m => ({ 
+            role: m.role, 
+            content: m.content,
+            modelId: m.modelId, 
+            attachmentsMeta: m.attachmentsMeta || [] 
+        }))
+    };
+
+    try {
+        const res = await fetch('/api/chatshare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chatData })
+        });
+        const data = await res.json();
+        
+        if (data.success && data.shareId) {
+            const link = window.location.origin + window.location.pathname + '?chat=' + data.shareId;
+            if (navigator.clipboard && window.isSecureContext) {
+                await navigator.clipboard.writeText(link);
+            } else { 
+                const t = document.createElement("textarea"); t.value = link; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); 
+            }
+            showToast("Chat Link Copied!");
+        } else {
+            showToast("Failed to generate link.");
+        }
+    } catch(e) {
+        showToast("Network Error.");
+    }
+}
+
 els.input.addEventListener('input', function() { 
     this.style.height = 'auto'; 
     this.style.height = this.scrollHeight + 'px'; 
     updateUIState(); 
 });
+
 
 els.input.addEventListener('keydown', (e) => { 
     if (e.key === 'Enter' && !e.shiftKey) {
