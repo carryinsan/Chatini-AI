@@ -154,18 +154,48 @@
                             let badgeColor = config.type === 'blocked' ? 'bg-red-500/20 text-red-400 border-red-500/30' : 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30';
                             let expText = config.expiresAt ? `Expires: ${new Date(config.expiresAt).toLocaleDateString()}` : 'Permanent';
                             return `
-                                <div class="bg-[#0a0a0a] border border-gray-800 p-3 rounded-lg flex flex-col gap-1">
+                                <div class="bg-[#0a0a0a] border border-gray-800 p-3 rounded-lg flex flex-col gap-2 transition-all hover:bg-[#111]">
                                     <div class="flex justify-between items-center">
-                                        <span class="text-gray-300 text-xs font-mono truncate mr-2">${uid}</span>
+                                        <span class="text-gray-300 text-xs font-mono truncate mr-2" title="${uid}">${uid.substring(0,20)}${uid.length>20?'...':''}</span>
                                         <span class="border text-[9px] px-1.5 py-0.5 rounded ${badgeColor} uppercase tracking-wider">${config.type.replace('_', ' ')}</span>
                                     </div>
-                                    <span class="text-gray-600 text-[10px]">${expText}</span>
+                                    <div class="flex justify-between items-center mt-1">
+                                        <span class="text-gray-600 text-[10px]">${expText}</span>
+                                        <div class="flex gap-1">
+                                            <button onclick="quickOverride('${uid}', 'blocked')" class="text-[9px] bg-red-900/30 hover:bg-red-900/60 text-red-400 px-2 py-1 rounded transition-colors" title="Block User">BLOCK</button>
+                                            <button onclick="quickOverride('${uid}', 'reset')" class="text-[9px] bg-gray-800 hover:bg-gray-700 text-gray-300 px-2 py-1 rounded transition-colors" title="Remove Rule / Unblock">RESET</button>
+                                            <button onclick="fillOverrideForm('${uid}', '${config.type}')" class="text-[9px] bg-cyan-900/30 hover:bg-cyan-900/60 text-cyan-400 px-2 py-1 rounded transition-colors" title="Edit Rule">EDIT</button>
+                                        </div>
+                                    </div>
                                 </div>
                             `;
                         }).join('');
                     }
                 }
             } catch(e) { reqContainer.innerHTML = `<div class="text-red-500 text-center py-4">Failed to fetch data.</div>`; }
+        }
+
+        async function quickOverride(uid, type) {
+            const actionText = type === 'reset' ? 'reset/unblock' : 'block';
+            if(!confirm(`Are you sure you want to ${actionText} user ${uid}?`)) return;
+            const res = await fetch('/api/subscription', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ action: 'set_override', password: adminPass, userId: uid, overrideType: type })
+            });
+            if(res.ok) fetchData();
+            else alert("Action failed.");
+        }
+
+        function fillOverrideForm(uid, currentType) {
+            document.getElementById('override-userId').value = uid;
+            const typeSelect = document.getElementById('override-type');
+            for(let i=0; i<typeSelect.options.length; i++) {
+                if(typeSelect.options[i].value === currentType) {
+                    typeSelect.selectedIndex = i;
+                    break;
+                }
+            }
+            document.getElementById('override-hours').focus();
         }
 
         async function executeOverride() {
