@@ -81,7 +81,8 @@ export default async function handler(req) {
             };
 
             try {
-                const { messages, modelId, researchContext, userProfile } = await req.json();
+                // ADDED MEMORY TOGGLES TO THE DESTRUCTURE
+                const { messages, modelId, researchContext, userProfile, useGlobalMemory, contributeToMemory } = await req.json();
                 
                 // ====================================================================
                 // 0. FIREWALL & RATE LIMITING
@@ -118,7 +119,10 @@ export default async function handler(req) {
 
                 if (GEMINI_KEYS.length === 0) throw new Error("CRITICAL: No Gemini Keys Configured on Server.");
 
-                const isThinkingEnabled = (modelId === 'oracle' || modelId === 'flux') && !researchContext;
+                // CORE FIX: Split Routing for Flux vs Oracle
+                // Oracle: Advanced thinking, groq triage, multi-search, etc.
+                // Flux: Direct line to Gemini, no intermediate API calls.
+                const isThinkingEnabled = modelId === 'oracle' && !researchContext;
 
                 // ====================================================================
                 // PRE-PROCESS: ADMIN OVERRIDE CHECK
@@ -173,9 +177,10 @@ export default async function handler(req) {
                     return null;
                 };
 
+                // NEW: Global Memory Integration
                 let memoryString = "";
-                if (userProfile && Object.keys(userProfile).length > 0) {
-                    memoryString = `\n\n[USER PROFILE/MEMORY DETECTED]: ${JSON.stringify(userProfile)}. Tailor response perfectly to their preferences without mentioning this profile explicitly.`;
+                if (useGlobalMemory && userProfile && Object.keys(userProfile).length > 0) {
+                    memoryString = `\n\n[GLOBAL USER MEMORY/CONTEXT]: ${JSON.stringify(userProfile)}. Tailor your response perfectly to this historical user context without explicitly mentioning that you are using this profile. Incorporate their preferences implicitly.`;
                 }
 
                 let systemPrompt = `# ROLE & IDENTITY
@@ -296,10 +301,10 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ====================================================================
-                // PHASE 2: DYNAMIC TRIAGE & SEARCH LIMIT CALCULATION
+                // PHASE 2: DYNAMIC TRIAGE & SEARCH LIMIT CALCULATION (Oracle Only)
                 // ====================================================================
-                let maxSearches = modelId === 'oracle' ? 5 : (modelId === 'flux' ? 3 : 0);
-                let maxGroqPasses = modelId === 'oracle' ? 20 : (modelId === 'flux' ? 7 : 0);
+                let maxSearches = modelId === 'oracle' ? 5 : 0;
+                let maxGroqPasses = modelId === 'oracle' ? 20 : 0;
                 
                 let dynamicPlan = { complexity: 1, search_queries: [] };
                 let deepReasoningContext = "";
@@ -323,17 +328,17 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ====================================================================
-                // PHASE 3: ADAPTIVE TAVILY WEB GROUNDING
+                // PHASE 3: ADAPTIVE TAVILY WEB GROUNDING (Oracle Only)
                 // ====================================================================
                 const genericNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
-                const shouldSearch = !researchContext && TAVILY_KEYS.length > 0 && (dynamicPlan.search_queries.length > 0 || genericNeedsSearch);
+                const shouldSearch = isThinkingEnabled && !researchContext && TAVILY_KEYS.length > 0 && (dynamicPlan.search_queries.length > 0 || genericNeedsSearch);
 
                 if (shouldSearch) {
                     let queries = dynamicPlan.search_queries && Array.isArray(dynamicPlan.search_queries) && dynamicPlan.search_queries.length > 0 
                         ? dynamicPlan.search_queries.slice(0, maxSearches) 
                         : [userQuery].slice(0, maxSearches);
 
-                    const maxResults = modelId === 'oracle' ? 20 : (modelId === 'flux' ? 15 : 3);
+                    const maxResults = 20;
                     let successfulSearches = 0;
 
                     for (let q = 0; q < queries.length; q++) {
@@ -363,7 +368,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                 }
 
-                // File Attachment Handling
+                // File Attachment Handling (Both Models)
                 const geminiInlineParts = [];
                 const geminiSupportedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
@@ -383,12 +388,12 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                 }
 
-                // Supabase HD Extraction Phase
+                // Supabase HD Extraction Phase (Both Models if Payload is Massive)
                 let condensedKnowledge = "";
                 const tokenEstimate = Math.ceil(massiveKnowledgeBase.length / 4);
 
                 if (tokenEstimate > 600000 && modelId !== 'spark') {
-                    sendThinkStep("Massive context dataset detected. Engaging vector high-density extraction...");
+                    if (isThinkingEnabled) sendThinkStep("Massive context dataset detected. Engaging vector high-density extraction...");
                     
                     try {
                         let searchIntents = userQuery;
@@ -409,7 +414,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                     if (data && data.length > 0) {
                                         condensedKnowledge = JSON.stringify(data);
                                         supaSuccess = true;
-                                        sendThinkStep("Semantic indexing complete. Context optimally compressed.");
+                                        if (isThinkingEnabled) sendThinkStep("Semantic indexing complete. Context optimally compressed.");
                                         break;
                                     }
                                 }
@@ -419,7 +424,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         if (!supaSuccess) throw new Error("Supabase unavailable.");
 
                     } catch (err) {
-                        sendThinkStep("Initiating local Edge-matrix memory bypass...");
+                        if (isThinkingEnabled) sendThinkStep("Initiating local Edge-matrix memory bypass...");
                         condensedKnowledge = advancedHDBypass(massiveKnowledgeBase, userQuery, 2400000); 
                     }
                 } else {
@@ -428,7 +433,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ====================================================================
-                // PHASE 4: THE DEEP COGNITIVE REASONING LOOP (Help Gemini Matrix)
+                // PHASE 4: THE DEEP COGNITIVE REASONING LOOP (Oracle Only)
                 // ====================================================================
                 const oracleThinkers = [
                     "Thinker 1: Solve normally (Establish baseline solution architecture).",
@@ -440,17 +445,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     "Thinker 7: Optimize for simplicity (Eliminate unnecessary complexity; rely on Occam's Razor).",
                     "Thinker 8: Expert in mathematics (Validate all equations, logic chains, and numerical claims).",
                     "Thinker 9: Expert programmer (Review code syntax, system architecture, and technical edge cases).",
-                    "Thinker 10: Expert researcher (Perfectly synthesize retrieved context and external search data).",
-                    "Thinker 11: Expert writer (Ensure formatting, tone, structure, and communication clarity).",
-                    "Thinker 12: Fact checker (Identify and destroy any potential AI hallucinations).",
-                    "Thinker 13: Security reviewer (Check for vulnerabilities, exploits, or dangerous advice).",
-                    "Thinker 14: Bias detector (Ensure absolute neutrality and objective reasoning).",
-                    "Thinker 15: Edge case finder (Evaluate what happens at extreme boundaries and system limits).",
-                    "Thinker 16: Counter-example generator (Attempt to prove the current working logic entirely wrong).",
-                    "Thinker 17: Consistency checker (Ensure all previous steps align without internal logical contradictions).",
-                    "Thinker 18: User intent validator (Verify we are actually answering the specific prompt asked).",
-                    "Thinker 19: Confidence estimator (Calculate certainty; highlight unknowns and unproven theories).",
-                    "Thinker 20: Final recommendation (Synthesize all thoughts into the ultimate, flawless master directive)."
+                    "Thinker 10: Expert researcher (Perfectly synthesize retrieved context and external search data)."
                 ];
 
                 if (isThinkingEnabled) {
@@ -458,7 +453,6 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     if (forceMaxPasses) {
                         actualPasses = maxGroqPasses;
                     } else {
-                        // Dynamically scale based on complexity. For Oracle (1-10 complexity -> 2 to 20 passes)
                         actualPasses = Math.min(maxGroqPasses, Math.max(1, Math.ceil(dynamicPlan.complexity * (maxGroqPasses / 10))));
                     }
                     
@@ -467,14 +461,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         let logicalFramework = "";
 
                         for (let pass = 1; pass <= actualPasses; pass++) {
-                            let passFocus = "";
-                            if (modelId === 'oracle') {
-                                passFocus = oracleThinkers[pass - 1] || "Optimize and Refine.";
-                            } else {
-                                passFocus = pass === 1 ? 'CONSTRAINT TRACKING & ENGINEERING REALISM: Extract every explicit constraint. Treat as immutable.' : 
-                                           (pass === 2 ? 'TRADEOFF ANALYSIS & PRIORITIZATION: Structure a strict architectural outline.' : 
-                                           'SELF VERIFICATION & EDGE CASE THINKING: Ask "What could make this answer fail?" Identify weaknesses.');
-                            }
+                            let passFocus = oracleThinkers[pass - 1] || "Optimize and Refine.";
 
                             let passPrompt = `You are an elite cognitive sub-module executing a rigorous reasoning pass.
                             Strictly adhere to the following directives: Use concrete numbers, prioritize engineering realism, perform tradeoff analysis, and heavily self-critique.
@@ -676,4 +663,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
     });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
-            }
+                    }
