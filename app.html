@@ -254,16 +254,27 @@ tailwind.config = {
 
 <!-- Sentinel Modal -->
 <div id="sentinel-modal" class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center backdrop-blur-md px-4">
-    <div class="bg-[#0a0a0a] p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-white/10 shadow-2xl">
+    <div class="bg-[#0a0a0a] p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-white/10 shadow-2xl flex flex-col max-h-[85vh]">
         <div class="flex justify-between items-center mb-6">
-            <h2 class="text-xl font-bold flex items-center gap-2 text-white"><i class="ph-fill ph-robot text-purple-400"></i> Sentinel Agents</h2>
-            <button onclick="closeSentinelModal()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x"></i></button>
+            <h2 class="text-xl font-bold flex items-center gap-2 text-white"><i class="ph-fill ph-robot text-purple-400"></i> 24x7 Sentinel Core</h2>
+            <button onclick="closeSentinelModal()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x text-xl"></i></button>
         </div>
-        <p class="text-sm text-gray-400 mb-4">Deploy an autonomous background agent to monitor the web for specific events and notify you.</p>
-        <textarea id="sentinel-prompt" placeholder="e.g., Watch Tesla stock. Notify me if they announce a new AI product..." class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-purple-500 mb-4 h-24 resize-none"></textarea>
-        <button onclick="deploySentinel()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"><i class="ph-bold ph-radar"></i> Deploy Sentinel</button>
+        
+        <div class="flex flex-col flex-1 min-h-0">
+            <p class="text-xs text-gray-400 mb-3">Set an autonomous time-based task. The OS will alert you natively even if this tab is closed.</p>
+            <div class="flex gap-2 mb-6 shrink-0">
+                <textarea id="sentinel-prompt" placeholder="e.g., Remind me to review the Q3 financials at 5:30 PM..." class="flex-1 bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-purple-500 h-14 resize-none" onkeypress="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); deploySentinel(); }"></textarea>
+                <button onclick="deploySentinel()" class="bg-purple-600 hover:bg-purple-500 text-white font-bold px-4 rounded-xl transition-colors shadow-[0_0_15px_rgba(147,51,234,0.3)]"><i class="ph-bold ph-paper-plane-right text-lg"></i></button>
+            </div>
+
+            <h3 class="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3 shrink-0"><i class="ph-bold ph-clock"></i> Active Background Tasks</h3>
+            <div id="sentinel-task-list" class="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar border border-white/5 bg-[#050505] rounded-xl p-2 min-h-[150px]">
+                <div class="text-center text-gray-600 text-xs italic py-10">No active tasks.</div>
+            </div>
+        </div>
     </div>
 </div>
+
 
 <!-- Sidebar -->
 <div id="sidebar-overlay" class="fixed inset-0 bg-black/60 z-40 hidden transition-opacity backdrop-blur-sm" onclick="toggleSidebar()"></div>
@@ -658,12 +669,18 @@ const els = {
 };
 
 window.onload = async () => {
+    // --- NEW: Register Background Sentinel Agent ---
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(err => console.error("Sentinel Reg failed:", err));
+    }
+
     await DB.init(); 
     updateUIState(); 
     refreshExtSelectors();
     checkNickname();
     if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
     getDeviceId();
+
 
     const urlParams = new URLSearchParams(window.location.search);
     const shareId = urlParams.get('share');
@@ -905,14 +922,62 @@ async function importDriveFile(id, name) {
     }
 }
 
+// ====== SENTINEL TASK ENGINE (OS-LEVEL INTEGRATION) ======
+
+let activeSentinelTasks = JSON.parse(localStorage.getItem('lexis_sentinel_tasks')) || [];
+
+function renderSentinelTasks() {
+    const list = document.getElementById('sentinel-task-list');
+    const now = Date.now();
+    
+    // Auto-clean expired tasks that are more than 1 day old
+    activeSentinelTasks = activeSentinelTasks.filter(t => (now - t.timestamp) < 86400000);
+    localStorage.setItem('lexis_sentinel_tasks', JSON.stringify(activeSentinelTasks));
+
+    if (activeSentinelTasks.length === 0) {
+        list.innerHTML = '<div class="text-center text-gray-600 text-xs italic py-10">No active tasks.</div>';
+        return;
+    }
+
+    // Sort by soonest first
+    activeSentinelTasks.sort((a, b) => a.timestamp - b.timestamp);
+
+    list.innerHTML = activeSentinelTasks.map(t => {
+        const isPast = t.timestamp < now;
+        const timeStr = new Date(t.timestamp).toLocaleString([], {month:'short', day:'numeric', hour: '2-digit', minute:'2-digit'});
+        const statusColor = isPast ? 'text-gray-500' : 'text-emerald-400';
+        const icon = isPast ? 'ph-check-circle' : 'ph-clock-countdown animate-pulse';
+
+        return `
+        <div class="p-3 bg-[#0a0a0a] border border-white/5 rounded-lg flex justify-between items-center group">
+            <div class="flex flex-col overflow-hidden pr-2">
+                <span class="text-xs text-white truncate font-medium">${t.task}</span>
+                <span class="text-[10px] ${statusColor} font-mono mt-0.5 flex items-center gap-1"><i class="ph-fill ${icon}"></i> ${timeStr}</span>
+            </div>
+            <button onclick="deleteSentinelTask('${t.id}')" class="text-gray-600 hover:text-red-400 p-1.5 rounded transition-colors bg-white/5 opacity-0 group-hover:opacity-100"><i class="ph-bold ph-trash"></i></button>
+        </div>`;
+    }).join('');
+}
+
+function deleteSentinelTask(id) {
+    activeSentinelTasks = activeSentinelTasks.filter(t => t.id !== id);
+    localStorage.setItem('lexis_sentinel_tasks', JSON.stringify(activeSentinelTasks));
+    renderSentinelTasks();
+}
+
 function openSentinelModal() {
     if(Notification.permission !== 'granted') {
         Notification.requestPermission().then(p => {
-            if(p === 'granted') document.getElementById('sentinel-modal').classList.remove('hidden');
-            else alert("Notifications are required for Sentinel Agents to alert you.");
+            if(p === 'granted') {
+                document.getElementById('sentinel-modal').classList.remove('hidden');
+                renderSentinelTasks();
+            } else {
+                alert("OS Notifications are strictly required for 24x7 background alerts.");
+            }
         });
     } else {
         document.getElementById('sentinel-modal').classList.remove('hidden');
+        renderSentinelTasks();
     }
 }
 
@@ -923,18 +988,75 @@ function closeSentinelModal() {
 async function deploySentinel() {
     const prompt = document.getElementById('sentinel-prompt').value.trim();
     if(!prompt) return;
-    const sub = { endpoint: "native_browser_push_placeholder" };
+
+    if (Notification.permission !== 'granted') {
+        return showToast("Permission required for OS alerts.");
+    }
+
+    const btn = document.querySelector('#sentinel-modal button');
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i>';
+    btn.disabled = true;
+
     try {
-        await fetch('/api/sentinel', { 
+        const res = await fetch('/api/task', { 
             method: 'POST', 
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({deviceId: getDeviceId(), taskPrompt: prompt, subscription: sub}) 
+            body: JSON.stringify({ 
+                prompt: prompt,
+                clientTime: Date.now(),
+                timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            }) 
         });
-        showToast("Sentinel Deployed!");
-        closeSentinelModal();
-        document.getElementById('sentinel-prompt').value = "";
-    } catch(e) {}
+        const data = await res.json();
+        
+        if (data.success && data.timestamp) {
+            
+            // 1. Send to OS Service Worker
+            if (navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    action: 'SCHEDULE_TASK',
+                    task: data.task,
+                    timestamp: data.timestamp
+                });
+            }
+            
+            // 2. Local Tab Fail-safe Backup
+            const delay = data.timestamp - Date.now();
+            if (delay > 0 && delay < 2147483647) { 
+                setTimeout(() => { new Notification("LexisAI Sentinel", { body: data.task }); }, delay);
+            }
+
+            // 3. Save to UI History
+            activeSentinelTasks.push({
+                id: 'tsk_' + Math.random().toString(36).substr(2,9),
+                task: data.task,
+                timestamp: data.timestamp
+            });
+            localStorage.setItem('lexis_sentinel_tasks', JSON.stringify(activeSentinelTasks));
+
+            document.getElementById('sentinel-prompt').value = "";
+            renderSentinelTasks();
+            showToast("Agent Deployed!");
+            
+            // Print visual confirmation into the chat if active
+            if(messages.length > 0) {
+                const timeString = new Date(data.timestamp).toLocaleString();
+                appendMessage('assistant', `> **Sentinel Agent Deployed** 🛡️\n> I will autonomously remind you to: *"${data.task}"*\n> **Trigger Time:** ${timeString}`, 'oracle');
+                saveCurrentChat();
+            }
+            
+        } else {
+            showToast("Failed to parse time constraints.");
+        }
+    } catch(e) { 
+        showToast("Network Error.");
+    }
+    
+    btn.innerHTML = origHtml;
+    btn.disabled = false;
 }
+
 
 function toggleDeepResearch() {
     isDeepResearchOn = !isDeepResearchOn;
