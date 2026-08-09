@@ -274,6 +274,34 @@ tailwind.config = {
         </div>
     </div>
 </div>
+<div id="experimental-modal" class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center backdrop-blur-md px-4">
+    <div class="bg-[#0a0a0a] p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-fuchsia-500/30 shadow-[0_0_30px_rgba(217,70,239,0.15)] flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-2 text-white"><i class="ph-fill ph-flask text-fuchsia-400"></i> Experimental Suite</h2>
+            <button onclick="closeExperimentalModal()" class="text-gray-400 hover:text-white"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        
+        <div class="flex flex-col flex-1 min-h-0 overflow-y-auto space-y-4 pr-1">
+            <div class="bg-[#111] border border-white/10 rounded-2xl p-4 flex flex-col gap-3 hover:border-fuchsia-500/40 transition-colors">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-fuchsia-500/20 border border-fuchsia-500/30 flex items-center justify-center text-fuchsia-400 shrink-0">
+                        <i class="ph-bold ph-lightbulb text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white">The Lab (Venture & White Ocean Strategy)</h3>
+                        <p class="text-[11px] text-gray-400">Brainstorm business, trading, or arbitrage ideas. AI searches real market gaps, complaints & White Oceans.</p>
+                    </div>
+                </div>
+                <textarea id="lab-idea-input" placeholder="Type your concept or topic to brainstorm (e.g. AI-driven micro-SaaS for legal teams, cross-border crypto arbitrage)..." class="w-full bg-[#050505] border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-fuchsia-500 h-20 resize-none"></textarea>
+                <button onclick="executeLabTool()" id="lab-exec-btn" class="w-full bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white text-xs font-bold py-2.5 rounded-xl shadow-lg shadow-fuchsia-500/20 flex items-center justify-center gap-2 transition-all">
+                    <i class="ph-bold ph-rocket-launch"></i> Launch Lab Analysis
+                </button>
+            </div>
+
+            </div>
+    </div>
+</div>
+
 
 
 <!-- Sidebar -->
@@ -297,6 +325,7 @@ tailwind.config = {
         <button onclick="openExtModal()" class="w-full flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-brain"></i> Manage Extensions</button>
         <button onclick="generateBrainMap()" class="w-full flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-graph"></i> Constellation Map</button>
         <button onclick="shareFullChat()" class="w-full flex items-center justify-center gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-share-network"></i> Share Chat </button>
+        <button onclick="openExperimentalModal()" class="w-full flex items-center justify-center gap-2 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/20 text-fuchsia-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-flask"></i> Experimental</button>
         <div class="relative w-full">
             <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none appearance-none cursor-pointer hover:border-white/20 transition-colors">
                 <option value="">No Extension Active</option>
