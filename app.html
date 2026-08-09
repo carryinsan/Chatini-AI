@@ -2907,6 +2907,96 @@ async function generateBrainMap() {
     }
     isProcessing = false; updateUIState();
 }
+// ====== EXPERIMENTAL LAB ENGINE HANDLERS ======
+function openExperimentalModal() {
+    document.getElementById('experimental-modal').classList.remove('hidden');
+}
+
+function closeExperimentalModal() {
+    document.getElementById('experimental-modal').classList.add('hidden');
+}
+
+async function executeLabTool() {
+    const input = document.getElementById('lab-idea-input');
+    const ideaText = input ? input.value.trim() : "";
+    if (!ideaText) return showToast("Enter an idea to launch analysis.");
+
+    closeExperimentalModal();
+    if (input) input.value = "";
+
+    // Render User Message in Chat Canvas
+    const userMsgObj = appendMessage('user', `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('lexis_nickname') : null);
+    messages.push({ role: 'user', content: `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, id: userMsgObj.id });
+
+    isProcessing = true;
+    updateUIState();
+
+    els.indicator.classList.add('hidden');
+    const logContainer = appendResearchTerminal('Initializing Experimental Lab Engine...', 'research');
+    logContainer.classList.replace('text-cyan-400', 'text-fuchsia-400');
+
+    try {
+        const res = await fetch('/api/lab', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                idea: ideaText,
+                chatHistory: messages.slice(-200) // 200 Chat Memory Virtualization
+            })
+        });
+
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+        const contentContainer = assistantMsgObj.container;
+        contentContainer.classList.add('typing-cursor');
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = "";
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            let lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.slice(6).trim();
+                    if (dataStr === '[DONE]') continue;
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.ui_error) {
+                            fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`;
+                            contentContainer.innerHTML = fullResponse;
+                            break;
+                        }
+                        let chunk = data.choices?.[0]?.delta?.content || data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                        fullResponse += chunk;
+                        contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id);
+                        els.canvas.scrollTop = els.canvas.scrollHeight;
+                    } catch(e) {}
+                }
+            }
+        }
+
+        logContainer.parentElement.parentElement.remove();
+        contentContainer.classList.remove('typing-cursor');
+        contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
+        messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
+        saveCurrentChat();
+
+    } catch (err) {
+        logContainer.parentElement.parentElement.remove();
+        appendMessage('assistant', `<span class="text-red-400 text-sm">Lab Engine Exception: ${err.message}</span>`, activeModelId);
+    }
+
+    isProcessing = false;
+    updateUIState();
+}
+
 
 // ====== PASTE shareFullChat HERE ======
 async function shareFullChat() {
