@@ -719,11 +719,23 @@ window.onload = async () => {
     if (roomId) {
         joinMultiplayerRoom(roomId);
     } else if (fullChatId) {
-        // --- NEW: Load Shared Chat from Supabase Branch ---
+        // --- NEW: Load Shared Chat from Supabase Branch (Password Protected) ---
         try {
             showToast("Loading Shared Branch...");
-            const res = await fetch(`/api/chatshare?id=${fullChatId}`);
-            const data = await res.json();
+            let pwd = null;
+            let res = await fetch(`/api/chatshare?id=${fullChatId}`);
+            let data = await res.json();
+
+            // Password Prompt Challenge
+            if (!data.success && data.isPasswordProtected) {
+                pwd = prompt("This shared chat is password protected.\n\nEnter Password:");
+                if (pwd) {
+                    res = await fetch(`/api/chatshare?id=${fullChatId}`, {
+                        headers: { 'x-chat-password': pwd.trim() }
+                    });
+                    data = await res.json();
+                }
+            }
             
             if (data.success && data.chat) {
                 // Fork it: Assign a brand new local ID so it doesn't overwrite anything
@@ -3001,9 +3013,12 @@ async function executeLabTool() {
 // ====== PASTE shareFullChat HERE ======
 async function shareFullChat() {
     if (messages.length === 0) return showToast("Cannot share an empty chat.");
+
+    const hidePrompts = confirm("Hide User Prompts?\n\nOK = Share ONLY AI Answers (Hide Prompts)\nCancel = Share Full Chat (Include Prompts)");
+    const password = prompt("Set a password for this shared link (Optional):\n\nLeave BLANK for no password.");
+
     showToast("Generating Share Link...");
-    
-    // Grab the current state of the chat to send to Supabase
+
     const chatData = {
         title: chats.find(c => c.id === currentChatId)?.title || "Shared Chat",
         messages: messages.map(m => ({ 
@@ -3018,10 +3033,14 @@ async function shareFullChat() {
         const res = await fetch('/api/chatshare', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chatData })
+            body: JSON.stringify({ 
+                chatData, 
+                hidePrompts: hidePrompts, 
+                password: password ? password.trim() : null 
+            })
         });
         const data = await res.json();
-        
+
         if (data.success && data.shareId) {
             const link = window.location.origin + window.location.pathname + '?chat=' + data.shareId;
             if (navigator.clipboard && window.isSecureContext) {
