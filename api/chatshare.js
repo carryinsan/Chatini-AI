@@ -13,10 +13,10 @@ const UPSTASH_TOKEN = (process.env.UPSTASH_REDIS_REST_TOKEN || "AY1LAAIgcDE5MjFi
 const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-requested-with',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-requested-with, x-chat-password',
 };
 
-// Helper: Upstash Redis Backup Runner
+// Helper: Upstash Redis Runner
 async function redisCommand(commandArray) {
     try {
         const res = await fetch(UPSTASH_URL, {
@@ -32,17 +32,34 @@ async function redisCommand(commandArray) {
     }
 }
 
-// Helper: Strips massive Base64 strings to prevent database payload limits
-function sanitizeChatPayload(chatData) {
+// Helper: SHA-256 Cryptographic Hash for Fail-Safe Password Security
+async function hashPassword(str) {
+    if (!str) return null;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Helper: Payload Sanitizer with Prompt Hiding & Base64 Cleanup
+function sanitizeChatPayload(chatData, hidePrompts = false) {
     if (!chatData || !Array.isArray(chatData.messages)) return chatData;
-    
-    const cleanMessages = chatData.messages.map(msg => {
+
+    let filteredMessages = chatData.messages;
+
+    // Option 1: Hide User Prompts (Only keep Assistant responses)
+    if (hidePrompts) {
+        filteredMessages = chatData.messages.filter(msg => msg.role === 'assistant');
+    }
+
+    const cleanMessages = filteredMessages.map(msg => {
         let cleanContent = msg.content || "";
-        // Replace huge inline base64 images/data URLs with a lightweight placeholder
+        // Replace huge inline base64 images with lightweight placeholder to prevent payload crashes
         if (cleanContent.length > 50000 && cleanContent.includes('data:image')) {
             cleanContent = cleanContent.replace(/data:image\/[a-zA-Z]+;base64,[^"'\s>]+/g, '[Shared Visual Asset]');
         }
-        
+
         return {
             role: msg.role,
             content: cleanContent,
@@ -53,25 +70,27 @@ function sanitizeChatPayload(chatData) {
 
     return {
         title: chatData.title || "Shared Chat",
-        messages: cleanMessages
+        messages: cleanMessages,
+        hidePrompts: hidePrompts
     };
 }
 
 export default async function handler(req) {
     // --------------------------------------------------------------------
-    // 0. CORS PREFLIGHT HANDLER (Fixes the "App not trying" bug)
+    // 0. CORS PREFLIGHT HANDLER
     // --------------------------------------------------------------------
     if (req.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
     // --------------------------------------------------------------------
-    // 1. GET: Retrieve a Shared Chat
+    // 1. GET: Retrieve a Shared Chat (Supports Password Challenge)
     // --------------------------------------------------------------------
     if (req.method === 'GET') {
         try {
             const url = new URL(req.url);
             const chatId = url.searchParams.get('id');
+            const providedPassword = req.headers.get('x-chat-password') || url.searchParams.get('pwd');
 
             if (!chatId) {
                 return new Response(JSON.stringify({ success: false, error: "Missing chat ID" }), {
@@ -80,7 +99,7 @@ export default async function handler(req) {
                 });
             }
 
-            let chatData = null;
+            let chatRecord = null;
 
             // Attempt 1: Fetch from Supabase
             try {
@@ -90,28 +109,64 @@ export default async function handler(req) {
                 });
                 if (supaRes.ok) {
                     const rows = await supaRes.json();
-                    if (rows && rows.length > 0) chatData = rows[0].chat_data;
+                    if (rows && rows.length > 0) chatRecord = rows[0];
                 }
             } catch (e) {}
 
-            // Attempt 2: Fallback to Upstash Redis if Supabase didn't have it
-            if (!chatData) {
+            // Attempt 2: Fallback to Upstash Redis
+            if (!chatRecord) {
                 const rawRedis = await redisCommand(["GET", `shared_chat:${chatId}`]);
                 if (rawRedis) {
                     try {
-                        chatData = typeof rawRedis === 'string' ? JSON.parse(rawRedis) : rawRedis;
+                        const parsedRedis = typeof rawRedis === 'string' ? JSON.parse(rawRedis) : rawRedis;
+                        chatRecord = {
+                            chat_data: parsedRedis.chat_data || parsedRedis,
+                            password_hash: parsedRedis.password_hash || null
+                        };
                     } catch (e) {}
                 }
             }
 
-            if (!chatData) {
+            if (!chatRecord || !chatRecord.chat_data) {
                 return new Response(JSON.stringify({ success: false, error: "Chat link expired or not found" }), {
                     status: 404,
                     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
                 });
             }
 
-            return new Response(JSON.stringify({ success: true, chat: chatData }), {
+            const storedHash = chatRecord.password_hash || (chatRecord.chat_data && chatRecord.chat_data._pwdHash);
+
+            // Password Protection Check
+            if (storedHash) {
+                if (!providedPassword) {
+                    return new Response(JSON.stringify({ 
+                        success: false, 
+                        isPasswordProtected: true, 
+                        error: "This chat is password protected." 
+                    }), {
+                        status: 401,
+                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                    });
+                }
+
+                const clientHash = await hashPassword(providedPassword.trim());
+                if (clientHash !== storedHash) {
+                    return new Response(JSON.stringify({ 
+                        success: false, 
+                        isPasswordProtected: true, 
+                        error: "Incorrect password. Access denied." 
+                    }), {
+                        status: 403,
+                        headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
+                    });
+                }
+            }
+
+            // Remove password metadata from output payload
+            const finalChatData = { ...chatRecord.chat_data };
+            delete finalChatData._pwdHash;
+
+            return new Response(JSON.stringify({ success: true, chat: finalChatData }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
             });
@@ -125,12 +180,12 @@ export default async function handler(req) {
     }
 
     // --------------------------------------------------------------------
-    // 2. POST: Create & Store Shared Chat
+    // 2. POST: Create & Store Shared Chat with Options
     // --------------------------------------------------------------------
     if (req.method === 'POST') {
         try {
             const body = await req.json();
-            const { chatData } = body;
+            const { chatData, hidePrompts, password } = body;
 
             if (!chatData || !chatData.messages || chatData.messages.length === 0) {
                 return new Response(JSON.stringify({ success: false, error: "Empty chat cannot be shared" }), {
@@ -139,7 +194,13 @@ export default async function handler(req) {
                 });
             }
 
-            const cleanChat = sanitizeChatPayload(chatData);
+            const cleanChat = sanitizeChatPayload(chatData, Boolean(hidePrompts));
+            const pwdHash = password ? await hashPassword(password.trim()) : null;
+
+            if (pwdHash) {
+                cleanChat._pwdHash = pwdHash; // Backup inline hash
+            }
+
             const shareId = 'chat_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
             let savedSuccessfully = false;
 
@@ -155,7 +216,8 @@ export default async function handler(req) {
                     },
                     body: JSON.stringify({
                         id: shareId,
-                        chat_data: cleanChat
+                        chat_data: cleanChat,
+                        password_hash: pwdHash
                     })
                 });
 
@@ -164,8 +226,12 @@ export default async function handler(req) {
                 }
             } catch (e) {}
 
-            // Step B: Store in Upstash Redis (as backup / primary failover)
-            const redisRes = await redisCommand(["SET", `shared_chat:${shareId}`, JSON.stringify(cleanChat), "EX", "2592000"]); // Auto-expire after 30 days
+            // Step B: Store in Upstash Redis (backup failover)
+            const redisPayload = {
+                chat_data: cleanChat,
+                password_hash: pwdHash
+            };
+            const redisRes = await redisCommand(["SET", `shared_chat:${shareId}`, JSON.stringify(redisPayload), "EX", "2592000"]); // 30-day retention
             if (redisRes) {
                 savedSuccessfully = true;
             }
