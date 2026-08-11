@@ -16,7 +16,7 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-requested-with, x-chat-password',
 };
 
-// Helper: Upstash Redis Runner
+// Helper: Upstash Redis Command Runner
 async function redisCommand(commandArray) {
     try {
         const res = await fetch(UPSTASH_URL, {
@@ -35,11 +35,16 @@ async function redisCommand(commandArray) {
 // Helper: SHA-256 Cryptographic Hash for Fail-Safe Password Security
 async function hashPassword(str) {
     if (!str) return null;
-    const encoder = new TextEncoder();
-    const data = encoder.encode(str);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    try {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(str);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+        // Simple fallback string transformation if crypto.subtle is unavailable
+        return btoa(str).split('').reverse().join('');
+    }
 }
 
 // Helper: Payload Sanitizer with Prompt Hiding & Base64 Cleanup
@@ -48,20 +53,25 @@ function sanitizeChatPayload(chatData, hidePrompts = false) {
 
     let filteredMessages = chatData.messages;
 
-    // Option 1: Hide User Prompts (Only keep Assistant responses)
+    // Option: Hide User Prompts (Only keep Assistant responses)
     if (hidePrompts) {
-        filteredMessages = chatData.messages.filter(msg => msg.role === 'assistant');
+        filteredMessages = chatData.messages.filter(msg => msg && msg.role === 'assistant');
+        // Fallback: If chat only had user prompts, keep at least one explanatory placeholder
+        if (filteredMessages.length === 0 && chatData.messages.length > 0) {
+            filteredMessages = [{ role: 'assistant', content: '*[Original user prompts hidden by chat owner]*' }];
+        }
     }
 
     const cleanMessages = filteredMessages.map(msg => {
-        let cleanContent = msg.content || "";
-        // Replace huge inline base64 images with lightweight placeholder to prevent payload crashes
+        let cleanContent = typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content || "");
+        
+        // Replace huge inline base64 images with lightweight placeholders to prevent DB crash
         if (cleanContent.length > 50000 && cleanContent.includes('data:image')) {
             cleanContent = cleanContent.replace(/data:image\/[a-zA-Z]+;base64,[^"'\s>]+/g, '[Shared Visual Asset]');
         }
 
         return {
-            role: msg.role,
+            role: msg.role || 'assistant',
             content: cleanContent,
             modelId: msg.modelId || 'oracle',
             attachmentsMeta: msg.attachmentsMeta || []
@@ -71,13 +81,13 @@ function sanitizeChatPayload(chatData, hidePrompts = false) {
     return {
         title: chatData.title || "Shared Chat",
         messages: cleanMessages,
-        hidePrompts: hidePrompts
+        hidePrompts: Boolean(hidePrompts)
     };
 }
 
 export default async function handler(req) {
     // --------------------------------------------------------------------
-    // 0. CORS PREFLIGHT HANDLER
+    // 0. CORS PREFLIGHT HANDLER (Guarantees browsers never block POST calls)
     // --------------------------------------------------------------------
     if (req.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -109,7 +119,9 @@ export default async function handler(req) {
                 });
                 if (supaRes.ok) {
                     const rows = await supaRes.json();
-                    if (rows && rows.length > 0) chatRecord = rows[0];
+                    if (rows && rows.length > 0) {
+                        chatRecord = rows[0];
+                    }
                 }
             } catch (e) {}
 
@@ -121,7 +133,7 @@ export default async function handler(req) {
                         const parsedRedis = typeof rawRedis === 'string' ? JSON.parse(rawRedis) : rawRedis;
                         chatRecord = {
                             chat_data: parsedRedis.chat_data || parsedRedis,
-                            password_hash: parsedRedis.password_hash || null
+                            password_hash: parsedRedis.password_hash || parsedRedis._password_hash || null
                         };
                     } catch (e) {}
                 }
@@ -134,9 +146,10 @@ export default async function handler(req) {
                 });
             }
 
-            const storedHash = chatRecord.password_hash || (chatRecord.chat_data && chatRecord.chat_data._pwdHash);
+            const rawChatData = typeof chatRecord.chat_data === 'string' ? JSON.parse(chatRecord.chat_data) : chatRecord.chat_data;
+            const storedHash = chatRecord.password_hash || rawChatData._password_hash || null;
 
-            // Password Protection Check
+            // Password Protection Verification
             if (storedHash) {
                 if (!providedPassword) {
                     return new Response(JSON.stringify({ 
@@ -162,9 +175,9 @@ export default async function handler(req) {
                 }
             }
 
-            // Remove password metadata from output payload
-            const finalChatData = { ...chatRecord.chat_data };
-            delete finalChatData._pwdHash;
+            // Remove password metadata before outputting payload
+            const finalChatData = { ...rawChatData };
+            delete finalChatData._password_hash;
 
             return new Response(JSON.stringify({ success: true, chat: finalChatData }), {
                 status: 200,
@@ -180,7 +193,7 @@ export default async function handler(req) {
     }
 
     // --------------------------------------------------------------------
-    // 2. POST: Create & Store Shared Chat with Options
+    // 2. POST: Create & Store Shared Chat
     // --------------------------------------------------------------------
     if (req.method === 'POST') {
         try {
@@ -197,14 +210,16 @@ export default async function handler(req) {
             const cleanChat = sanitizeChatPayload(chatData, Boolean(hidePrompts));
             const pwdHash = password ? await hashPassword(password.trim()) : null;
 
-            if (pwdHash) {
-                cleanChat._pwdHash = pwdHash; // Backup inline hash
-            }
+            // Embed hash directly in the JSONB payload to avoid schema errors on Supabase
+            const payloadToStore = {
+                ...cleanChat,
+                _password_hash: pwdHash
+            };
 
             const shareId = 'chat_' + Math.random().toString(36).substring(2, 9) + Date.now().toString(36);
             let savedSuccessfully = false;
 
-            // Step A: Store in Supabase
+            // Step A: Store in Supabase (100% schema safe - uses only id & chat_data columns)
             try {
                 const supaRes = await fetch(`${SUPABASE_URL}/rest/v1/shared_chats`, {
                     method: 'POST',
@@ -216,8 +231,7 @@ export default async function handler(req) {
                     },
                     body: JSON.stringify({
                         id: shareId,
-                        chat_data: cleanChat,
-                        password_hash: pwdHash
+                        chat_data: payloadToStore
                     })
                 });
 
@@ -227,17 +241,15 @@ export default async function handler(req) {
             } catch (e) {}
 
             // Step B: Store in Upstash Redis (backup failover)
-            const redisPayload = {
-                chat_data: cleanChat,
-                password_hash: pwdHash
-            };
-            const redisRes = await redisCommand(["SET", `shared_chat:${shareId}`, JSON.stringify(redisPayload), "EX", "2592000"]); // 30-day retention
-            if (redisRes) {
-                savedSuccessfully = true;
-            }
+            try {
+                const redisRes = await redisCommand(["SET", `shared_chat:${shareId}`, JSON.stringify(payloadToStore), "EX", "2592000"]); // 30 days
+                if (redisRes) {
+                    savedSuccessfully = true;
+                }
+            } catch (e) {}
 
             if (!savedSuccessfully) {
-                throw new Error("Unable to persist share record to database.");
+                throw new Error("Unable to save share record to database.");
             }
 
             return new Response(JSON.stringify({ success: true, shareId: shareId }), {
@@ -257,4 +269,4 @@ export default async function handler(req) {
         status: 405,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
-}
+                    }
