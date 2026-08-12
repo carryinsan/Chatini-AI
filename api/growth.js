@@ -2,9 +2,9 @@ export const config = {
     runtime: 'edge',
 };
 
-// --------------------------------------------------------------------
-// CREDENTIALS & SERVICE ACCOUNT DATA
-// --------------------------------------------------------------------
+// ====================================================================
+// CONSTANTS & CONFIGURATION
+// ====================================================================
 const MASTER_PASS = "Lexis-Admin-2026";
 
 const SERVICE_ACCOUNT = {
@@ -40,9 +40,9 @@ const CORS_HEADERS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-admin-pass, x-user-id',
 };
 
-// --------------------------------------------------------------------
-// REDIS RUNNER
-// --------------------------------------------------------------------
+// ====================================================================
+// REDIS RUNNER (Upstash REST API)
+// ====================================================================
 async function redisCommand(commandArray) {
     try {
         const res = await fetch(UPSTASH_URL, {
@@ -58,9 +58,9 @@ async function redisCommand(commandArray) {
     }
 }
 
-// --------------------------------------------------------------------
+// ====================================================================
 // GOOGLE JWT GENERATOR (RS256 Edge Cryptography)
-// --------------------------------------------------------------------
+// ====================================================================
 function base64UrlEncode(str) {
     return btoa(str).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 }
@@ -89,6 +89,7 @@ function pemToArrayBuffer(pem) {
 
 async function getGoogleAuthToken() {
     try {
+        if (!PRIVATE_KEY_PEM.includes("BEGIN PRIVATE KEY")) return null;
         const header = { alg: "RS256", typ: "JWT", kid: SERVICE_ACCOUNT.private_key_id };
         const now = Math.floor(Date.now() / 1000);
         const claimSet = {
@@ -130,11 +131,7 @@ async function getGoogleAuthToken() {
             })
         });
 
-        if (!tokenRes.ok) {
-            const errText = await tokenRes.text();
-            throw new Error(`OAuth Token Error: ${errText}`);
-        }
-
+        if (!tokenRes.ok) return null;
         const tokenData = await tokenRes.json();
         return tokenData.access_token;
     } catch (e) {
@@ -142,63 +139,56 @@ async function getGoogleAuthToken() {
     }
 }
 
-// --------------------------------------------------------------------
-// GROQ ASSET & SEO GENERATOR
-// --------------------------------------------------------------------
-async function generateMarketingCopy(targetUrl) {
-    const GROQ_KEYS = [
-        process.env.GROQ_API_KEY,
-        process.env.GROQ_KEY_2,
-        process.env.GROQ_KEY_3
+// ====================================================================
+// GEMINI MARKETING & SEO COPY GENERATOR
+// ====================================================================
+async function generateGeminiMarketingCopy(targetUrl) {
+    const GEMINI_KEYS = [
+        process.env.GEMINI_API_KEY_1,
+        process.env.GEMINI_API_KEY_2,
+        process.env.GEMINI_API_KEY_3,
+        process.env.GEMINI_API_KEY
     ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
-    if (GROQ_KEYS.length === 0) {
-        return {
-            title: "LexisAI — Ultimate Cognitive Workspace",
-            description: "Next-generation AI chat platform with 4M+ context virtualization, deep research, and real-time collaboration.",
-            keywords: ["LexisAI", "AI Workspace", "Gemini 2.5", "Groq AI", "Multiplayer AI"],
-            socialPost: "Discover LexisAI: Next-level cognitive workspace powered by Gemini & Groq. Try it live at " + targetUrl
-        };
-    }
+    const fallbackCopy = {
+        title: "LexisAI — Ultimate Cognitive Workspace",
+        description: "Next-generation AI chat platform with 4M+ context virtualization, deep research, and real-time collaboration.",
+        keywords: ["LexisAI", "AI Workspace", "Gemini 2.5", "Multiplayer AI"],
+        socialPost: "Discover LexisAI: Next-level cognitive workspace powered by Gemini. Try it live at " + targetUrl
+    };
 
-    for (const gKey of GROQ_KEYS) {
+    if (GEMINI_KEYS.length === 0) return fallbackCopy;
+
+    for (const gKey of GEMINI_KEYS) {
         try {
-            const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            const geminiRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${gKey}`, {
                 method: "POST",
-                headers: { "Authorization": `Bearer ${gKey}`, "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    model: "llama-3.1-8b-instant",
-                    response_format: { type: "json_object" },
-                    temperature: 0.3,
-                    messages: [
-                        {
-                            role: "system",
-                            content: `You are an elite marketing strategist and SEO specialist. Generate dynamic, high-conversion promotional metadata for an AI web app URL.
-Output JSON strictly with keys: "title", "description", "keywords" (array of 5 strings), "socialPost".`
-                        },
-                        { role: "user", content: `Target Web App: ${targetUrl}` }
-                    ]
+                    contents: [{
+                        role: "user",
+                        parts: [{ text: `Generate dynamic, high-conversion promotional metadata for an AI web app URL: ${targetUrl}. Output STRICT JSON format with keys: "title", "description", "keywords" (array of 4 strings), "socialPost".` }]
+                    }],
+                    generationConfig: { responseMimeType: "application/json", temperature: 0.2 }
                 })
             });
 
-            if (groqRes.ok) {
-                const data = await groqRes.json();
-                return JSON.parse(data.choices[0].message.content);
+            if (geminiRes.ok) {
+                const data = await geminiRes.json();
+                const textResult = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (textResult) {
+                    return JSON.parse(textResult);
+                }
             }
         } catch (e) {}
     }
 
-    return {
-        title: "LexisAI — Ultimate Cognitive Workspace",
-        description: "Next-generation AI chat platform with 4M+ context virtualization, deep research, and real-time collaboration.",
-        keywords: ["LexisAI", "AI Workspace", "Gemini 2.5", "Groq AI", "Multiplayer AI"],
-        socialPost: "Discover LexisAI: Next-level cognitive workspace powered by Gemini & Groq. Try it live at " + targetUrl
-    };
+    return fallbackCopy;
 }
 
-// --------------------------------------------------------------------
-// MAIN HANDLER
-// --------------------------------------------------------------------
+// ====================================================================
+// EDGE HANDLER
+// ====================================================================
 export default async function handler(req) {
     if (req.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: CORS_HEADERS });
@@ -208,28 +198,58 @@ export default async function handler(req) {
     const action = url.searchParams.get('action');
 
     // ----------------------------------------------------------------
-    // 1. VISITOR TELEMETRY & TRACKING (Public / Open)
+    // 1. GRANULAR UNIVERSAL PATH TELEMETRY & CAPTURE
+    // Automatically captures any visitor hitting the domain via any entry point
+    // and categorizes them into exact unique paths without duplication:
+    // - lexis-ai-chatini.vercel.app (root)
+    // - lexis-ai-chatini.vercel.app/app.html
+    // - lexis-ai-chatini.vercel.app/apikeys.html
     // ----------------------------------------------------------------
     if (req.method === 'POST' && action === 'ping') {
         try {
-            const { userId, userAgent, pageUrl } = await req.json();
+            const { userId, userAgent, path } = await req.json();
             const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'anonymous';
             const id = userId || clientIp;
             const now = Date.now();
 
             const isGoogleBot = /googlebot|google-inspectiontool|bingbot|crawler|spider/i.test(userAgent || '');
+            const rawPath = (path || '/').toLowerCase().trim();
 
-            // Log Session Ping into Redis
-            await redisCommand(["SET", `active_user:${id}`, now, "EX", "300"]); // 5 min TTL
+            // Strict URL path classification
+            let targetCategory = 'root';
+            if (rawPath.includes('app.html')) {
+                targetCategory = 'appHtml';
+            } else if (rawPath.includes('apikeys.html')) {
+                targetCategory = 'apikeysHtml';
+            } else if (rawPath === '/' || rawPath === '') {
+                targetCategory = 'root';
+            } else if (rawPath.includes('app')) {
+                targetCategory = 'appHtml';
+            } else if (rawPath.includes('apikey')) {
+                targetCategory = 'apikeysHtml';
+            }
+
+            // Global active session ping (active now within 5 mins)
+            await redisCommand(["SET", `active_user:${id}`, now, "EX", "300"]);
             await redisCommand(["INCR", "metric:total_visits"]);
             await redisCommand(["SADD", "metric:unique_visitors", id]);
+
+            // Unique visitor deduplication per page category using Redis Sets
+            const visitorKey = `visited_page:${targetCategory}:${id}`;
+            const alreadyVisited = await redisCommand(["GET", visitorKey]);
+            
+            if (!alreadyVisited) {
+                await redisCommand(["SET", visitorKey, "1", "EX", "86400"]); // 24-hr session unique lock
+                await redisCommand(["INCR", `metric:path_${targetCategory}_unique`]);
+            }
+            await redisCommand(["INCR", `metric:path_${targetCategory}_hits`]);
 
             if (isGoogleBot) {
                 await redisCommand(["INCR", "metric:google_bot_hits"]);
                 await redisCommand(["SET", "metric:last_bot_visit", now]);
             }
 
-            return new Response(JSON.stringify({ success: true }), {
+            return new Response(JSON.stringify({ success: true, trackedPath: targetCategory }), {
                 status: 200,
                 headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
             });
@@ -242,7 +262,7 @@ export default async function handler(req) {
     }
 
     // ----------------------------------------------------------------
-    // 2. ADMIN AUTHENTICATION GUARD (Required for administrative functions)
+    // 2. ADMIN AUTHENTICATION GUARD
     // ----------------------------------------------------------------
     const adminPassHeader = req.headers.get('x-admin-pass');
     let requestBody = {};
@@ -257,14 +277,14 @@ export default async function handler(req) {
     const providedPass = adminPassHeader || requestBody.password || url.searchParams.get('pass');
 
     if (providedPass !== MASTER_PASS) {
-        return new Response(JSON.stringify({ success: false, error: "Access Denied. Invalid Key." }), {
+        return new Response(JSON.stringify({ success: false, error: "Access Denied. Invalid Master Key." }), {
             status: 401,
             headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
         });
     }
 
     // ----------------------------------------------------------------
-    // 3. FETCH HONEST ANALYTICS & TELEMETRY
+    // 3. SEGREGATED PATH ANALYTICS & METRICS
     // ----------------------------------------------------------------
     if (action === 'metrics' || (req.method === 'POST' && requestBody.action === 'metrics')) {
         try {
@@ -278,6 +298,25 @@ export default async function handler(req) {
             const lastIndexBlast = parseInt(await redisCommand(["GET", "metric:last_index_blast"]) || "0");
             const totalBlasts = parseInt(await redisCommand(["GET", "metric:total_blasts"]) || "0");
 
+            // Strictly differentiated path metrics without duplication
+            const pathMetrics = {
+                root: {
+                    url: "lexis-ai-chatini.vercel.app",
+                    hits: parseInt(await redisCommand(["GET", "metric:path_root_hits"]) || "0"),
+                    unique: parseInt(await redisCommand(["GET", "metric:path_root_unique"]) || "0")
+                },
+                appHtml: {
+                    url: "lexis-ai-chatini.vercel.app/app.html",
+                    hits: parseInt(await redisCommand(["GET", "metric:path_appHtml_hits"]) || "0"),
+                    unique: parseInt(await redisCommand(["GET", "metric:path_appHtml_unique"]) || "0")
+                },
+                apikeysHtml: {
+                    url: "lexis-ai-chatini.vercel.app/apikeys.html",
+                    hits: parseInt(await redisCommand(["GET", "metric:path_apikeysHtml_hits"]) || "0"),
+                    unique: parseInt(await redisCommand(["GET", "metric:path_apikeysHtml_unique"]) || "0")
+                }
+            };
+
             return new Response(JSON.stringify({
                 success: true,
                 analytics: {
@@ -285,6 +324,7 @@ export default async function handler(req) {
                     totalVisits: totalVisits,
                     uniqueVisitors: uniqueVisitorsCount,
                     googleBotHits: googleBotHits,
+                    pathSegmentation: pathMetrics,
                     lastBotVisit: lastBotVisit ? new Date(lastBotVisit).toISOString() : "Never",
                     lastIndexBlast: lastIndexBlast ? new Date(lastIndexBlast).toISOString() : "Never",
                     totalBlasts: totalBlasts
@@ -302,57 +342,75 @@ export default async function handler(req) {
     }
 
     // ----------------------------------------------------------------
-    // 4. EXECUTE FULL ORGANIC LAUNCH
+    // 4. DEFENSIVE ORGANIC LAUNCH & INDEXING ELIGIBILITY CHECK
     // ----------------------------------------------------------------
     if (req.method === 'POST' && (action === 'launch' || requestBody.action === 'launch')) {
         try {
             const targetDomain = requestBody.targetUrl || "https://lexis-ai-chatini.vercel.app";
             const logs = [];
-
             const logStep = (msg) => logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
 
-            logStep("Authenticating Admin Access... Authorized.");
+            logStep("Admin session verified. Initializing Maximum Free Reach Engine.");
 
-            // Step A: Generate Copy
-            logStep("Calling Groq Llama-3.1 engine to synthesize dynamic marketing assets...");
-            const copy = await generateMarketingCopy(targetDomain);
-            logStep(`Assets Ready: "${copy.title}"`);
+            // Step A: Gemini SEO Asset Generation
+            logStep("Consulting Gemini 2.5 Flash to synthesize high-conversion organic metadata...");
+            const copy = await generateGeminiMarketingCopy(targetDomain);
+            logStep(`SEO Asset Ready: "${copy.title}"`);
 
-            // Step B: Request Google Indexing
-            logStep("Constructing RS256 JWT assertion for Google Indexing API...");
-            const googleToken = await getGoogleAuthToken();
-
+            // Step B: Defensive Google Indexing Eligibility Check
+            logStep("Evaluating Google Indexing API eligibility and service account credentials...");
+            
+            let indexingStatus = "SKIPPED — Google Indexing API not applicable to this URL";
             let indexingSuccess = false;
-            if (googleToken) {
-                logStep("Google Access Token acquired. Dispatching URL_UPDATED request to Googlebot...");
-                
-                const indexRes = await fetch("https://indexing.googleapis.com/v1/urlNotifications:publish", {
-                    method: "POST",
-                    headers: {
-                        "Authorization": `Bearer ${googleToken}`,
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        url: targetDomain,
-                        type: "URL_UPDATED"
-                    })
-                });
 
-                if (indexRes.ok) {
-                    const indexData = await indexRes.json();
-                    indexingSuccess = true;
-                    logStep("Google Indexing API Response: SUCCESS! Googlebot queued for immediate crawl.");
-                } else {
-                    const indexErr = await indexRes.text();
-                    logStep(`Google Indexing Warning: ${indexErr}`);
-                }
+            const isEligibleForIndexingAPI = targetDomain.includes('/job') || targetDomain.includes('/event') || targetDomain.includes('/broadcast');
+
+            if (!isEligibleForIndexingAPI) {
+                logStep(`Notice: Target URL "${targetDomain}" is a standard web application root or static page. Google Indexing API strictly restricts eligibility (requires JobPosting/BroadcastEvent schema). Skipping Indexing API request to prevent 403 Forbidden errors.`);
+            } else if (!PRIVATE_KEY_PEM.includes("BEGIN PRIVATE KEY")) {
+                indexingStatus = "AUTH_ERROR — Service account private key is missing or malformed.";
+                logStep(`Error: ${indexingStatus}`);
             } else {
-                logStep("Google Indexing Warning: Failed to generate RS256 token.");
+                logStep("Credentials validated. Generating RS256 JWT assertion for Googlebot...");
+                const googleToken = await getGoogleAuthToken();
+
+                if (!googleToken) {
+                    indexingStatus = "AUTH_ERROR — OAuth token acquisition failed.";
+                    logStep(`Error: ${indexingStatus}`);
+                } else {
+                    logStep("OAuth token acquired successfully. Dispatching URL_UPDATED request...");
+                    const indexRes = await fetch("https://indexing.googleapis.com/v1/urlNotifications:publish", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${googleToken}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            url: targetDomain,
+                            type: "URL_UPDATED"
+                        })
+                    });
+
+                    if (indexRes.ok) {
+                        indexingSuccess = true;
+                        indexingStatus = "SUCCESS — Googlebot notified for immediate re-crawl.";
+                        logStep(`Google Indexing Response: ${indexingStatus}`);
+                    } else {
+                        const errText = await indexRes.text();
+                        if (indexRes.status === 403) {
+                            indexingStatus = "AUTH_ERROR — Google service account lacks Search Console verification for this domain.";
+                        } else if (indexRes.status === 429) {
+                            indexingStatus = "RATE_LIMITED — Google quota exceeded.";
+                        } else {
+                            indexingStatus = `API_ERROR — HTTP ${indexRes.status}: ${errText}`;
+                        }
+                        logStep(`Google Indexing Notice: ${indexingStatus}`);
+                    }
+                }
             }
 
-            // Step C: Syndication Broadcasts
-            logStep("Broadcasting syndication webhooks across public distribution nodes...");
-            
+            // Step C: Verified Syndication Webhooks
+            logStep("Inspecting external syndication channels...");
             const syndicationEndpoints = [
                 requestBody.webhookUrl,
                 process.env.DISCORD_WEBHOOK_URL,
@@ -360,32 +418,36 @@ export default async function handler(req) {
             ].filter(Boolean);
 
             let webhooksDispatched = 0;
-            for (const endpoint of syndicationEndpoints) {
-                try {
-                    const syncRes = await fetch(endpoint, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            content: `🚀 **LexisAI Organic Launch**\n\n**${copy.title}**\n${copy.description}\n\n👉 Experience it live: ${targetDomain}`,
-                            username: "LexisAI Launch Bot"
-                        })
-                    });
-                    if (syncRes.ok) webhooksDispatched++;
-                } catch (e) {}
+            if (syndicationEndpoints.length === 0) {
+                logStep("Zero external webhook endpoints configured. Skipping broadcast.");
+            } else {
+                for (const endpoint of syndicationEndpoints) {
+                    try {
+                        const syncRes = await fetch(endpoint, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                content: `🚀 **LexisAI Organic Discovery Update**\n\n**${copy.title}**\n${copy.description}\n\n👉 Access Platform: ${targetDomain}`,
+                                username: "LexisAI Growth Agent"
+                            })
+                        });
+                        if (syncRes.ok) webhooksDispatched++;
+                    } catch (e) {}
+                }
+                logStep(`Syndication Broadcast Complete: Dispatched ${webhooksDispatched} verified webhook deliveries.`);
             }
 
-            logStep(`Syndication Complete. Dispatched ${webhooksDispatched} external broadcasts.`);
-
-            // Step D: Update Telemetry Metrics
+            // Step D: Record Campaign Metrics
             const now = Date.now();
             await redisCommand(["SET", "metric:last_index_blast", now]);
             await redisCommand(["INCR", "metric:total_blasts"]);
 
-            logStep("Launch Engine Executed Successfully. Real-time telemetry listening for incoming traffic.");
+            logStep("Campaign execution completed successfully.");
 
             return new Response(JSON.stringify({
                 success: true,
-                googleIndexed: indexingSuccess,
+                campaignStatus: indexingSuccess ? "SUCCESS" : "PARTIAL_SUCCESS",
+                googleIndexingOutcome: indexingStatus,
                 webhooksDispatched: webhooksDispatched,
                 marketingCopy: copy,
                 logs: logs
@@ -406,4 +468,4 @@ export default async function handler(req) {
         status: 400,
         headers: { 'Content-Type': 'application/json', ...CORS_HEADERS }
     });
-          }
+    }
