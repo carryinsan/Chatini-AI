@@ -320,42 +320,53 @@ tailwind.config = {
         <button onclick="changeNickname()" class="text-cyan-400 hover:text-cyan-300 text-xs font-bold transition-colors p-2 hover:bg-white/5 rounded-lg"><i class="ph-bold ph-pencil-simple text-lg"></i></button>
     </div>
     <div class="p-4 space-y-3 border-b border-white/10">
-        <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-center gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-users-three"></i> Invite Co-Op Friend</button>
-        <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-plus"></i> New Conversation</button>
-        <button onclick="openExtModal()" class="w-full flex items-center justify-center gap-2 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-brain"></i> Manage Extensions</button>
-        <button onclick="generateBrainMap()" class="w-full flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-graph"></i> Constellation Map</button>
-        <button onclick="shareFullChat()" class="w-full flex items-center justify-center gap-2 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-share-network"></i> Share Chat </button>
-        <button onclick="openExperimentalModal()" class="w-full flex items-center justify-center gap-2 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/20 text-fuchsia-400 py-2.5 rounded-xl text-sm font-medium transition-colors"><i class="ph-bold ph-flask"></i> Experimental</button>
-        <div class="relative w-full">
-            <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none appearance-none cursor-pointer hover:border-white/20 transition-colors">
-                <option value="">No Extension Active</option>
-            </select>
-            <i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none text-xs"></i>
-        </div>
-        
-        <div class="w-full bg-[#0a0a0a] border border-white/10 rounded-xl p-3 flex flex-col gap-3 mt-2 shadow-inner">
-            <div class="flex justify-between items-center w-full group">
-                <div class="flex items-center gap-2 text-gray-400 group-hover:text-cyan-400 transition-colors">
-                    <i class="ph-bold ph-brain text-sm"></i>
-                    <span class="text-xs font-semibold tracking-wide">Use Global Memory</span>
+        <button onclick="createNewChat()" class="w-full flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 rounded-xl text-sm font-medium transition-colors text-white"><i class="ph-bold ph-plus"></i> Start New Chat</button>
+
+        <details class="group w-full">
+            <summary class="w-full flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/10 py-2.5 px-4 rounded-xl text-sm font-medium transition-colors cursor-pointer list-none select-none text-gray-300">
+                <span class="flex items-center gap-2"><i class="ph-bold ph-dots-three-circle text-lg text-cyan-400"></i> More</span>
+                <i class="ph-bold ph-caret-down text-gray-500 group-open:rotate-180 transition-transform"></i>
+            </summary>
+            
+            <div class="mt-2 space-y-2 pt-1 pb-1 pl-1 pr-1 border-l-2 border-cyan-500/30 my-2">
+                <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 py-2 rounded-xl text-xs font-medium transition-colors"><i class="ph-bold ph-users-three text-sm"></i> Invite Co-Op Friend</button>
+                <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-purple-400 py-2 rounded-xl text-xs font-medium transition-colors"><i class="ph-bold ph-brain text-sm"></i> Manage Extensions</button>
+                <button onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 py-2 rounded-xl text-xs font-medium transition-colors"><i class="ph-bold ph-graph text-sm"></i> Constellation Map</button>
+                <button onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 text-indigo-400 py-2 rounded-xl text-xs font-medium transition-colors"><i class="ph-bold ph-share-network text-sm"></i> Share Chat</button>
+                <button onclick="openExperimentalModal()" class="w-full flex items-center justify-start px-3 gap-2.5 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/20 text-fuchsia-400 py-2 rounded-xl text-xs font-medium transition-colors"><i class="ph-bold ph-flask text-sm"></i> Experimental</button>
+                
+                <div class="relative w-full pt-1">
+                    <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-[#0a0a0a] border border-white/10 rounded-lg px-3 py-2 text-xs text-gray-300 outline-none appearance-none cursor-pointer hover:border-white/20 transition-colors">
+                        <option value="">No Extension Active</option>
+                    </select>
+                    <i class="ph-bold ph-caret-down absolute right-3 top-1/2 translate-y-0.5 text-gray-500 pointer-events-none text-xs"></i>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggle-use-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
-                    <div class="w-8 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-cyan-500 shadow-inner"></div>
-                </label>
-            </div>
-            <div class="w-full h-px bg-white/5"></div>
-            <div class="flex justify-between items-center w-full group">
-                <div class="flex items-center gap-2 text-gray-400 group-hover:text-purple-400 transition-colors">
-                    <i class="ph-bold ph-floppy-disk text-sm"></i>
-                    <span class="text-xs font-semibold tracking-wide">Save to Memory</span>
+                
+                <div class="w-full bg-[#0a0a0a] border border-white/10 rounded-xl p-2.5 flex flex-col gap-2 mt-1 shadow-inner">
+                    <div class="flex justify-between items-center w-full group">
+                        <div class="flex items-center gap-2 text-gray-400 group-hover:text-cyan-400 transition-colors">
+                            <i class="ph-bold ph-brain text-xs"></i>
+                            <span class="text-[11px] font-semibold tracking-wide">Use Global Memory</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-use-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
+                            <div class="w-7 h-3.5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-cyan-500 shadow-inner"></div>
+                        </label>
+                    </div>
+                    <div class="w-full h-px bg-white/5"></div>
+                    <div class="flex justify-between items-center w-full group">
+                        <div class="flex items-center gap-2 text-gray-400 group-hover:text-purple-400 transition-colors">
+                            <i class="ph-bold ph-floppy-disk text-xs"></i>
+                            <span class="text-[11px] font-semibold tracking-wide">Save to Memory</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-save-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
+                            <div class="w-7 h-3.5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
+                        </label>
+                    </div>
                 </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="toggle-save-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
-                    <div class="w-8 h-4 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-purple-500 shadow-inner"></div>
-                </label>
             </div>
-        </div>
+        </details>
     </div>
     <div class="p-4 flex justify-between items-center border-b border-white/10">
         <h2 class="text-xs font-bold tracking-widest text-gray-400 uppercase">Chat History</h2>
