@@ -3020,6 +3020,116 @@ async function executeLabTool() {
     updateUIState();
 }
 
+// ====== DIGITAL TWIN HANDLER & AUTO-INJECTOR ======
+async function executeTwinTool() {
+    const input = document.getElementById('twin-prompt-input');
+    const promptText = input ? input.value.trim() : "";
+    if (!promptText) return showToast("Enter a proposal to test against your Digital Twin.");
+
+    closeExperimentalModal();
+    if (input) input.value = "";
+
+    // Render User Message in Chat Canvas
+    const userMsgObj = appendMessage('user', `[DIGITAL TWIN SIMULATION]: ${promptText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('lexis_nickname') : null);
+    messages.push({ role: 'user', content: `[DIGITAL TWIN SIMULATION]: ${promptText}`, id: userMsgObj.id });
+
+    isProcessing = true;
+    updateUIState();
+
+    els.indicator.classList.add('hidden');
+    const logContainer = appendResearchTerminal('Synthesizing Cognitive Profile & Digital Twin...', 'research');
+    logContainer.classList.replace('text-cyan-400', 'text-cyan-300');
+
+    try {
+        const res = await fetch('/api/twin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                prompt: promptText,
+                chatHistory: messages.slice(-200),
+                userProfile: userProfile
+            })
+        });
+
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+        const contentContainer = assistantMsgObj.container;
+        contentContainer.classList.add('typing-cursor');
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let fullResponse = "";
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            let lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.slice(6).trim();
+                    if (dataStr === '[DONE]') continue;
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.ui_error) {
+                            fullResponse = `<span class="text-red-400 text-sm"><i class="ph-bold ph-warning-circle"></i> ${data.ui_error}</span>`;
+                            contentContainer.innerHTML = fullResponse;
+                            break;
+                        }
+                        let chunk = data.choices?.[0]?.delta?.content || data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                        fullResponse += chunk;
+                        contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id);
+                        els.canvas.scrollTop = els.canvas.scrollHeight;
+                    } catch(e) {}
+                }
+            }
+        }
+
+        logContainer.parentElement.parentElement.remove();
+        contentContainer.classList.remove('typing-cursor');
+        contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
+        messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
+        saveCurrentChat();
+
+    } catch (err) {
+        logContainer.parentElement.parentElement.remove();
+        appendMessage('assistant', `<span class="text-red-400 text-sm">Digital Twin Error: ${err.message}</span>`, activeModelId);
+    }
+
+    isProcessing = false;
+    updateUIState();
+}
+
+// Auto-inject Digital Twin Card into Experimental Suite Modal
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+        if (!document.getElementById('twin-prompt-input')) {
+            const modalBody = document.querySelector('#experimental-modal .space-y-4');
+            if (modalBody) {
+                modalBody.insertAdjacentHTML('beforeend', `
+                    <div class="bg-[#111] border border-white/10 rounded-2xl p-4 flex flex-col gap-3 hover:border-cyan-500/40 transition-colors mt-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0">
+                                <i class="ph-bold ph-users-three text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-bold text-white">Digital Twin (Shadow Boardroom)</h3>
+                                <p class="text-[11px] text-gray-400">Clone your cognitive matrix. Debate proposals with an AI twin & Shadow Adversary.</p>
+                            </div>
+                        </div>
+                        <textarea id="twin-prompt-input" placeholder="Type your decision, strategy, or argument to test against your Digital Twin..." class="w-full bg-[#050505] border border-white/10 rounded-xl p-3 text-xs text-white outline-none focus:border-cyan-500 h-20 resize-none"></textarea>
+                        <button onclick="executeTwinTool()" id="twin-exec-btn" class="w-full bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-bold py-2.5 rounded-xl shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 transition-all">
+                            <i class="ph-bold ph-cpu"></i> Launch Digital Twin Debate
+                        </button>
+                    </div>
+                `);
+            }
+        }
+    }, 500);
+});
 
 // ====== PASTE shareFullChat HERE ======
 async function shareFullChat() {
