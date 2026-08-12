@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexisAI | Growth & Traffic Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        body { background-color: #050505; color: #e5e5e5; font-family: 'Inter', sans-serif; }
+        .glass-panel { background: rgba(12, 12, 12, 0.75); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .neon-glow { box-shadow: 0 0 30px rgba(56, 189, 248, 0.15); }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #262626; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #404040; }
+        .terminal-scroll::-webkit-scrollbar { width: 4px; }
+        .terminal-scroll::-webkit-scrollbar-thumb { background: #38bdf8; border-radius: 2px; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="glass-panel p-8 rounded-3xl w-full max-w-md text-center neon-glow">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center mb-6 shadow-lg shadow-sky-500/20">
+            <i class="ph-fill ph-shield-check text-2xl text-white"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-white mb-2">Growth Portal</h1>
+        <p class="text-gray-400 text-sm mb-6">Enter master administration key to access organic traffic orchestration.</p>
+        <input type="password" id="admin-pass" class="w-full bg-[#111] border border-white/10 rounded-xl px-4 py-3 text-white text-center focus:outline-none focus:border-sky-500 transition-colors mb-4 tracking-widest text-sm" placeholder="••••••••••••" onkeypress="if(event.key==='Enter') authenticateAdmin()">
+        <button onclick="authenticateAdmin()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-3 rounded-xl transition-colors shadow-lg shadow-sky-600/20 text-sm">Authenticate Session</button>
+        <p id="login-error" class="text-red-400 text-xs mt-3 hidden"></p>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboard" class="hidden w-full max-w-6xl h-[90dvh] flex flex-col glass-panel rounded-3xl overflow-hidden shadow-2xl">
+        
+        <!-- Header -->
+        <header class="border-b border-white/10 px-6 py-4 flex justify-between items-center bg-[#0a0a0a]">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md">
+                    <i class="ph-fill ph-chart-line-up text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-base font-bold text-white tracking-tight">LexisAI <span class="text-sky-400 font-normal">Growth & Traffic Core</span></h1>
+                    <p class="text-[10px] text-gray-500 font-mono">Autonomous Search Engine Paging & Syndication Engine</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="fetchAnalytics()" class="text-xs text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 font-medium"><i class="ph-bold ph-arrows-clockwise"></i> Refresh Metrics</button>
+                <button onclick="logout()" class="text-xs text-gray-400 hover:text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5"><i class="ph-bold ph-sign-out"></i> Logout</button>
+            </div>
+        </header>
+
+        <!-- Content Grid -->
+        <main class="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- LEFT 2 COLUMNS: Controls & Live Analytics -->
+            <div class="lg:col-span-2 flex flex-col gap-6">
+                
+                <!-- Metrics Bar -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-[#111] border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Live Active Users</span>
+                        <div class="flex items-center gap-2 mt-3">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            <span id="stat-active" class="text-2xl font-extrabold text-white">0</span>
+                        </div>
+                    </div>
+                    <div class="bg-[#111] border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Total Impressions</span>
+                        <span id="stat-visits" class="text-2xl font-extrabold text-sky-400 mt-3">0</span>
+                    </div>
+                    <div class="bg-[#111] border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Unique Visitors</span>
+                        <span id="stat-unique" class="text-2xl font-extrabold text-indigo-400 mt-3">0</span>
+                    </div>
+                    <div class="bg-[#111] border border-white/5 p-4 rounded-2xl flex flex-col justify-between">
+                        <span class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Google Bot Hits</span>
+                        <span id="stat-bots" class="text-2xl font-extrabold text-emerald-400 mt-3">0</span>
+                    </div>
+                </div>
+
+                <!-- Launch Control Panel -->
+                <div class="bg-[#111] border border-white/5 p-6 rounded-2xl flex flex-col gap-5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+                            <i class="ph-bold ph-rocket-launch text-base"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-sm font-bold text-white">Execute Global Traffic Blast</h2>
+                            <p class="text-xs text-gray-400">Forces instant Google indexing, triggers SEO asset generation, and broadcasts syndication webhooks.</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="text-[11px] font-semibold text-gray-400 block mb-1 uppercase tracking-wider">Target Web App URL</label>
+                            <input type="url" id="target-url" value="https://lexis-ai-chatini.vercel.app" class="w-full bg-[#080808] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-sky-500 font-mono">
+                        </div>
+                        <div>
+                            <label class="text-[11px] font-semibold text-gray-400 block mb-1 uppercase tracking-wider">Optional Custom Webhook (Discord / Telegram / Custom API)</label>
+                            <input type="url" id="webhook-url" placeholder="https://discord.com/api/webhooks/..." class="w-full bg-[#080808] border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white outline-none focus:border-sky-500 font-mono">
+                        </div>
+                    </div>
+
+                    <button onclick="launchTrafficBlast()" id="launch-btn" class="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-sky-600/20 text-xs flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-lightning"></i> Launch Organic Growth Blast
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Execution Terminal & Status -->
+            <div class="flex flex-col gap-4">
+                <div class="bg-[#111] border border-white/5 p-5 rounded-2xl flex flex-col h-full min-h-[400px]">
+                    <div class="flex justify-between items-center mb-3">
+                        <h2 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2"><i class="ph-bold ph-terminal-window text-sky-400"></i> Execution Terminal</h2>
+                        <span id="terminal-status" class="text-[10px] text-gray-500 font-mono">Idle</span>
+                    </div>
+                    
+                    <div id="terminal-logs" class="flex-1 bg-[#050505] border border-white/5 rounded-xl p-3 font-mono text-[11px] text-gray-300 overflow-y-auto terminal-scroll space-y-1.5 flex flex-col">
+                        <div class="text-gray-600 italic">[System Ready. Awaiting launch command...]</div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        let adminPass = '';
+
+        async function authenticateAdmin() {
+            const pass = document.getElementById('admin-pass').value.trim();
+            const errEl = document.getElementById('login-error');
+            errEl.classList.add('hidden');
+            if (!pass) return;
+
+            try {
+                const res = await fetch('/api/growth?action=metrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pass })
+                });
+
+                if (res.ok) {
+                    adminPass = pass;
+                    document.getElementById('login-screen').classList.add('hidden');
+                    document.getElementById('dashboard').classList.remove('hidden');
+                    document.body.classList.remove('items-center', 'justify-center');
+                    fetchAnalytics();
+                } else {
+                    errEl.innerText = "Access Denied. Invalid master key.";
+                    errEl.classList.remove('hidden');
+                }
+            } catch (e) {
+                errEl.innerText = "Network Error connecting to growth endpoint.";
+                errEl.classList.remove('hidden');
+            }
+        }
+
+        function logout() {
+            adminPass = '';
+            document.getElementById('admin-pass').value = '';
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.body.classList.add('items-center', 'justify-center');
+        }
+
+        async function fetchAnalytics() {
+            if (!adminPass) return;
+            try {
+                const res = await fetch('/api/growth?action=metrics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-pass': adminPass },
+                    body: JSON.stringify({ password: adminPass })
+                });
+                const data = await res.json();
+                if (data.success && data.analytics) {
+                    const a = data.analytics;
+                    document.getElementById('stat-active').innerText = a.activeLiveUsers;
+                    document.getElementById('stat-visits').innerText = a.totalVisits;
+                    document.getElementById('stat-unique').innerText = a.uniqueVisitors;
+                    document.getElementById('stat-bots').innerText = a.googleBotHits;
+                }
+            } catch (e) {}
+        }
+
+        async function launchTrafficBlast() {
+            if (!adminPass) return;
+            const targetUrl = document.getElementById('target-url').value.trim();
+            const webhookUrl = document.getElementById('webhook-url').value.trim();
+            const btn = document.getElementById('launch-btn');
+            const term = document.getElementById('terminal-logs');
+            const statusEl = document.getElementById('terminal-status');
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Executing Blast...';
+            statusEl.innerText = "Running...";
+            term.innerHTML = '<div class="text-sky-400">[System] Initializing Organic Growth Blast...</div>';
+
+            try {
+                const res = await fetch('/api/growth?action=launch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-pass': adminPass },
+                    body: JSON.stringify({
+                        password: adminPass,
+                        targetUrl: targetUrl,
+                        webhookUrl: webhookUrl
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    if (data.logs && Array.isArray(data.logs)) {
+                        term.innerHTML = data.logs.map(l => `<div class="text-gray-300">${l}</div>`).join('');
+                    }
+                    term.innerHTML += `<div class="text-emerald-400 font-bold mt-2">[Success] Traffic engine successfully executed! Googlebot notified & webhooks broadcasted.</div>`;
+                    statusEl.innerText = "Completed";
+                    fetchAnalytics();
+                } else {
+                    term.innerHTML += `<div class="text-red-400">[Error] ${data.error || 'Launch failed.'}</div>`;
+                    statusEl.innerText = "Failed";
+                }
+            } catch (e) {
+                term.innerHTML += `<div class="text-red-400">[Exception] Network or server timeout.</div>`;
+                statusEl.innerText = "Error";
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = '<i class="ph-bold ph-lightning"></i> Launch Organic Growth Blast';
+        }
+    </script>
+</body>
+</html>
