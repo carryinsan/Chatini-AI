@@ -547,7 +547,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
                     let lastErr = "";
                     for (let i = 0; i < GEMINI_KEYS.length; i++) {
-                        llmRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEYS[i]}`, { 
+                        llmRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEYS[i]}`, { 
                             method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(finalPayload) 
                         });
                         if (llmRes.ok) break;
