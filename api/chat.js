@@ -151,28 +151,37 @@ export default async function handler(req) {
                     sendUIChunk(html);
                 };
 
+                const GROQ_MODELS_FALLBACK = [
+                    'gpt-oss-20b',
+                    'llama-3.3-70b-versatile',
+                    'gemma2-9b-it',
+                    'mixtral-8x7b-32768'
+                ];
+
                 const callGroqAPI = async (systemPrompt, userPrompt) => {
                     if (GROQ_KEYS.length === 0) return null;
-                    for (let i = 0; i < GROQ_KEYS.length; i++) {
-                        try {
-                            const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-                                method: 'POST',
-                                headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    model: 'gpt-oss-20b',
-                                    response_format: { type: "json_object" },
-                                    temperature: 0.2,
-                                    messages: [
-                                        { role: 'system', content: systemPrompt },
-                                        { role: 'user', content: userPrompt }
-                                    ]
-                                })
-                            });
-                            if (res.ok) {
-                                const data = await res.json();
-                                return JSON.parse(data.choices[0].message.content);
-                            }
-                        } catch (e) {} 
+                    for (const groqModel of GROQ_MODELS_FALLBACK) {
+                        for (let i = 0; i < GROQ_KEYS.length; i++) {
+                            try {
+                                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                                    method: 'POST',
+                                    headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        model: groqModel,
+                                        response_format: { type: "json_object" },
+                                        temperature: 0.2,
+                                        messages: [
+                                            { role: 'system', content: systemPrompt },
+                                            { role: 'user', content: userPrompt }
+                                        ]
+                                    })
+                                });
+                                if (res.ok) {
+                                    const data = await res.json();
+                                    return JSON.parse(data.choices[0].message.content);
+                                }
+                            } catch (e) {} 
+                        }
                     }
                     return null;
                 };
@@ -528,11 +537,14 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 if (modelId === 'spark' && GROQ_KEYS.length > 0) {
                     isGroq = true;
                     let lastErr = "";
-                    for (let i = 0; i < GROQ_KEYS.length; i++) {
-                        const payload = { model: 'gpt-oss-20b', messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.slice(-5)], stream: true, temperature: 0.2 }; 
-                        llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                        if (llmRes.ok) break;
-                        lastErr = await llmRes.text();
+                    for (const groqModel of GROQ_MODELS_FALLBACK) {
+                        for (let i = 0; i < GROQ_KEYS.length; i++) {
+                            const payload = { model: groqModel, messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.slice(-5)], stream: true, temperature: 0.2 }; 
+                            llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                            if (llmRes.ok) break;
+                            lastErr = await llmRes.text();
+                        }
+                        if (llmRes && llmRes.ok) break;
                     }
                     if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All Groq API keys exhausted.");
                 } else {
@@ -663,4 +675,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
     });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
-                    }
+                }
