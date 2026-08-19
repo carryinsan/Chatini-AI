@@ -529,7 +529,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     isGroq = true;
                     let lastErr = "";
                     for (let i = 0; i < GROQ_KEYS.length; i++) {
-                        const payload = { model: 'llama-3.1-8b-instant', messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.slice(-5)], stream: true, temperature: 0.2 }; 
+                        const payload = { model: 'gpt-oss-20b', messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.slice(-5)], stream: true, temperature: 0.2 }; 
                         llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                         if (llmRes.ok) break;
                         lastErr = await llmRes.text();
