@@ -218,7 +218,7 @@ RULES:
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: 'llama-3.1-8b-instant',
+                        model: 'openai/gpt-oss-20b',
                         messages: [{ role: 'user', content: groqPrompt }],
                         temperature: 0.2,
                         response_format: { type: "json_object" }
