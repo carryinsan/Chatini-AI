@@ -52,7 +52,7 @@ export default async function handler(req) {
                             method: 'POST',
                             headers: { 'Authorization': `Bearer ${GROQ_KEY}`, 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                model: 'llama-3.1-8b-instant',
+                                model: 'openai/gpt-oss-20b',
                                 messages: [{
                                     role: 'system',
                                     content: 'You are an autonomous research agent. Break the user query into 3 highly targeted web search queries to gather comprehensive data. Output EXACTLY a JSON array of 4 strings (original query + 3 new ones). Return NOTHING ELSE.'
