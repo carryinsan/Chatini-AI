@@ -84,6 +84,9 @@ export default async function handler(req) {
                 // ADDED MEMORY TOGGLES TO THE DESTRUCTURE
                 const { messages, modelId, researchContext, userProfile, useGlobalMemory, contributeToMemory } = await req.json();
                 
+                // DETECT DOCUMENT ATTACHMENTS FOR DIRECT GEMINI PASSTHROUGH
+                const hasAttachments = messages.some(m => m.attachments && Array.isArray(m.attachments) && m.attachments.length > 0);
+
                 // ====================================================================
                 // 0. FIREWALL & RATE LIMITING
                 // ====================================================================
@@ -119,10 +122,8 @@ export default async function handler(req) {
 
                 if (GEMINI_KEYS.length === 0) throw new Error("CRITICAL: No Gemini Keys Configured on Server.");
 
-                // CORE FIX: Split Routing for Flux vs Oracle
-                // Oracle: Advanced thinking, groq triage, multi-search, etc.
-                // Flux: Direct line to Gemini, no intermediate API calls.
-                const isThinkingEnabled = modelId === 'oracle' && !researchContext;
+                // CORE FIX: Disable thinking steps completely if document/file uploaded or if not Oracle
+                const isThinkingEnabled = modelId === 'oracle' && !researchContext && !hasAttachments;
 
                 // ====================================================================
                 // PRE-PROCESS: ADMIN OVERRIDE CHECK
@@ -162,7 +163,7 @@ export default async function handler(req) {
                 ];
 
                 const callGroqAPI = async (systemPrompt, userPrompt) => {
-                    if (GROQ_KEYS.length === 0) return null;
+                    if (GROQ_KEYS.length === 0 || hasAttachments) return null;
                     for (const groqModel of GROQ_MODELS_FALLBACK) {
                         for (let i = 0; i < GROQ_KEYS.length; i++) {
                             try {
@@ -316,7 +317,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 // PHASE 2: DYNAMIC TRIAGE & SEARCH LIMIT CALCULATION (Oracle Only)
                 // ====================================================================
                 let maxSearches = modelId === 'oracle' ? 5 : 0;
-                let maxGroqPasses = modelId === 'oracle' ? 20 : 0;
+                // DRASTICALLY REDUCED PASSES: Max 3 for Oracle, 0 for Flux / Attachments
+                let maxGroqPasses = isThinkingEnabled ? 3 : 0;
                 
                 let dynamicPlan = { complexity: 1, search_queries: [] };
                 let deepReasoningContext = "";
@@ -409,8 +411,10 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     
                     try {
                         let searchIntents = userQuery;
-                        const intentData = await callGroqAPI('Extract 3-5 core search keywords from the query. Return ONLY space-separated keywords in JSON: {"keywords": "..."}', userQuery);
-                        if (intentData && intentData.keywords) searchIntents = intentData.keywords;
+                        if (!hasAttachments) {
+                            const intentData = await callGroqAPI('Extract 3-5 core search keywords from the query. Return ONLY space-separated keywords in JSON: {"keywords": "..."}', userQuery);
+                            if (intentData && intentData.keywords) searchIntents = intentData.keywords;
+                        }
 
                         let supaSuccess = false;
                         for (let attempt = 1; attempt <= 2; attempt++) {
@@ -445,28 +449,17 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ====================================================================
-                // PHASE 4: THE DEEP COGNITIVE REASONING LOOP (Oracle Only)
+                // PHASE 4: THE DEEP COGNITIVE REASONING LOOP (Max 3 Passes for Oracle Only)
                 // ====================================================================
                 const oracleThinkers = [
                     "Thinker 1: Solve normally (Establish baseline solution architecture).",
                     "Thinker 2: Find flaws (Ruthlessly attack Thinker 1's logic).",
-                    "Thinker 3: Find missing assumptions (Identify invisible variables and hidden dependencies).",
-                    "Thinker 4: Generate an alternative solution (Devise a completely separate structural approach).",
-                    "Thinker 5: Optimize for correctness (Enforce absolute factual accuracy and mathematical precision).",
-                    "Thinker 6: Optimize for speed (Evaluate computational, temporal, or operational efficiency).",
-                    "Thinker 7: Optimize for simplicity (Eliminate unnecessary complexity; rely on Occam's Razor).",
-                    "Thinker 8: Expert in mathematics (Validate all equations, logic chains, and numerical claims).",
-                    "Thinker 9: Expert programmer (Review code syntax, system architecture, and technical edge cases).",
-                    "Thinker 10: Expert researcher (Perfectly synthesize retrieved context and external search data)."
+                    "Thinker 3: Optimize for correctness & completeness (Enforce absolute factual accuracy)."
                 ];
 
-                if (isThinkingEnabled) {
-                    let actualPasses = 1;
-                    if (forceMaxPasses) {
-                        actualPasses = maxGroqPasses;
-                    } else {
-                        actualPasses = Math.min(maxGroqPasses, Math.max(1, Math.ceil(dynamicPlan.complexity * (maxGroqPasses / 10))));
-                    }
+                if (isThinkingEnabled && maxGroqPasses > 0) {
+                    let actualPasses = Math.min(3, Math.max(1, Math.ceil(dynamicPlan.complexity * (3 / 10))));
+                    if (forceMaxPasses) actualPasses = 3;
                     
                     if (actualPasses > 0) {
                         let baseContextSample = condensedKnowledge.substring(0, 8000); 
@@ -678,4 +671,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
     });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
-                }
+                        }
