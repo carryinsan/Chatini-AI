@@ -159,7 +159,7 @@ export default async function handler(req) {
                                 method: 'POST',
                                 headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
-                                    model: 'llama-3.1-8b-instant',
+                                    model: 'gpt-oss-20b',
                                     response_format: { type: "json_object" },
                                     temperature: 0.2,
                                     messages: [
