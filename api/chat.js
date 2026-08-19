@@ -154,8 +154,11 @@ export default async function handler(req) {
                 const GROQ_MODELS_FALLBACK = [
                     'gpt-oss-20b',
                     'llama-3.3-70b-versatile',
+                    'llama-3.1-70b-versatile',
                     'gemma2-9b-it',
-                    'mixtral-8x7b-32768'
+                    'llama3-70b-8192',
+                    'llama3-8b-8192',
+                    'deepseek-r1-distill-llama-70b'
                 ];
 
                 const callGroqAPI = async (systemPrompt, userPrompt) => {
