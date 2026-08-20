@@ -1,4 +1,5 @@
 import { verifyAndLimit } from './auth.js';
+import { PrivacyEngine } from '../lib/privacyEngine.js';
 
 export const config = {
     runtime: 'edge', 
@@ -81,9 +82,14 @@ export default async function handler(req) {
             };
 
             try {
-                // ADDED MEMORY TOGGLES TO THE DESTRUCTURE
-                const { messages, modelId, researchContext, userProfile, useGlobalMemory, contributeToMemory } = await req.json();
+                // PARSE REQUEST BODY & EXECUTE PRIVACY ANONYMIZATION
+                const body = await req.json();
+                const { modelId, researchContext, userProfile, useGlobalMemory, contributeToMemory } = body;
                 
+                // Anonymize user inputs and extract volatile token map in RAM
+                const { sanitizedMessages, tokenMap: ephemeralTokenMap } = PrivacyEngine.anonymizeMessages(body.messages || []);
+                const messages = sanitizedMessages;
+
                 // DETECT DOCUMENT ATTACHMENTS FOR DIRECT GEMINI PASSTHROUGH
                 const hasAttachments = messages.some(m => m.attachments && Array.isArray(m.attachments) && m.attachments.length > 0);
 
@@ -506,6 +512,9 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
                 systemPrompt += `\n\n[CRITICAL: Base your answer strictly on the provided context and reasoning matrix. Maximize depth. Do not hallucinate.]`;
 
+                // APPEND ZERO-TRAINING & ZERO-KNOWLEDGE PRIVACY DIRECTIVE
+                systemPrompt = PrivacyEngine.injectAntiTrainingDirectives(systemPrompt);
+
                 processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}`;
 
                 const geminiMessages = processedMessages.map((m, i) => {
@@ -588,7 +597,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ================================================================
-                // CORE BUG FIX: THE IRONCLAD SSE PARSER
+                // CORE BUG FIX: THE IRONCLAD SSE PARSER WITH REAL-TIME DETOKENIZATION
                 // ================================================================
                 const reader = llmRes.body.getReader();
                 const decoder = new TextDecoder();
@@ -608,6 +617,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                         : rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
                                     
                                     if (cleanText) {
+                                        cleanText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
                                         const cleanPayload = { id: "chatcmpl-end", object: "chat.completion.chunk", created: Date.now(), model: modelId, text: cleanText, message: cleanText, choices: [{ index: 0, delta: { role: "assistant", content: cleanText }, finish_reason: null }], candidates: [{ index: 0, content: { role: "model", parts: [{ text: cleanText }] }, finishReason: null }] };
                                         controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
                                     }
@@ -640,15 +650,16 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                             }
 
                             if (cleanText) {
+                                const restoredText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
                                 const cleanPayload = { 
                                     id: "chatcmpl-" + Math.random().toString(36).substring(2, 10),
                                     object: "chat.completion.chunk",
                                     created: Math.floor(Date.now() / 1000),
                                     model: modelId,
-                                    text: cleanText, 
-                                    message: cleanText, 
-                                    choices: [{ index: 0, delta: { role: "assistant", content: cleanText }, finish_reason: null }],
-                                    candidates: [{ index: 0, content: { role: "model", parts: [{ text: cleanText }] }, finishReason: null }]
+                                    text: restoredText, 
+                                    message: restoredText, 
+                                    choices: [{ index: 0, delta: { role: "assistant", content: restoredText }, finish_reason: null }],
+                                    candidates: [{ index: 0, content: { role: "model", parts: [{ text: restoredText }] }, finishReason: null }]
                                 };
                                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
                             }
@@ -673,4 +684,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
     });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
-            }
+                                                          }
