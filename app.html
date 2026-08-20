@@ -2443,6 +2443,10 @@ async function handleSend() {
     renderStagingArea();
     isProcessing = true; 
     updateUIState();
+
+    // Hook background pulse trigger
+    triggerPulseDetection(text);
+
     msgCountForMemory++;
     
     // NEW: Check if user wants to contribute this chat to their global memory profile
