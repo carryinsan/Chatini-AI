@@ -3242,6 +3242,77 @@ if (els && els.input) {
 }
 
 
+// ====================================================================
+// LEXIS PULSE FRONTEND ENGINE & UI LOGIC (FAIL-SAFE)
+// ====================================================================
+
+let pulseTasks = JSON.parse(localStorage.getItem('lexis_pulse_tasks')) || [];
+
+function openPulseModal() {
+    renderPulseVault();
+    document.getElementById('pulse-modal').classList.remove('hidden');
+}
+
+function closePulseModal() {
+    document.getElementById('pulse-modal').classList.add('hidden');
+}
+
+function renderPulseTodayWidget() {
+    const widget = document.getElementById('pulse-today-widget');
+    const list = document.getElementById('pulse-today-list');
+    const countEl = document.getElementById('pulse-today-count');
+    if (!widget || !list) return;
+
+    // Calculate device local date (YYYY-MM-DD)
+    const now = new Date();
+    const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // Strict Filter: Tasks for today OR tasks created today without specific deadline
+    const todayTasks = pulseTasks.filter(t => {
+        const isNotDismissed = t.status !== 'dismissed';
+        const taskCreatedToday = t.createdAt && t.createdAt.startsWith(localTodayStr);
+        const taskDueToday = t.due === localTodayStr;
+        return isNotDismissed && (taskDueToday || (!t.due && taskCreatedToday));
+    });
+
+    // Count real user messages (ignore the initial System greeting)
+    const realUserMessagesCount = messages.filter(m => m.role === 'user').length;
+    const isInputEmpty = !els.input || els.input.value.trim().length === 0;
+
+    // Show ONLY if there are tasks for today, no user messages sent yet, and input box is empty
+    if (todayTasks.length === 0 || realUserMessagesCount > 0 || !isInputEmpty) {
+        widget.classList.add('hidden');
+        return;
+    }
+
+    widget.classList.remove('hidden');
+    countEl.innerText = `${todayTasks.length} pending`;
+
+    const iconMap = { DO: '🔥', DECIDE: '🧠', REMEMBER: '📌', REPLY: '💬' };
+
+    list.innerHTML = todayTasks.map(t => `
+        <div class="p-3 bg-surface2 border border-white/5 rounded-xl flex items-center justify-between group hover:border-cyan-500/30 transition-all">
+            <div class="flex items-center gap-3 overflow-hidden pr-2">
+                <span class="text-lg">${iconMap[t.type] || '📌'}</span>
+                <div class="flex flex-col truncate">
+                    <span class="text-xs font-bold text-white truncate">${t.title}</span>
+                    <span class="text-[10px] text-cyan-400 font-mono">${t.due ? 'Scheduled Today (' + t.due + ')' : 'Created Today • No deadline'}</span>
+                </div>
+            </div>
+            <button onclick="markPulseTaskDone('${t.id}')" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-lg font-bold transition-all shrink-0 flex items-center gap-1">
+                <i class="ph-bold ph-check"></i> Done
+            </button>
+        </div>
+    `).join('');
+}
+
+// Dynamic typing listener: Hides widget when user types, shows when cleared
+if (els && els.input) {
+    els.input.addEventListener('input', () => {
+        renderPulseTodayWidget();
+    });
+}
+
 function renderPulseVault() {
     const container = document.getElementById('pulse-vault-list');
     if (!container) return;
@@ -3352,6 +3423,42 @@ function confirmPulseTask(cardId, item) {
 }
 
 function undoPulseTask(taskId, cardId) {
+    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
+    localStorage.setItem('lexis_pulse_tasks', JSON.stringify(pulseTasks));
+    dismissPulseTask(cardId);
+    showToast("Task undone.");
+    renderPulseTodayWidget();
+}
+
+function dismissPulseTask(cardId) {
+    const card = document.getElementById(cardId);
+    if (card) card.remove();
+}
+
+function markPulseTaskDone(taskId) {
+    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
+    localStorage.setItem('lexis_pulse_tasks', JSON.stringify(pulseTasks));
+    renderPulseTodayWidget();
+    showToast("Task completed! 🎉");
+}
+
+function deletePulseTask(taskId) {
+    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
+    localStorage.setItem('lexis_pulse_tasks', JSON.stringify(pulseTasks));
+    renderPulseVault();
+    renderPulseTodayWidget();
+    showToast("Task deleted.");
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(renderPulseTodayWidget, 300);
+});
+
+if (els && els.sendBtn) {
+    els.sendBtn.addEventListener('click', handleSend);
+}
+
 </script>
 </body>
 </html>
+
