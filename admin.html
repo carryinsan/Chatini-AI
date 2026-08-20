@@ -160,7 +160,7 @@
             mChart = new Chart(document.getElementById('modelChart'), {
                 type: 'doughnut',
                 data: {
-                    labels: ['Spark (Groq)', 'Flux (Gemini)', 'Oracle (Deep)'],
+                    labels: ['Spark ', 'Flux ', 'Oracle '],
                     datasets: [{
                         data: [stats.model_spark || 0, stats.model_flux || 0, stats.model_oracle || 0],
                         backgroundColor: ['#fbbf24', '#22d3ee', '#c084fc'],
