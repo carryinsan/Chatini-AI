@@ -3248,38 +3248,62 @@ function closePulseModal() {
 }
 
 function renderPulseTodayWidget() {
+function renderPulseTodayWidget() {
     const widget = document.getElementById('pulse-today-widget');
     const list = document.getElementById('pulse-today-list');
     const countEl = document.getElementById('pulse-today-count');
     if (!widget || !list) return;
 
-    const todayTasks = pulseTasks.filter(t => t.status === 'confirmed' || t.status === 'suggested');
+    // 1. Calculate device local date (YYYY-MM-DD)
+    const now = new Date();
+    const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-    if (todayTasks.length === 0 || messages.length > 0) {
+    // 2. Strict Filter: Tasks for today OR tasks created today without specific deadline
+    const todayTasks = pulseTasks.filter(t => {
+        const isNotDismissed = t.status !== 'dismissed';
+        const taskCreatedToday = t.createdAt && t.createdAt.startsWith(localTodayStr);
+        const taskDueToday = t.due === localTodayStr;
+        return isNotDismissed && (taskDueToday || (!t.due && taskCreatedToday));
+    });
+
+    // 3. Count real user messages (ignore the initial System greeting)
+    const realUserMessagesCount = messages.filter(m => m.role === 'user').length;
+    const isInputEmpty = !els.input || els.input.value.trim().length === 0;
+
+    // Show ONLY if there are tasks for today, no user messages sent yet, and input box is empty
+    if (todayTasks.length === 0 || realUserMessagesCount > 0 || !isInputEmpty) {
         widget.classList.add('hidden');
         return;
     }
 
     widget.classList.remove('hidden');
-    countEl.innerText = `${todayTasks.length} items`;
+    countEl.innerText = `${todayTasks.length} pending`;
 
     const iconMap = { DO: '🔥', DECIDE: '🧠', REMEMBER: '📌', REPLY: '💬' };
 
     list.innerHTML = todayTasks.map(t => `
-        <div class="p-3 bg-surface2 border border-white/5 rounded-xl flex items-center justify-between group hover:border-white/20 transition-all">
-            <div class="flex items-center gap-2.5 overflow-hidden pr-2">
-                <span class="text-base">${iconMap[t.type] || '📌'}</span>
+        <div class="p-3 bg-surface2 border border-white/5 rounded-xl flex items-center justify-between group hover:border-cyan-500/30 transition-all">
+            <div class="flex items-center gap-3 overflow-hidden pr-2">
+                <span class="text-lg">${iconMap[t.type] || '📌'}</span>
                 <div class="flex flex-col truncate">
                     <span class="text-xs font-bold text-white truncate">${t.title}</span>
-                    <span class="text-[10px] text-gray-500 font-mono">${t.due ? 'Due: ' + t.due : 'No deadline'}</span>
+                    <span class="text-[10px] text-cyan-400 font-mono">${t.due ? 'Scheduled Today (' + t.due + ')' : 'Created Today • No deadline'}</span>
                 </div>
             </div>
-            <button onclick="markPulseTaskDone('${t.id}')" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-lg font-bold transition-all shrink-0">
-                ✓ Done
+            <button onclick="markPulseTaskDone('${t.id}')" class="text-xs bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 px-3 py-1.5 rounded-lg font-bold transition-all shrink-0 flex items-center gap-1">
+                <i class="ph-bold ph-check"></i> Done
             </button>
         </div>
     `).join('');
 }
+
+// Dynamic typing listener: Hides widget when user types, shows when cleared
+if (els && els.input) {
+    els.input.addEventListener('input', () => {
+        renderPulseTodayWidget();
+    });
+}
+
 
 function renderPulseVault() {
     const container = document.getElementById('pulse-vault-list');
