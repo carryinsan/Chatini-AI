@@ -1,8 +1,3 @@
-/* ==========================================
-   PART 1/5: Imports, Global Styles/Theme Tokens, Root Layout & Container Wrappers
-   MERGE POINT: Save this as the beginning of your `index.html` file. Part 2 will append directly after this block.
-   ========================================== */
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -257,15 +252,6 @@ body {
         </div>
     </div>
 </div>
-
-/* ==========================================
-   END PART 1/5
-   ========================================== */
-/* ==========================================
-   PART 2/5: Advanced Modals & Primary Sidebar
-   MERGE POINT: Append this exactly after the closing `</div>` of the `#pdf-modal` from Part 1.
-   ========================================== */
-
 <!-- Extensions Modal -->
 <div id="ext-modal" class="fixed inset-0 bg-gray-900/40 z-[70] hidden flex flex-col backdrop-blur-sm">
     <div class="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white pt-safe shadow-sm">
@@ -546,14 +532,6 @@ body {
     </div>
 </aside>
 
-/* ==========================================
-   END PART 2/5
-   ========================================== */
-/* ==========================================
-   PART 3/5: Main Content Area, CSS Bridge & Input Footer
-   MERGE POINT: Append this exactly after the closing `</aside>` of `#sidebar` from Part 2.
-   ========================================== */
-
 <!-- CSS Bridge: Maps strictly hardcoded backend dark-mode JS classes to Target UI Light Theme natively -->
 <style>
 /* Send Button States */
@@ -753,14 +731,6 @@ div[id^="pulse_card_"] .bg-white\/5 { background-color: #e5e7eb !important; colo
         </div>
     </footer>
 </main>
-
-/* ==========================================
-   END PART 3/5
-   ========================================== */
-/* ==========================================
-   PART 4/5: Workspace Panel & Core Application Logic (JS - Part A)
-   MERGE POINT: Append this exactly after the closing `</main>` from Part 3.
-   ========================================== */
 
 <!-- ==================== WORKSPACE PANEL (RIGHT) ==================== -->
 <aside id="workspace-canvas" class="fixed lg:absolute top-0 right-0 w-full lg:w-[450px] xl:w-[500px] h-full bg-[#FAFAFA] border-l border-gray-200 flex flex-col flex-shrink-0 z-[60] shadow-[-10px_0_30px_rgba(0,0,0,0.05)] transform translate-x-full hidden transition-transform duration-400 ease-in-out">
@@ -3147,8 +3117,3 @@ if (els && els.sendBtn) { els.sendBtn.addEventListener('click', handleSend); }
 </script>
 </body>
 </html>
-
-/* ==========================================
-   END PART 5/5
-   SUCCESSFULLY REFACTORED TO TARGET UI
-   ========================================== */
