@@ -252,6 +252,8 @@ body {
         </div>
     </div>
 </div>
+
+
 <!-- Extensions Modal -->
 <div id="ext-modal" class="fixed inset-0 bg-gray-900/40 z-[70] hidden flex flex-col backdrop-blur-sm">
     <div class="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200 bg-white pt-safe shadow-sm">
@@ -418,119 +420,80 @@ body {
             </div>
         </button>
     </div>
-
-    <!-- Scrollable Navigation Area -->
-    <div class="flex-1 overflow-y-auto px-3 space-y-6 custom-scrollbar pb-6">
+<!-- Scrollable Navigation Area -->
+    <div class="flex-1 overflow-y-auto px-3 space-y-2 custom-scrollbar pb-6">
         
-        <!-- Advanced Engine Features -->
+        <!-- Main Navigation -->
+        <div class="space-y-1 mb-6">
+            <button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl bg-theme-50 text-theme-600 font-semibold text-sm transition-colors">
+                <i class="ph-fill ph-house text-lg"></i> Home
+            </button>
+            <button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                <i class="ph-bold ph-chat-circle text-lg"></i> Chats
+            </button>
+            <button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                <i class="ph-bold ph-folder text-lg"></i> Projects
+            </button>
+            <button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                <i class="ph-bold ph-books text-lg"></i> Library
+            </button>
+        </div>
+
+        <!-- CAPABILITIES Section -->
         <div>
-            <div class="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Advanced Tools
-                <i class="ph-bold ph-caret-down text-gray-400"></i>
+            <div class="px-4 mb-2 flex items-center justify-between text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                Capabilities
+                <i class="ph-bold ph-caret-down"></i>
             </div>
-            <div class="space-y-0.5">
-                <button onclick="openPulseModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-cyan-50 border border-cyan-100/50">
-                        <i class="ph-bold ph-lightning text-cyan-600"></i>
-                    </div>
-                    Lexis Pulse Tasks
+            <div class="space-y-1">
+                <button id="deep-research-btn" onclick="toggleDeepResearch()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                    <i id="deep-research-icon" class="ph-bold ph-magnifying-glass text-blue-500 text-lg"></i> Research
                 </button>
-                <button onclick="createMultiplayerRoom()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-50 border border-emerald-100/50">
-                        <i class="ph-bold ph-users-three text-emerald-600"></i>
-                    </div>
-                    Invite Co-Op Friend
+                <button id="ppt-btn" onclick="togglePresentationMode()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                    <i id="ppt-icon" class="ph-bold ph-presentation-chart text-rose-500 text-lg"></i> Slides
                 </button>
-                <button onclick="openExtModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-purple-50 border border-purple-100/50">
-                        <i class="ph-bold ph-brain text-purple-600"></i>
-                    </div>
-                    Knowledge Extensions
+                <button id="math-btn" onclick="toggleMathMode()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                    <i id="math-icon" class="ph-bold ph-function text-emerald-500 text-lg"></i> Math
                 </button>
-                <button onclick="generateBrainMap()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-blue-50 border border-blue-100/50">
-                        <i class="ph-bold ph-graph text-blue-600"></i>
-                    </div>
-                    Constellation Map
+                <button id="podcast-btn" onclick="togglePodcastMode()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                    <i id="podcast-icon" class="ph-bold ph-music-notes text-purple-500 text-lg"></i> Audio
                 </button>
-                <button onclick="shareFullChat()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-indigo-50 border border-indigo-100/50">
-                        <i class="ph-bold ph-share-network text-indigo-600"></i>
-                    </div>
-                    Share Chat
+                <button id="image-btn" onclick="toggleImageMode()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                    <i id="image-icon" class="ph-bold ph-image text-cyan-500 text-lg"></i> Image
                 </button>
-                <button onclick="openExperimentalModal()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-sm font-medium text-gray-700 hover:bg-gray-50 hover:text-gray-900">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-fuchsia-50 border border-fuchsia-100/50">
-                        <i class="ph-bold ph-flask text-fuchsia-600"></i>
-                    </div>
-                    Experimental Suite
+                <button id="app-btn" onclick="toggleAppMode()" class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors">
+                    <i id="app-icon" class="ph-bold ph-code text-amber-500 text-lg"></i> Code
                 </button>
+                <button class="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 font-medium text-sm transition-colors" onclick="document.getElementById('file-upload').click()">
+                    <i class="ph-bold ph-file-text text-gray-500 text-lg"></i> Documents
+                </button>
+                <button id="study-btn" onclick="toggleStudyMode()" class="hidden"><i id="study-icon"></i></button>
             </div>
         </div>
-
-        <!-- Global Engine Settings -->
-        <div class="px-2">
-            <div class="bg-gray-50 border border-gray-100 rounded-2xl p-3 flex flex-col gap-3 shadow-inner">
-                <div class="relative w-full">
-                    <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-600 outline-none appearance-none cursor-pointer hover:border-gray-300 focus:border-theme-300 focus:ring-2 focus:ring-theme-50 transition-colors shadow-sm">
-                        <option value="">No Extension Active</option>
-                    </select>
-                    <i class="ph-bold ph-caret-down absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-xs"></i>
-                </div>
-                
-                <div class="flex justify-between items-center w-full group px-1">
-                    <div class="flex items-center gap-2 text-gray-500 group-hover:text-theme-600 transition-colors">
-                        <i class="ph-bold ph-brain text-xs"></i>
-                        <span class="text-[11px] font-semibold tracking-wide">Use Global Memory</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="toggle-use-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
-                        <div class="w-7 h-3.5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-theme-500 shadow-inner"></div>
-                    </label>
-                </div>
-                <div class="w-full h-px bg-gray-200/60"></div>
-                <div class="flex justify-between items-center w-full group px-1">
-                    <div class="flex items-center gap-2 text-gray-500 group-hover:text-theme-600 transition-colors">
-                        <i class="ph-bold ph-floppy-disk text-xs"></i>
-                        <span class="text-[11px] font-semibold tracking-wide">Save to Memory</span>
-                    </div>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" id="toggle-save-memory" class="sr-only peer" checked onchange="saveMemorySettings()">
-                        <div class="w-7 h-3.5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-2.5 after:w-2.5 after:transition-all peer-checked:bg-theme-500 shadow-inner"></div>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- Chat History List -->
-        <div class="flex flex-col flex-1">
-            <div class="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Recent Chats
-                <span class="text-theme-600 normal-case font-medium cursor-pointer hover:underline transition-colors duration-500">View all</span>
-            </div>
-            <!-- The JS logic injects here. We will ensure CSS targets children correctly via global styles later if needed. -->
-            <div id="history-list" class="space-y-0.5 flex-1 overflow-y-auto pr-1"></div>
-        </div>
+        
+        <!-- Hidden elements for JS compatibility -->
+        <select id="chat-ext-selector" class="hidden"></select>
+        <div id="history-list" class="hidden"></div>
     </div>
-
-    <!-- User Profile Footer -->
+<!-- User Profile Footer -->
     <div class="p-4 border-t border-gray-100 bg-white">
         <button onclick="changeNickname()" class="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors group">
             <div class="flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full bg-theme-600 text-white flex items-center justify-center font-bold text-sm transition-colors duration-500 shadow-sm border border-theme-700/20">
-                    <i class="ph-bold ph-user"></i>
+                <div class="w-9 h-9 rounded-full bg-theme-600 text-white flex items-center justify-center font-bold text-sm shadow-sm border border-theme-700/20">
+                    A
                 </div>
                 <div class="text-left">
-                    <div class="text-sm font-medium text-gray-900 flex items-center gap-1.5 group-hover:text-theme-700 transition-colors">
-                        Settings <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>
+                    <div class="text-sm font-bold text-gray-900 flex items-center gap-1.5 group-hover:text-theme-700 transition-colors">
+                        Arjun <div class="w-1.5 h-1.5 rounded-full bg-blue-500"></div>
                     </div>
-                    <div class="text-xs text-gray-500">LexisAI Workspace</div>
+                    <div class="text-xs text-gray-500">arjun@example.com</div>
                 </div>
             </div>
-            <i class="ph-bold ph-caret-right text-gray-300 group-hover:text-gray-500 transition-colors"></i>
+            <i class="ph-bold ph-caret-down text-gray-300 group-hover:text-gray-500 transition-colors"></i>
         </button>
     </div>
 </aside>
+
 
 <!-- CSS Bridge: Maps strictly hardcoded backend dark-mode JS classes to Target UI Light Theme natively -->
 <style>
@@ -586,50 +549,36 @@ div[id^="pulse_card_"] .bg-white\/5 { background-color: #e5e7eb !important; colo
 <!-- ==================== MAIN CONTENT (CENTER) ==================== -->
 <main class="flex-1 h-full flex flex-col bg-white relative transition-all duration-300 min-w-0">
 
-    <!-- Top Header -->
-    <header class="h-[72px] border-b border-gray-100 flex items-center justify-between px-3 sm:px-6 flex-shrink-0 bg-white z-20">
+    
+   <!-- Top Header -->
+    <header class="h-[72px] flex items-center justify-between px-6 flex-shrink-0 bg-white z-20 w-full">
         <!-- Mobile Sidebar Toggle -->
         <div class="flex items-center gap-3 lg:hidden flex-shrink-0">
             <button onclick="toggleSidebar()" class="text-gray-400 hover:text-gray-600 transition-colors p-2 rounded-lg hover:bg-gray-50"><i class="ph-bold ph-list text-2xl"></i></button>
         </div>
-
-        <!-- Scrollable Mode Toggles (Matches Original Engine Logic but styled like Target UI) -->
-        <div class="flex-1 overflow-x-auto no-scrollbar flex items-center py-2 lg:py-0 w-full ml-2 lg:ml-0">
-            <div class="flex items-center gap-2 w-max pr-4">
-                <button id="math-btn" onclick="toggleMathMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all duration-300 flex-shrink-0" title="Interactive Cartesian Engine">
-                    <i id="math-icon" class="ph-bold ph-function text-sm sm:text-base"></i> <span>Maths</span>
-                </button>
-                <button id="ppt-btn" onclick="togglePresentationMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all duration-300 flex-shrink-0" title="Auto-Pilot Premium Presentation Engine">
-                    <i id="ppt-icon" class="ph-bold ph-presentation-chart text-sm sm:text-base"></i> <span>Slides</span>
-                </button>
-                <button id="deep-research-btn" onclick="toggleDeepResearch()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all duration-300 flex-shrink-0" title="Auto-Pilot Deep Research">
-                    <i id="deep-research-icon" class="ph-bold ph-radar text-sm sm:text-base"></i> <span>Research</span>
-                </button>
-                <button id="podcast-btn" onclick="togglePodcastMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all duration-300 flex-shrink-0" title="Neural Podcast Producer">
-                    <i id="podcast-icon" class="ph-bold ph-headphones text-sm sm:text-base"></i> <span>Audio</span>
-                </button>
-                <button id="app-btn" onclick="toggleAppMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all duration-300 flex-shrink-0" title="Web App Builder">
-                    <i id="app-icon" class="ph-bold ph-code text-sm sm:text-base"></i> <span>App</span>
-                </button>
-                <button id="study-btn" onclick="toggleStudyMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all duration-300 flex-shrink-0" title="Study Deck Generator">
-                    <i id="study-icon" class="ph-bold ph-cards text-sm sm:text-base"></i> <span>Study</span>
-                </button>
-                <button id="image-btn" onclick="toggleImageMode()" class="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-transparent text-gray-500 bg-gray-50 hover:bg-gray-100 transition-all duration-300 flex-shrink-0" title="AI Visual Engine">
-                    <i id="image-icon" class="ph-bold ph-aperture text-sm sm:text-base"></i> <span>Image</span>
-                </button>
-                
-                <!-- Model Selector Target Container -->
-                <div class="ml-2 pl-2 border-l border-gray-200">
-                    <div id="model-selector" class="flex bg-gray-50 p-1 rounded-full border border-gray-200 shadow-inner flex-shrink-0"></div>
+        
+        <!-- Search Bar -->
+        <div class="flex-1 max-w-2xl hidden md:block">
+            <div class="relative flex items-center w-full h-10 rounded-full bg-gray-50 border border-gray-200 px-4">
+                <i class="ph-bold ph-magnifying-glass text-gray-400 text-lg mr-2"></i>
+                <input type="text" placeholder="Search anything..." class="bg-transparent w-full text-sm outline-none text-gray-700 placeholder-gray-400">
+                <div class="flex items-center gap-1 text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 ml-2 shadow-sm text-xs">
+                    <i class="ph-bold ph-command text-[10px]"></i><span>/</span>
                 </div>
             </div>
         </div>
-
-        <div class="hidden sm:flex items-center gap-4 ml-6 pl-6 border-l border-gray-100 flex-shrink-0">
-            <button class="flex items-center gap-2 bg-theme-50 text-theme-700 border border-theme-100 px-4 py-2 rounded-full text-sm font-semibold hover:bg-theme-100 transition-colors duration-500 shadow-sm">
-                <i class="ph-fill ph-hexagon"></i> LexisAI Pro
+        
+        <!-- Right Actions -->
+        <div class="flex items-center justify-end flex-1 md:flex-none gap-4 ml-6 pl-6 flex-shrink-0">
+            <button class="text-gray-400 hover:text-gray-600 transition-colors"><i class="ph-bold ph-bell text-xl"></i></button>
+            <button class="text-gray-400 hover:text-gray-600 transition-colors"><i class="ph-bold ph-question text-xl"></i></button>
+            <button class="flex items-center gap-2 bg-white text-theme-600 border border-gray-200 px-4 py-1.5 rounded-full text-sm font-semibold hover:bg-gray-50 transition-colors shadow-sm whitespace-nowrap">
+                <i class="ph-fill ph-sparkle text-theme-500"></i> LexisAI Pro <i class="ph-bold ph-caret-down text-gray-400 ml-1"></i>
             </button>
         </div>
+        
+        <!-- Hidden Model Selector Target for JS compatibility -->
+        <div id="model-selector" class="hidden"></div>
     </header>
 
     <!-- Chat Area Scrollable (Dynamic Insertion Container) -->
@@ -669,88 +618,92 @@ div[id^="pulse_card_"] .bg-white\/5 { background-color: #e5e7eb !important; colo
         </div>
     </div>
 
-    <!-- Fixed Bottom Input Area -->
-    <footer class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white/90 to-transparent pt-10 pb-6 px-4 sm:px-8 z-20 pointer-events-none">
+<!-- Fixed Bottom Input Area -->
+    <footer class="absolute bottom-6 left-0 w-full px-4 sm:px-8 z-30 pointer-events-none">
         <div class="max-w-4xl mx-auto relative pointer-events-auto flex flex-col gap-3">
             
             <!-- File Staging Area -->
             <div id="staging-area" class="flex flex-wrap gap-2 empty:hidden px-1 mb-1"></div>
             
-            <!-- Glow Effect underneath Input -->
-            <div id="input-glow" class="absolute -inset-0.5 rounded-2xl sm:rounded-3xl blur-md opacity-30 transition duration-1000 -z-10 bg-theme-400/20"></div>
+            <!-- Glow Effect disabled for cleaner UI matching screenshot -->
+            <div id="input-glow" class="hidden"></div>
             
-            <!-- Main Input Bar -->
-            <div class="bg-white border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl p-2 flex flex-col gap-2 transition-all duration-500 focus-within:shadow-[0_8px_30px_rgb(var(--theme-600)/0.1)] focus-within:border-theme-300">
+            <!-- Main Input Bar (Floating) -->
+            <div class="bg-white border border-gray-200 shadow-[0_12px_40px_rgb(0,0,0,0.08)] rounded-2xl p-3 flex flex-col gap-2 transition-all duration-500 focus-within:border-theme-300">
                 
                 <textarea 
                     id="chat-input"
                     placeholder="Ask anything, do anything..."
-                    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] sm:max-h-48 custom-scrollbar leading-relaxed font-medium"
+                    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-2 py-1 text-[15px] min-h-[44px] max-h-[150px] sm:max-h-48 custom-scrollbar leading-relaxed font-medium"
                     rows="1"
                 ></textarea>
-
-                <div class="flex items-center justify-between px-1 border-t border-gray-50 pt-1 mt-1">
-                    <div class="flex items-center gap-1">
+                
+                <div class="flex items-center justify-between px-1 pt-1 mt-1">
+                    <div class="flex items-center gap-2">
                         <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx">
-                        <button onclick="document.getElementById('file-upload').click()" class="p-2 text-gray-400 hover:text-theme-600 hover:bg-theme-50 rounded-lg transition-colors flex-shrink-0" title="Attach Files">
-                            <i class="ph-bold ph-paperclip text-lg sm:text-xl"></i>
+                        <button onclick="document.getElementById('file-upload').click()" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Attach Files">
+                            <i class="ph-bold ph-paperclip text-xl"></i>
                         </button>
-                        <button onclick="openDriveModal()" class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors flex-shrink-0" title="Google Drive Mind-Sync">
-                            <i class="ph-bold ph-google-logo text-lg sm:text-xl"></i>
+                        <button onclick="openDriveModal()" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Web Search">
+                            <i class="ph-bold ph-globe text-xl"></i>
                         </button>
-                        <button onclick="openSentinelModal()" class="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors flex-shrink-0" title="Deploy Sentinel Agent">
-                            <i class="ph-bold ph-robot text-lg sm:text-xl"></i>
+                        <button onclick="document.getElementById('file-upload').click()" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Image Gallery">
+                            <i class="ph-bold ph-image text-xl"></i>
+                        </button>
+                        <button onclick="openSentinelModal()" class="p-1.5 text-gray-400 hover:text-gray-600 transition-colors" title="Code / Sentinel">
+                            <i class="ph-bold ph-code text-xl"></i>
                         </button>
                     </div>
                     
                     <div class="flex items-center gap-2">
-                        <button onclick="toggleVoice()" class="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors flex-shrink-0" title="Voice Input">
-                            <i id="mic-icon" class="ph-bold ph-microphone text-lg sm:text-xl transition-colors"></i>
+                        <button onclick="toggleVoice()" class="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Voice Input">
+                            <i id="mic-icon" class="ph-bold ph-microphone text-xl transition-colors"></i>
                         </button>
                         
-                        <!-- Core Send Action -->
-                        <button id="send-btn" class="p-2 sm:p-2.5 rounded-xl flex items-center justify-center transition-all bg-gray-100 text-gray-400 cursor-not-allowed flex-shrink-0">
-                            <i id="send-icon" class="ph-bold ph-paper-plane-right text-lg sm:text-xl transition-transform"></i>
+                        <button id="send-btn" class="w-9 h-9 rounded-full flex items-center justify-center transition-all bg-theme-600 text-white hover:bg-theme-700 shadow-md flex-shrink-0">
+                            <i id="send-icon" class="ph-fill ph-paper-plane-right text-[15px] transition-transform"></i>
                         </button>
                     </div>
                 </div>
             </div>
             
             <!-- Quick Prompts Row -->
-            <div class="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar pb-2 px-1">
-                <button onclick="document.getElementById('chat-input').value='Explain quantum computing'; document.getElementById('chat-input').focus();" class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-[12px] font-medium whitespace-nowrap flex-shrink-0 shadow-sm">
-                    <i class="ph-bold ph-atom text-theme-500 text-sm"></i> Explain quantum computing
+            <div class="flex items-center justify-center gap-3 mt-1 overflow-x-auto no-scrollbar pb-2 px-1 text-[12px] text-gray-500 font-medium">
+                <button onclick="document.getElementById('chat-input').value='Explain quantum computing'; document.getElementById('chat-input').focus();" class="flex items-center gap-1.5 hover:text-gray-800 transition-colors whitespace-nowrap px-2">
+                    <i class="ph-bold ph-sparkle text-gray-400"></i> Explain quantum computing
                 </button>
-                <button onclick="document.getElementById('chat-input').value='Summarize this document'; document.getElementById('file-upload').click();" class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-[12px] font-medium whitespace-nowrap flex-shrink-0 shadow-sm">
-                    <i class="ph-bold ph-file-text text-amber-500 text-sm"></i> Summarize this PDF
+                <button onclick="document.getElementById('chat-input').value='Summarize this document'; document.getElementById('file-upload').click();" class="flex items-center gap-1.5 hover:text-gray-800 transition-colors whitespace-nowrap px-2 border-l border-gray-200">
+                    <i class="ph-bold ph-file-text text-gray-400"></i> Summarize this PDF
                 </button>
-                <button onclick="document.getElementById('chat-input').value='Write a Python script to...'; document.getElementById('chat-input').focus();" class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors text-[12px] font-medium whitespace-nowrap flex-shrink-0 shadow-sm">
-                    <i class="ph-bold ph-code text-blue-500 text-sm"></i> Write a Python code
+                <button onclick="document.getElementById('chat-input').value='Write a Python script to...'; document.getElementById('chat-input').focus();" class="flex items-center gap-1.5 hover:text-gray-800 transition-colors whitespace-nowrap px-2 border-l border-gray-200">
+                    <i class="ph-bold ph-code text-gray-400"></i> Write a Python code
+                </button>
+                <button onclick="document.getElementById('chat-input').value='Generate image of...'; document.getElementById('chat-input').focus();" class="flex items-center gap-1.5 hover:text-gray-800 transition-colors whitespace-nowrap px-2 border-l border-gray-200">
+                    <i class="ph-bold ph-image text-gray-400"></i> Generate Image
                 </button>
             </div>
         </div>
     </footer>
 </main>
 
+
+
 <!-- ==================== WORKSPACE PANEL (RIGHT) ==================== -->
-<aside id="workspace-canvas" class="fixed lg:absolute top-0 right-0 w-full lg:w-[450px] xl:w-[500px] h-full bg-[#FAFAFA] border-l border-gray-200 flex flex-col flex-shrink-0 z-[60] shadow-[-10px_0_30px_rgba(0,0,0,0.05)] transform translate-x-full hidden transition-transform duration-400 ease-in-out">
+<aside id="workspace-canvas" class="hidden lg:flex flex-col w-[350px] xl:w-[400px] h-full bg-[#FAFAFA] border-l border-gray-200 flex-shrink-0 z-[40]">
     
     <!-- Workspace Header -->
     <div class="h-[72px] px-6 border-b border-gray-200 flex items-center justify-between flex-shrink-0 bg-white">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100">
-                <i class="ph-bold ph-layout text-lg"></i>
-            </div>
-            <h3 id="canvas-title" class="font-semibold text-gray-900 truncate max-w-[180px]">Artifact Workspace</h3>
+            <i class="ph-bold ph-layout text-blue-600 text-xl"></i>
+            <h3 id="canvas-title" class="font-bold text-gray-900 text-sm">Workspace</h3>
         </div>
-        <div class="flex gap-2">
-            <button onclick="publishArtifact()" class="text-blue-700 hover:text-white bg-blue-50 hover:bg-blue-600 border border-blue-200 hover:border-transparent p-1.5 px-3 rounded-lg text-xs flex items-center gap-1.5 font-bold transition-all shadow-sm"><i class="ph-bold ph-globe"></i> Publish</button>
-            <button onclick="copyCanvasContent()" class="text-gray-600 hover:text-gray-900 bg-white border border-gray-200 hover:bg-gray-50 p-1.5 rounded-lg text-xs flex items-center gap-1.5 font-medium transition-all shadow-sm"><i class="ph-bold ph-copy"></i> Copy</button>
-            <button onclick="toggleMaximizeCanvas()" class="text-gray-500 hover:text-theme-600 bg-white border border-gray-200 hover:bg-theme-50 p-1.5 rounded-lg transition-all hidden lg:block shadow-sm" title="Maximize Workspace"><i id="maximize-icon" class="ph-bold ph-arrows-out-simple"></i></button>
-            <button onclick="closeCanvas()" class="text-gray-500 hover:text-red-600 bg-white border border-gray-200 hover:bg-red-50 p-1.5 rounded-lg transition-all shadow-sm"><i class="ph-bold ph-x"></i></button>
+        <div class="flex gap-3">
+            <button onclick="publishArtifact()" class="text-gray-400 hover:text-blue-600 transition-colors" title="Publish"><i class="ph-bold ph-globe text-lg"></i></button>
+            <button onclick="copyCanvasContent()" class="text-gray-400 hover:text-gray-900 transition-colors" title="Copy"><i class="ph-bold ph-copy text-lg"></i></button>
+            <button onclick="closeCanvas()" class="text-gray-400 hover:text-red-600 transition-colors" title="Close"><i class="ph-bold ph-x text-lg"></i></button>
+            <button id="maximize-icon" class="hidden"></button> <!-- Retained for JS compatibility -->
         </div>
-    </div>
-    
+    </div>    
     <!-- Content Area - Scrollable -->
     <div id="canvas-content" class="flex-1 overflow-y-auto min-h-0 h-full p-0 prose max-w-none text-sm md:text-base selection:bg-theme-200 relative custom-scrollbar bg-[#FAFAFA]"></div>
 </aside>
@@ -1760,13 +1713,7 @@ function renderPresentationPreview(payload) {
     return html;
 }
 
-/* ==========================================
-   END PART 4/5
-   ========================================== */
-/* ==========================================
-   PART 5/5: Core Application Logic (JS - Part B) & Finalization
-   MERGE POINT: Append this exactly after the `renderPresentationPreview` function from Part 4.
-   ========================================== */
+
 
 function openCanvas(artifactId, title, type = 'document') {
     window.CURRENT_CANVAS_ID = artifactId;
