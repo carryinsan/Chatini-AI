@@ -423,7 +423,7 @@ body {
 
 <div id="sidebar-overlay" class="fixed inset-0 bg-gray-900/20 z-40 hidden transition-opacity backdrop-blur-sm lg:hidden" onclick="toggleSidebar()"></div>
 
-<aside id="sidebar" class="w-[280px] h-full bg-white border-r border-gray-100 flex flex-col flex-shrink-0 z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 absolute lg:relative left-0 top-0">
+<aside id="sidebar" class="w-[280px] h-full bg-white border-r border-gray-100 flex flex-col flex-shrink-0 relative z-50 shadow-[4px_0_24px_rgba(0,0,0,0.02)] transform -translate-x-full lg:translate-x-0 transition-transform duration-300 fixed lg:relative">
 
     <!-- Header / Logo -->
     <div class="p-5 flex items-center justify-between">
@@ -513,7 +513,7 @@ body {
                 Advanced Integrations
             </div>
             <div class="space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
-                <button onclick="openPulseModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
+                <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
                 <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
                 <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
                 <button onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-graph text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Constellation Map</button>
@@ -2485,31 +2485,45 @@ function parseRichText(content, isStreaming = false, msgId = null) {
         return "";
     });
     
+    
     // Process <sources> into modern target UI blocks
     markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
         if (!closeTag) return `<div class="animate-pulse text-purple-600 text-xs font-semibold mt-4 flex items-center gap-2"><i class="ph ph-circle-notch animate-spin"></i> Analyzing Sources...</div>`;
         try {
             const cleanedStr = jsonStr.replace(/^```json/gi, "").replace(/```$/g, "").trim();
             const sources = JSON.parse(cleanedStr);
-            const chipsHtml = sources.map((s) => {
-                const initial = (s.title || s.name || s.url || 'S').charAt(0).toUpperCase();
-                return `<a href="${s.url}" target="_blank" class="w-14 flex flex-col items-center gap-1.5 group">
-                    <div class="w-12 h-12 rounded-xl flex items-center justify-center text-lg shadow-sm border border-gray-100 group-hover:border-theme-300 group-hover:shadow-md transition-all bg-gray-900 text-white font-sans font-bold">
-                        ${initial}
+            const listHtml = sources.map((s) => {
+                let domain = "";
+                try { domain = new URL(s.url).hostname; } catch(e) { domain = s.url.split('/')[0] || "link"; }
+                const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : '';
+                
+                return `<a href="${s.url}" target="_blank" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-200 group/link">
+                    <img src="${faviconUrl}" alt="logo" class="w-8 h-8 rounded-lg shadow-sm bg-white p-1 border border-gray-100" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center font-bold text-xs shadow-sm hidden" style="display:none;">${(s.title || s.name || domain).charAt(0).toUpperCase()}</div>
+                    <div class="flex flex-col flex-1 overflow-hidden">
+                        <span class="text-[13px] text-gray-900 font-bold truncate group-hover/link:text-theme-600 transition-colors">${s.title || s.name || s.url}</span>
+                        <span class="text-[10px] text-gray-500 font-medium truncate">${domain}</span>
                     </div>
-                    <span class="text-[10px] text-gray-500 font-medium truncate w-full text-center group-hover:text-theme-700">${s.title || s.name || 'Source'}</span>
+                    <i class="ph-bold ph-arrow-up-right text-gray-300 group-hover/link:text-theme-500 text-sm transition-colors mr-1"></i>
                 </a>`;
             }).join("");
             
-            extractedHtml += `<div class="extra-data-block mt-6 pt-4 border-t border-gray-100 w-full">
-                <div class="flex items-center justify-between mb-4">
-                    <h4 class="text-[15px] font-semibold text-gray-900">Sources (${sources.length})</h4>
+            extractedHtml += `<details class="group mt-6 w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-4 hover:bg-gray-50 transition-colors select-none">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center"><i class="ph-bold ph-link text-sm"></i></div>
+                        <h4 class="text-[14px] font-bold text-gray-900">View Sources (${sources.length})</h4>
+                    </div>
+                    <i class="ph-bold ph-caret-down text-gray-400 group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <div class="flex flex-col gap-1 p-3 pt-0 border-t border-gray-100 bg-gray-50/50">
+                   ${listHtml}
                 </div>
-                <div class="flex flex-wrap gap-3">${chipsHtml}</div>
-            </div>`;
+            </details>`;
         } catch (e) { console.error("Failed to parse sources"); }
         return "";
     });
+
     
     // Process <chart> into modern target UI blocks
     markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|$)/g, (match, jsonStr, closeTag) => {
