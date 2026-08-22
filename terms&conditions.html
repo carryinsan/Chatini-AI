@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LexisAI Terms and Conditions</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f5ff',
+                            100: '#e0ebff',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                            950: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #334155;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 antialiased min-h-screen flex flex-col selection:bg-blue-600 selection:text-white relative pb-32">
+
+    <!-- Reading Progress Bar -->
+    <div class="fixed top-0 left-0 w-full h-1 bg-slate-800 z-50">
+        <div id="progress-bar" class="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 w-0 transition-all duration-150"></div>
+    </div>
+
+    <!-- Header / Navigation -->
+    <header class="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-8 py-4 transition-all">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-violet-600 flex items-center justify-center shadow-lg shadow-blue-500/20 font-bold text-white text-xl">
+                    L
+                </div>
+                <div>
+                    <span class="text-xl font-bold tracking-tight text-white block leading-tight">Lexis<span class="text-blue-500">AI</span></span>
+                    <span class="text-xs text-slate-400 font-medium">Legal Terms & Policies</span>
+                </div>
+            </div>
+            
+            <a href="https://lexis-ai-chatini.vercel.app/app.html" class="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition">
+                <span>Go to App</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs text-slate-400"></i>
+            </a>
+        </div>
+    </header>
+
+    <!-- Hero Banner -->
+    <section class="border-b border-slate-800/60 bg-gradient-to-b from-slate-900/60 to-slate-950 py-12 px-4 sm:px-8">
+        <div class="max-w-4xl mx-auto text-center sm:text-left">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-4">
+                <i class="fa-solid fa-shield-halved"></i> Agreement Document
+            </div>
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4">
+                LexisAI Terms and Conditions
+            </h1>
+            <p class="text-slate-400 text-sm sm:text-base flex items-center justify-center sm:justify-start gap-2">
+                <i class="fa-regular fa-calendar-check text-blue-400"></i>
+                <span><strong>Last Updated:</strong> August 22, 2026</span>
+            </p>
+        </div>
+    </section>
+
+    <!-- Main Content Container -->
+    <div class="max-w-6xl mx-auto px-4 sm:px-8 py-10 flex-1 grid grid-cols-1 lg:grid-cols-4 gap-8">
+
+        <!-- Sidebar Navigation (Desktop) -->
+        <aside class="hidden lg:block lg:col-span-1 sticky top-24 self-start max-h-[calc(100vh-8rem)] overflow-y-auto pr-2 text-xs text-slate-400 space-y-1">
+            <div class="font-semibold text-slate-200 text-sm mb-3 uppercase tracking-wider px-2">Table of Contents</div>
+            <a href="#intro" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">Introduction</a>
+            <a href="#sec-1" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">1. About LexisAI</a>
+            <a href="#sec-2" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">2. AI-Generated Content</a>
+            <a href="#sec-3" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">3. User Responsibility</a>
+            <a href="#sec-4" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">4. Prompt Processing</a>
+            <a href="#sec-5" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">5. User Content & Ownership</a>
+            <a href="#sec-6" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">6. Database Policy</a>
+            <a href="#sec-7" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">7. Third-Party Providers</a>
+            <a href="#sec-8" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">8. Local Storage Warning</a>
+            <a href="#sec-9" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">9. No Data Recovery</a>
+            <a href="#sec-10" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">10. Third-Party Models</a>
+            <a href="#sec-14" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">14. Intellectual Property</a>
+            <a href="#sec-24" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">24. No Warranty</a>
+            <a href="#sec-25" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">25. Limitation of Liability</a>
+            <a href="#sec-37" class="block px-2 py-1.5 rounded hover:bg-slate-800 hover:text-white transition">37. Contact</a>
+            <a href="#continue-to-app" class="block px-2 py-1.5 rounded bg-blue-950/60 text-blue-400 font-semibold hover:bg-blue-900/80 transition">Continue to App</a>
+        </aside>
+
+        <!-- Terms Content Body -->
+        <main class="lg:col-span-3 space-y-8 text-slate-300 leading-relaxed text-sm sm:text-base">
+
+            <!-- Welcome Intro Card -->
+            <div id="intro" class="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-4">
+                <p>
+                    Welcome to LexisAI. These Terms and Conditions (“Terms”) govern your access to and use of LexisAI, including the LexisAI website, applications, APIs, AI features, extensions, integrations, and related services (collectively, the “Service”).
+                </p>
+                <p class="font-medium text-slate-100 bg-blue-950/40 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                    By accessing or using LexisAI, you agree to these Terms. If you do not agree with these Terms, you must not use the Service.
+                </p>
+            </div>
+
+            <!-- Section 1 -->
+            <section id="sec-1" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">1.</span> About LexisAI
+                </h2>
+                <p>LexisAI is an artificial-intelligence service and technology platform that provides access to AI-powered features and, where applicable, third-party artificial-intelligence models and services.</p>
+                <p>LexisAI may route requests to third-party AI providers or other technology providers in order to provide certain features.</p>
+                <p>LexisAI does not guarantee that any AI-generated response is accurate, complete, current, unbiased, safe, or suitable for your particular purpose.</p>
+            </section>
+
+            <!-- Section 2 -->
+            <section id="sec-2" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">2.</span> AI-Generated Content Can Be Wrong
+                </h2>
+                <p class="font-semibold text-amber-400 bg-amber-950/30 border border-amber-800/50 p-3 rounded-lg">
+                    LexisAI can make mistakes.
+                </p>
+                <p>AI systems can produce incorrect, outdated, misleading, incomplete, biased, or nonsensical information, including information that may appear confident or authoritative despite being incorrect.</p>
+                <p>You are solely responsible for independently verifying important information before relying on it.</p>
+                <p>You should especially independently verify information involving:</p>
+                <ul class="list-disc list-inside space-y-1.5 text-slate-300 pl-2">
+                    <li>health or medical matters;</li>
+                    <li>legal matters;</li>
+                    <li>financial decisions;</li>
+                    <li>education or examinations;</li>
+                    <li>employment;</li>
+                    <li>safety;</li>
+                    <li>identity or personal information;</li>
+                    <li>technical or security decisions;</li>
+                    <li>current events;</li>
+                    <li>factual claims that materially affect you or another person.</li>
+                </ul>
+                <p>LexisAI is an AI service provider and is not a substitute for a qualified professional.</p>
+                <p>An AI-generated response does not constitute professional medical, legal, financial, psychological, educational, or other professional advice.</p>
+            </section>
+
+            <!-- Section 3 -->
+            <section id="sec-3" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">3.</span> User Responsibility
+                </h2>
+                <p>You are responsible for the prompts, instructions, files, documents, links, data, and other material that you submit to LexisAI (“User Content”).</p>
+                <p>You are responsible for ensuring that your use of the Service and your User Content comply with applicable laws and these Terms.</p>
+                <p>You must not use LexisAI to:</p>
+                <ul class="list-disc list-inside space-y-1.5 text-slate-300 pl-2">
+                    <li>violate applicable law;</li>
+                    <li>infringe another person's intellectual-property rights;</li>
+                    <li>impersonate another person or organization;</li>
+                    <li>deceive, defraud, threaten, harass, or unlawfully harm another person;</li>
+                    <li>upload or disclose personal information that you are not authorized to provide;</li>
+                    <li>attempt to compromise, disrupt, overload, reverse engineer, or interfere with the Service;</li>
+                    <li>circumvent security, authentication, rate limits, or access controls;</li>
+                    <li>abuse API keys or credentials;</li>
+                    <li>use the Service to develop or facilitate unlawful activity;</li>
+                    <li>intentionally submit malicious code or content designed to compromise systems; or</li>
+                    <li>use the Service in a way that violates the rules of an underlying third-party AI provider.</li>
+                </ul>
+                <p>LexisAI may restrict, suspend, or terminate access where reasonably necessary to protect the Service, its users, third-party providers, or comply with law.</p>
+            </section>
+
+            <!-- Section 4 -->
+            <section id="sec-4" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">4.</span> Prompt Processing and Safety Systems
+                </h2>
+                <p>LexisAI may use automated processing, filtering, moderation, transformation, or safety mechanisms when handling prompts.</p>
+                <p>For example, LexisAI may modify, sanitize, restrict, reject, or otherwise transform certain prompts before sending them to an AI provider.</p>
+                <p>Accordingly, the response generated by an AI provider may differ from the exact output that might have been produced from an unmodified prompt.</p>
+                <p>You acknowledge that automated safety and moderation systems are not perfect and may occasionally incorrectly allow, modify, or reject content.</p>
+            </section>
+
+            <!-- Section 5 -->
+            <section id="sec-5" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">5.</span> User Content and Ownership
+                </h2>
+                <p>You retain whatever rights you have in your User Content, subject to the rights necessary for LexisAI and its service providers to technically process that content to provide the Service.</p>
+                <p>You represent that you have the necessary rights, permissions, and authority to submit User Content to LexisAI.</p>
+                <p>You must not submit confidential, proprietary, copyrighted, personal, or otherwise protected information belonging to another person unless you are legally authorized to do so.</p>
+            </section>
+
+            <!-- Section 6 -->
+            <section id="sec-6" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">6.</span> LexisAI Does Not Intentionally Maintain a User-Content Database
+                </h2>
+                <p>LexisAI is designed so that user conversations and other user-generated application data are primarily maintained on the user's device/browser rather than in a LexisAI-operated persistent user-content database.</p>
+                <p>LexisAI does not intentionally use users' prompts or conversations to train, fine-tune, or improve LexisAI's own AI models.</p>
+                <p>Where technically and contractually available, LexisAI is configured to request or use third-party AI-provider settings that restrict providers from using API/customer content to train their general AI models.</p>
+                <p>However, third-party providers may independently process data as necessary to operate their services, including transient processing, security, abuse prevention, logging, or other purposes permitted by their applicable terms and privacy documentation.</p>
+                <p>LexisAI cannot guarantee the internal practices of an independent third-party provider beyond the contractual and technical controls available to LexisAI.</p>
+            </section>
+
+            <!-- Section 7 -->
+            <section id="sec-7" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">7.</span> Important Third-Party Provider Disclosure
+                </h2>
+                <p>When you use an AI-powered feature, your prompt, files, or other information may need to be transmitted to one or more third-party service providers so that the requested feature can operate.</p>
+                <p>Therefore:</p>
+                <p class="italic text-slate-200 border-l-2 border-slate-600 pl-4 py-1">
+                    “Not stored by LexisAI” does not mean “never transmitted to any third party.”
+                </p>
+                <p>Third-party providers may process information according to their own applicable terms, privacy policies, technical practices, and contractual commitments.</p>
+                <p>You should not submit highly sensitive information unless you understand and accept the processing required to provide the requested feature.</p>
+            </section>
+
+            <!-- Section 8 -->
+            <section id="sec-8" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">8.</span> Local Data and Browser/Site Storage
+                </h2>
+                <p>Certain LexisAI information may be stored locally in your browser or on your device, including application settings, conversations, extensions, preferences, cached information, or other locally maintained application data.</p>
+                <p>Because this information may be stored locally rather than in a LexisAI account database, LexisAI may be unable to recover it for you.</p>
+                
+                <div class="p-4 rounded-xl bg-red-950/30 border border-red-800/60 text-red-200 space-y-2 mt-2">
+                    <div class="font-bold text-red-400 flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Important Warning About Clearing Site Data
+                    </div>
+                    <p>Do not clear your browser's site data, local storage, IndexedDB, cookies, cached application storage, or equivalent LexisAI application data unless you understand the consequences.</p>
+                    <p>If your LexisAI information is stored locally on your device, clearing or deleting that site/application data may permanently delete your locally stored conversations, preferences, extensions, memory, or other application information.</p>
+                    <p>LexisAI may not be able to restore such information because LexisAI may not possess a server-side copy.</p>
+                </div>
+                
+                <p>You are responsible for maintaining any backups you consider necessary.</p>
+                <p>LexisAI is not responsible for loss of locally stored information caused by clearing site data, browser resets, device loss, device failure, operating-system actions, browser behavior, uninstallations, storage corruption, or similar events.</p>
+            </section>
+
+            <!-- Section 9 -->
+            <section id="sec-9" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">9.</span> No Guarantee of Data Recovery
+                </h2>
+                <p>Because LexisAI may not maintain a server-side copy of your locally stored application information, we cannot guarantee recovery of deleted or lost data.</p>
+                <p>If you delete local application data, reset your browser, change devices, use private/incognito browsing, uninstall required software, or otherwise cause local storage to be removed, your information may become permanently inaccessible.</p>
+            </section>
+
+            <!-- Section 10 -->
+            <section id="sec-10" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">10.</span> Third-Party AI Models
+                </h2>
+                <p>LexisAI may provide access to AI models operated by third parties.</p>
+                <p>The underlying AI model may have its own limitations, policies, availability requirements, content restrictions, privacy practices, and terms.</p>
+                <p>LexisAI does not control the internal operation of third-party AI models.</p>
+                <p>LexisAI does not guarantee that any third-party model will remain available, produce consistent results, preserve a particular capability, or remain compatible with the Service.</p>
+                <p>Third-party providers may change, discontinue, restrict, or replace their models or APIs without notice.</p>
+            </section>
+
+            <!-- Section 11 -->
+            <section id="sec-11" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">11.</span> External Services and Integrations
+                </h2>
+                <p>LexisAI may integrate with external services, including AI providers, search services, cloud-storage services, APIs, hosting providers, authentication providers, and other third-party technologies.</p>
+                <p>Examples may include features that allow users to connect external accounts, import documents, perform web research, generate images, or access other external functionality.</p>
+                <p>When you choose to use an integration, you authorize the technical communications reasonably necessary to provide that feature.</p>
+                <p>Your use of an external service may additionally be governed by that provider's own terms and privacy policy.</p>
+                <p>LexisAI is not responsible for independent changes, outages, security incidents, data practices, or failures of third-party services.</p>
+            </section>
+
+            <!-- Section 12 -->
+            <section id="sec-12" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">12.</span> Google Drive and Connected Accounts
+                </h2>
+                <p>If you voluntarily connect a third-party account such as Google Drive, LexisAI may access information necessary to perform the functionality you request.</p>
+                <p>You are responsible for reviewing the permissions displayed during the connection process and ensuring that you are comfortable granting those permissions.</p>
+                <p>You may disconnect integrations where the relevant functionality permits.</p>
+                <p>LexisAI is not responsible for unauthorized activity occurring directly within a third-party account due to compromised credentials, compromised devices, or circumstances outside LexisAI's reasonable control.</p>
+            </section>
+
+            <!-- Section 13 -->
+            <section id="sec-13" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">13.</span> API Keys
+                </h2>
+                <p>If LexisAI provides you with an API key, the API key is confidential authentication information.</p>
+                <p>You are responsible for protecting your API key.</p>
+                <p>You must not publicly expose, publish, sell, transfer, or intentionally share your API key with unauthorized persons.</p>
+                <p>Any activity performed using your API key may be attributed to your account or device unless LexisAI determines otherwise.</p>
+                <p>If you believe an API key has been compromised, you should immediately use the available revocation or security mechanism or contact LexisAI.</p>
+                <p>LexisAI may revoke, rotate, restrict, suspend, or terminate API keys where reasonably necessary for security, abuse prevention, service operation, or violation of these Terms.</p>
+            </section>
+
+            <!-- Section 14 -->
+            <section id="sec-14" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">14.</span> Intellectual Property
+                </h2>
+                <p>The LexisAI name, branding, website design, software, interfaces, documentation, logos, original code, and other LexisAI-owned materials are owned by or licensed to LexisAI and are protected by applicable intellectual-property laws.</p>
+                <p>Except where expressly permitted, you may not copy, reproduce, modify, distribute, sell, lease, sublicense, reverse engineer, or create derivative works from LexisAI's proprietary software or materials.</p>
+                <p>These Terms do not transfer ownership of LexisAI's intellectual property to you.</p>
+            </section>
+
+            <!-- Section 15 -->
+            <section id="sec-15" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">15.</span> AI Output and Intellectual Property
+                </h2>
+                <p>AI-generated output may not be unique.</p>
+                <p>Similar or identical output may be generated for different users.</p>
+                <p>LexisAI does not guarantee that AI-generated content is free from third-party intellectual-property rights or that you will obtain exclusive rights in any output.</p>
+                <p>You are responsible for determining whether your intended use of AI-generated content is lawful and appropriate.</p>
+                <p>You should independently review AI-generated content before publishing, commercializing, submitting, or otherwise relying upon it.</p>
+            </section>
+
+            <!-- Section 16 -->
+            <section id="sec-16" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">16.</span> Accuracy, Availability, and Reliability
+                </h2>
+                <p>The Service is provided using technology that can experience errors and interruptions.</p>
+                <p>LexisAI does not guarantee:</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-300 pl-2">
+                    <li>uninterrupted availability;</li>
+                    <li>error-free operation;</li>
+                    <li>continuous compatibility;</li>
+                    <li>permanent availability of any model or feature;</li>
+                    <li>accuracy of AI-generated responses;</li>
+                    <li>completeness of search results;</li>
+                    <li>accuracy of retrieved web information;</li>
+                    <li>preservation of locally stored data;</li>
+                    <li>successful generation of every requested result; or</li>
+                    <li>compatibility with every device, browser, operating system, API, or third-party service.</li>
+                </ul>
+                <p>Features may be added, modified, suspended, or discontinued at any time.</p>
+            </section>
+
+            <!-- Section 17 -->
+            <section id="sec-17" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">17.</span> Experimental Features
+                </h2>
+                <p>Some LexisAI features may be experimental, beta, preview, research, or under testing.</p>
+                <p>Experimental features may be incomplete, unstable, inaccurate, unavailable, or removed without notice.</p>
+                <p>You use experimental features at your own risk.</p>
+            </section>
+
+            <!-- Section 18 -->
+            <section id="sec-18" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">18.</span> Web Search and External Information
+                </h2>
+                <p>Where LexisAI uses web search or external information retrieval, the retrieved information may be outdated, incomplete, incorrectly interpreted, unavailable, or sourced from unreliable material.</p>
+                <p>The existence of a source or search result does not mean LexisAI endorses or verifies it.</p>
+                <p>You are responsible for independently checking important claims.</p>
+            </section>
+
+            <!-- Section 19 -->
+            <section id="sec-19" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">19.</span> No Professional Advice
+                </h2>
+                <p>Nothing provided through LexisAI should be interpreted as professional advice.</p>
+                <p>You should consult an appropriately qualified professional where a decision has significant legal, medical, financial, educational, employment, safety, or other consequences.</p>
+                <p>You remain responsible for decisions made using information obtained through LexisAI.</p>
+            </section>
+
+            <!-- Section 20 -->
+            <section id="sec-20" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">20.</span> Prohibited Reliance
+                </h2>
+                <p>You agree not to treat LexisAI as the sole decision-maker for situations where an incorrect response could reasonably cause significant harm.</p>
+                <p>LexisAI should not be used as the sole basis for emergency decisions, medical diagnosis, legal conclusions, financial transactions, safety-critical decisions, or other high-risk decisions.</p>
+            </section>
+
+            <!-- Section 21 -->
+            <section id="sec-21" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">21.</span> Privacy
+                </h2>
+                <p>LexisAI's privacy practices should be described in a separate Privacy Policy.</p>
+                <p>The Privacy Policy forms part of these Terms where applicable.</p>
+                <p>If there is a conflict between these Terms and the Privacy Policy concerning the processing of personal data, the applicable privacy notice and mandatory law will govern to the extent of that conflict.</p>
+            </section>
+
+            <!-- Section 22 -->
+            <section id="sec-22" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">22.</span> Security
+                </h2>
+                <p>LexisAI takes reasonable technical and organizational measures intended to protect the Service and information processed through it.</p>
+                <p>However, no software, device, network, browser, or Internet transmission can be guaranteed to be completely secure.</p>
+                <p>You acknowledge that security risks can exist outside LexisAI's reasonable control.</p>
+                <p>You are responsible for maintaining the security of your own device, browser, passwords, API keys, connected accounts, and local storage.</p>
+            </section>
+
+            <!-- Section 23 -->
+            <section id="sec-23" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">23.</span> User Device Responsibility
+                </h2>
+                <p>Because certain LexisAI data may be stored locally, you are responsible for securing your device.</p>
+                <p>If another person obtains access to your device or browser profile, they may potentially access information stored locally by LexisAI.</p>
+                <p>LexisAI cannot protect locally stored information from someone who has obtained unauthorized access to your device or browser environment.</p>
+            </section>
+
+            <!-- Section 24 -->
+            <section id="sec-24" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">24.</span> No Warranty
+                </h2>
+                <p>To the maximum extent permitted by applicable law, the Service is provided on an “AS IS” and “AS AVAILABLE” basis.</p>
+                <p>LexisAI disclaims warranties to the maximum extent permitted by applicable law, including implied warranties of merchantability, fitness for a particular purpose, non-infringement, accuracy, availability, and reliability.</p>
+                <p>Nothing in these Terms excludes a warranty or legal protection that cannot lawfully be excluded.</p>
+            </section>
+
+            <!-- Section 25 -->
+            <section id="sec-25" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">25.</span> Limitation of Liability
+                </h2>
+                <p>To the maximum extent permitted by applicable law, LexisAI and its owners, operators, developers, affiliates, licensors, contractors, and service providers will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for loss of profits, revenue, business opportunities, reputation, data, locally stored information, or other intangible losses arising from or relating to your use of the Service.</p>
+                <p>To the maximum extent permitted by applicable law, LexisAI's total aggregate liability arising from or relating to the Service will be limited to the amount you actually paid to LexisAI for the relevant Service during the applicable period, or another minimum limitation required by applicable law.</p>
+                <p>Nothing in these Terms is intended to exclude liability that cannot legally be excluded or limited.</p>
+            </section>
+
+            <!-- Section 26 -->
+            <section id="sec-26" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">26.</span> Data Loss Disclaimer
+                </h2>
+                <p>Because some information may exist only on your device, LexisAI is not responsible for loss of locally stored information resulting from:</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-300 pl-2">
+                    <li>clearing browser/site data;</li>
+                    <li>deleting local storage;</li>
+                    <li>deleting IndexedDB or equivalent browser storage;</li>
+                    <li>browser resets;</li>
+                    <li>device loss or damage;</li>
+                    <li>operating-system changes;</li>
+                    <li>browser updates or behavior;</li>
+                    <li>accidental deletion;</li>
+                    <li>storage corruption;</li>
+                    <li>private/incognito browsing;</li>
+                    <li>uninstalling software;</li>
+                    <li>security software;</li>
+                    <li>third-party browser extensions; or</li>
+                    <li>other events outside LexisAI's reasonable control.</li>
+                </ul>
+                <p>You are responsible for creating backups where appropriate.</p>
+            </section>
+
+            <!-- Section 27 -->
+            <section id="sec-27" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">27.</span> Indemnification
+                </h2>
+                <p>To the maximum extent permitted by applicable law, you agree to defend, indemnify, and hold harmless LexisAI and its owners, operators, developers, affiliates, licensors, and service providers from claims, losses, liabilities, damages, costs, and expenses arising from or related to:</p>
+                <ol class="list-decimal list-inside space-y-1 text-slate-300 pl-2 font-mono text-sm">
+                    <li><span class="font-sans">your User Content;</span></li>
+                    <li><span class="font-sans">your use or misuse of the Service;</span></li>
+                    <li><span class="font-sans">your violation of these Terms;</span></li>
+                    <li><span class="font-sans">your violation of applicable law;</span></li>
+                    <li><span class="font-sans">your infringement of another person's rights; or</span></li>
+                    <li><span class="font-sans">your unauthorized use of a third-party service or account.</span></li>
+                </ol>
+                <p>This section applies only to the extent permitted by applicable law.</p>
+            </section>
+
+            <!-- Section 28 -->
+            <section id="sec-28" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">28.</span> Suspension and Termination
+                </h2>
+                <p>LexisAI may suspend or terminate access to the Service where reasonably necessary to:</p>
+                <ul class="list-disc list-inside space-y-1 text-slate-300 pl-2">
+                    <li>prevent abuse;</li>
+                    <li>protect users or the Service;</li>
+                    <li>address security concerns;</li>
+                    <li>comply with law;</li>
+                    <li>enforce these Terms;</li>
+                    <li>respond to third-party-provider restrictions; or</li>
+                    <li>discontinue the Service.</li>
+                </ul>
+                <p>You may stop using the Service at any time.</p>
+                <p>Termination may result in loss of access to locally stored application information depending on your device and browser configuration.</p>
+            </section>
+
+            <!-- Section 29 -->
+            <section id="sec-29" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">29.</span> Changes to the Service
+                </h2>
+                <p>LexisAI may modify, update, add, remove, or discontinue features at any time.</p>
+                <p>We may also update these Terms from time to time.</p>
+                <p>Where legally required, we will provide appropriate notice of material changes.</p>
+                <p>Your continued use of the Service after an updated version becomes effective constitutes acceptance of the updated Terms to the extent permitted by applicable law.</p>
+            </section>
+
+            <!-- Section 30 -->
+            <section id="sec-30" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">30.</span> Children and Age Requirements
+                </h2>
+                <p>You may use LexisAI only if you are legally permitted to use the Service under applicable law.</p>
+                <p>If a particular feature requires parental consent or has an age restriction, that requirement applies.</p>
+                <p>Parents or legal guardians are responsible for supervising a minor's use of the Service where required by applicable law.</p>
+                <p>LexisAI does not knowingly request unnecessary personal information from children.</p>
+            </section>
+
+            <!-- Section 31 -->
+            <section id="sec-31" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">31.</span> Compliance With Law
+                </h2>
+                <p>You agree to use LexisAI in compliance with all laws and regulations applicable to you.</p>
+                <p>LexisAI may cooperate with lawful requests from governmental authorities and may take measures reasonably necessary to comply with applicable law.</p>
+            </section>
+
+            <!-- Section 32 -->
+            <section id="sec-32" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">32.</span> Force Majeure
+                </h2>
+                <p>LexisAI will not be responsible for delay or failure caused by circumstances beyond its reasonable control, including Internet failures, infrastructure failures, cyber incidents, natural disasters, war, governmental actions, telecommunications failures, third-party outages, cloud-provider failures, or other events beyond reasonable control.</p>
+            </section>
+
+            <!-- Section 33 -->
+            <section id="sec-33" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">33.</span> Severability
+                </h2>
+                <p>If any provision of these Terms is determined to be invalid or unenforceable, that provision will be enforced to the maximum extent permitted by law, and the remaining provisions will continue in effect.</p>
+            </section>
+
+            <!-- Section 34 -->
+            <section id="sec-34" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">34.</span> No Waiver
+                </h2>
+                <p>A failure to enforce any provision of these Terms does not constitute a waiver of the right to enforce that provision later.</p>
+            </section>
+
+            <!-- Section 35 -->
+            <section id="sec-35" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">35.</span> Entire Agreement
+                </h2>
+                <p>These Terms, together with any applicable Privacy Policy and other legally incorporated policies, constitute the agreement between you and LexisAI concerning your use of the Service, except where additional terms expressly apply to a particular service.</p>
+            </section>
+
+            <!-- Section 36 -->
+            <section id="sec-36" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">36.</span> Governing Law and Dispute Resolution
+                </h2>
+                <p>These Terms will be governed by the laws applicable to LexisAI and its operating entity, without regard to conflict-of-law principles, subject to any mandatory consumer or data-protection rights that cannot legally be excluded.</p>
+                <p>Before initiating formal legal proceedings, the parties should attempt in good faith to resolve the dispute informally.</p>
+                <p>Any mandatory jurisdiction, arbitration, or dispute-resolution provision should be completed with the actual legal entity and jurisdiction of the LexisAI operator and reviewed by qualified legal counsel before publication.</p>
+            </section>
+
+            <!-- Section 37 -->
+            <section id="sec-37" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">37.</span> Contact
+                </h2>
+                <p>For questions, privacy concerns, legal notices, or complaints concerning these Terms, contact LexisAI through the official contact method provided within the Service.</p>
+                <div class="mt-4 p-4 rounded-lg bg-slate-950 border border-slate-800 space-y-1 font-mono text-xs text-slate-300">
+                    <p><strong class="text-blue-400">LexisAI Operator:</strong> Team LexisAI</p>
+                    <p><strong class="text-blue-400">Contact Email:</strong> <a href="mailto:thestarsofstarsptpn@gmail.com" class="underline hover:text-white">thestarsofstarsptpn@gmail.com</a></p>
+                </div>
+            </section>
+
+            <!-- Section 38 -->
+            <section id="sec-38" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">38.</span> Important Privacy Commitment
+                </h2>
+                <p>LexisAI's intended architecture is privacy-conscious: user application data may remain under the user's control on their device rather than being maintained in a centralized LexisAI user-data database.</p>
+                <p>However, using an AI service necessarily involves transmitting information required to generate the requested response to the applicable AI or technology provider.</p>
+                <p>LexisAI does not intentionally use user prompts or conversations to train its own AI models, and LexisAI seeks to use third-party AI-provider configurations that prevent customer/API content from being used to train their general models where those controls are available.</p>
+                <p>These commitments apply only to systems and providers actually configured and operated in accordance with those commitments.</p>
+                <p>If the architecture, providers, storage practices, or training/data-use policies change, LexisAI will update its applicable privacy documentation and these Terms as appropriate.</p>
+            </section>
+
+            <!-- Section 39 -->
+            <section id="sec-39" class="p-6 rounded-xl bg-slate-900/40 border border-slate-800/80 space-y-3">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="text-blue-500 font-mono">39.</span> Acceptance
+                </h2>
+                <p>By clicking an acceptance button, accessing, or using LexisAI where permitted by law, you acknowledge that you have read and understood these Terms and agree to be bound by them.</p>
+                <p class="font-semibold text-slate-200">If you do not agree to these Terms, do not use LexisAI.</p>
+            </section>
+
+            <!-- END OF TERMS CTA CARD -->
+            <div id="continue-to-app" class="p-8 rounded-2xl bg-gradient-to-br from-blue-900/40 via-indigo-950/50 to-slate-900 border-2 border-blue-500/30 text-center space-y-6 shadow-2xl mt-12">
+                <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-blue-600/20 text-blue-400 border border-blue-500/30 text-2xl">
+                    <i class="fa-solid fa-rocket"></i>
+                </div>
+                <div>
+                    <h3 class="text-2xl font-extrabold text-white">Ready to proceed?</h3>
+                    <p class="text-slate-300 text-sm mt-2 max-w-md mx-auto">
+                        By continuing to the LexisAI application, you acknowledge that you have read and agreed to our Terms and Conditions.
+                    </p>
+                </div>
+                
+                <div class="pt-2">
+                    <a id="main-continue-btn" href="https://lexis-ai-chatini.vercel.app/app.html" class="inline-flex items-center justify-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-base shadow-lg shadow-blue-600/30 transform hover:-translate-y-0.5 transition-all duration-200">
+                        <span>Continue to app</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
+                
+                <p class="text-xs text-slate-400">
+                    Direct hyperlink: 
+                    <a href="https://lexis-ai-chatini.vercel.app/app.html" class="text-blue-400 hover:underline font-mono">
+                        lexis-ai-chatini.vercel.app/app.html
+                    </a>
+                </p>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- FLOATING AGREE / DO NOT AGREE BOTTOM BAR -->
+    <div id="floating-bar" class="fixed bottom-0 left-0 right-0 z-50 p-4 bg-slate-900/95 backdrop-blur-xl border-t border-slate-700/80 shadow-2xl transition-all duration-300">
+        <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            
+            <div class="flex items-center gap-3 text-center sm:text-left">
+                <div class="hidden sm:flex w-10 h-10 rounded-full bg-blue-500/20 text-blue-400 items-center justify-center flex-shrink-0 border border-blue-500/30">
+                    <i class="fa-solid fa-file-contract"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-semibold text-white">Do you agree to LexisAI Terms and Conditions?</h4>
+                    <p class="text-xs text-slate-400">You must accept the terms to continue using the application.</p>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <button id="disagree-btn" onclick="handleDisagree()" class="flex-1 sm:flex-initial px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 text-sm font-medium transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-xmark text-red-400"></i>
+                    <span>Do Not Agree</span>
+                </button>
+
+                <button id="agree-btn" onclick="handleAgree()" class="flex-1 sm:flex-initial px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-check"></i>
+                    <span>I Agree</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- DISAGREE MODAL -->
+    <div id="disagree-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl transform scale-95 transition-transform duration-200">
+            <div class="w-12 h-12 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center text-xl mx-auto">
+                <i class="fa-solid fa-circle-exclamation"></i>
+            </div>
+            <div class="text-center space-y-2">
+                <h3 class="text-xl font-bold text-white">Agreement Required</h3>
+                <p class="text-sm text-slate-300">
+                    You have chosen not to agree to the LexisAI Terms and Conditions. Access to LexisAI and its features requires acceptance of these Terms.
+                </p>
+            </div>
+            <div class="p-3 bg-slate-950 rounded-lg text-xs text-slate-400 border border-slate-800">
+                If you do not agree, you must refrain from using the Service and close this window.
+            </div>
+            <div class="flex flex-col gap-2 pt-2">
+                <button onclick="closeDisagreeModal()" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium text-sm transition">
+                    Review Terms Again
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Interactions -->
+    <script>
+        // Reading Progress Bar Listener
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('progress-bar').style.width = scrolled + '%';
+        });
+
+        // Handle Agree Action
+        function handleAgree() {
+            const floatingBar = document.getElementById('floating-bar');
+            
+            // Highlight agree status
+            floatingBar.classList.add('bg-emerald-950/90', 'border-emerald-600/50');
+            floatingBar.classList.remove('bg-slate-900/95');
+
+            floatingBar.innerHTML = `
+                <div class="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                            <i class="fa-solid fa-check text-sm"></i>
+                        </div>
+                        <div>
+                            <span class="text-sm font-bold text-emerald-400 block">Terms Accepted!</span>
+                            <span class="text-xs text-slate-300">You can now proceed to the LexisAI application.</span>
+                        </div>
+                    </div>
+                    <a href="https://lexis-ai-chatini.vercel.app/app.html" class="w-full sm:w-auto px-6 py-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-600/30 transition text-center flex items-center justify-center gap-2">
+                        <span>Continue to App</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </a>
+                </div>
+            `;
+
+            // Redirect automatically after brief feedback
+            setTimeout(() => {
+                window.location.href = "https://lexis-ai-chatini.vercel.app/app.html";
+            }, 800);
+        }
+
+        // Handle Disagree Action
+        function handleDisagree() {
+            const modal = document.getElementById('disagree-modal');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+
+        // Close Disagree Modal
+        function closeDisagreeModal() {
+            const modal = document.getElementById('disagree-modal');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            modal.classList.add('opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+    </script>
+</body>
+</html>
+
