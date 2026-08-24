@@ -608,13 +608,19 @@ body {
                 <i class="ph-bold ph-magnifying-glass text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg"></i>
                 <input 
                     type="text" 
-                    placeholder="Search anything..." 
+                    id="global-search-input"
+                    placeholder="Search all chats & messages..." 
+                    oninput="handleGlobalSearch(this.value)"
+                    onfocus="if(this.value.trim()) document.getElementById('search-results-dropdown').classList.remove('hidden')"
                     class="w-full bg-gray-50 border border-transparent hover:border-gray-200 focus:border-theme-300 focus:bg-white focus:ring-4 focus:ring-theme-50 transition-all duration-500 rounded-full py-2.5 pl-11 pr-12 text-sm outline-none text-gray-700"
                 />
-                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 shadow-sm">
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 shadow-sm pointer-events-none">
                     <i class="ph-bold ph-command text-[10px]"></i>
                     <span class="text-[10px] font-medium">K</span>
                 </div>
+
+                <!-- Live Search Results Dropdown -->
+                <div id="search-results-dropdown" class="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 hidden max-h-80 overflow-y-auto custom-scrollbar p-2"></div>
             </div>
         </div>
 
@@ -3604,6 +3610,88 @@ els.input.addEventListener('keydown', (e) => {
 if (els && els.sendBtn) {
     els.sendBtn.addEventListener('click', handleSend);
 }
+
+// ====== GLOBAL DEEP SEARCH ENGINE ======
+function handleGlobalSearch(query) {
+    const dropdown = document.getElementById('search-results-dropdown');
+    const q = query.trim().toLowerCase();
+    
+    if (!q) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = "";
+        return;
+    }
+
+    const matches = [];
+
+    chats.forEach(chat => {
+        const titleMatch = (chat.title || "").toLowerCase().includes(q);
+        const matchingMessages = [];
+
+        (chat.messages || []).forEach(m => {
+            if (m.content && m.content.toLowerCase().includes(q)) {
+                // Generate a highlighted excerpt around the match
+                const idx = m.content.toLowerCase().indexOf(q);
+                const start = Math.max(0, idx - 30);
+                const end = Math.min(m.content.length, idx + q.length + 50);
+                let snippet = m.content.substring(start, end).replace(/\n/g, ' ');
+                if (start > 0) snippet = '...' + snippet;
+                if (end < m.content.length) snippet = snippet + '...';
+                matchingMessages.push({ role: m.role, snippet });
+            }
+        });
+
+        if (titleMatch || matchingMessages.length > 0) {
+            matches.push({ chat, titleMatch, matchingMessages });
+        }
+    });
+
+    if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="text-center text-gray-400 text-xs py-6 font-medium">No results found for "<strong>${query}</strong>"</div>`;
+    } else {
+        dropdown.innerHTML = matches.map(res => `
+            <div class="p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-b-0" onclick="selectSearchResult('${res.chat.id}')">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="ph-bold ph-chat-circle text-theme-600 text-sm"></i>
+                    <span class="text-xs font-bold text-gray-900 truncate">${res.chat.title}</span>
+                </div>
+                ${res.matchingMessages.slice(0, 2).map(m => `
+                    <div class="text-[11px] text-gray-500 pl-4 border-l border-gray-200 my-1 font-mono truncate">
+                        <strong class="text-gray-700 capitalize">${m.role}:</strong> ${m.snippet}
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+    }
+
+    dropdown.classList.remove('hidden');
+}
+
+function selectSearchResult(chatId) {
+    loadChat(chatId);
+    document.getElementById('search-results-dropdown').classList.add('hidden');
+    document.getElementById('global-search-input').value = "";
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', (e) => {
+    const searchWrap = document.getElementById('global-search-input')?.parentElement;
+    if (searchWrap && !searchWrap.contains(e.target)) {
+        document.getElementById('search-results-dropdown')?.classList.add('hidden');
+    }
+});
+
+// Cmd/Ctrl + K Hotkey Handler
+document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('global-search-input');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(renderPulseTodayWidget, 300);
