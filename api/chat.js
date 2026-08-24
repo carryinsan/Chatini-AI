@@ -9,6 +9,58 @@ export const config = {
 const SUPABASE_URL = "https://vvcpdfdofihdmzshglxr.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ";
 
+// ====================================================================
+// KATEX / LATEX ADVANCED FAIL-SAFE ALGORITHM
+// Prevents math formulas from "bleeding" raw text into the UI renderer.
+// Handles malformed boundaries, converts legacy delimiters, and enforces 
+// structural integrity for KaTeX/MathJax compatibility in real-time streams.
+// ====================================================================
+class KaTeXFailSafe {
+    static sanitizeStreamChunk(chunk) {
+        if (!chunk) return chunk;
+        let safe = chunk;
+        
+        // 1. Normalize Block Math Delimiters
+        // Some models output \[ and \] which breaks standard Markdown parsers
+        safe = safe.replace(/\\\[/g, '$$$$');
+        safe = safe.replace(/\\\]/g, '$$$$');
+        
+        // 2. Normalize Inline Math Delimiters
+        // Convert \( and \) to standard $
+        safe = safe.replace(/\\\(/g, '$');
+        safe = safe.replace(/\\\)/g, '$');
+        
+        // 3. Fix specific character bleeds (e.g., mismatched unicode spaces in math)
+        // Removes zero-width spaces that silently crash KaTeX parsers
+        safe = safe.replace(/\u200B/g, ''); 
+        
+        // 4. Matrix and array safety padding
+        // Ensures that double backslashes used for newlines in matrices don't get swallowed
+        safe = safe.replace(/\\\\/g, '\\\\ ');
+
+        return safe;
+    }
+
+    static isSafeBoundary(buffer) {
+        // Prevent flushing if the buffer ends with a partial LaTeX delimiter.
+        // If a chunk splits mid-delimiter, the frontend parser will permanently break
+        // for that specific mathematical block. We hold the buffer until it's complete.
+        if (buffer.endsWith('\\')) return false;
+        if (buffer.endsWith('$')) return false;
+        if (buffer.endsWith('\\b')) return false;
+        if (buffer.endsWith('\\be')) return false;
+        if (buffer.endsWith('\\beg')) return false;
+        if (buffer.endsWith('\\begi')) return false;
+        if (buffer.endsWith('\\begin')) return false;
+        if (buffer.endsWith('\\begin{')) return false;
+        if (buffer.endsWith('\\e')) return false;
+        if (buffer.endsWith('\\en')) return false;
+        if (buffer.endsWith('\\end')) return false;
+        if (buffer.endsWith('\\end{')) return false;
+        return true;
+    }
+}
+
 // Aggressive context compressor to prevent token-limit crashes on massive attachments
 function hyperCondense(text, maxChars) {
     if (!text || text.length <= maxChars) return text;
@@ -149,6 +201,12 @@ export default async function handler(req) {
                     process.env.GEMINI_API_KEY_1,
                     process.env.GEMINI_API_KEY_2,
                     process.env.GEMINI_API_KEY_3,
+                    process.env.GEMINI_API_KEY_4,
+                    process.env.GEMINI_API_KEY_5,
+                    process.env.GEMINI_API_KEY_6,
+                    process.env.GEMINI_API_KEY_7,
+                    process.env.GEMINI_API_KEY_8,
+                    process.env.GEMINI_API_KEY_9,
                     process.env.GEMINI_API_KEY
                 ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
@@ -645,17 +703,30 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 // Flushes aggregated characters to prevent the UI from locking up during extremely fast AI generation
                 const flushStreamBuffer = (force = false) => {
                     if (!streamTextBuffer) return;
+                    
+                    // --- FAIL-SAFE: KATEX BOUNDARY PROTECTION ---
+                    // Prevent flushing if we are mid-way through a LaTeX delimiter to avoid UI bleed.
+                    // If the chunk splits right on a mathematical marker, we wait for the rest to arrive.
+                    if (!force && !KaTeXFailSafe.isSafeBoundary(streamTextBuffer) && streamTextBuffer.length < 50) {
+                        return; // Hold buffer until the delimiter sequence completes
+                    }
+
                     // Flush if forced (at the end), or if chunk is sufficiently large (12 chars), or ends with a structural space/newline
                     if (force || streamTextBuffer.length >= 12 || streamTextBuffer.includes('\n') || streamTextBuffer.includes(' ')) {
+                        
+                        // --- FAIL-SAFE: SANITIZE MATH DELIMITERS ---
+                        // Standardize and protect all mathematical sequences before transmission
+                        const sanitizedText = KaTeXFailSafe.sanitizeStreamChunk(streamTextBuffer);
+
                         const cleanPayload = {
                             id: "chatcmpl-" + Math.random().toString(36).substring(2, 10),
                             object: "chat.completion.chunk",
                             created: Math.floor(Date.now() / 1000),
                             model: modelId,
-                            text: streamTextBuffer,
-                            message: streamTextBuffer,
-                            choices: [{ index: 0, delta: { role: "assistant", content: streamTextBuffer }, finish_reason: null }],
-                            candidates: [{ index: 0, content: { role: "model", parts: [{ text: streamTextBuffer }] }, finishReason: null }]
+                            text: sanitizedText,
+                            message: sanitizedText,
+                            choices: [{ index: 0, delta: { role: "assistant", content: sanitizedText }, finish_reason: null }],
+                            candidates: [{ index: 0, content: { role: "model", parts: [{ text: sanitizedText }] }, finishReason: null }]
                         };
                         controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
                         streamTextBuffer = "";
@@ -713,7 +784,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                             if (cleanText) {
                                 const restoredText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
                                 streamTextBuffer += restoredText;
-                                flushStreamBuffer(false); // Only flushes if optimized conditions are met
+                                flushStreamBuffer(false); // Only flushes if optimized conditions and KaTeX boundaries are met
                             }
                         } catch (e) {
                             // Suppress partial chunk parsing errors gracefully
