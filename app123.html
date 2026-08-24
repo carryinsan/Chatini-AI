@@ -474,6 +474,12 @@ body {
                     </div>
                     Research
                 </button>
+                <button id="diagram-btn" onclick="toggleDiagramMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
+                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-teal-50">
+                        <i id="diagram-icon" class="ph-bold ph-cube text-teal-500"></i>
+                    </div>
+                    Diagram
+                </button>
                 <button id="ppt-btn" onclick="togglePresentationMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
                     <div class="w-6 h-6 rounded-md flex items-center justify-center bg-amber-50">
                         <i id="ppt-icon" class="ph-bold ph-presentation-chart text-amber-500"></i>
@@ -961,6 +967,7 @@ let isMathMode = false;
 let isPodcastMode = false;
 let isAppMode = false;
 let isStudyMode = false;
+let isDiagramMode = false;
 let isCanvasMaximized = false;
 let isImageMode = false;
 let currentChatId = Date.now().toString();
@@ -1011,7 +1018,9 @@ const els = {
     studyBtn: document.getElementById('study-btn'),
     studyIcon: document.getElementById('study-icon'),
     imageBtn: document.getElementById('image-btn'),
-    imageIcon: document.getElementById('image-icon')
+    imageIcon: document.getElementById('image-icon'),
+    diagramBtn: document.getElementById('diagram-btn'),
+    diagramIcon: document.getElementById('diagram-icon')
 };
 
 window.onload = async () => {
@@ -1415,7 +1424,8 @@ function resetAllModeUI() {
         { btn: els.podcastBtn, icon: els.podcastIcon, textClass: 'text-pink-600', bgClass: 'bg-pink-50', borderClass: 'border-pink-200' },
         { btn: els.appBtn, icon: els.appIcon, textClass: 'text-orange-600', bgClass: 'bg-orange-50', borderClass: 'border-orange-200' },
         { btn: els.studyBtn, icon: els.studyIcon, textClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-200' },
-        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' }
+        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' },
+        { btn: els.diagramBtn, icon: els.diagramIcon, textClass: 'text-teal-600', bgClass: 'bg-teal-50', borderClass: 'border-teal-200' }
     ];
 
     modes.forEach(m => {
@@ -1512,7 +1522,7 @@ function toggleImageMode() {
 
 function toggleStudyMode() {
     const wasOn = isStudyMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isDiagramMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isStudyMode = true;
@@ -1524,6 +1534,19 @@ function toggleStudyMode() {
     }
 }
 
+function toggleDiagramMode() {
+    const wasOn = isDiagramMode;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isDiagramMode = false;
+    resetAllModeUI();
+    if (!wasOn) {
+        isDiagramMode = true;
+        els.diagramBtn.classList.replace('text-gray-500', 'text-teal-600');
+        els.diagramBtn.classList.replace('border-transparent', 'border-teal-200');
+        els.diagramBtn.classList.add('bg-teal-50');
+        els.diagramIcon.classList.add('animate-pulse');
+        showToast("Live Diagram Engine Engaged");
+    }
+}
 // ====== RENDERERS & FORMATTERS ======
 function renderMathAndMarkdown(text) {
     if (!text) return "";
@@ -2172,9 +2195,9 @@ function openCanvas(artifactId, title, type = 'document') {
     } else if (type === 'brain_map') {
         els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
         try { els.canvasContent.innerHTML = renderBrainMapUI(JSON.parse(rawData)); } catch(e) { }
-    } else if (type === 'html') {
-        els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
-        els.canvasContent.innerHTML = `<iframe class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin" id="app-iframe-${artifactId}"></iframe>`;
+    } else if (type === 'diagram' || type === 'html') {
+                els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
+                els.canvasContent.innerHTML = `<iframe class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin" id="app-iframe-${artId}"></iframe>`;
         setTimeout(() => {
             const iframe = document.getElementById(`app-iframe-${artifactId}`);
             if(iframe) {
@@ -2505,10 +2528,12 @@ function parseRichText(content, isStreaming = false, msgId = null) {
         const isPod = type === 'podcast';
         const isStudy = type === 'study_deck';
         const isMap = type === 'brain_map';
+        const isDiagram = type === 'diagram';
         
         let iconColor = 'theme-600', iconBg = 'theme-50', iconBorder = 'theme-100', iconClass = 'ph-layout', typeName = 'Live Workspace';
         
         if(isMath) { iconColor = 'emerald-500'; iconBg = 'emerald-50'; iconBorder = 'emerald-100'; iconClass = 'ph-function'; typeName = 'Cartesian Engine'; }
+        else if(isDiagram) { iconColor = 'teal-500'; iconBg = 'teal-50'; iconBorder = 'teal-100'; iconClass = 'ph-cube'; typeName = 'Interactive Diagram'; }
         else if(isPres) { iconColor = 'amber-500'; iconBg = 'amber-50'; iconBorder = 'amber-100'; iconClass = 'ph-presentation-chart'; typeName = 'Presentation Deck'; }
         else if(isApp) { iconColor = 'orange-500'; iconBg = 'orange-50'; iconBorder = 'orange-100'; iconClass = 'ph-code'; typeName = 'Executable App'; }
         else if(isPod) { iconColor = 'pink-500'; iconBg = 'pink-50'; iconBorder = 'pink-100'; iconClass = 'ph-headphones'; typeName = 'Audio Transcript'; }
@@ -3015,6 +3040,34 @@ async function handleSend() {
         } catch (err) {
             logContainer.parentElement.parentElement.remove();
             aiMsgObj.container.innerHTML = `<span class="text-red-500 font-medium">Visual Engine Error: ${err.message}</span>`;
+        }
+        isProcessing = false; updateUIState(); return;
+    }
+    
+    // 5G. DIAGRAM ENGINE
+    if (isDiagramMode) {
+        els.indicator.classList.add('hidden');
+        const logContainer = appendResearchTerminal('Initializing Interactive Physics & Diagram Engine...', 'math');
+        try {
+            const res = await fetch('/api/diagram', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ prompt: text }) 
+            });
+            const data = await res.json();
+            logContainer.parentElement.parentElement.remove();
+            if (data.success && data.html) {
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+                const artifactContent = `<artifact title="Interactive Diagram" type="diagram">\n${data.html}\n</artifact>`;
+                assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
+                messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
+                saveCurrentChat();
+            } else {
+                appendMessage('assistant', `<span class="text-red-500 font-medium">Failed to generate Diagram: ${data.error}</span>`, activeModelId);
+            }
+        } catch (err) {
+            logContainer.parentElement.parentElement.remove();
+            appendMessage('assistant', `<span class="text-red-500 font-medium">Network Error.</span>`, activeModelId);
         }
         isProcessing = false; updateUIState(); return;
     }
