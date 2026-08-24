@@ -513,12 +513,13 @@ body {
             </div>
         </div>
 
-        <!-- Advanced Tools / "More" Menu equivalent from Original UI -->
+       <!-- Advanced Tools / "More" Menu equivalent from Original UI -->
         <div>
-            <div class="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div onclick="document.getElementById('adv-int-content').classList.toggle('hidden'); document.getElementById('adv-int-icon').classList.toggle('rotate-180');" class="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors select-none">
                 Advanced Integrations
+                <i id="adv-int-icon" class="ph-bold ph-caret-down transition-transform"></i>
             </div>
-            <div class="space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
+            <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
                 <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
                 <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
                 <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
@@ -1041,6 +1042,7 @@ window.onload = async () => {
     refreshExtSelectors();
     checkNickname();
     if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
+    renderHistoryList(); // Initialize chat history in sidebar on load
     getDeviceId();
     const urlParams = new URLSearchParams(window.location.search);
     const shareId = urlParams.get('share');
@@ -2352,6 +2354,7 @@ function saveCurrentChat() {
     if (chatIndex > -1) chats[chatIndex] = chatData; 
     else chats.unshift(chatData);
     try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) {}
+    renderHistoryList(); // Refresh the UI immediately after saving
 }
 
 function createNewChat() { 
@@ -2363,6 +2366,7 @@ function createNewChat() {
     renderStagingArea();
     renderMessagesToUI(); 
     if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
+    renderHistoryList(); // Reset sidebar active states
     appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init', [], 'LexisAI'); 
     closeCanvas(); 
     renderPulseTodayWidget();
