@@ -2308,28 +2308,76 @@ function deleteProject(projId) {
         saveProjects();
     }
 }
-
 async function shareProjectAPI(projId) {
     const proj = customProjects.find(p => p.id === projId);
     if(!proj || proj.chats.length === 0) return showToast("Add chats to this project first!");
     
     const pwd = prompt("Set a password to lock this project? (Leave blank for public)");
-    showToast("Generating Project Link...");
+    showToast("Publishing Project...");
     
     try {
         const res = await fetch('/api/project', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'share', project: proj, password: pwd })
+            body: JSON.stringify({ action: 'share', project: proj, password: pwd, deviceId: getDeviceId() })
         });
         const data = await res.json();
         
         if (data.success && data.shareId) {
-            const link = window.location.origin + '?project=' + data.shareId;
+            proj.shareId = data.shareId; // Bind the URL to the local project
+            saveProjects();
+            const link = window.location.origin + window.location.pathname + '?project=' + data.shareId;
             await navigator.clipboard.writeText(link);
-            showToast("Project Link Copied!");
+            showToast("Project Published & Link Copied!");
         } else { showToast(data.error || "Failed to share project."); }
     } catch(e) { showToast("Backend API error."); }
+}
+
+async function syncSharedProject(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(!proj || !proj.shareId) return;
+    showToast("Syncing project...");
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', shareId: proj.shareId, project: proj, deviceId: getDeviceId() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast("Project Synced Successfully!");
+        } else { showToast(data.error || "Sync failed."); }
+    } catch(e) { showToast("Backend API error."); }
+}
+
+async function fetchProjectAnalytics(projId, shareId) {
+    const badge = document.getElementById(`analytics-badge-${projId}`);
+    if(badge) badge.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Loading...`;
+    
+    try {
+        const res = await fetch(`/api/project?action=analytics&shareId=${shareId}`);
+        const data = await res.json();
+        if (data.success) {
+            alert(`Project Analytics:\n\n👁️ Unique Views: ${data.views || 0}\n🌿 Forks/Clones: ${data.forks || 0}`);
+            if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> ${data.views||0} V / ${data.forks||0} F`;
+        } else {
+            if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> Stats`;
+            showToast(data.error || "Analytics failed");
+        }
+    } catch(e) { 
+        if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> Stats`;
+        showToast("Backend API error."); 
+    }
+}
+
+function removeChatFromProject(projId, chatId) {
+    if(confirm("Remove this chat from the project?")) {
+        const proj = customProjects.find(p => p.id === projId);
+        if(proj) {
+            proj.chats = proj.chats.filter(c => c.id !== chatId);
+            saveProjects();
+        }
+    }
 }
 
 function renderProjectsList() {
@@ -2337,20 +2385,48 @@ function renderProjectsList() {
     if(!list) return;
     if(customProjects.length === 0) { list.innerHTML = '<div class="text-center text-gray-500 py-10 text-xs font-medium">No projects created.</div>'; return; }
     
-    list.innerHTML = customProjects.map(p => `
-        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-3 group transition-colors hover:border-amber-200 shadow-sm">
+    list.innerHTML = customProjects.map(p => {
+        const isShared = !!p.shareId;
+        const chatsListHtml = p.chats.length === 0 
+            ? `<div class="text-[10px] text-gray-400 italic px-2 py-1 text-center">No chats imported yet.</div>`
+            : p.chats.map(c => `
+                <div class="flex justify-between items-center bg-white border border-gray-100 rounded-lg p-2 shadow-sm mb-1 group/chat transition-colors hover:border-amber-200">
+                    <span class="text-[11px] font-semibold text-gray-700 truncate max-w-[200px] cursor-pointer hover:text-amber-600 flex items-center gap-1.5" onclick="loadChat('${c.id}'); closeProjectsModal();">
+                        <i class="ph-bold ph-chat-circle text-amber-500"></i> ${c.title}
+                    </span>
+                    <button onclick="removeChatFromProject('${p.id}', '${c.id}')" class="text-gray-300 hover:text-red-500 opacity-0 group-hover/chat:opacity-100 transition-opacity p-1"><i class="ph-bold ph-x"></i></button>
+                </div>
+            `).join('');
+
+        return `
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-3 group transition-colors hover:border-amber-200 shadow-sm" id="proj-card-${p.id}">
             <div class="flex justify-between items-center">
-                <h4 class="font-bold text-gray-900 text-[14px] flex items-center gap-2"><i class="ph-fill ph-folder text-amber-500 text-lg"></i> ${p.name}</h4>
-                <span class="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-600 font-bold shadow-sm">${p.chats.length} Chats</span>
+                <h4 class="font-bold text-gray-900 text-[14px] flex items-center gap-2 truncate pr-2"><i class="ph-fill ph-folder text-amber-500 text-lg flex-shrink-0"></i> <span class="truncate">${p.name}</span></h4>
+                <div class="flex gap-2 flex-shrink-0">
+                    ${isShared ? `<span class="text-[10px] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full text-blue-700 font-bold shadow-sm cursor-pointer hover:bg-blue-100 flex items-center gap-1 transition-colors" onclick="fetchProjectAnalytics('${p.id}', '${p.shareId}')" id="analytics-badge-${p.id}"><i class="ph-bold ph-chart-bar"></i> Stats</span>` : ''}
+                    <span class="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-600 font-bold shadow-sm">${p.chats.length} Chats</span>
+                </div>
             </div>
+            
+            <!-- Internal Chat Viewer -->
+            <div class="bg-gray-100/50 rounded-xl p-2 max-h-32 overflow-y-auto custom-scrollbar border border-gray-100 shadow-inner">
+                ${chatsListHtml}
+            </div>
+
             <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-                <button onclick="importCurrentChatToProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-download-simple"></i> Import Active Chat</button>
-                <button onclick="shareProjectAPI('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-share-network"></i> Share Link</button>
-                <button onclick="renameProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-amber-600 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1"><i class="ph-bold ph-pencil-simple"></i></button>
-                <button onclick="deleteProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 ml-auto"><i class="ph-bold ph-trash"></i></button>
+                <button onclick="importCurrentChatToProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-download-simple"></i> Add Active Chat</button>
+                
+                ${isShared 
+                    ? `<button onclick="syncSharedProject('${p.id}')" class="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold" title="Push new chats to the published link"><i class="ph-bold ph-arrows-clockwise"></i> Sync Updates</button>
+                       <button onclick="navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?project=' + '${p.shareId}'); showToast('Link Copied!')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-copy"></i> Copy Link</button>`
+                    : `<button onclick="shareProjectAPI('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-share-network"></i> Publish Link</button>`
+                }
+                
+                <button onclick="renameProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-amber-600 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 ml-auto"><i class="ph-bold ph-pencil-simple"></i></button>
+                <button onclick="deleteProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1"><i class="ph-bold ph-trash"></i></button>
             </div>
         </div>
-    `).join('');
+    `}).join('');
 }
 function openPulseModal() { 
     document.getElementById('pulse-modal').classList.remove('hidden');
