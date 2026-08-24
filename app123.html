@@ -2355,7 +2355,11 @@ async function fetchProjectAnalytics(projId, shareId) {
     if(badge) badge.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Loading...`;
     
     try {
-        const res = await fetch(`/api/project?action=analytics&shareId=${shareId}`);
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'analytics', projectId: shareId, shareId: shareId })
+        });
         const data = await res.json();
         if (data.success) {
             alert(`Project Analytics:\n\n👁️ Unique Views: ${data.views || 0}\n🌿 Forks/Clones: ${data.forks || 0}`);
