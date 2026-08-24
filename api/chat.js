@@ -13,39 +13,61 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 function hyperCondense(text, maxChars) {
     if (!text || text.length <= maxChars) return text;
     
-    const blocks = text.split(/(?=--- DOC: |--- REAL-TIME SEARCH CONTEXT ---|--- ORACLE PASS 2 SEARCH CONTEXT ---|URL: |\[Title: )/g).filter(b => b.trim());
-    if (blocks.length === 0) return text.substring(0, maxChars);
-    if (blocks.length === 1) {
-        return text.substring(0, Math.floor(maxChars * 0.6)) + "\n\n...[DATA COMPRESSED]...\n\n" + text.substring(text.length - Math.floor(maxChars * 0.4));
+    try {
+        const blocks = text.split(/(?=--- DOC: |--- REAL-TIME SEARCH CONTEXT ---|--- ORACLE PASS 2 SEARCH CONTEXT ---|URL: |\[Title: )/g).filter(b => b.trim());
+        if (blocks.length === 0) return text.substring(0, maxChars);
+        if (blocks.length === 1) {
+            return text.substring(0, Math.floor(maxChars * 0.6)) + "\n\n...[DATA COMPRESSED]...\n\n" + text.substring(text.length - Math.floor(maxChars * 0.4));
+        }
+        
+        const charsPerBlock = Math.max(50, Math.floor(maxChars / blocks.length));
+        
+        return blocks.map(block => {
+            if (block.length <= charsPerBlock) return block;
+            const top = Math.floor(charsPerBlock * 0.7);
+            const bottom = Math.floor(charsPerBlock * 0.3);
+            return block.substring(0, top) + "\n...[TRUNC]...\n" + block.substring(block.length - bottom);
+        }).join('\n');
+    } catch (e) {
+        // Ultimate fail-safe if regex engine struggles with corrupted strings
+        return text.substring(0, maxChars) + "\n\n...[EMERGENCY COMPRESSION TRIGGERED]...";
     }
-    
-    const charsPerBlock = Math.max(50, Math.floor(maxChars / blocks.length));
-    
-    return blocks.map(block => {
-        if (block.length <= charsPerBlock) return block;
-        const top = Math.floor(charsPerBlock * 0.7);
-        const bottom = Math.floor(charsPerBlock * 0.3);
-        return block.substring(0, top) + "\n...[TRUNC]...\n" + block.substring(block.length - bottom);
-    }).join('\n');
 }
 
 // FINAL BYPASS OPTION: High-Density Local Extraction for >600k tokens if Supabase fails
+// V2 ALGORITHM UPDATE: Eliminated Regex chunking to completely prevent thread-locking and app lag on massive documents
 function advancedHDBypass(text, query, maxChars) {
     if (!text || text.length <= maxChars) return text;
     
     const keywords = query.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 3);
     if (keywords.length === 0) return hyperCondense(text, maxChars);
 
-    const chunks = text.match(/[\s\S]{1,10000}(?=\s|$)/g) || [text];
+    // ZERO-LAG LINEAR CHUNKING ALGORITHM (O(N) Complexity)
+    const chunks = [];
+    let currIdx = 0;
+    while (currIdx < text.length) {
+        let nextIdx = currIdx + 10000;
+        if (nextIdx < text.length) {
+            // Find the last space within this block to make a clean cut
+            let spaceIdx = text.lastIndexOf(' ', nextIdx);
+            // Only adjust if the space isn't too far back
+            if (spaceIdx > currIdx + 5000) {
+                nextIdx = spaceIdx;
+            }
+        }
+        chunks.push(text.substring(currIdx, nextIdx));
+        currIdx = nextIdx;
+    }
     
     const scoredChunks = chunks.map((chunk, index) => {
         const lowerChunk = chunk.toLowerCase();
         let score = 0;
         keywords.forEach(kw => {
-            let occurrences = (lowerChunk.match(new RegExp(kw, 'g')) || []).length;
+            // High-speed string counting
+            let occurrences = lowerChunk.split(kw).length - 1;
             score += occurrences * (kw.length);
         });
-        if (index < 5) score += 5; 
+        if (index < 5) score += 5; // Bias towards document introductions/headers
         return { chunk, score };
     });
 
@@ -102,11 +124,13 @@ export default async function handler(req) {
                     return; 
                 }
 
-                // 1. STRICT KEY SANITIZATION
+                // 1. STRICT KEY SANITIZATION & AGGREGATION
                 const GROQ_KEYS = [
                     process.env.GROQ_API_KEY,
-                    process.env.GROQ_KEY_2,
-                    process.env.GROQ_KEY_3
+                    process.env.GROQ_KEY_2, process.env.GROQ_API_KEY_2,
+                    process.env.GROQ_KEY_3, process.env.GROQ_API_KEY_3,
+                    process.env.GROQ_KEY_4, process.env.GROQ_API_KEY_4,
+                    process.env.GROQ_KEY_5, process.env.GROQ_API_KEY_5
                 ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
                 const TAVILY_KEYS = [
@@ -114,7 +138,9 @@ export default async function handler(req) {
                     process.env.TAVILY_KEY_2,
                     process.env.TAVILY_KEY_3,
                     process.env.TAVILY_KEY_4,
-                    process.env.TAVILY_KEY_5
+                    process.env.TAVILY_KEY_5,
+                    process.env.TAVILY_KEY_6,
+                    process.env.TAVILY_KEY_7
                 ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
                 const MISTRAL_KEY = process.env.MISTRAL_API_KEY ? process.env.MISTRAL_API_KEY.replace(/[\r\n\s]/g, '') : null;
@@ -132,7 +158,7 @@ export default async function handler(req) {
                 const isThinkingEnabled = modelId === 'oracle' && !researchContext && !hasAttachments;
 
                 // ====================================================================
-                // PRE-PROCESS: ADMIN OVERRIDE CHECK
+                // PRE-PROCESS: ADMIN OVERRIDE & TEMPORAL CONTEXT CHECK
                 // ====================================================================
                 let processedMessages = messages.map(m => ({ role: m.role, content: m.content }));
                 let userQuery = processedMessages[processedMessages.length - 1].content;
@@ -142,8 +168,12 @@ export default async function handler(req) {
                     forceMaxPasses = true;
                     // Silently strip the tag so it doesn't pollute actual search/LLM context
                     userQuery = userQuery.replace('Lexis-Admin-2026!', '').trim();
-                    processedMessages[processedMessages.length - 1].content = userQuery;
                 }
+                
+                // INJECT REAL-TIME SERVER CLOCK (Fixes AI memory regarding date and time)
+                const currentDateTimeLocal = new Date().toLocaleString('en-US', { timeZone: 'Asia/Calcutta' });
+                const currentDateTimeUTC = new Date().toUTCString();
+                const clockContext = `\n\n[SYSTEM CLOCK - CRITICAL MEMORY]: The user submitted this prompt at exactly: ${currentDateTimeLocal} (Local Time) / ${currentDateTimeUTC}. YOU MUST remember this date and time. If the user asks about 'today', 'this month', or specific timestamps from their past messages, use this EXACT clock data to orient yourself accurately in time.`;
 
                 // ====================================================================
                 // DECENT, PROFESSIONAL UI LOGIC
@@ -301,7 +331,7 @@ Revise before answering if the answer can be improved.
 20. FINAL CHECKLIST
 Before sending the response verify: Answered every question, followed constraints, no hallucinated facts, and the tone is perfectly conversational and user-friendly.
 
-CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhaustive, hyper-detailed, incredibly conversational responses.${memoryString}`;
+CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhaustive, hyper-detailed, incredibly conversational responses.${memoryString}${clockContext}`;
 
                 let massiveKnowledgeBase = "";
 
@@ -387,7 +417,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     }
                 }
 
-                // File Attachment Handling (Both Models)
+                // File Attachment Handling (Both Models) - SAFE WRAPPERS ADDED
                 const geminiInlineParts = [];
                 const geminiSupportedMimes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/heic'];
 
@@ -398,8 +428,15 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                             const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv') || att.name.endsWith('.txt') || att.name.endsWith('.md') || att.name.endsWith('.py');
                             
                             if (isText) {
-                                try { massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${decodeURIComponent(escape(atob(att.base64)))}\n`; } 
-                                catch (e) { try { massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${atob(att.base64)}\n`; } catch (err) {} }
+                                try { 
+                                    massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${decodeURIComponent(escape(atob(att.base64)))}\n`; 
+                                } catch (e) { 
+                                    try { 
+                                        massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n${atob(att.base64)}\n`; 
+                                    } catch (err) {
+                                        massiveKnowledgeBase += `\n--- DOC: ${att.name} ---\n[Warning: Binary or corrupted text encoding detected. Safely skipped to maintain app stability.]\n`;
+                                    } 
+                                }
                             } else if (modelId !== 'spark' && geminiSupportedMimes.includes(mime)) {
                                 if (geminiInlineParts.length < 15) geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
                             }
@@ -445,7 +482,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                         if (!supaSuccess) throw new Error("Supabase unavailable.");
 
                     } catch (err) {
-                        if (isThinkingEnabled) sendThinkStep("Initiating local Edge-matrix memory bypass...");
+                        if (isThinkingEnabled) sendThinkStep("Initiating local Edge-matrix memory bypass (Anti-Lag Architecture)...");
                         condensedKnowledge = advancedHDBypass(massiveKnowledgeBase, userQuery, 2400000); 
                     }
                 } else {
@@ -515,7 +552,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 // APPEND ZERO-TRAINING & ZERO-KNOWLEDGE PRIVACY DIRECTIVE
                 systemPrompt = PrivacyEngine.injectAntiTrainingDirectives(systemPrompt);
 
-                processedMessages[processedMessages.length - 1].content = `[USER COMMAND - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}`;
+                // INJECT TIMESTAMP TO THE ACTUAL FINAL USER COMMAND
+                processedMessages[processedMessages.length - 1].content = `[USER COMMAND - INITIATED AT: ${currentDateTimeLocal} - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}`;
 
                 const geminiMessages = processedMessages.map((m, i) => {
                     const parts = [{ text: m.content }];
@@ -597,16 +635,39 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 }
 
                 // ================================================================
-                // CORE BUG FIX: THE IRONCLAD SSE PARSER WITH REAL-TIME DETOKENIZATION
+                // CORE BUG FIX: THE IRONCLAD SSE PARSER WITH REAL-TIME DETOKENIZATION & ANTI-LAG AGGREGATION
                 // ================================================================
                 const reader = llmRes.body.getReader();
                 const decoder = new TextDecoder();
                 let buffer = "";
+                let streamTextBuffer = ""; // Anti-Lag Text Buffer
+
+                // Flushes aggregated characters to prevent the UI from locking up during extremely fast AI generation
+                const flushStreamBuffer = (force = false) => {
+                    if (!streamTextBuffer) return;
+                    // Flush if forced (at the end), or if chunk is sufficiently large (12 chars), or ends with a structural space/newline
+                    if (force || streamTextBuffer.length >= 12 || streamTextBuffer.includes('\n') || streamTextBuffer.includes(' ')) {
+                        const cleanPayload = {
+                            id: "chatcmpl-" + Math.random().toString(36).substring(2, 10),
+                            object: "chat.completion.chunk",
+                            created: Math.floor(Date.now() / 1000),
+                            model: modelId,
+                            text: streamTextBuffer,
+                            message: streamTextBuffer,
+                            choices: [{ index: 0, delta: { role: "assistant", content: streamTextBuffer }, finish_reason: null }],
+                            candidates: [{ index: 0, content: { role: "model", parts: [{ text: streamTextBuffer }] }, finishReason: null }]
+                        };
+                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
+                        streamTextBuffer = "";
+                    }
+                };
 
                 while (true) {
                     const { done, value } = await reader.read();
                     
                     if (done) {
+                        flushStreamBuffer(true); // Force final flush to ensure nothing is dropped
+                        
                         if (buffer.trim()) {
                             const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
                             if (jsonStr && jsonStr !== '[DONE]') {
@@ -618,8 +679,8 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                     
                                     if (cleanText) {
                                         cleanText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
-                                        const cleanPayload = { id: "chatcmpl-end", object: "chat.completion.chunk", created: Date.now(), model: modelId, text: cleanText, message: cleanText, choices: [{ index: 0, delta: { role: "assistant", content: cleanText }, finish_reason: null }], candidates: [{ index: 0, content: { role: "model", parts: [{ text: cleanText }] }, finishReason: null }] };
-                                        controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
+                                        streamTextBuffer += cleanText;
+                                        flushStreamBuffer(true);
                                     }
                                 } catch (e) {}
                             }
@@ -629,7 +690,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     
                     buffer += decoder.decode(value, { stream: true });
                     const chunks = buffer.split(/\r?\n\r?\n/);
-                    buffer = chunks.pop(); 
+                    buffer = chunks.pop(); // Keep incomplete JSON in the buffer
 
                     for (const chunk of chunks) {
                         const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
@@ -651,20 +712,11 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
                             if (cleanText) {
                                 const restoredText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
-                                const cleanPayload = { 
-                                    id: "chatcmpl-" + Math.random().toString(36).substring(2, 10),
-                                    object: "chat.completion.chunk",
-                                    created: Math.floor(Date.now() / 1000),
-                                    model: modelId,
-                                    text: restoredText, 
-                                    message: restoredText, 
-                                    choices: [{ index: 0, delta: { role: "assistant", content: restoredText }, finish_reason: null }],
-                                    candidates: [{ index: 0, content: { role: "model", parts: [{ text: restoredText }] }, finishReason: null }]
-                                };
-                                controller.enqueue(encoder.encode(`data: ${JSON.stringify(cleanPayload)}\n\n`));
+                                streamTextBuffer += restoredText;
+                                flushStreamBuffer(false); // Only flushes if optimized conditions are met
                             }
                         } catch (e) {
-                            // Suppress partial chunk errors
+                            // Suppress partial chunk parsing errors gracefully
                         }
                     }
                 }
@@ -684,4 +736,4 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
     });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
-                                                          }
+}
