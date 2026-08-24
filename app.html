@@ -409,6 +409,24 @@ body {
     </div>
 </div>
 
+<!-- Custom Projects Modal -->
+<div id="projects-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
+    <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-amber-100 shadow-[0_8px_40px_rgba(245,158,11,0.1)] flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-2 text-gray-900 tracking-tight"><i class="ph-fill ph-folder-open text-amber-500"></i> Custom Projects</h2>
+            <button onclick="closeProjectsModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <div class="mb-4 shrink-0">
+            <button onclick="createProject()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md shadow-amber-200 transition-all flex items-center justify-center gap-2">
+                <i class="ph-bold ph-plus"></i> Create New Project
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar" id="projects-list-container">
+            <!-- Projects injected via JS -->
+        </div>
+    </div>
+</div>
+
 <!-- Lexis Pulse Task Manager Modal -->
 <div id="pulse-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
     <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-cyan-100 shadow-[0_8px_40px_rgba(6,182,212,0.1)] flex flex-col max-h-[85vh]">
@@ -526,7 +544,7 @@ body {
                 <button onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-graph text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Constellation Map</button>
                 <button onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-indigo-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat</button>
                 <button onclick="openExperimentalModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-fuchsia-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-flask text-sm text-fuchsia-500 group-hover:scale-110 transition-transform"></i> Experimental</button>
-                
+                <button onclick="openProjectsModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-amber-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-folder-open text-sm text-amber-500 group-hover:scale-110 transition-transform"></i>Your Projects</button>
                 <!-- Selectors & Toggles -->
                 <div class="relative w-full pt-2 mb-2 px-1">
                     <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-medium text-gray-600 outline-none appearance-none cursor-pointer hover:border-gray-300 transition-colors shadow-sm">
@@ -973,6 +991,7 @@ let currentMultiplayerRoom = null;
 let pollInterval = null;
 let lastMessageTs = 0;
 let pulseTasks = JSON.parse(localStorage.getItem('lexis_pulse_tasks')) || [];
+let customProjects = JSON.parse(localStorage.getItem('lexis_custom_projects')) || [];
 
 window.ARTIFACT_STORE = {};
 window.CURRENT_CANVAS_ID = null;
@@ -1030,7 +1049,49 @@ window.onload = async () => {
     const shareId = urlParams.get('share');
     const roomId = urlParams.get('room');
     const fullChatId = urlParams.get('chat');
-    if (roomId) {
+    const projectId = urlParams.get('project');
+    
+    if (projectId) {
+        // --- NEW: Load Shared Custom Project & Import all its chats ---
+        try {
+            showToast("Loading Shared Project...");
+            let pwd = null;
+            let res = await fetch(`/api/project?action=get&id=${projectId}`);
+            let data = await res.json();
+            
+            if (!data.success && data.isPasswordProtected) {
+                pwd = prompt("This project is protected. Enter Password:");
+                if (pwd) {
+                    res = await fetch(`/api/project?action=get&id=${projectId}&pwd=${pwd}`);
+                    data = await res.json();
+                }
+            }
+            
+            if (data.success && data.project) {
+                let importedCount = 0;
+                data.project.chats.forEach(projChat => {
+                    const newChatId = Date.now().toString() + Math.random().toString(36).substr(2,4);
+                    chats.unshift({
+                        id: newChatId,
+                        title: "[Project] " + projChat.title,
+                        messages: projChat.messages,
+                        date: Date.now(),
+                        extId: null
+                    });
+                    importedCount++;
+                });
+                
+                localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showToast(`Imported ${importedCount} chats from Project!`);
+                renderHistoryList();
+                if(chats.length > 0) loadChat(chats[0].id);
+            } else {
+                showToast("Invalid or expired Project link.");
+                createNewChat();
+            }
+        } catch(e) { createNewChat(); }
+    } else if (roomId) {
         joinMultiplayerRoom(roomId);
     } else if (fullChatId) {
         // --- NEW: Load Shared Chat from Supabase Branch (Password Protected) ---
@@ -2196,6 +2257,181 @@ function closeCanvas() {
 }
 
 // ====== ADVANCED INTEGRATIONS FIXES ======
+function openProjectsModal() { 
+    document.getElementById('projects-modal').classList.remove('hidden'); 
+    renderProjectsList(); 
+}
+function closeProjectsModal() { document.getElementById('projects-modal').classList.add('hidden'); }
+
+function createProject() {
+    const name = prompt("Enter Project Name:");
+    if(name && name.trim()) {
+        customProjects.unshift({ id: 'proj_' + Date.now(), name: name.trim(), chats: [], createdAt: Date.now() });
+        saveProjects();
+    }
+}
+
+function saveProjects() {
+    localStorage.setItem('lexis_custom_projects', JSON.stringify(customProjects));
+    renderProjectsList();
+}
+
+function importCurrentChatToProject(projId) {
+    if(messages.length === 0) return showToast("Current chat is empty!");
+    const proj = customProjects.find(p => p.id === projId);
+    if(proj) {
+        const chatSnapshot = {
+            id: currentChatId,
+            title: chats.find(c => c.id === currentChatId)?.title || "Untitled Chat",
+            messages: JSON.parse(JSON.stringify(messages)),
+            addedAt: Date.now()
+        };
+        const existingIdx = proj.chats.findIndex(c => c.id === currentChatId);
+        if(existingIdx > -1) proj.chats[existingIdx] = chatSnapshot;
+        else proj.chats.push(chatSnapshot);
+        saveProjects();
+        showToast(`Chat imported to ${proj.name}!`);
+    }
+}
+
+function renameProject(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(proj) {
+        const newName = prompt("Rename Project:", proj.name);
+        if(newName && newName.trim()) { proj.name = newName.trim(); saveProjects(); }
+    }
+}
+
+function deleteProject(projId) {
+    if(confirm("Delete this project completely?")) {
+        customProjects = customProjects.filter(p => p.id !== projId);
+        saveProjects();
+    }
+}
+async function shareProjectAPI(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(!proj || proj.chats.length === 0) return showToast("Add chats to this project first!");
+    
+    const pwd = prompt("Set a password to lock this project? (Leave blank for public)");
+    showToast("Publishing Project...");
+    
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'share', project: proj, password: pwd, deviceId: getDeviceId() })
+        });
+        const data = await res.json();
+        
+        if (data.success && data.shareId) {
+            proj.shareId = data.shareId; // Bind the URL to the local project
+            saveProjects();
+            const link = window.location.origin + window.location.pathname + '?project=' + data.shareId;
+            await navigator.clipboard.writeText(link);
+            showToast("Project Published & Link Copied!");
+        } else { showToast(data.error || "Failed to share project."); }
+    } catch(e) { showToast("Backend API error."); }
+}
+
+async function syncSharedProject(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(!proj || !proj.shareId) return;
+    showToast("Syncing project...");
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', shareId: proj.shareId, project: proj, deviceId: getDeviceId() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast("Project Synced Successfully!");
+        } else { showToast(data.error || "Sync failed."); }
+    } catch(e) { showToast("Backend API error."); }
+}
+
+async function fetchProjectAnalytics(projId, shareId) {
+    const badge = document.getElementById(`analytics-badge-${projId}`);
+    if(badge) badge.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Loading...`;
+    
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'analytics', projectId: shareId, shareId: shareId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(`Project Analytics:\n\n👁️ Unique Views: ${data.views || 0}\n🌿 Forks/Clones: ${data.forks || 0}`);
+            if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> ${data.views||0} V / ${data.forks||0} F`;
+        } else {
+            if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> Stats`;
+            showToast(data.error || "Analytics failed");
+        }
+    } catch(e) { 
+        if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> Stats`;
+        showToast("Backend API error."); 
+    }
+}
+
+function removeChatFromProject(projId, chatId) {
+    if(confirm("Remove this chat from the project?")) {
+        const proj = customProjects.find(p => p.id === projId);
+        if(proj) {
+            proj.chats = proj.chats.filter(c => c.id !== chatId);
+            saveProjects();
+        }
+    }
+}
+
+function renderProjectsList() {
+    const list = document.getElementById('projects-list-container');
+    if(!list) return;
+    if(customProjects.length === 0) { list.innerHTML = '<div class="text-center text-gray-500 py-10 text-xs font-medium">No projects created.</div>'; return; }
+    
+    list.innerHTML = customProjects.map(p => {
+        const isShared = !!p.shareId;
+        const chatsListHtml = p.chats.length === 0 
+            ? `<div class="text-[10px] text-gray-400 italic px-2 py-1 text-center">No chats imported yet.</div>`
+            : p.chats.map(c => `
+                <div class="flex justify-between items-center bg-white border border-gray-100 rounded-lg p-2 shadow-sm mb-1 group/chat transition-colors hover:border-amber-200">
+                    <span class="text-[11px] font-semibold text-gray-700 truncate max-w-[200px] cursor-pointer hover:text-amber-600 flex items-center gap-1.5" onclick="loadChat('${c.id}'); closeProjectsModal();">
+                        <i class="ph-bold ph-chat-circle text-amber-500"></i> ${c.title}
+                    </span>
+                    <button onclick="removeChatFromProject('${p.id}', '${c.id}')" class="text-gray-300 hover:text-red-500 opacity-0 group-hover/chat:opacity-100 transition-opacity p-1"><i class="ph-bold ph-x"></i></button>
+                </div>
+            `).join('');
+
+        return `
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-3 group transition-colors hover:border-amber-200 shadow-sm" id="proj-card-${p.id}">
+            <div class="flex justify-between items-center">
+                <h4 class="font-bold text-gray-900 text-[14px] flex items-center gap-2 truncate pr-2"><i class="ph-fill ph-folder text-amber-500 text-lg flex-shrink-0"></i> <span class="truncate">${p.name}</span></h4>
+                <div class="flex gap-2 flex-shrink-0">
+                    ${isShared ? `<span class="text-[10px] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full text-blue-700 font-bold shadow-sm cursor-pointer hover:bg-blue-100 flex items-center gap-1 transition-colors" onclick="fetchProjectAnalytics('${p.id}', '${p.shareId}')" id="analytics-badge-${p.id}"><i class="ph-bold ph-chart-bar"></i> Stats</span>` : ''}
+                    <span class="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-600 font-bold shadow-sm">${p.chats.length} Chats</span>
+                </div>
+            </div>
+            
+            <!-- Internal Chat Viewer -->
+            <div class="bg-gray-100/50 rounded-xl p-2 max-h-32 overflow-y-auto custom-scrollbar border border-gray-100 shadow-inner">
+                ${chatsListHtml}
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                <button onclick="importCurrentChatToProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-download-simple"></i> Add Active Chat</button>
+                
+                ${isShared 
+                    ? `<button onclick="syncSharedProject('${p.id}')" class="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold" title="Push new chats to the published link"><i class="ph-bold ph-arrows-clockwise"></i> Sync Updates</button>
+                       <button onclick="navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?project=' + '${p.shareId}'); showToast('Link Copied!')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-copy"></i> Copy Link</button>`
+                    : `<button onclick="shareProjectAPI('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-share-network"></i> Publish Link</button>`
+                }
+                
+                <button onclick="renameProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-amber-600 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 ml-auto"><i class="ph-bold ph-pencil-simple"></i></button>
+                <button onclick="deleteProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1"><i class="ph-bold ph-trash"></i></button>
+            </div>
+        </div>
+    `}).join('');
+}
 function openPulseModal() { 
     document.getElementById('pulse-modal').classList.remove('hidden');
     if (typeof renderPulseVault === 'function') renderPulseVault();
