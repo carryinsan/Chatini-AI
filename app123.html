@@ -409,6 +409,24 @@ body {
     </div>
 </div>
 
+<!-- Custom Projects Modal -->
+<div id="projects-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
+    <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-amber-100 shadow-[0_8px_40px_rgba(245,158,11,0.1)] flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-2 text-gray-900 tracking-tight"><i class="ph-fill ph-folder-open text-amber-500"></i> Custom Projects</h2>
+            <button onclick="closeProjectsModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <div class="mb-4 shrink-0">
+            <button onclick="createProject()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md shadow-amber-200 transition-all flex items-center justify-center gap-2">
+                <i class="ph-bold ph-plus"></i> Create New Project
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar" id="projects-list-container">
+            <!-- Projects injected via JS -->
+        </div>
+    </div>
+</div>
+
 <!-- Lexis Pulse Task Manager Modal -->
 <div id="pulse-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
     <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-cyan-100 shadow-[0_8px_40px_rgba(6,182,212,0.1)] flex flex-col max-h-[85vh]">
@@ -474,12 +492,6 @@ body {
                     </div>
                     Research
                 </button>
-                <button id="diagram-btn" onclick="toggleDiagramMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-teal-50">
-                        <i id="diagram-icon" class="ph-bold ph-cube text-teal-500"></i>
-                    </div>
-                    Diagram
-                </button>
                 <button id="ppt-btn" onclick="togglePresentationMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
                     <div class="w-6 h-6 rounded-md flex items-center justify-center bg-amber-50">
                         <i id="ppt-icon" class="ph-bold ph-presentation-chart text-amber-500"></i>
@@ -532,7 +544,7 @@ body {
                 <button onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-graph text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Constellation Map</button>
                 <button onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-indigo-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat</button>
                 <button onclick="openExperimentalModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-fuchsia-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-flask text-sm text-fuchsia-500 group-hover:scale-110 transition-transform"></i> Experimental</button>
-                
+                <button onclick="openProjectsModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-amber-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-folder-open text-sm text-amber-500 group-hover:scale-110 transition-transform"></i>Your Projects</button>
                 <!-- Selectors & Toggles -->
                 <div class="relative w-full pt-2 mb-2 px-1">
                     <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-medium text-gray-600 outline-none appearance-none cursor-pointer hover:border-gray-300 transition-colors shadow-sm">
@@ -647,7 +659,7 @@ body {
     </header>
 
     <!-- Chat Area Scrollable -->
-    <div id="chat-canvas" class="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 md:px-12 pt-8 pb-32 custom-scrollbar scroll-smooth min-h-0 relative">
+    <div id="chat-canvas" class="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 md:px-12 pt-8 pb-48 custom-scrollbar scroll-smooth min-h-0 relative">
         <div class="max-w-4xl mx-auto w-full relative">
 
             <!-- Lexis Pulse Today Widget (Injected dynamically by JS, styled here) -->
@@ -683,13 +695,13 @@ body {
     </div>
 
     <!-- Fixed Bottom Input Area -->
-    <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white/90 via-white/80 to-transparent pt-6 pb-4 px-4 sm:px-8 pointer-events-none z-30 backdrop-blur-sm">
+    <div class="absolute bottom-0 left-0 w-full bg-gradient-to-t from-white via-white to-transparent pt-12 pb-6 px-4 sm:px-8 pointer-events-none z-30">
         <div class="max-w-4xl mx-auto pointer-events-auto relative">
             
             <!-- Animated Input Glow (Backend Bound) -->
             <div id="input-glow" class="absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-theme-400"></div>
 
-            <div class="bg-white border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl p-2 flex flex-col gap-1 transition-all duration-500 focus-within:shadow-[0_8px_30px_rgba(var(--theme-600),0.12)] focus-within:border-theme-300 focus-within:ring-4 focus-within:ring-theme-50 group">
+            <div class="bg-white border border-gray-200 shadow-[0_8px_30px_rgb(0,0,0,0.06)] rounded-2xl p-2 sm:p-3 flex flex-col gap-2 transition-all duration-500 focus-within:shadow-[0_8px_30px_rgba(var(--theme-600),0.12)] focus-within:border-theme-300 focus-within:ring-4 focus-within:ring-theme-50 group">
                 
                 <!-- Staging Area for Uploaded Files -->
                 <div id="staging-area" class="flex flex-wrap gap-2 px-2 empty:hidden pt-1"></div>
@@ -732,7 +744,7 @@ body {
             </div>
 
             <!-- Suggested Prompts (Visual Target UI flair mapped to Chat Input logic via inline JS) -->
-            <div class="flex items-center gap-2 mt-2 overflow-x-auto no-scrollbar pb-1 px-1">
+            <div class="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pb-2 px-1">
                 <button onclick="document.getElementById('chat-input').value='Explain quantum computing'; document.getElementById('chat-input').focus(); updateUIState();" class="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white shadow-sm text-gray-600 hover:bg-theme-50 hover:text-theme-700 hover:border-theme-200 transition-all text-[12px] font-medium whitespace-nowrap flex-shrink-0">
                     <i class="ph-bold ph-atom text-theme-500"></i> Explain quantum computing
                 </button>
@@ -967,7 +979,6 @@ let isMathMode = false;
 let isPodcastMode = false;
 let isAppMode = false;
 let isStudyMode = false;
-let isDiagramMode = false;
 let isCanvasMaximized = false;
 let isImageMode = false;
 let currentChatId = Date.now().toString();
@@ -980,6 +991,7 @@ let currentMultiplayerRoom = null;
 let pollInterval = null;
 let lastMessageTs = 0;
 let pulseTasks = JSON.parse(localStorage.getItem('lexis_pulse_tasks')) || [];
+let customProjects = JSON.parse(localStorage.getItem('lexis_custom_projects')) || [];
 
 window.ARTIFACT_STORE = {};
 window.CURRENT_CANVAS_ID = null;
@@ -1018,9 +1030,7 @@ const els = {
     studyBtn: document.getElementById('study-btn'),
     studyIcon: document.getElementById('study-icon'),
     imageBtn: document.getElementById('image-btn'),
-    imageIcon: document.getElementById('image-icon'),
-    diagramBtn: document.getElementById('diagram-btn'),
-    diagramIcon: document.getElementById('diagram-icon')
+    imageIcon: document.getElementById('image-icon')
 };
 
 window.onload = async () => {
@@ -1039,7 +1049,49 @@ window.onload = async () => {
     const shareId = urlParams.get('share');
     const roomId = urlParams.get('room');
     const fullChatId = urlParams.get('chat');
-    if (roomId) {
+    const projectId = urlParams.get('project');
+    
+    if (projectId) {
+        // --- NEW: Load Shared Custom Project & Import all its chats ---
+        try {
+            showToast("Loading Shared Project...");
+            let pwd = null;
+            let res = await fetch(`/api/project?action=get&id=${projectId}`);
+            let data = await res.json();
+            
+            if (!data.success && data.isPasswordProtected) {
+                pwd = prompt("This project is protected. Enter Password:");
+                if (pwd) {
+                    res = await fetch(`/api/project?action=get&id=${projectId}&pwd=${pwd}`);
+                    data = await res.json();
+                }
+            }
+            
+            if (data.success && data.project) {
+                let importedCount = 0;
+                data.project.chats.forEach(projChat => {
+                    const newChatId = Date.now().toString() + Math.random().toString(36).substr(2,4);
+                    chats.unshift({
+                        id: newChatId,
+                        title: "[Project] " + projChat.title,
+                        messages: projChat.messages,
+                        date: Date.now(),
+                        extId: null
+                    });
+                    importedCount++;
+                });
+                
+                localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showToast(`Imported ${importedCount} chats from Project!`);
+                renderHistoryList();
+                if(chats.length > 0) loadChat(chats[0].id);
+            } else {
+                showToast("Invalid or expired Project link.");
+                createNewChat();
+            }
+        } catch(e) { createNewChat(); }
+    } else if (roomId) {
         joinMultiplayerRoom(roomId);
     } else if (fullChatId) {
         // --- NEW: Load Shared Chat from Supabase Branch (Password Protected) ---
@@ -1424,8 +1476,7 @@ function resetAllModeUI() {
         { btn: els.podcastBtn, icon: els.podcastIcon, textClass: 'text-pink-600', bgClass: 'bg-pink-50', borderClass: 'border-pink-200' },
         { btn: els.appBtn, icon: els.appIcon, textClass: 'text-orange-600', bgClass: 'bg-orange-50', borderClass: 'border-orange-200' },
         { btn: els.studyBtn, icon: els.studyIcon, textClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-200' },
-        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' },
-        { btn: els.diagramBtn, icon: els.diagramIcon, textClass: 'text-teal-600', bgClass: 'bg-teal-50', borderClass: 'border-teal-200' }
+        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' }
     ];
 
     modes.forEach(m => {
@@ -1522,7 +1573,7 @@ function toggleImageMode() {
 
 function toggleStudyMode() {
     const wasOn = isStudyMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isDiagramMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isStudyMode = true;
@@ -1534,19 +1585,6 @@ function toggleStudyMode() {
     }
 }
 
-function toggleDiagramMode() {
-    const wasOn = isDiagramMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isDiagramMode = false;
-    resetAllModeUI();
-    if (!wasOn) {
-        isDiagramMode = true;
-        els.diagramBtn.classList.replace('text-gray-500', 'text-teal-600');
-        els.diagramBtn.classList.replace('border-transparent', 'border-teal-200');
-        els.diagramBtn.classList.add('bg-teal-50');
-        els.diagramIcon.classList.add('animate-pulse');
-        showToast("Live Diagram Engine Engaged");
-    }
-}
 // ====== RENDERERS & FORMATTERS ======
 function renderMathAndMarkdown(text) {
     if (!text) return "";
@@ -2195,9 +2233,9 @@ function openCanvas(artifactId, title, type = 'document') {
     } else if (type === 'brain_map') {
         els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
         try { els.canvasContent.innerHTML = renderBrainMapUI(JSON.parse(rawData)); } catch(e) { }
-    } else if (type === 'diagram' || type === 'html') {
-                els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
-                els.canvasContent.innerHTML = `<iframe class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin" id="app-iframe-${artId}"></iframe>`;
+    } else if (type === 'html') {
+        els.canvasContent.className = "flex-1 overflow-hidden min-h-0 h-full p-0 relative";
+        els.canvasContent.innerHTML = `<iframe class="w-full h-full border-0 bg-white" sandbox="allow-scripts allow-modals allow-forms allow-same-origin" id="app-iframe-${artifactId}"></iframe>`;
         setTimeout(() => {
             const iframe = document.getElementById(`app-iframe-${artifactId}`);
             if(iframe) {
@@ -2219,6 +2257,101 @@ function closeCanvas() {
 }
 
 // ====== ADVANCED INTEGRATIONS FIXES ======
+function openProjectsModal() { 
+    document.getElementById('projects-modal').classList.remove('hidden'); 
+    renderProjectsList(); 
+}
+function closeProjectsModal() { document.getElementById('projects-modal').classList.add('hidden'); }
+
+function createProject() {
+    const name = prompt("Enter Project Name:");
+    if(name && name.trim()) {
+        customProjects.unshift({ id: 'proj_' + Date.now(), name: name.trim(), chats: [], createdAt: Date.now() });
+        saveProjects();
+    }
+}
+
+function saveProjects() {
+    localStorage.setItem('lexis_custom_projects', JSON.stringify(customProjects));
+    renderProjectsList();
+}
+
+function importCurrentChatToProject(projId) {
+    if(messages.length === 0) return showToast("Current chat is empty!");
+    const proj = customProjects.find(p => p.id === projId);
+    if(proj) {
+        const chatSnapshot = {
+            id: currentChatId,
+            title: chats.find(c => c.id === currentChatId)?.title || "Untitled Chat",
+            messages: JSON.parse(JSON.stringify(messages)),
+            addedAt: Date.now()
+        };
+        const existingIdx = proj.chats.findIndex(c => c.id === currentChatId);
+        if(existingIdx > -1) proj.chats[existingIdx] = chatSnapshot;
+        else proj.chats.push(chatSnapshot);
+        saveProjects();
+        showToast(`Chat imported to ${proj.name}!`);
+    }
+}
+
+function renameProject(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(proj) {
+        const newName = prompt("Rename Project:", proj.name);
+        if(newName && newName.trim()) { proj.name = newName.trim(); saveProjects(); }
+    }
+}
+
+function deleteProject(projId) {
+    if(confirm("Delete this project completely?")) {
+        customProjects = customProjects.filter(p => p.id !== projId);
+        saveProjects();
+    }
+}
+
+async function shareProjectAPI(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(!proj || proj.chats.length === 0) return showToast("Add chats to this project first!");
+    
+    const pwd = prompt("Set a password to lock this project? (Leave blank for public)");
+    showToast("Generating Project Link...");
+    
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'share', project: proj, password: pwd })
+        });
+        const data = await res.json();
+        
+        if (data.success && data.shareId) {
+            const link = window.location.origin + '?project=' + data.shareId;
+            await navigator.clipboard.writeText(link);
+            showToast("Project Link Copied!");
+        } else { showToast(data.error || "Failed to share project."); }
+    } catch(e) { showToast("Backend API error."); }
+}
+
+function renderProjectsList() {
+    const list = document.getElementById('projects-list-container');
+    if(!list) return;
+    if(customProjects.length === 0) { list.innerHTML = '<div class="text-center text-gray-500 py-10 text-xs font-medium">No projects created.</div>'; return; }
+    
+    list.innerHTML = customProjects.map(p => `
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-3 group transition-colors hover:border-amber-200 shadow-sm">
+            <div class="flex justify-between items-center">
+                <h4 class="font-bold text-gray-900 text-[14px] flex items-center gap-2"><i class="ph-fill ph-folder text-amber-500 text-lg"></i> ${p.name}</h4>
+                <span class="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-600 font-bold shadow-sm">${p.chats.length} Chats</span>
+            </div>
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                <button onclick="importCurrentChatToProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-download-simple"></i> Import Active Chat</button>
+                <button onclick="shareProjectAPI('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-share-network"></i> Share Link</button>
+                <button onclick="renameProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-amber-600 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1"><i class="ph-bold ph-pencil-simple"></i></button>
+                <button onclick="deleteProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 ml-auto"><i class="ph-bold ph-trash"></i></button>
+            </div>
+        </div>
+    `).join('');
+}
 function openPulseModal() { 
     document.getElementById('pulse-modal').classList.remove('hidden');
     if (typeof renderPulseVault === 'function') renderPulseVault();
@@ -2528,12 +2661,10 @@ function parseRichText(content, isStreaming = false, msgId = null) {
         const isPod = type === 'podcast';
         const isStudy = type === 'study_deck';
         const isMap = type === 'brain_map';
-        const isDiagram = type === 'diagram';
         
         let iconColor = 'theme-600', iconBg = 'theme-50', iconBorder = 'theme-100', iconClass = 'ph-layout', typeName = 'Live Workspace';
         
         if(isMath) { iconColor = 'emerald-500'; iconBg = 'emerald-50'; iconBorder = 'emerald-100'; iconClass = 'ph-function'; typeName = 'Cartesian Engine'; }
-        else if(isDiagram) { iconColor = 'teal-500'; iconBg = 'teal-50'; iconBorder = 'teal-100'; iconClass = 'ph-cube'; typeName = 'Interactive Diagram'; }
         else if(isPres) { iconColor = 'amber-500'; iconBg = 'amber-50'; iconBorder = 'amber-100'; iconClass = 'ph-presentation-chart'; typeName = 'Presentation Deck'; }
         else if(isApp) { iconColor = 'orange-500'; iconBg = 'orange-50'; iconBorder = 'orange-100'; iconClass = 'ph-code'; typeName = 'Executable App'; }
         else if(isPod) { iconColor = 'pink-500'; iconBg = 'pink-50'; iconBorder = 'pink-100'; iconClass = 'ph-headphones'; typeName = 'Audio Transcript'; }
@@ -3040,34 +3171,6 @@ async function handleSend() {
         } catch (err) {
             logContainer.parentElement.parentElement.remove();
             aiMsgObj.container.innerHTML = `<span class="text-red-500 font-medium">Visual Engine Error: ${err.message}</span>`;
-        }
-        isProcessing = false; updateUIState(); return;
-    }
-    
-    // 5G. DIAGRAM ENGINE
-    if (isDiagramMode) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Initializing Interactive Physics & Diagram Engine...', 'math');
-        try {
-            const res = await fetch('/api/diagram', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ prompt: text }) 
-            });
-            const data = await res.json();
-            logContainer.parentElement.parentElement.remove();
-            if (data.success && data.html) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
-                const artifactContent = `<artifact title="Interactive Diagram" type="diagram">\n${data.html}\n</artifact>`;
-                assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
-            } else {
-                appendMessage('assistant', `<span class="text-red-500 font-medium">Failed to generate Diagram: ${data.error}</span>`, activeModelId);
-            }
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            appendMessage('assistant', `<span class="text-red-500 font-medium">Network Error.</span>`, activeModelId);
         }
         isProcessing = false; updateUIState(); return;
     }
