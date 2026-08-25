@@ -562,8 +562,8 @@ body {
                         <div class="flex items-center gap-2"><i class="ph-bold ph-cpu text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> SPARKer <span class="font-medium text-[9px] text-gray-400">(880MB)</span></div>
                         <i class="ph-bold ph-download-simple text-gray-300"></i>
                     </button>
-                    <button onclick="window.loadLocalModel('fluxero')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-indigo-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
-                        <div class="flex items-center gap-2"><i class="ph-bold ph-microchip text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> FLUXero <span class="font-medium text-[9px] text-gray-400">(2GB)</span></div>
+                    <button onclick="window.loadLocalModel('FLiX')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-indigo-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
+                        <div class="flex items-center gap-2"><i class="ph-bold ph-microchip text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> FLiX <span class="font-medium text-[9px] text-gray-400">(2GB)</span></div>
                         <i class="ph-bold ph-download-simple text-gray-300"></i>
                     </button>
                 </div>
@@ -823,7 +823,7 @@ const CONFIG = {
         flux: { id: 'flux', name: 'Flux 1.5', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100' },
         oracle: { id: 'oracle', name: 'Oracle 2.0', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' },
         sparker: { id: 'sparker', name: 'SPARKer', icon: 'ph-cpu', color: 'text-emerald-500', bg: 'bg-emerald-50', glow: 'bg-emerald-100', mlcId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC' },
-        fluxero: { id: 'fluxero', name: 'FLiX', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' }
+        FLiX: { id: 'FLiX', name: 'FLiX', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' }
     }
 };
 const EXTENSION_MAP = {
@@ -2685,7 +2685,7 @@ function switchModel(modelId) {
     activeModelId = modelId;
     localStorage.setItem('Arix_active_model', activeModelId);
     updateUIState();
-    if (modelId === 'sparker' || modelId === 'fluxero') {
+    if (modelId === 'sparker' || modelId === 'FLiX') {
         if (window.loadLocalModel) window.loadLocalModel(modelId);
     }
 }
@@ -3412,9 +3412,9 @@ async function handleSend() {
         const shouldReadMemory = document.getElementById('toggle-use-memory') ? document.getElementById('toggle-use-memory').checked : true;
         
         // ==========================================
-        // LOCAL OFFLINE AI INFERENCE (SPARKer / FLUXero)
+        // LOCAL OFFLINE AI INFERENCE (SPARKer / FLiX)
         // ==========================================
-        if (activeModelId === 'sparker' || activeModelId === 'fluxero') {
+        if (activeModelId === 'sparker' || activeModelId === 'FLiX') {
             els.indicator.classList.add('hidden');
             const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
             const contentContainer = assistantMsgObj.container;
