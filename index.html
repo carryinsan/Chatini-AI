@@ -1,100 +1,135 @@
 <!DOCTYPE html>
-<html lang="en" class="dark scroll-smooth">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ArixAI | The Ultimate Autonomous Workspace</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
     <script>
         tailwind.config = {
-            darkMode: 'class',
             theme: {
                 extend: {
                     colors: { 
-                        background: '#030305', 
-                        surface: '#0a0a0f', 
-                        surface2: '#12121a', 
-                        surface3: '#1a1a24',
+                        // Premium light mode palette: pristine, airy, highly legible
+                        background: '#ffffff', 
+                        surface: '#f8fafc', // slate-50
+                        surface2: '#f1f5f9', // slate-100
+                        surface3: '#e2e8f0', // slate-200
+                        textMain: '#0f172a', // slate-900
+                        textMuted: '#475569', // slate-600
                         brand: {
-                            cyan: '#06b6d4',
-                            purple: '#a855f7',
-                            emerald: '#10b981',
-                            amber: '#f59e0b',
-                            pink: '#ec4899',
-                            blue: '#3b82f6',
-                            orange: '#f97316'
+                            cyan: '#0284c7',    // Refined for light mode
+                            purple: '#7e22ce',  // Deepened for contrast
+                            emerald: '#059669', // Grounded green
+                            amber: '#d97706',   // Rich amber
+                            pink: '#db2777',
+                            blue: '#2563eb',
+                            orange: '#ea580c'
                         }
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                         mono: ['JetBrains Mono', 'monospace'],
                     },
+                    letterSpacing: {
+                        tighter: '-.04em',
+                        tight: '-.02em',
+                    },
+                    boxShadow: {
+                        'premium': '0 20px 40px -15px rgba(0,0,0,0.05)',
+                        'premium-hover': '0 30px 60px -15px rgba(0,0,0,0.12)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255,255,255,0.8)',
+                    },
                     animation: { 
                         'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                        'float': 'float 6s ease-in-out infinite',
-                        'float-delayed': 'float 8s ease-in-out infinite 2s',
-                        'spin-slow': 'spin 15s linear infinite',
-                        'spin-slow-reverse': 'spin 20s linear infinite reverse',
-                        'shimmer': 'shimmer 2.5s infinite linear',
-                        'glow': 'glow 3s ease-in-out infinite alternate',
-                        'blob': 'blob 10s infinite',
+                        'float': 'float 8s ease-in-out infinite',
+                        'spin-slow': 'spin 20s linear infinite',
+                        'spin-slow-reverse': 'spin 25s linear infinite reverse',
+                        'shimmer': 'shimmer 3s infinite linear',
+                        'draw-line': 'drawLine 2s ease-out forwards',
                     },
                     keyframes: {
                         float: {
                             '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-15px)' },
+                            '50%': { transform: 'translateY(-10px)' },
                         },
                         shimmer: {
                             '0%': { transform: 'translateX(-100%)' },
                             '100%': { transform: 'translateX(100%)' }
                         },
-                        glow: {
-                            '0%': { boxShadow: '0 0 20px rgba(168, 85, 247, 0.2)' },
-                            '100%': { boxShadow: '0 0 40px rgba(168, 85, 247, 0.6)' }
-                        },
-                        blob: {
-                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
-                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
-                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
-                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        drawLine: {
+                            '0%': { strokeDashoffset: '500' },
+                            '100%': { strokeDashoffset: '0' }
                         }
                     }
                 }
             }
         }
     </script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
-        
         body {
-            background-color: #030305;
+            background-color: #ffffff;
+            color: #475569;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::selection {
+            background-color: rgba(2, 132, 199, 0.2);
+            color: #0f172a;
         }
 
         ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-track { background: #030305; }
-        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #06b6d4; }
+        ::-webkit-scrollbar-track { background: #f8fafc; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
         
-        /* Glassmorphism Refinements */
+        /* Glassmorphism Refined for Light Mode */
         .glass-nav { 
-            background: rgba(3, 3, 5, 0.4); 
+            background: rgba(255, 255, 255, 0.7); 
             backdrop-filter: blur(24px) saturate(150%); 
             -webkit-backdrop-filter: blur(24px) saturate(150%); 
-            border-bottom: 1px solid rgba(255,255,255,0.03); 
+            border-bottom: 1px solid rgba(0,0,0,0.05); 
+        }
+
+        /* High-end Mouse-Tracking Card Effect (Adapted for Light Mode) */
+        .premium-card {
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.06);
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -2px rgba(0,0,0,0.02);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s ease;
         }
         
-        .glass-card {
-            background: rgba(10, 10, 15, 0.4);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: inset 0 0 20px rgba(255,255,255,0.01), 0 8px 32px rgba(0,0,0,0.4);
-            transition: border-color 0.4s ease, box-shadow 0.4s ease, transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        .premium-card:hover {
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.08);
+            border-color: rgba(0,0,0,0.12);
         }
-        .glass-card:hover {
-            border-color: rgba(255,255,255,0.15);
-            box-shadow: inset 0 0 20px rgba(255,255,255,0.03), 0 15px 40px rgba(0,0,0,0.6);
+
+        /* Subtle inner glow tracking the mouse */
+        .premium-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: radial-gradient(
+                600px circle at var(--mouse-x) var(--mouse-y),
+                rgba(0,0,0,0.04),
+                transparent 40%
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            z-index: 10;
         }
 
         .text-gradient { 
@@ -102,373 +137,321 @@
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
             background-size: 200% auto;
-            animation: gradient-shift 5s ease infinite;
+            animation: gradient-shift 8s ease infinite;
         }
         
-        /* Interactive Background Elements */
+        /* Subtle architect grid */
         .grid-bg {
-            background-size: 40px 40px;
+            background-size: 50px 50px;
             background-image: 
-                linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            mask-image: radial-gradient(circle at center, black, transparent 80%);
-            -webkit-mask-image: radial-gradient(circle at center, black, transparent 80%);
+                linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at 50% 0%, black 10%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at 50% 0%, black 10%, transparent 80%);
         }
 
+        /* Paper texture / noise for organic feel */
         .noise-overlay {
             position: fixed;
             inset: 0;
             z-index: 9999;
-            opacity: 0.03;
+            opacity: 0.25; /* Higher opacity but lighter blend mode for white */
+            mix-blend-mode: multiply;
             pointer-events: none;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
         }
 
-        /* Mouse Tracking Cursor Glow */
-        #cursor-glow {
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(168,85,247,0.15) 0%, rgba(6,182,212,0.05) 40%, transparent 70%);
-            border-radius: 50%;
-            position: fixed;
-            pointer-events: none;
-            z-index: 1;
-            transform: translate(-50%, -50%);
-            transition: top 0.1s ease-out, left 0.1s ease-out, opacity 0.3s ease;
-            mix-blend-mode: screen;
-            opacity: 0;
-        }
-
-        /* 3D Mockup Container (JS Driven) */
-        .mockup-container { perspective: 1200px; }
+        /* Physics-based Mockup Tilt (Light Mode Adjusted) */
+        .mockup-container { perspective: 2000px; }
         .mockup-inner { 
             transform-style: preserve-3d; 
-            transition: transform 0.1s ease; /* Fast transition for JS tracking */
+            transition: transform 0.15s ease-out;
             will-change: transform;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 30px 60px -15px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,1);
+            background: #ffffff;
         }
-        /* Reset transition when mouse leaves */
         .mockup-container.reset .mockup-inner {
-            transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Animated Borders for specific cards */
-        .animated-border-card {
-            position: relative;
-            background: #0a0a0f;
-            border-radius: 2rem;
-            z-index: 1;
+        /* Magnetic Button Reset - Dopamine via Kinesthetic feedback */
+        .magnetic {
+            display: inline-block;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .animated-border-card::before {
-            content: "";
-            position: absolute;
-            inset: -2px;
-            border-radius: 2.1rem;
-            background: conic-gradient(from 0deg, #06b6d4, #a855f7, #f59e0b, #06b6d4);
-            z-index: -1;
-            animation: spin-slow 4s linear infinite;
-            opacity: 0.3;
-            transition: opacity 0.3s ease;
-        }
-        .animated-border-card:hover::before { opacity: 0.8; }
-
-        .oracle-badge {
-            background: linear-gradient(90deg, #a855f7, #ec4899, #f59e0b, #a855f7);
-            background-size: 300% auto;
-            animation: gradient-shift 4s linear infinite;
-        }
-
-        /* Scroll Reveal Utility Classes */
+        
+        /* Smooth Reveal System (Mimicking natural peripheral motion) */
         .reveal {
             opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(20px);
+            transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
         }
         .reveal.active {
             opacity: 1;
             transform: translateY(0);
         }
-        .reveal-delay-1 { transition-delay: 100ms; }
-        .reveal-delay-2 { transition-delay: 200ms; }
-        .reveal-delay-3 { transition-delay: 300ms; }
+        .delay-100 { transition-delay: 100ms; }
+        .delay-200 { transition-delay: 200ms; }
+        .delay-300 { transition-delay: 300ms; }
 
         @keyframes gradient-shift { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
     </style>
 </head>
-<body class="bg-background text-gray-300 font-sans antialiased overflow-x-hidden selection:bg-brand-cyan/30 selection:text-white relative">
+<body class="bg-background font-sans antialiased overflow-x-hidden relative">
 
     <div class="noise-overlay"></div>
-    <div id="cursor-glow"></div>
     <div class="fixed inset-0 grid-bg pointer-events-none z-0"></div>
 
-    <!-- Background Ambient Orbs -->
-    <div class="fixed top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-brand-cyan/10 rounded-full blur-[120px] mix-blend-screen animate-blob pointer-events-none z-0"></div>
-    <div class="fixed bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] bg-brand-purple/10 rounded-full blur-[120px] mix-blend-screen animate-blob animation-delay-2000 pointer-events-none z-0"></div>
+    <!-- Very subtle, bright ambient glows (Evolutionary safe space - sunlight mimic) -->
+    <div class="fixed top-[-20%] left-[10%] w-[50vw] h-[50vw] bg-brand-cyan/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+    <div class="fixed bottom-[-20%] right-[10%] w-[50vw] h-[50vw] bg-brand-purple/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
 
-    <!-- Navigation -->
     <nav class="fixed top-0 w-full glass-nav z-50 transition-all duration-500" id="navbar">
         <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-            <div class="flex items-center gap-4 group cursor-pointer">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-cyan to-brand-purple flex items-center justify-center shadow-[0_0_30px_rgba(6,182,212,0.3)] relative overflow-hidden transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
-                    <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMSIvPgo8L3N2Zz4=')] opacity-50"></div>
-                    <i class="ph-fill ph-hexagon text-white text-2xl z-10 animate-pulse-slow"></i>
+            <div class="flex items-center gap-3 cursor-pointer magnetic-target" data-magnetic-strength="10">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-sm relative overflow-hidden group">
+                    <i class="ph-fill ph-hexagon text-brand-cyan text-xl z-10 group-hover:scale-110 transition-transform duration-300"></i>
                 </div>
                 <div>
-                    <span class="text-2xl font-extrabold tracking-tight text-white block leading-none">ArixAI</span>
-                    <span class="text-[10px] font-mono text-brand-cyan tracking-widest uppercase mt-1 block">OS v4.2.0</span>
+                    <span class="text-xl font-extrabold tracking-tighter text-textMain block leading-none scramble-text" data-original="ArixAI">ArixAI</span>
                 </div>
             </div>
             
-            <div class="hidden lg:flex items-center gap-8 text-xs font-bold tracking-widest uppercase text-gray-400">
-                <a href="#models" class="hover:text-white transition-colors relative group">
+            <div class="hidden lg:flex items-center gap-10 text-[11px] font-bold tracking-widest uppercase text-slate-500">
+                <a href="#models" class="hover:text-textMain transition-colors relative group">
                     Cognitive Cores
-                    <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-brand-cyan transition-all group-hover:w-full"></span>
+                    <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-cyan opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </a>
-                <a href="#engines" class="hover:text-brand-cyan transition-colors relative group">
-                    The 7 Engines
-                    <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-brand-cyan transition-all group-hover:w-full"></span>
+                <a href="#engines" class="hover:text-textMain transition-colors relative group">
+                    Architecture
+                    <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-cyan opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </a>
-                <a href="#ecosystem" class="hover:text-brand-purple transition-colors relative group">
+                <a href="#ecosystem" class="hover:text-textMain transition-colors relative group">
                     Ecosystem
-                    <span class="absolute -bottom-2 left-0 w-0 h-0.5 bg-brand-purple transition-all group-hover:w-full"></span>
+                    <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-cyan opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 </a>
             </div>
             
-            <div class="flex items-center gap-4">
-                <!-- NEW API KEY CTA -->
-                <a href="https://Arix-ai-chatini.vercel.app/apikeys.html" target="_blank" class="hidden md:flex relative group overflow-hidden bg-brand-amber/10 text-brand-amber border border-brand-amber/30 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-brand-amber hover:text-black hover:shadow-[0_0_20px_rgba(245,158,11,0.4)] transition-all items-center gap-2">
-                    <i class="ph-bold ph-key"></i> Get Free API Key
+            <div class="flex items-center gap-6">
+                <a href="https://lexis-ai-chatini.vercel.app/apikeys.html" target="_blank" class="hidden md:block text-[11px] font-mono text-slate-500 hover:text-textMain transition-colors">
+                    [ API Access ]
                 </a>
                 
-                <a href="app.html" class="relative group overflow-hidden bg-white text-black px-6 py-2.5 md:px-8 md:py-3 rounded-full text-sm font-bold shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-105 transition-all flex items-center gap-2">
-                    <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
-                    <span class="relative z-10 flex items-center gap-2">Initialize <i class="ph-bold ph-arrow-right"></i></span>
-                </a>
+                <!-- Magnetic CTA -->
+                <div class="magnetic-target" data-magnetic-strength="20">
+                    <a href="app.html" class="magnetic relative overflow-hidden bg-textMain text-white px-6 py-2.5 rounded-full text-xs font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                        <span class="relative z-10 flex items-center gap-2">Initialize <i class="ph-bold ph-arrow-right"></i></span>
+                    </a>
+                </div>
             </div>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="relative pt-48 pb-32 lg:pt-64 lg:pb-40 px-6 overflow-hidden min-h-screen flex items-center z-10">
-        <div class="max-w-6xl mx-auto text-center relative z-10">
-            <div class="reveal inline-flex items-center gap-3 px-6 py-2.5 rounded-full bg-surface/80 backdrop-blur-md border border-white/10 text-gray-300 text-xs font-bold uppercase tracking-widest mb-8 shadow-2xl animate-float">
+    <section class="relative pt-48 pb-32 lg:pt-64 lg:pb-40 px-6 min-h-screen flex items-center justify-center z-10">
+        <div class="max-w-5xl mx-auto text-center relative z-10 flex flex-col items-center">
+            
+            <div class="reveal inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-[10px] font-mono uppercase tracking-widest mb-10 shadow-sm backdrop-blur-md">
                 <span class="flex h-2 w-2 relative">
                     <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-cyan opacity-75"></span>
                     <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-cyan"></span>
                 </span>
-                Arix OS 4.2 featuring Oracle 2.0 is now live
+                System Boot: Arix OS v4.2 Local
             </div>
             
-            <h1 class="reveal reveal-delay-1 text-6xl md:text-8xl lg:text-[7.5rem] font-extrabold text-white tracking-tighter mb-8 leading-[1.05]">
+            <h1 class="reveal delay-100 text-5xl md:text-7xl lg:text-[7rem] font-extrabold text-textMain tracking-tighter mb-8 leading-[1.05]">
                 The Ultimate <br/>
-                <span class="bg-gradient-to-r from-brand-cyan via-brand-purple to-brand-pink text-gradient relative inline-block pb-2">
+                <span class="bg-gradient-to-r from-brand-cyan via-brand-purple to-textMain text-gradient pb-2 inline-block">
                     Autonomous Workspace.
-                    <svg class="absolute w-full h-6 -bottom-4 left-0 text-brand-purple opacity-50 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 15 100 5" fill="none" stroke="currentColor" stroke-width="3"/></svg>
                 </span>
             </h1>
             
-            <p class="reveal reveal-delay-2 text-lg md:text-2xl text-gray-400 max-w-4xl mx-auto mb-12 leading-relaxed font-light">
-                ArixAI collapses 10 fragmented applications into a single, high-performance operating system. Command autonomous research agents, transpile complex math into interactive canvases, architect web applications, and synthesize documents into neural podcasts—all executing within a strictly sandboxed, browser-native environment.
+            <p class="reveal delay-200 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-14 leading-relaxed font-light">
+                Collapse fragmented workflows into a single, high-performance OS. Command neural architectures, transpile complex logic, and architect applications within a strict, beautifully engineered sanctuary.
             </p>
             
-            <div class="reveal reveal-delay-3 flex flex-col sm:flex-row items-center justify-center gap-6">
-                <a href="app.html" class="w-full sm:w-auto bg-gradient-to-r from-brand-cyan to-brand-blue hover:from-cyan-400 hover:to-blue-400 text-white px-10 py-4 md:px-12 md:py-5 rounded-full text-lg font-bold shadow-[0_0_40px_rgba(6,182,212,0.4)] hover:shadow-[0_0_60px_rgba(6,182,212,0.6)] hover:scale-105 transition-all flex items-center justify-center gap-3 relative overflow-hidden group">
-                    <div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
-                    <i class="ph-bold ph-terminal-window text-2xl relative z-10"></i> 
-                    <span class="relative z-10">Launch Environment (app.html)</span>
-                </a>
-                <a href="#engines" class="w-full sm:w-auto glass-card hover:bg-white/10 text-white px-10 py-4 md:px-12 md:py-5 rounded-full text-lg font-medium transition-all flex items-center justify-center gap-3">
-                    <i class="ph-bold ph-cpu text-2xl text-brand-cyan"></i> Explore Engines
-                </a>
-            </div>
-
-            <!-- API Key Secondary Banner -->
-            <div class="reveal reveal-delay-3 mt-10">
-                <a href="https://Arix-ai-chatini.vercel.app/apikeys.html" target="_blank" class="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-brand-amber/5 border border-brand-amber/20 hover:bg-brand-amber/10 hover:border-brand-amber/50 transition-all group">
-                    <div class="w-8 h-8 rounded-full bg-brand-amber/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                        <i class="ph-fill ph-key text-brand-amber"></i>
-                    </div>
-                    <div class="text-left">
-                        <p class="text-white text-sm font-bold">Developers: Need unrestricted access?</p>
-                        <p class="text-brand-amber text-xs flex items-center gap-1 group-hover:translate-x-1 transition-transform">Claim your free API key now <i class="ph-bold ph-arrow-right"></i></p>
-                    </div>
-                </a>
-            </div>
-            
-            <!-- Tech Stack Indicators -->
-            <div class="reveal mt-20 pt-10 border-t border-white/10 flex flex-wrap justify-center items-center gap-6 md:gap-16 opacity-60 grayscale hover:grayscale-0 transition-all duration-700">
-                <div class="flex items-center gap-2 group cursor-default"><i class="ph-fill ph-shield-check text-2xl text-white group-hover:text-brand-emerald transition-colors"></i> <span class="font-mono text-sm group-hover:text-white transition-colors">Local IndexedDB</span></div>
-                <div class="flex items-center gap-2 group cursor-default"><i class="ph-fill ph-lightning text-2xl text-white group-hover:text-brand-amber transition-colors"></i> <span class="font-mono text-sm group-hover:text-white transition-colors">Edge Inference</span></div>
-                <div class="flex items-center gap-2 group cursor-default"><i class="ph-fill ph-code text-2xl text-white group-hover:text-brand-blue transition-colors"></i> <span class="font-mono text-sm group-hover:text-white transition-colors">WASM Sandboxing</span></div>
-                <div class="flex items-center gap-2 group cursor-default"><i class="ph-fill ph-lock-key text-2xl text-white group-hover:text-brand-pink transition-colors"></i> <span class="font-mono text-sm group-hover:text-white transition-colors">Zero-Knowledge</span></div>
+            <div class="reveal delay-300 flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+                <div class="magnetic-target" data-magnetic-strength="15">
+                    <a href="app.html" class="magnetic w-full sm:w-auto bg-textMain text-white px-10 py-4 rounded-full text-sm font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-3 group">
+                        <i class="ph-bold ph-terminal-window text-lg"></i> 
+                        <span>Launch Environment</span>
+                    </a>
+                </div>
+                <div class="magnetic-target" data-magnetic-strength="15">
+                    <a href="#engines" class="magnetic w-full sm:w-auto bg-white border border-slate-200 hover:border-slate-300 text-textMain px-10 py-4 rounded-full text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-3 hover:-translate-y-0.5">
+                        Read Whitepaper
+                    </a>
+                </div>
             </div>
         </div>
     </section>
 
-    <!-- THE MODELS (Spark, Flux, Oracle 2.0) -->
-    <section id="models" class="py-32 bg-surface2 relative border-y border-white/5 z-10">
-        <div class="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-[1px] bg-gradient-to-r from-transparent via-brand-purple to-transparent opacity-50"></div>
+    <section id="models" class="py-32 bg-surface relative z-10 border-t border-slate-200/60">
         <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-24 reveal">
-                <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full glass-card text-white text-sm font-bold uppercase tracking-widest mb-6">
-                    <i class="ph-fill ph-brain text-brand-purple"></i> The Cognitive Cores
-                </div>
-                <h2 class="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">Three Models. One Brain.</h2>
-                <p class="text-xl text-gray-400 max-w-3xl mx-auto font-light leading-relaxed">
-                    Intelligence isn't one-size-fits-all. ArixAI provides seamless hot-swapping between three distinct neural architectures, allowing you to optimize for speed, creativity, or raw computational reasoning.
+            <div class="text-center mb-20 reveal">
+                <h2 class="text-3xl md:text-5xl font-bold text-textMain mb-6 tracking-tight">Five Cores. Absolute Control.</h2>
+                <p class="text-lg text-slate-600 max-w-2xl mx-auto font-light leading-relaxed">
+                    Intelligence decoupled from limitations. Seamlessly toggle between our hyper-connected cloud engines and our fully reshaped, sovereign offline models that live entirely in your browser.
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-stretch">
+            <!-- Top Row: Cloud / Flagship Models -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mb-6">
                 
-                <!-- Spark -->
-                <div class="reveal glass-card p-10 rounded-[2rem] text-center group flex flex-col relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-brand-amber/10 blur-[50px] rounded-full group-hover:bg-brand-amber/30 transition-colors duration-500"></div>
-                    <div class="w-20 h-20 mx-auto rounded-2xl bg-brand-amber/10 border border-brand-amber/30 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-500 shadow-[0_0_15px_rgba(245,158,11,0.1)]">
-                        <i class="ph-fill ph-lightning text-brand-amber text-4xl group-hover:animate-pulse"></i>
-                    </div>
-                    <h3 class="text-3xl font-bold text-white mb-2">Spark</h3>
-                    <p class="text-brand-amber text-xs font-bold uppercase tracking-widest mb-6 border-b border-white/10 pb-4">The Speed Engine</p>
-                    <p class="text-gray-400 text-sm leading-relaxed mb-8 flex-grow">
-                        Engineered for ultra-low latency and immediate time-to-first-token. Spark bypasses deep abstraction layers to provide near-instantaneous streaming responses.
-                    </p>
-                    <div class="bg-black/50 rounded-xl p-5 text-left border border-white/5 group-hover:border-brand-amber/20 transition-colors">
-                        <p class="text-[11px] font-mono text-gray-500 mb-3 uppercase tracking-wider">Optimal Use Cases:</p>
-                        <ul class="text-sm text-gray-300 space-y-3">
-                            <li class="flex items-center gap-3"><i class="ph-bold ph-check text-brand-amber"></i> Syntax formatting & linting</li>
-                            <li class="flex items-center gap-3"><i class="ph-bold ph-check text-brand-amber"></i> Drafting rapid emails</li>
-                            <li class="flex items-center gap-3"><i class="ph-bold ph-check text-brand-amber"></i> Quick definitional lookups</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Flux -->
-                <div class="reveal reveal-delay-1 glass-card p-10 rounded-[2rem] text-center group flex flex-col relative overflow-hidden">
-                    <div class="absolute top-0 right-0 w-32 h-32 bg-brand-cyan/10 blur-[50px] rounded-full group-hover:bg-brand-cyan/30 transition-colors duration-500"></div>
-                    <div class="w-20 h-20 mx-auto rounded-2xl bg-brand-cyan/10 border border-brand-cyan/30 flex items-center justify-center mb-8 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-500 shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-                        <i class="ph-fill ph-drop text-brand-cyan text-4xl group-hover:animate-pulse"></i>
-                    </div>
-                    <h3 class="text-3xl font-bold text-white mb-2">Flux</h3>
-                    <p class="text-brand-cyan text-xs font-bold uppercase tracking-widest mb-6 border-b border-white/10 pb-4">The Creative Core</p>
-                    <p class="text-gray-400 text-sm leading-relaxed mb-8 flex-grow">
-                        Designed with an expanded context window and heightened semantic nuance. Flux excels at maintaining persona, understanding subtle stylistic instructions, and deep memory.
-                    </p>
-                    <div class="bg-black/50 rounded-xl p-5 text-left border border-white/5 group-hover:border-brand-cyan/20 transition-colors">
-                        <p class="text-[11px] font-mono text-gray-500 mb-3 uppercase tracking-wider">Optimal Use Cases:</p>
-                        <ul class="text-sm text-gray-300 space-y-3">
-                            <li class="flex items-center gap-3"><i class="ph-bold ph-check text-brand-cyan"></i> Long-form essay & blog writing</li>
-                            <li class="flex items-center gap-3"><i class="ph-bold ph-check text-brand-cyan"></i> Brainstorming & ideation</li>
-                            <li class="flex items-center gap-3"><i class="ph-bold ph-check text-brand-cyan"></i> Tone-matching translation</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Oracle 2.0 (Massive Upgrade) -->
-                <div class="reveal reveal-delay-2 animated-border-card p-[2px] group">
-                    <div class="bg-[#0a0a0f] p-10 rounded-[1.9rem] h-full flex flex-col relative z-10 text-center overflow-hidden glass-card">
-                        <div class="absolute inset-0 oracle-badge opacity-10 group-hover:opacity-20 transition-opacity duration-700 pointer-events-none"></div>
-                        
-                        <div class="absolute top-6 right-6 px-3 py-1 bg-brand-purple/20 border border-brand-purple/50 rounded-full text-brand-purple text-[10px] font-bold uppercase animate-pulse shadow-[0_0_10px_rgba(168,85,247,0.4)]">Next Gen</div>
-                        
-                        <div class="w-24 h-24 mx-auto rounded-full bg-brand-purple/10 border border-brand-purple/40 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(168,85,247,0.2)] relative">
-                            <div class="absolute inset-[-4px] rounded-full border-t-2 border-brand-purple animate-spin-slow"></div>
-                            <div class="absolute inset-[2px] rounded-full border-b-2 border-brand-pink animate-spin-slow-reverse"></div>
-                            <i class="ph-fill ph-hexagon text-brand-purple text-5xl group-hover:scale-110 transition-transform"></i>
+                <!-- Spark (Speed) -->
+                <div class="reveal premium-card p-10 flex flex-col group cursor-default">
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="w-12 h-12 rounded-full bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center text-brand-amber transition-transform group-hover:scale-110">
+                            <i class="ph-fill ph-lightning text-xl"></i>
                         </div>
+                        <span class="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono text-slate-500 uppercase tracking-wider">Cloud Engine</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-textMain mb-1">Spark</h3>
+                    <p class="text-brand-amber text-[10px] font-mono uppercase tracking-widest mb-4">The Speed Engine</p>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6 flex-grow">
+                        Engineered for immediate time-to-first-token. Spark is your go-to for rapid syntax formatting, fast email drafting, and instantaneous query resolution.
+                    </p>
+                </div>
+
+                <!-- Oracle 2.0 (Flagship - Central Emphasis) -->
+                <div class="reveal delay-100 premium-card p-[2px] flex flex-col group cursor-default relative overflow-hidden" style="background: linear-gradient(135deg, rgba(126, 34, 206, 0.2), rgba(219, 39, 119, 0.2));">
+                    <div class="bg-white rounded-[22px] p-10 h-full flex flex-col relative z-10">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-brand-purple/5 blur-[80px] rounded-full pointer-events-none"></div>
                         
-                        <h3 class="text-3xl font-extrabold text-white mb-2 tracking-tight bg-gradient-to-r from-brand-purple to-brand-pink text-transparent bg-clip-text">Oracle 2.0</h3>
-                        <p class="text-brand-purple text-xs font-bold uppercase tracking-widest mb-6 border-b border-brand-purple/20 pb-4">The Cognitive Juggernaut</p>
-                        
-                        <p class="text-gray-300 text-sm leading-relaxed mb-6 flex-grow font-medium relative z-10">
-                            A complete architectural rewrite. Oracle 2.0 introduces deep <strong>System 2 Chain-of-Thought reasoning</strong>. Before outputting a single word, it builds an internal logic tree, verifies its own assumptions, and self-corrects.
+                        <div class="flex justify-between items-start mb-8">
+                            <div class="w-12 h-12 rounded-full bg-brand-purple/10 border border-brand-purple/20 flex items-center justify-center text-brand-purple shadow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
+                                <i class="ph-fill ph-hexagon text-xl"></i>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-brand-purple/10 border border-brand-purple/20 text-[9px] font-mono text-brand-purple uppercase tracking-wider animate-pulse">Flagship</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-textMain mb-1">Oracle 2.0</h3>
+                        <p class="text-brand-purple text-[10px] font-mono uppercase tracking-widest mb-4">The Cognitive Juggernaut</p>
+                        <p class="text-slate-600 text-sm leading-relaxed flex-grow">
+                            Deep <strong>System 2 Chain-of-Thought reasoning</strong>. Oracle 2.0 builds an internal logic tree and mathematically deduces outputs before generating a single token. Unmatched accuracy.
                         </p>
-                        
-                        <div class="bg-brand-purple/10 rounded-xl p-5 text-left border border-brand-purple/30 backdrop-blur-sm relative z-10">
-                            <p class="text-[11px] font-mono text-brand-pink mb-3 uppercase tracking-wider">Oracle 2.0 Capabilities:</p>
-                            <ul class="text-sm text-gray-200 space-y-3 font-medium">
-                                <li class="flex items-start gap-3"><i class="ph-bold ph-check text-brand-purple mt-0.5 text-lg"></i> <span><strong>Engineering:</strong> Zero-shot generation of complex full-stack apps.</span></li>
-                                <li class="flex items-start gap-3"><i class="ph-bold ph-check text-brand-purple mt-0.5 text-lg"></i> <span><strong>Mathematics:</strong> Symbolic regression and multi-step calculus.</span></li>
-                            </ul>
-                        </div>
                     </div>
                 </div>
 
+                <!-- Flux (Creative) -->
+                <div class="reveal delay-200 premium-card p-10 flex flex-col group cursor-default">
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="w-12 h-12 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 flex items-center justify-center text-brand-cyan transition-transform group-hover:scale-110">
+                            <i class="ph-fill ph-drop text-xl"></i>
+                        </div>
+                        <span class="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono text-slate-500 uppercase tracking-wider">Cloud Engine</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-textMain mb-1">Flux</h3>
+                    <p class="text-brand-cyan text-[10px] font-mono uppercase tracking-widest mb-4">The Creative Core</p>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6 flex-grow">
+                        Expanded context window with heightened semantic nuance. Flux excels at maintaining persona, understanding subtle stylistic instructions, and generating long-form content.
+                    </p>
+                </div>
             </div>
+
+            <!-- Bottom Row: 100% Offline / Sovereign Models -->
+            <div class="mt-12 text-center reveal">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-emerald/10 border border-brand-emerald/20 text-brand-emerald text-[10px] font-mono uppercase tracking-widest mb-6">
+                    <i class="ph-fill ph-shield-check"></i> Sovereign Offline Architecture
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch max-w-5xl mx-auto">
+                <!-- SPARKer (Reshaped Offline Speed) -->
+                <div class="reveal premium-card p-8 flex flex-col group cursor-default border-l-4 border-l-brand-emerald/50">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-brand-emerald/10 flex items-center justify-center text-brand-emerald">
+                            <i class="ph-bold ph-lightning text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-textMain">SPARKer</h3>
+                            <p class="text-slate-500 text-[10px] font-mono uppercase tracking-widest">WASM Sandboxed Edge Speed</p>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="px-2 py-1 rounded bg-brand-emerald/10 text-[9px] font-bold text-brand-emerald uppercase tracking-wider">100% Offline</span>
+                        </div>
+                    </div>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Reshaped from our V3 architecture, SPARKer executes purely in your browser's IndexedDB. Bypassing cloud latency, it offers ultra-fast logic resolution without ever sending data over a network.
+                    </p>
+                </div>
+
+                <!-- FLiX (Reshaped Offline Creative) -->
+                <div class="reveal delay-100 premium-card p-8 flex flex-col group cursor-default border-l-4 border-l-brand-emerald/50">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-brand-emerald/10 flex items-center justify-center text-brand-emerald">
+                            <i class="ph-bold ph-drop text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-textMain">FLiX</h3>
+                            <p class="text-slate-500 text-[10px] font-mono uppercase tracking-widest">Local Context Engine</p>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="px-2 py-1 rounded bg-brand-emerald/10 text-[9px] font-bold text-brand-emerald uppercase tracking-wider">100% Offline</span>
+                        </div>
+                    </div>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Untethered ideation. FLiX retains deep semantic memory of your sessions via local storage. It learns your style and structure natively, offering private creative assistance that never phones home.
+                    </p>
+                </div>
+            </div>
+
         </div>
     </section>
 
-    <!-- THE 7 ENGINES DEEP DIVE -->
-    <section id="engines" class="py-32 bg-background relative z-10">
+    <section id="engines" class="py-40 bg-background relative z-10">
         <div class="max-w-7xl mx-auto px-6">
-            <div class="text-center mb-32 reveal">
-                <div class="inline-flex items-center gap-2 px-5 py-2 rounded-full glass-card text-white text-sm font-bold uppercase tracking-widest mb-6">
-                    <i class="ph-fill ph-cpu text-brand-cyan"></i> Core Architecture
-                </div>
-                <h2 class="text-5xl md:text-7xl font-bold text-white mb-8 tracking-tight">7 Engines. <br/>Infinite Workflows.</h2>
-                <p class="text-xl text-gray-400 max-w-4xl mx-auto font-light leading-relaxed">
-                    ArixAI acts as an orchestrator. It intercepts natural language, parses intent, and routes execution to specialized, isolated neural engines designed to build, compute, and design in real-time.
+            
+            <div class="text-center mb-40 reveal">
+                <h2 class="text-4xl md:text-6xl font-bold text-textMain mb-8 tracking-tight">The Engine Architecture.</h2>
+                <p class="text-lg text-slate-600 max-w-3xl mx-auto font-light leading-relaxed">
+                    ArixAI intercepts natural language, parses intent, and mathematically routes execution to highly specialized, isolated neural engines designed to build and compute in real-time.
                 </p>
             </div>
 
             <div class="space-y-48">
                 
-                <!-- ENGINE 1: DEEP RESEARCH -->
+                <!-- ENGINE 1: DEEP RESEARCH (Light mode macOS terminal look) -->
                 <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-                    <div class="w-full lg:w-1/2 space-y-8 reveal">
-                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-cyan/10 border border-brand-cyan/20 text-brand-cyan text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(6,182,212,0.15)]">
-                            <i class="ph-fill ph-radar text-lg"></i> Engine 01
-                        </div>
-                        <h3 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">Auto-Pilot <br/>Deep Research Module</h3>
-                        
-                        <div class="space-y-4">
-                            <p class="text-gray-300 text-lg leading-relaxed">
-                                The Deep Research engine is an autonomous academic agent. Provide a single query, and watch the built-in terminal spin up parallel search threads.
-                            </p>
-                            <p class="text-gray-400 text-base leading-relaxed font-light">
-                                <strong>Under the Hood:</strong> Pass 1 identifies search vectors. Pass 2 scrapes live DOM data. Pass 3 cross-references facts to prevent hallucinations, outputting a rigorously cited Markdown report.
-                            </p>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4 mt-8">
-                            <div class="glass-card p-5 rounded-xl border-l-4 border-l-brand-cyan hover:border-l-brand-blue transition-colors">
-                                <i class="ph-bold ph-globe-hemisphere-west text-brand-cyan text-2xl mb-2"></i>
-                                <h4 class="text-white font-bold text-sm mb-1">Live Web Scraping</h4>
-                                <p class="text-xs text-gray-500">Bypasses static training data for real-time intel.</p>
-                            </div>
-                            <div class="glass-card p-5 rounded-xl border-l-4 border-l-brand-cyan hover:border-l-brand-blue transition-colors">
-                                <i class="ph-bold ph-quotes text-brand-cyan text-2xl mb-2"></i>
-                                <h4 class="text-white font-bold text-sm mb-1">Inline Citations</h4>
-                                <p class="text-xs text-gray-500">Every claim is linked directly to source chips.</p>
-                            </div>
-                        </div>
+                    <div class="w-full lg:w-5/12 space-y-8 reveal">
+                        <div class="text-brand-cyan text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4">Engine 01</div>
+                        <h3 class="text-4xl font-bold text-textMain tracking-tight leading-tight">Autonomous <br/>Deep Research</h3>
+                        <p class="text-slate-600 text-base leading-relaxed font-light">
+                            Trigger a single query, and watch the built-in terminal spin up parallel search threads. It scrapes live DOM data, cross-references facts to prevent hallucinations, and outputs rigorously cited reports.
+                        </p>
+                        <ul class="space-y-3 mt-6">
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-cyan"></i> Real-time DOM Scraping</li>
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-cyan"></i> Anti-Hallucination Cross-Ref</li>
+                        </ul>
                     </div>
-                    <div class="w-full lg:w-1/2 mockup-container reveal reveal-delay-2">
-                        <div class="mockup-inner bg-surface/50 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 shadow-2xl relative group">
-                            <!-- Terminal UI Mockup -->
-                            <div class="bg-[#050505] rounded-[2rem] border border-white/5 h-[450px] flex flex-col relative overflow-hidden font-mono text-xs shadow-inner">
-                                <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-cyan/10 via-transparent to-transparent opacity-50"></div>
-                                
-                                <div class="flex items-center gap-2 bg-[#0a0a0f] px-5 py-4 border-b border-white/5 relative z-10">
-                                    <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
-                                    <div class="w-3 h-3 rounded-full bg-amber-500/80"></div>
-                                    <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
-                                    <span class="text-gray-500 ml-4 font-bold tracking-widest uppercase text-[10px]">research_orchestrator.sh</span>
+                    
+                    <div class="w-full lg:w-7/12 mockup-container reveal delay-200">
+                        <div class="mockup-inner rounded-2xl h-[400px] flex flex-col overflow-hidden relative">
+                            <!-- macOS Light Title Bar -->
+                            <div class="bg-surface2 px-4 py-3 border-b border-slate-200 flex items-center gap-4">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
                                 </div>
-                                <div class="flex-1 p-6 text-brand-cyan space-y-3 overflow-y-auto relative z-10">
-                                    <p class="text-white">> Init: <span class="text-brand-cyan">Arix_Agent_Protocol v2.1</span></p>
-                                    <p class="opacity-70">> Target Query: "Solid-state battery EV logistics 2026"</p>
-                                    <div class="pl-4 border-l-2 border-brand-cyan/30 space-y-2 my-3 py-2">
-                                        <p class="opacity-70 flex items-center gap-2"><i class="ph-bold ph-spinner animate-spin"></i> [Thread 1] Analyzing semantic vectors...</p>
-                                        <p class="opacity-70 flex items-center gap-2"><i class="ph-bold ph-check text-green-400"></i> [Thread 2] Querying scientific journals...</p>
+                                <div class="text-[10px] font-mono text-slate-500 mx-auto">research_agent.sh</div>
+                            </div>
+                            <!-- Terminal Body (Light Theme) -->
+                            <div class="flex-1 p-6 font-mono text-xs overflow-hidden relative bg-white">
+                                <div class="space-y-3 text-slate-700 relative z-10">
+                                    <p><span class="text-brand-cyan font-bold">➜</span> <span class="font-bold text-slate-900">~/arix</span> <span class="text-brand-emerald">./init_research</span> "Solid-state battery logistics"</p>
+                                    <p class="text-slate-400">[System] Compiling semantic vectors...</p>
+                                    <div class="pl-4 border-l-2 border-slate-200 space-y-2 py-1">
+                                        <p class="text-slate-500"><i class="ph-bold ph-spinner animate-spin inline-block mr-2 text-brand-cyan"></i>Thread_1: Querying scientific journals...</p>
+                                        <p class="text-brand-emerald"><i class="ph-bold ph-check inline-block mr-2"></i>Thread_2: Live market data secured.</p>
                                     </div>
-                                    <p class="text-brand-amber">> Warning: Conflicting data found. Initiating Cross-Ref.</p>
-                                    <p class="text-brand-emerald font-bold animate-pulse">> [SUCCESS] Conflict resolved via IEEE publication.</p>
-                                    
-                                    <!-- Markdown Preview Overlay -->
-                                    <div class="mt-6 bg-surface p-5 border border-white/10 rounded-xl text-gray-300 font-sans shadow-[0_10px_30px_rgba(0,0,0,0.5)] transform translate-y-2 opacity-90 relative">
-                                        <div class="absolute -top-3 -right-3 bg-brand-cyan text-black px-2 py-1 rounded text-[9px] font-bold shadow-lg">ARTIFACT RENDERED</div>
-                                        <h1 class="text-xl font-bold text-white mb-2">The Solid-State Shift (2026)</h1>
-                                        <p class="text-sm mb-2">Recent breakthroughs indicate a 40% reduction in supply chain weight<span class="inline-block ml-1 bg-brand-cyan/20 text-brand-cyan px-1.5 rounded text-[10px] cursor-pointer hover:bg-brand-cyan hover:text-black transition-colors">1</span>.</p>
-                                    </div>
+                                    <p class="text-brand-amber">> Notice: Conflicting payload detected. Initiating consensus check.</p>
+                                    <p class="text-brand-emerald font-bold">> Consensus Reached: Artifact generated.</p>
+                                </div>
+                                <!-- Floating Rendered Artifact (Light) -->
+                                <div class="absolute bottom-6 right-6 bg-white border border-slate-200 p-4 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] w-64 transform translate-y-2 hover:translate-y-0 transition-transform">
+                                    <div class="text-[8px] font-mono text-brand-cyan uppercase mb-2 font-bold">Markdown Rendered</div>
+                                    <h4 class="text-textMain font-bold text-sm mb-1">Solid-State Shift</h4>
+                                    <p class="text-slate-600 text-[10px] leading-tight">Supply chain weight reduced by 40% <span class="bg-brand-cyan/10 text-brand-cyan px-1 rounded inline-block font-bold">1</span>.</p>
                                 </div>
                             </div>
                         </div>
@@ -477,138 +460,102 @@
 
                 <!-- ENGINE 2: CARTESIAN MATHS -->
                 <div class="flex flex-col lg:flex-row-reverse items-center gap-16 lg:gap-24">
-                    <div class="w-full lg:w-1/2 space-y-8 reveal">
-                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-emerald/10 border border-brand-emerald/20 text-brand-emerald text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(16,185,129,0.15)]">
-                            <i class="ph-fill ph-function text-lg"></i> Engine 02
-                        </div>
-                        <h3 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">Cartesian <br/>Graphing Core</h3>
-                        
-                        <div class="space-y-4">
-                            <p class="text-gray-300 text-lg leading-relaxed">
-                                Move beyond static PNGs and LaTeX blocks. ArixAI dynamically transpiles natural language into pure JavaScript algebra to generate interactive graphical artifacts.
-                            </p>
-                            <p class="text-gray-400 text-base leading-relaxed font-light">
-                                <strong>Under the Hood:</strong> The engine parses your request into an AST, generates optimized Canvas/WebGL code, and automatically binds variables to UI sliders for real-time manipulation.
-                            </p>
-                        </div>
-
-                        <ul class="space-y-4 mt-6 bg-brand-emerald/5 p-6 rounded-2xl border border-brand-emerald/20 shadow-inner">
-                            <li class="flex items-center gap-3 text-gray-200 font-medium"><i class="ph-fill ph-check-circle text-brand-emerald text-xl"></i> 60fps HTML5 Canvas Rendering</li>
-                            <li class="flex items-center gap-3 text-gray-200 font-medium"><i class="ph-fill ph-check-circle text-brand-emerald text-xl"></i> Parametric, Polar & 3D Surface Support</li>
-                            <li class="flex items-center gap-3 text-gray-200 font-medium"><i class="ph-fill ph-check-circle text-brand-emerald text-xl"></i> Auto-generated UI controls</li>
+                    <div class="w-full lg:w-5/12 space-y-8 reveal">
+                        <div class="text-brand-emerald text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4">Engine 02</div>
+                        <h3 class="text-4xl font-bold text-textMain tracking-tight leading-tight">Cartesian <br/>Graphing Core</h3>
+                        <p class="text-slate-600 text-base leading-relaxed font-light">
+                            Move beyond static PNGs and LaTeX limits. ArixAI dynamically transpiles natural language into pure JavaScript algebra to generate interactive, 60fps HTML5 graphical artifacts right in the DOM.
+                        </p>
+                        <ul class="space-y-3 mt-6">
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-emerald"></i> Parametric & Polar Support</li>
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-emerald"></i> Auto-bound UI Sliders</li>
                         </ul>
                     </div>
-                    <div class="w-full lg:w-1/2 mockup-container reveal reveal-delay-2">
-                        <div class="mockup-inner bg-surface/50 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 shadow-2xl relative group">
-                            
-                            <!-- Graph UI Mockup -->
-                            <div class="bg-[#080808] rounded-[2rem] border border-white/5 h-[450px] flex overflow-hidden shadow-inner relative">
-                                <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-brand-emerald/10 via-transparent to-transparent opacity-50"></div>
-                                
-                                <div class="w-1/3 bg-[#0a0a0f]/80 backdrop-blur-md border-r border-white/5 p-5 flex flex-col gap-6 relative z-10 shadow-[5px_0_15px_rgba(0,0,0,0.5)]">
-                                    <div class="text-[10px] uppercase text-brand-emerald font-bold tracking-widest border-b border-white/10 pb-2 flex items-center justify-between">
-                                        Damped Oscillator <i class="ph-bold ph-sliders"></i>
-                                    </div>
-                                    
-                                    <div>
-                                        <div class="flex justify-between text-xs text-gray-400 mb-2"><span>Amplitude (A)</span> <span class="text-white font-mono bg-white/5 px-1 rounded">4.2</span></div>
-                                        <div class="w-full h-2 bg-surface3 rounded-full overflow-hidden border border-white/5"><div class="w-[70%] h-full bg-gradient-to-r from-emerald-600 to-brand-emerald shadow-[0_0_10px_#10b981]"></div></div>
-                                    </div>
-                                    <div>
-                                        <div class="flex justify-between text-xs text-gray-400 mb-2"><span>Damping (γ)</span> <span class="text-white font-mono bg-white/5 px-1 rounded">0.15</span></div>
-                                        <div class="w-full h-2 bg-surface3 rounded-full overflow-hidden border border-white/5"><div class="w-[30%] h-full bg-gradient-to-r from-emerald-600 to-brand-emerald shadow-[0_0_10px_#10b981]"></div></div>
-                                    </div>
-                                    
-                                    <div class="mt-auto bg-brand-emerald/10 border border-brand-emerald/30 p-3 rounded-xl text-center cursor-pointer hover:bg-brand-emerald hover:text-black transition-all group/btn shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-                                        <span class="text-brand-emerald group-hover/btn:text-black text-xs font-bold font-mono transition-colors">Export CSV</span>
-                                    </div>
+                    
+                    <div class="w-full lg:w-7/12 mockup-container reveal delay-200">
+                        <div class="mockup-inner rounded-2xl h-[400px] flex overflow-hidden relative">
+                            <!-- UI Controls Sidebar (Light) -->
+                            <div class="w-1/3 bg-surface border-r border-slate-200 p-5 flex flex-col gap-6 relative z-10">
+                                <div class="text-[10px] font-mono text-brand-emerald uppercase tracking-widest font-bold">Controls</div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] text-slate-500 mb-2 font-medium"><span>Amplitude</span> <span class="text-textMain font-mono bg-white px-1 rounded border border-slate-200">4.2</span></div>
+                                    <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="w-[70%] h-full bg-brand-emerald"></div></div>
                                 </div>
-                                <div class="flex-1 relative bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCI+PGNpcmNsZSBjeD0iMiIgY3k9IjIiIHI9IjEiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4wOCkiLz48L3N2Zz4=')] flex items-center justify-center p-4">
-                                    <svg width="100%" height="100%" viewBox="0 0 200 100" class="overflow-visible drop-shadow-[0_0_15px_rgba(16,185,129,0.5)] z-10">
-                                        <line x1="0" y1="50" x2="200" y2="50" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4" />
-                                        <line x1="10" y1="0" x2="10" y2="100" stroke="rgba(255,255,255,0.15)" stroke-width="1" stroke-dasharray="4" />
-                                        <path d="M 10 50 Q 20 -20, 30 50 T 50 50 T 70 50 T 90 50 T 110 50 T 130 50 T 150 50 T 170 50 T 190 50" 
-                                              fill="none" stroke="url(#emerald-grad)" stroke-width="3" class="animate-pulse-slow"
-                                              style="stroke-dasharray: 500; stroke-dashoffset: 0; animation: draw 2s ease-out forwards;" />
-                                        <defs>
-                                            <linearGradient id="emerald-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                <stop offset="0%" stop-color="#10b981" />
-                                                <stop offset="100%" stop-color="#34d399" />
-                                            </linearGradient>
-                                        </defs>
-                                    </svg>
-                                    <div class="absolute top-1/4 right-1/4 bg-black/90 backdrop-blur border border-brand-emerald/30 px-3 py-2 rounded-lg text-[10px] font-mono text-brand-emerald shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-20 transform -translate-y-4 animate-float">
-                                        y = e^(-γt)cos(ωt)<br/>y = 3.82, t = 4.1s
-                                    </div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] text-slate-500 mb-2 font-medium"><span>Damping</span> <span class="text-textMain font-mono bg-white px-1 rounded border border-slate-200">0.15</span></div>
+                                    <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="w-[30%] h-full bg-brand-emerald"></div></div>
+                                </div>
+                            </div>
+                            <!-- Canvas Area (Light Grid) -->
+                            <div class="flex-1 relative flex items-center justify-center p-6 bg-white">
+                                <!-- Light mode grid background for canvas -->
+                                <div class="absolute inset-0" style="background-image: linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px); background-size: 20px 20px;"></div>
+                                
+                                <svg width="100%" height="100%" viewBox="0 0 200 100" class="overflow-visible relative z-10">
+                                    <line x1="0" y1="50" x2="200" y2="50" stroke="#cbd5e1" stroke-width="1" />
+                                    <line x1="10" y1="0" x2="10" y2="100" stroke="#cbd5e1" stroke-width="1" />
+                                    <!-- Animated Wave -->
+                                    <path d="M 10 50 Q 20 -20, 30 50 T 50 50 T 70 50 T 90 50 T 110 50 T 130 50 T 150 50 T 170 50 T 190 50" 
+                                          fill="none" stroke="#059669" stroke-width="2.5" class="animate-draw-line drop-shadow-sm"
+                                          style="stroke-dasharray: 500;" />
+                                </svg>
+                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur border border-slate-200 px-3 py-2 rounded text-[10px] font-mono text-brand-emerald shadow-sm font-bold">
+                                    y = e^(-γt)cos(ωt)
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- (Engines 3-7 Follow the exact same upgraded visual pattern. For brevity and single-file limits, the logic and layout are identical but with enhanced shadows, glows, and reveal tags) -->
                 <!-- ENGINE 4: APP BUILDER -->
                 <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-                    <div class="w-full lg:w-1/2 space-y-8 reveal">
-                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-brand-orange/10 border border-brand-orange/20 text-brand-orange text-xs font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(249,115,22,0.15)]">
-                            <i class="ph-fill ph-code text-lg"></i> Engine 04
-                        </div>
-                        <h3 class="text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">Interactive Web <br/>App Builder</h3>
-                        
-                        <div class="space-y-4">
-                            <p class="text-gray-300 text-lg leading-relaxed">
-                                Describe a functional tool, and ArixAI acts as your elite Frontend Engineer, coding it before your eyes in a sandboxed iframe.
-                            </p>
-                            <p class="text-gray-400 text-base leading-relaxed font-light">
-                                <strong>Under the Hood:</strong> Generates self-contained HTML with Tailwind CSS and vanilla JS. If there's an error, Oracle 2.0 reads the console output and patches the code autonomously via hot-reloading.
-                            </p>
-                        </div>
+                    <div class="w-full lg:w-5/12 space-y-8 reveal">
+                        <div class="text-brand-orange text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4">Engine 04</div>
+                        <h3 class="text-4xl font-bold text-textMain tracking-tight leading-tight">Interactive <br/>App Builder</h3>
+                        <p class="text-slate-600 text-base leading-relaxed font-light">
+                            Describe a functional tool, and ArixAI acts as your elite Frontend Engineer, coding it natively in a sandboxed iframe. If an error occurs, the engine reads the console and auto-patches the DOM.
+                        </p>
                     </div>
-                    <div class="w-full lg:w-1/2 mockup-container reveal reveal-delay-2">
-                        <div class="mockup-inner bg-surface/50 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-3 shadow-2xl relative group">
-                            
-                            <div class="bg-black rounded-[2rem] border border-white/5 h-[450px] flex flex-col relative overflow-hidden shadow-inner">
-                                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-brand-orange/10 via-transparent to-transparent opacity-50"></div>
-                                <div class="bg-[#1a1a1a] border-b border-white/10 px-5 py-3 flex items-center gap-4 z-10 shadow-md">
-                                    <div class="flex gap-1.5">
-                                        <div class="w-3 h-3 rounded-full bg-gray-600"></div>
-                                        <div class="w-3 h-3 rounded-full bg-gray-600"></div>
-                                        <div class="w-3 h-3 rounded-full bg-gray-600"></div>
-                                    </div>
-                                    <div class="bg-black/80 border border-white/10 rounded-md text-[10px] text-gray-400 font-mono px-3 py-1.5 flex-1 text-center shadow-inner">
-                                        <i class="ph-bold ph-lock-key text-green-500 mr-1"></i> sandbox.Arix.local/artifact_492
-                                    </div>
+                    
+                    <div class="w-full lg:w-7/12 mockup-container reveal delay-200">
+                        <div class="mockup-inner rounded-2xl h-[400px] flex flex-col overflow-hidden relative">
+                            <!-- Browser Chrome (Light) -->
+                            <div class="bg-surface2 px-4 py-3 border-b border-slate-200 flex items-center gap-4">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-slate-300"></div>
+                                    <div class="w-3 h-3 rounded-full bg-slate-300"></div>
+                                    <div class="w-3 h-3 rounded-full bg-slate-300"></div>
                                 </div>
-                                
-                                <div class="flex-1 flex flex-col items-center justify-center p-6 relative z-10">
-                                    <div class="absolute top-0 right-0 p-5 font-mono text-[10px] text-brand-orange/40 text-right opacity-0 group-hover:opacity-100 transition-opacity duration-1000">
-                                        &lt;div class="grid gap-4"&gt;<br/>
-                                        &nbsp;&nbsp;const rate = calcROI();<br/>
-                                        &nbsp;&nbsp;updateDOM(rate);<br/>
-                                        &lt;/div&gt;
+                                <div class="bg-white border border-slate-200 rounded text-[10px] font-mono text-slate-500 px-3 py-1 flex-1 flex items-center gap-2 shadow-inner font-medium">
+                                    <i class="ph-fill ph-lock-key text-brand-emerald"></i> sandbox.arix.local/app_render
+                                </div>
+                            </div>
+                            
+                            <!-- Inside Iframe rendering an App (Light UI) -->
+                            <div class="flex-1 relative flex items-center justify-center p-6 bg-surface">
+                                <div class="bg-white border border-slate-200 p-6 rounded-2xl w-full max-w-[280px] transform hover:scale-105 transition-transform duration-500 shadow-[0_15px_30px_rgba(0,0,0,0.05)]">
+                                    <div class="flex items-center gap-3 mb-6">
+                                        <div class="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+                                            <i class="ph-fill ph-calculator text-xl"></i>
+                                        </div>
+                                        <span class="text-textMain font-bold text-sm">SaaS ROI Cal</span>
                                     </div>
-                                    
-                                    <div class="bg-zinc-900 border border-zinc-700/50 p-6 rounded-2xl shadow-[0_20px_40px_rgba(0,0,0,0.8)] w-full max-w-[280px] transform group-hover:-translate-y-2 transition-transform duration-500 relative">
-                                        <div class="absolute -inset-0.5 bg-gradient-to-br from-brand-orange to-transparent opacity-20 rounded-2xl blur"></div>
-                                        <div class="relative z-10">
-                                            <div class="flex justify-between items-center mb-6">
-                                                <i class="ph-fill ph-calculator text-3xl text-brand-orange drop-shadow-[0_0_10px_rgba(249,115,22,0.4)]"></i>
-                                                <span class="text-white font-bold text-sm">SaaS ROI Cal</span>
-                                            </div>
-                                            <div class="space-y-4">
-                                                <div>
-                                                    <label class="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Monthly Spend</label>
-                                                    <div class="bg-zinc-800 rounded border border-zinc-700 px-3 py-2 text-white font-mono text-sm mt-1 shadow-inner">$4,500</div>
-                                                </div>
-                                                <div class="pt-2">
-                                                    <div class="w-full bg-gradient-to-r from-brand-orange to-orange-500 text-black text-center py-2.5 rounded font-bold text-sm shadow-[0_5px_15px_rgba(249,115,22,0.3)] hover:shadow-[0_8px_20px_rgba(249,115,22,0.5)] cursor-pointer transition-shadow">
-                                                        Calculate Result
-                                                    </div>
-                                                </div>
-                                            </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Monthly Spend</label>
+                                            <div class="bg-slate-50 rounded border border-slate-200 px-3 py-2 text-slate-800 font-mono text-sm mt-1 shadow-inner">$4,500</div>
+                                        </div>
+                                        <div class="w-full bg-brand-orange text-white text-center py-2.5 rounded text-xs font-bold shadow-md cursor-pointer hover:bg-orange-500 transition-colors">
+                                            Calculate
                                         </div>
                                     </div>
                                 </div>
+                                <!-- Pseudo Code overlay -->
+                                <div class="absolute bottom-4 right-4 font-mono text-[9px] text-slate-400 text-right">
+                                    const calc = () => {<br/>
+                                    &nbsp;&nbsp;return spend * 1.2;<br/>
+                                    }
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -618,223 +565,194 @@
         </div>
     </section>
 
-    <!-- ADVANCED ECOSYSTEM -->
-    <section id="ecosystem" class="py-32 bg-surface2 border-t border-white/5 relative overflow-hidden z-10">
-        <div class="max-w-7xl mx-auto px-6 relative z-10">
-            <div class="text-center mb-24 reveal">
-                <h2 class="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">The Advanced Ecosystem</h2>
-                <p class="text-xl text-gray-400 max-w-3xl mx-auto font-light leading-relaxed">
-                    Designed for power users. ArixAI extends beyond isolated tasks to offer collaboration, persistent vector memory, and background automation.
-                </p>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- Ecosystem Cards -->
-                <div class="reveal glass-card p-10 rounded-[2.5rem] group border border-white/10 hover:border-brand-emerald/50">
-                    <div class="w-16 h-16 rounded-2xl bg-brand-emerald/10 border border-brand-emerald/20 flex items-center justify-center mb-6 text-brand-emerald shadow-inner group-hover:scale-110 transition-transform">
-                        <i class="ph-fill ph-users-three text-3xl"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-3">Multi-user Co-Op Rooms</h3>
-                    <p class="text-gray-400 text-base leading-relaxed mb-6">
-                        Generate a secure Co-Op link to invite teammates. Using CRDTs, you both see the same terminal outputs and artifacts in real-time. Ping the AI collaboratively.
-                    </p>
-                    <div class="flex gap-2">
-                        <span class="px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-[10px] text-gray-400 font-mono">CRDT Sync</span>
-                    </div>
-                </div>
-
-                <div class="reveal reveal-delay-1 glass-card p-10 rounded-[2.5rem] group border border-white/10 hover:border-brand-purple/50">
-                    <div class="w-16 h-16 rounded-2xl bg-brand-purple/10 border border-brand-purple/20 flex items-center justify-center mb-6 text-brand-purple shadow-inner group-hover:scale-110 transition-transform">
-                        <i class="ph-fill ph-database text-3xl"></i>
-                    </div>
-                    <h3 class="text-2xl font-bold text-white mb-3">Knowledge Extensions (RAG)</h3>
-                    <p class="text-gray-400 text-base leading-relaxed mb-6">
-                        Attach up to 50 PDFs to a "Knowledge Extension". ArixAI utilizes a local Vector Database to embed this data, allowing Oracle 2.0 to perfectly recall massive datasets.
-                    </p>
-                    <div class="flex gap-2">
-                        <span class="px-3 py-1 bg-black/40 border border-white/10 rounded-lg text-[10px] text-gray-400 font-mono">Vector Embeddings</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ARCHITECTURE OF TRUST -->
-    <section id="trust" class="py-32 bg-background border-t border-white/5 relative z-10">
-        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center gap-16 reveal">
+    <section id="trust" class="py-40 bg-surface border-t border-slate-200/60 relative z-10 overflow-hidden">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center gap-20 reveal">
             <div class="w-full md:w-1/2">
-                <div class="w-24 h-24 rounded-3xl bg-brand-emerald/10 flex items-center justify-center mb-8 border border-brand-emerald/20 shadow-[0_0_50px_rgba(16,185,129,0.2)]">
-                    <i class="ph-fill ph-shield-check text-6xl text-brand-emerald animate-pulse"></i>
-                </div>
-                <h2 class="text-4xl md:text-5xl font-bold text-white mb-6">Built on Absolute Privacy.</h2>
-                <p class="text-gray-400 text-lg leading-relaxed mb-6">
-                    We inverted the standard AI architecture. Instead of sending your sensitive data to our servers, we stream the neural inference directly to your edge environment.
+                <div class="text-slate-500 text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4 mb-8 inline-block font-bold">Absolute Privacy</div>
+                <h2 class="text-4xl md:text-5xl font-bold text-textMain mb-6 tracking-tight">Total Data Sovereignty.</h2>
+                <p class="text-slate-600 text-lg leading-relaxed mb-6 font-light">
+                    We inverted the standard AI architecture. SPARKer and FLiX execute entirely locally in your browser. They do not phone home. Your sensitive documents, codebases, and intellectual property never leave your machine's local IndexedDB space.
                 </p>
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-emerald/10 text-brand-emerald text-xs font-bold border border-brand-emerald/20 shadow-sm">
+                    <i class="ph-fill ph-shield-check text-lg"></i> Zero-Knowledge Architecture
+                </div>
             </div>
             
-            <div class="w-full md:w-1/2 glass-card p-10 rounded-[2.5rem] border border-white/10 text-center relative overflow-hidden">
-                <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand-emerald/10 via-transparent to-transparent opacity-50"></div>
-                <h4 class="text-white font-bold mb-10 uppercase tracking-widest text-sm border-b border-white/10 pb-4 relative z-10">Data Flow Architecture</h4>
-                <div class="flex justify-between items-center px-2 relative z-10">
-                    <div class="flex flex-col items-center gap-3">
-                        <div class="w-16 h-16 bg-surface border border-white/20 rounded-2xl flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.5)] z-10 bg-gradient-to-b from-gray-800 to-black"><i class="ph-fill ph-laptop text-3xl text-brand-emerald"></i></div>
-                        <span class="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Local Machine</span>
-                    </div>
-                    
-                    <div class="flex-1 h-[2px] bg-white/10 relative mx-4">
-                        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-brand-emerald to-transparent animate-[shimmer_2s_infinite]"></div>
-                        <div class="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] text-brand-emerald font-bold tracking-widest bg-brand-emerald/10 border border-brand-emerald/30 px-3 py-1 rounded-full backdrop-blur-md">SANDBOXED</div>
-                    </div>
-                    
-                    <div class="flex flex-col items-center gap-3 opacity-40 grayscale relative">
-                        <div class="absolute inset-0 flex items-center justify-center z-20"><i class="ph-bold ph-x text-6xl text-red-500 drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]"></i></div>
-                        <div class="w-16 h-16 bg-surface border border-white/20 rounded-2xl flex items-center justify-center z-10"><i class="ph-fill ph-cloud text-3xl text-gray-300"></i></div>
-                        <span class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Servers</span>
+            <div class="w-full md:w-1/2">
+                <div class="premium-card p-10 text-center relative h-64 flex items-center justify-center bg-white">
+                    <div class="flex items-center justify-between w-full px-8 relative z-10">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-14 h-14 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-md"><i class="ph-fill ph-laptop text-2xl text-brand-emerald"></i></div>
+                            <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Local Device</span>
+                        </div>
+                        
+                        <div class="flex-1 h-[1px] bg-slate-200 relative mx-4 flex items-center justify-center">
+                            <div class="bg-white px-3 py-1 text-[9px] text-red-600 font-bold border border-red-200 rounded-full z-10 shadow-sm flex items-center"><i class="ph-bold ph-x mr-1"></i> Air-Gapped</div>
+                        </div>
+                        
+                        <div class="flex flex-col items-center gap-3 opacity-40 grayscale">
+                            <div class="w-14 h-14 bg-surface2 border border-slate-200 rounded-xl flex items-center justify-center"><i class="ph-fill ph-cloud text-2xl"></i></div>
+                            <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Cloud</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Massive Final CTA -->
-    <section class="py-48 relative overflow-hidden bg-background border-t border-white/5 z-10">
-        <div class="absolute inset-0 bg-gradient-to-t from-brand-purple/20 via-brand-cyan/10 to-transparent z-0"></div>
-        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[800px] bg-brand-cyan/5 blur-[200px] rounded-full pointer-events-none"></div>
+    <section class="py-40 relative overflow-hidden bg-background border-t border-slate-200/60 z-10">
+        <!-- Deep Radial Glow (Light Mode) -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-brand-cyan/5 blur-[120px] rounded-full pointer-events-none z-0"></div>
         
-        <div class="max-w-5xl mx-auto px-6 text-center relative z-10 reveal">
-            <h2 class="text-6xl md:text-[6rem] font-extrabold text-white mb-8 tracking-tighter drop-shadow-2xl leading-[1.05]">
-                Ready to upgrade <br/> your workflow?
+        <div class="max-w-4xl mx-auto px-6 text-center relative z-10 reveal">
+            <h2 class="text-5xl md:text-7xl font-extrabold text-textMain mb-8 tracking-tighter leading-[1.05]">
+                Initialize Your <br/>
+                Next Evolution.
             </h2>
-            <p class="text-xl md:text-2xl text-cyan-100/70 mb-16 max-w-3xl mx-auto font-light leading-relaxed">
-                No hidden API fees. No data harvesting. Just raw, unadulterated neural computation ready to execute natively in the browser.
+            <p class="text-lg text-slate-600 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
+                Step into a unified, high-performance workspace. Unadulterated neural computation ready to execute natively in your browser.
             </p>
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-6">
-                <a href="app.html" class="inline-flex items-center justify-center gap-4 bg-white text-black px-12 py-6 rounded-full text-xl font-bold shadow-[0_0_60px_rgba(255,255,255,0.4)] hover:shadow-[0_0_80px_rgba(255,255,255,0.7)] hover:scale-105 transition-all duration-300 group">
-                    Initialize Arix OS 
-                    <i class="ph-bold ph-rocket-launch text-2xl group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform"></i>
-                </a>
-                
-                <!-- Tertiary API Link -->
-                <a href="https://Arix-ai-chatini.vercel.app/apikeys.html" target="_blank" class="inline-flex items-center justify-center gap-3 bg-brand-amber/10 border border-brand-amber/30 text-brand-amber px-10 py-5 rounded-full text-lg font-bold hover:bg-brand-amber hover:text-black hover:shadow-[0_0_40px_rgba(245,158,11,0.5)] transition-all duration-300 group">
-                    <i class="ph-bold ph-key text-xl"></i> Free API Key
+            
+            <div class="flex flex-col items-center gap-6">
+                <div class="magnetic-target" data-magnetic-strength="20">
+                    <a href="app.html" class="magnetic bg-textMain text-white px-12 py-5 rounded-full text-lg font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all group flex items-center gap-3">
+                        Launch Arix OS
+                        <i class="ph-bold ph-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                </div>
+                <a href="https://lexis-ai-chatini.vercel.app/apikeys.html" target="_blank" class="text-[11px] font-bold text-slate-500 hover:text-brand-cyan transition-colors underline decoration-slate-300 underline-offset-4">
+                    Or secure developer API keys
                 </a>
             </div>
-            
-            <p class="text-xs text-gray-500 mt-12 font-mono tracking-widest uppercase flex items-center justify-center gap-2">
-                <span class="relative flex h-2 w-2"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span></span>
-                Secure Tunnel Ready • Destination: app.html
-            </p>
         </div>
     </section>
 
-    <!-- Footer -->
-    <footer class="border-t border-white/10 bg-[#030305] py-16 relative z-20">
-        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl bg-surface border border-white/10 flex items-center justify-center">
-                    <i class="ph-fill ph-hexagon text-brand-cyan text-xl"></i>
-                </div>
-                <div class="flex flex-col">
-                    <span class="text-gray-300 font-bold tracking-wide">ArixAI Platform</span>
-                    <span class="text-brand-emerald text-[10px] font-mono uppercase">System Active</span>
-                </div>
+    <footer class="border-t border-slate-200 bg-surface py-12 relative z-20">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <i class="ph-fill ph-hexagon text-brand-cyan text-lg"></i>
+                <span class="text-slate-800 font-bold tracking-tight text-sm">ArixAI Core</span>
             </div>
             
-            <div class="flex flex-wrap justify-center gap-8 text-sm text-gray-500 font-medium">
-                <a href="#models" class="hover:text-white transition-colors">Models</a>
-                <a href="#engines" class="hover:text-white transition-colors">Engines</a>
-                <a href="https://Arix-ai-chatini.vercel.app/apikeys.html" target="_blank" class="text-brand-amber hover:text-amber-400 transition-colors font-bold">API Keys</a>
-                <a href="app.html" class="text-brand-cyan font-bold hover:text-white transition-colors">Launch App</a>
-            </div>
-            
-            <div class="text-gray-600 text-xs font-mono text-right">
-                © 2026 ArixAI Core.<br/> Engineered for local sovereignty.
+            <div class="flex items-center gap-6 text-[10px] font-bold tracking-widest uppercase text-slate-500">
+                <a href="https://lexis-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="hover:text-textMain transition-colors">Terms & Conditions</a>
+                <span>© 2026 Engineered for total sovereignty.</span>
             </div>
         </div>
     </footer>
 
-    <!-- Interactive Scripts for Advanced Visuals -->
     <script>
-        // 1. Scroll Reveal Logic
+        // 1. Premium Scroll Reveal (Mimics tracking peripheral motion)
         document.addEventListener('DOMContentLoaded', () => {
-            const observerOptions = { root: null, rootMargin: '0px', threshold: 0.15 };
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
                     if (entry.isIntersecting) {
                         entry.target.classList.add('active');
-                        // Optional: Stop observing once revealed
-                        // observer.unobserve(entry.target);
                     }
                 });
-            }, observerOptions);
+            }, { root: null, rootMargin: '0px', threshold: 0.1 });
 
             document.querySelectorAll('.reveal').forEach((el) => {
                 observer.observe(el);
             });
         });
 
-        // 2. Cursor Ambient Glow Tracker
-        const cursorGlow = document.getElementById('cursor-glow');
-        let mouseX = 0, mouseY = 0;
-        let glowX = 0, glowY = 0;
-
-        document.addEventListener('mousemove', (e) => {
-            mouseX = e.clientX;
-            mouseY = e.clientY;
-            if (cursorGlow.style.opacity == 0) {
-                cursorGlow.style.opacity = 1;
+        // 2. Mouse Tracking for Premium Cards (Subtle dopamine trigger via visual feedback)
+        const cards = document.querySelectorAll('.premium-card');
+        document.addEventListener('mousemove', e => {
+            for(const card of cards) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
             }
         });
 
-        // Smooth follow animation for cursor glow
-        function animateGlow() {
-            glowX += (mouseX - glowX) * 0.15;
-            glowY += (mouseY - glowY) * 0.15;
-            cursorGlow.style.left = `${glowX}px`;
-            cursorGlow.style.top = `${glowY}px`;
-            requestAnimationFrame(animateGlow);
-        }
-        animateGlow();
-
-        // 3. Advanced 3D Parallax Tilt for Mockups
+        // 3. Physics-based 3D Tilt for Mockups (Kinesthetic realism)
         document.querySelectorAll('.mockup-container').forEach(container => {
             const inner = container.querySelector('.mockup-inner');
             
             container.addEventListener('mousemove', (e) => {
                 container.classList.remove('reset');
                 const rect = container.getBoundingClientRect();
-                
-                // Calculate cursor position relative to the center of the element
                 const x = e.clientX - rect.left;
                 const y = e.clientY - rect.top;
                 const centerX = rect.width / 2;
                 const centerY = rect.height / 2;
                 
-                // Calculate rotation (max 12 degrees)
-                const rotateX = ((y - centerY) / centerY) * -12; 
-                const rotateY = ((x - centerX) / centerX) * 12;
+                // Very subtle rotation for light mode to avoid looking unnatural
+                const rotateX = ((y - centerY) / centerY) * -5; 
+                const rotateY = ((x - centerX) / centerX) * 5;
 
-                inner.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+                inner.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
             });
 
             container.addEventListener('mouseleave', () => {
                 container.classList.add('reset');
-                inner.style.transform = `perspective(1200px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+                inner.style.transform = `rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
             });
         });
 
-        // 4. Navbar Blur Transition on Scroll
+        // 4. Magnetic Buttons (Tactile satisfaction / Safety in control)
+        const magneticTargets = document.querySelectorAll('.magnetic-target');
+        magneticTargets.forEach(target => {
+            const magneticEl = target.querySelector('.magnetic');
+            const strength = target.dataset.magneticStrength || 20;
+
+            target.addEventListener('mousemove', (e) => {
+                const rect = target.getBoundingClientRect();
+                const hx = rect.left + rect.width / 2;
+                const hy = rect.top + rect.height / 2;
+                const dx = e.clientX - hx;
+                const dy = e.clientY - hy;
+                
+                magneticEl.style.transform = `translate(${dx * (strength/100)}px, ${dy * (strength/100)}px)`;
+            });
+
+            target.addEventListener('mouseleave', () => {
+                magneticEl.style.transform = `translate(0px, 0px)`;
+            });
+        });
+
+        // 5. Scramble Text Effect on Hover (Curiosity & Information Gap)
+        const scrambleElements = document.querySelectorAll('.scramble-text');
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        
+        scrambleElements.forEach(el => {
+            el.addEventListener('mouseover', () => {
+                let iterations = 0;
+                const originalText = el.dataset.original;
+                
+                clearInterval(el.interval);
+                
+                el.interval = setInterval(() => {
+                    el.innerText = originalText.split('')
+                        .map((char, index) => {
+                            if(index < iterations) return originalText[index];
+                            return characters[Math.floor(Math.random() * characters.length)];
+                        })
+                        .join('');
+                    
+                    if(iterations >= originalText.length) {
+                        clearInterval(el.interval);
+                    }
+                    iterations += 1 / 3; 
+                }, 30);
+            });
+        });
+
+        // 6. Navbar Blur on Scroll
         const navbar = document.getElementById('navbar');
         window.addEventListener('scroll', () => {
-            if (window.scrollY > 50) {
-                navbar.classList.add('shadow-lg', 'bg-[#030305]/80');
-                navbar.classList.remove('bg-transparent');
+            if (window.scrollY > 20) {
+                navbar.classList.add('shadow-sm');
+                navbar.style.background = 'rgba(255, 255, 255, 0.9)';
             } else {
-                navbar.classList.remove('shadow-lg', 'bg-[#030305]/80');
-                navbar.classList.add('bg-transparent');
+                navbar.classList.remove('shadow-sm');
+                navbar.style.background = 'rgba(255, 255, 255, 0.7)';
             }
         });
     </script>
 </body>
 </html>
-
