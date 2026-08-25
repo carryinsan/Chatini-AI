@@ -3,7 +3,7 @@ export const config = {
 };
 
 // ============================================================================
-// [ SAAS GATEWAY ] LEXIS ACCOUNT REGISTRY & ADMIN BRIDGE (V3)
+// [ SAAS GATEWAY ] Arix ACCOUNT REGISTRY & ADMIN BRIDGE (V3)
 // Massive, Error-Proof Upstash Handlers for Accounts & Telemetry
 // ============================================================================
 
@@ -14,7 +14,7 @@ const UPSTASH_TOKEN = "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw";
 const hashPwd = (pwd) => {
     if (!pwd) return "ERROR_NO_PWD";
     let hash = 0;
-    const str = pwd + "LEXIS_SECURE_SALT_99";
+    const str = pwd + "Arix_SECURE_SALT_99";
     for (let i = 0; i < str.length; i++) {
         const char = str.charCodeAt(i);
         hash = ((hash << 5) - hash) + char;
@@ -35,7 +35,7 @@ export default async function handler(req) {
         const { action, adminSecret } = body;
 
         // --------------------------------------------------------------------
-        // ACTION 1: REGISTER NEW LEXIS ACCOUNT
+        // ACTION 1: REGISTER NEW Arix ACCOUNT
         // --------------------------------------------------------------------
         if (action === 'register') {
             const { username, password, website, deviceId } = body;
@@ -43,19 +43,19 @@ export default async function handler(req) {
             if (!username || username.length < 3) return new Response(JSON.stringify({ error: "Username too short." }), { status: 400 });
             if (!password || password.length < 5) return new Response(JSON.stringify({ error: "Password must be at least 5 characters." }), { status: 400 });
             
-            // Format to standard @lexis.ai email
+            // Format to standard @Arix.ai email
             let email = username.toLowerCase().replace(/[^a-z0-9_.-]/g, '');
-            if (!email.includes('@')) email = `${email}@lexis.ai`;
+            if (!email.includes('@')) email = `${email}@Arix.ai`;
 
             // Check if account already exists using POST Array syntax
             const checkData = await executeUpstashCommand(["GET", `account:${email}`]);
             if (checkData) {
-                return new Response(JSON.stringify({ error: "That @lexis.ai account already exists. Please sign in." }), { status: 409 });
+                return new Response(JSON.stringify({ error: "That @Arix.ai account already exists. Please sign in." }), { status: 409 });
             }
 
             // Mint new API Key
             const uniqueUUID = crypto.randomUUID().replace(/-/g, '');
-            const newApiKey = `Lexis-${uniqueUUID}`;
+            const newApiKey = `Arix-${uniqueUUID}`;
 
             // Define Account & Enterprise Limits
             const keyConfig = {
@@ -93,14 +93,14 @@ export default async function handler(req) {
         }
 
         // --------------------------------------------------------------------
-        // ACTION 2: LOGIN TO LEXIS ACCOUNT
+        // ACTION 2: LOGIN TO Arix ACCOUNT
         // --------------------------------------------------------------------
         if (action === 'login') {
             const { username, password } = body;
             if (!username || !password) return new Response(JSON.stringify({ error: "Credentials missing." }), { status: 400 });
 
             let email = username.toLowerCase().replace(/\s/g, '');
-            if (!email.includes('@')) email = `${email}@lexis.ai`;
+            if (!email.includes('@')) email = `${email}@Arix.ai`;
 
             const accDataRaw = await executeUpstashCommand(["GET", `account:${email}`]);
             if (!accDataRaw) return new Response(JSON.stringify({ error: "Account not found." }), { status: 404 });
@@ -128,7 +128,7 @@ export default async function handler(req) {
         // ACTION 3: ADMIN - FETCH FULL DASHBOARD DATA
         // --------------------------------------------------------------------
         if (action === 'admin_stats') {
-            if (adminSecret !== "Lexis-Admin-2026!") return new Response(JSON.stringify({ error: "Access Denied." }), { status: 401 });
+            if (adminSecret !== "Arix-Admin-2026!") return new Response(JSON.stringify({ error: "Access Denied." }), { status: 401 });
 
             const statExec = [
                 ["GET", "stats:total_requests"], ["GET", "stats:total_success"], ["GET", "stats:total_errors"], ["GET", "stats:total_devices"],
@@ -191,7 +191,7 @@ export default async function handler(req) {
         // ACTION 4: ADMIN - MODIFY USER LIMITS OR BLOCK
         // --------------------------------------------------------------------
         if (action === 'admin_modify') {
-            if (adminSecret !== "Lexis-Admin-2026!") return new Response(JSON.stringify({ error: "Access Denied." }), { status: 401 });
+            if (adminSecret !== "Arix-Admin-2026!") return new Response(JSON.stringify({ error: "Access Denied." }), { status: 401 });
             
             const { targetKey, newStatus, newLimits } = body;
             if (!targetKey) return new Response(JSON.stringify({ error: "targetKey required." }), { status: 400 });
