@@ -2609,7 +2609,7 @@ function createNewChat() {
     renderMessagesToUI(); 
     if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
     renderHistoryList(); // Reset sidebar active states
-    appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
+    appendMessage('assistant', 'New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
     closeCanvas(); 
     renderPulseTodayWidget();
 }
@@ -2924,7 +2924,7 @@ function appendMessage(role, content, modelId, specificId = null, attachmentsMet
         div.className = `flex gap-4 sm:gap-5 max-w-3xl animate-fade-in-up mb-8`;
         const model = CONFIG.models[modelId] || CONFIG.models.oracle;
         
-        let nameStr = senderName === 'ArixAI' ? `<div class="text-[10px] text-theme-500 mb-2 font-bold uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> ArixAI (Co-Op)</div>` : "";
+        let nameStr = senderName === 'ArixAI' ? `<div class="text-[10px] text-theme-500 mb-2 font-bold uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> ArixAI</div>` : "";
         
         div.innerHTML = `
             <div class="w-10 h-10 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
