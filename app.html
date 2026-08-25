@@ -995,7 +995,7 @@ function changeNickname() {
 }
 
 // Global Application State Variables
-let activeModelId = 'oracle';
+let activeModelId = localStorage.getItem('Arix_active_model') || 'spark';
 let isProcessing = false;
 let isDeepResearchOn = false;
 let isPresentationMode = false;
@@ -2680,14 +2680,23 @@ function editMessage(msgId) {
     closeCanvas(); 
 }
 
+function switchModel(modelId) {
+    if (isProcessing) return;
+    activeModelId = modelId;
+    localStorage.setItem('Arix_active_model', activeModelId);
+    updateUIState();
+    if (modelId === 'sparker' || modelId === 'fluxero') {
+        if (window.loadLocalModel) window.loadLocalModel(modelId);
+    }
+}
+
 function renderModelSelector() { 
     els.selector.innerHTML = Object.values(CONFIG.models).map(model => 
-        `<button onclick="if(!isProcessing) {activeModelId='${model.id}'; updateUIState();}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `bg-white ${model.color} shadow-sm border border-gray-200` : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'}">
+        `<button onclick="switchModel('${model.id}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `bg-white ${model.color} shadow-sm border border-gray-200` : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'}">
             <i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm"></i> ${model.name}
         </button>`
     ).join(""); 
 }
-
 function updateUIState() {
     renderModelSelector(); 
     const model = CONFIG.models[activeModelId];
@@ -3000,6 +3009,7 @@ async function handleSend() {
         attachmentsMeta: attachmentsMeta 
     };
     messages.push(currentMessage);
+    saveCurrentChat(); // <-- FIX: Saves immediately to prevent vanishing chats
     
     // 2. Multiplayer Sync
     if (currentMultiplayerRoom) {
@@ -3410,19 +3420,24 @@ async function handleSend() {
             const contentContainer = assistantMsgObj.container;
             contentContainer.classList.add('typing-cursor');
 
+            // Auto-Wake Engine if page was reloaded
             if (!window.localAIEngine) {
-                uiErrFlag = true;
-                contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Local Engine not loaded. Click the model in Advanced Integrations first.</span>`;
-                isProcessing = false; updateUIState(); return;
+                contentContainer.innerHTML = `<span class="text-emerald-600 font-semibold"><i class="ph-bold ph-spinner animate-spin"></i> Waking up Offline Engine...</span>`;
+                if (window.loadLocalModel) await window.loadLocalModel(activeModelId);
+                
+                // If it STILL fails to wake up
+                if (!window.localAIEngine) {
+                    contentContainer.classList.remove('typing-cursor');
+                    contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Engine failed to load. Click the model in Advanced Integrations to retry.</span>`;
+                    messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                    saveCurrentChat();
+                    isProcessing = false; return;
+                }
             }
-
+            
             try {
-                // Fail-safe Context Window Logic (Prevents WebGPU Out-Of-Memory Crashes)
-                // Grabs the last ~30 messages to keep context well under 8k tokens for browser stability
-                const safeContextWindow = contextMessages.slice(-30).map(m => ({
-                    role: m.role,
-                    content: m.content
-                }));
+                // Fail-safe Context Window: Grabs last 30 messages (Safe 8k tokens) to prevent WebGPU OOM Crashes
+                const safeContextWindow = contextMessages.slice(-30).map(m => ({ role: m.role, content: m.content }));
 
                 const stream = await window.localAIEngine.chat.completions.create({
                     messages: safeContextWindow,
@@ -3432,9 +3447,7 @@ async function handleSend() {
 
                 let fullResponse = "";
                 for await (const chunk of stream) {
-                    const textChunk = chunk.choices[0]?.delta?.content || "";
-                    fullResponse += textChunk;
-                    // Pipe directly into KaTeX/Markdown parser
+                    fullResponse += chunk.choices[0]?.delta?.content || "";
                     contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id);
                     els.canvas.scrollTop = els.canvas.scrollHeight;
                 }
@@ -3443,11 +3456,13 @@ async function handleSend() {
                 contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat();
-                isProcessing = false; updateUIState(); return; // Exit early, skipping API fetch
+                isProcessing = false; updateUIState(); return; // Exit cleanly without calling cloud API
 
             } catch (err) {
                 contentContainer.classList.remove('typing-cursor');
-                contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Offline Inference Failed: ${err.message}. Try reloading or using Oracle.</span>`;
+                contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Offline Inference Failed: ${err.message}</span>`;
+                messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                saveCurrentChat();
                 isProcessing = false; updateUIState(); return;
             }
         }
@@ -3548,7 +3563,9 @@ async function handleSend() {
         
     } catch (error) {
         els.indicator.classList.add('hidden');
-        appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+        const errObj = appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+        messages.push({ role: 'assistant', content: `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, id: errObj.id, modelId: activeModelId });
+        saveCurrentChat(); // <-- FIX: Saves the error state so history chain isn't broken
         sendTelemetry(currentAction, activeModelId, 'error', error.message);
     }
     
