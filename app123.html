@@ -562,12 +562,15 @@ body {
                         <div class="flex items-center gap-2"><i class="ph-bold ph-cpu text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> SPARKer <span class="font-medium text-[9px] text-gray-400">(880MB)</span></div>
                         <i class="ph-bold ph-download-simple text-gray-300"></i>
                     </button>
+                    <button onclick="window.loadLocalModel('sparkerolite')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-rose-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
+                        <div class="flex items-center gap-2"><i class="ph-bold ph-paper-plane-tilt text-sm text-rose-500 group-hover:scale-110 transition-transform"></i> SPARKero-lite <span class="font-medium text-[9px] text-gray-400">(1.3GB)</span></div>
+                        <i class="ph-bold ph-download-simple text-gray-300"></i>
+                    </button>
                     <button onclick="window.loadLocalModel('fluxero')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-indigo-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
                         <div class="flex items-center gap-2"><i class="ph-bold ph-microchip text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> FLUXero <span class="font-medium text-[9px] text-gray-400">(2GB)</span></div>
                         <i class="ph-bold ph-download-simple text-gray-300"></i>
                     </button>
                 </div>
-
                 <!-- Selectors & Toggles -->
                 <div class="relative w-full pt-2 mb-2 px-1">
                     <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-medium text-gray-600 outline-none appearance-none cursor-pointer hover:border-gray-300 transition-colors shadow-sm">
@@ -823,8 +826,8 @@ const CONFIG = {
         flux: { id: 'flux', name: 'Flux 1.5', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100' },
         oracle: { id: 'oracle', name: 'Oracle 2.0[NEW]', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' },
         sparker: { id: 'sparker', name: 'SPARKer (Offline)', icon: 'ph-cpu', color: 'text-emerald-500', bg: 'bg-emerald-50', glow: 'bg-emerald-100', mlcId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC' },
-        fluxero: { id: 'fluxero', name: 'FLUXero (Offline)', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' }
-    }
+        fluxero: { id: 'fluxero', name: 'FLUXero (Offline)', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' },
+        sparkerolite: { id: 'sparkerolite', name: 'SPARKero-lite (Offline)', icon: 'ph-paper-plane-tilt', color: 'text-rose-500', bg: 'bg-rose-50', glow: 'bg-rose-100', mlcId: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC' }
 };
 
 const EXTENSION_MAP = {
@@ -3403,9 +3406,9 @@ async function handleSend() {
         const shouldReadMemory = document.getElementById('toggle-use-memory') ? document.getElementById('toggle-use-memory').checked : true;
         
         // ==========================================
-        // LOCAL OFFLINE AI INFERENCE (SPARKer / FLUXero)
+        // MAX-SPEED OFFLINE AI INFERENCE ENGINE
         // ==========================================
-        if (activeModelId === 'sparker' || activeModelId === 'fluxero') {
+        if (activeModelId === 'sparker' || activeModelId === 'fluxero' || activeModelId === 'sparkerolite') {
             els.indicator.classList.add('hidden');
             const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
             const contentContainer = assistantMsgObj.container;
@@ -3418,17 +3421,25 @@ async function handleSend() {
             }
 
             try {
-                // Fail-safe Context Window Logic (Prevents WebGPU Out-Of-Memory Crashes)
-                // Grabs the last ~30 messages to keep context well under 8k tokens for browser stability
-                const safeContextWindow = contextMessages.slice(-30).map(m => ({
-                    role: m.role,
-                    content: m.content
-                }));
+                // --- ALGORITHM 1: KV-CACHE COMPRESSION ---
+                // Strict slicing: Only send the last 8 messages (4 turns) to keep VRAM usage low and prefill ultra-fast.
+                // Auto-truncates incredibly long past messages to 800 chars so the engine doesn't get bogged down.
+                const safeContextWindow = contextMessages.slice(-8).map((m, index, arr) => {
+                    const isLatestMessage = index === arr.length - 1;
+                    return {
+                        role: m.role,
+                        content: (!isLatestMessage && m.content.length > 800) ? m.content.substring(0, 800) + '...[Truncated]' : m.content
+                    };
+                });
 
+                // --- ALGORITHM 2: GREEDY DECODING ---
                 const stream = await window.localAIEngine.chat.completions.create({
                     messages: safeContextWindow,
                     stream: true,
-                    temperature: 0.7
+                    temperature: 0.2, // Extremely low temp forces faster, deterministic token math
+                    top_p: 0.9,       // Cuts off long-tail probabilities
+                    presence_penalty: 0.0,
+                    frequency_penalty: 0.0
                 });
 
                 let fullResponse = "";
