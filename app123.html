@@ -547,40 +547,37 @@ body {
                 <i id="adv-int-icon" class="ph-bold ph-caret-down transition-transform"></i>
             </div>
             <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
-                <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
-                <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
-                <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
-                <button onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-graph text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Constellation Map</button>
-                <button onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-indigo-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat</button>
-                <button onclick="openExperimentalModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-fuchsia-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-flask text-sm text-fuchsia-500 group-hover:scale-110 transition-transform"></i> Experimental</button>
-                <button onclick="openProjectsModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-amber-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-folder-open text-sm text-amber-500 group-hover:scale-110 transition-transform"></i>Your Projects</button>
+                <button id="feat-btn-your_tasks" onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
+                <button id="feat-btn-invite_coop" onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
+                <button id="feat-btn-manage_extensions" onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
+                <button id="feat-btn-constellation_map" onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-graph text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Constellation Map</button>
+                <button id="feat-btn-share_chat" onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-indigo-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat</button>
+                <button id="feat-btn-experimental" onclick="openExperimentalModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-fuchsia-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-flask text-sm text-fuchsia-500 group-hover:scale-110 transition-transform"></i> Experimental</button>
+                <button id="feat-btn-your_projects" onclick="openProjectsModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-amber-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-folder-open text-sm text-amber-500 group-hover:scale-110 transition-transform"></i>Your Projects</button>
                 
                 <!-- OFFLINE LOCAL MODELS -->
-                <div class="pt-2 mt-2 border-t border-gray-100 px-1">
+                <div id="feat-group-ondevice" class="pt-2 mt-2 border-t border-gray-100 px-1">
                     <div class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-2">On-Device AI (No Wi-Fi)</div>
-                    <button onclick="window.loadLocalModel('sparker')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-emerald-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
+                    <button id="feat-btn-sparker" onclick="window.loadLocalModel('sparker')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-emerald-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
                         <div class="flex items-center gap-2"><i class="ph-bold ph-cpu text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> SPARKer <span class="font-medium text-[9px] text-gray-400">(880MB)</span></div>
                         <i class="ph-bold ph-download-simple text-gray-300"></i>
                     </button>
-                    <button onclick="window.loadLocalModel('sparkerolite')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-rose-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
-                        <div class="flex items-center gap-2"><i class="ph-bold ph-paper-plane-tilt text-sm text-rose-500 group-hover:scale-110 transition-transform"></i> SPARKero-lite <span class="font-medium text-[9px] text-gray-400">(1.3GB)</span></div>
-                        <i class="ph-bold ph-download-simple text-gray-300"></i>
-                    </button>
-                    <button onclick="window.loadLocalModel('fluxero')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-indigo-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
-                        <div class="flex items-center gap-2"><i class="ph-bold ph-microchip text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> FLUXero <span class="font-medium text-[9px] text-gray-400">(2GB)</span></div>
+                    <button id="feat-btn-fluxero" onclick="window.loadLocalModel('FLiX')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-indigo-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
+                        <div class="flex items-center gap-2"><i class="ph-bold ph-microchip text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> FLiX / Fluxero <span class="font-medium text-[9px] text-gray-400">(2GB)</span></div>
                         <i class="ph-bold ph-download-simple text-gray-300"></i>
                     </button>
                 </div>
+
                 <!-- Selectors & Toggles -->
-                <div class="relative w-full pt-2 mb-2 px-1">
+                <div id="feat-wrapper-ext-selector" class="relative w-full pt-2 mb-2 px-1">
                     <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-medium text-gray-600 outline-none appearance-none cursor-pointer hover:border-gray-300 transition-colors shadow-sm">
                         <option value="">No Extension Active</option>
                     </select>
                     <i class="ph-bold ph-caret-down absolute right-3 top-1/2 translate-y-[2px] text-gray-400 pointer-events-none text-xs"></i>
                 </div>
                 
-                <div class="w-[calc(100%-8px)] mx-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-col gap-2 shadow-sm">
-                    <div class="flex justify-between items-center w-full group">
+                <div id="feat-group-memory" class="w-[calc(100%-8px)] mx-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 flex flex-col gap-2 shadow-sm">
+                    <div id="feat-wrapper-use_memory" class="flex justify-between items-center w-full group">
                         <div class="flex items-center gap-1.5 text-gray-600">
                             <i class="ph-bold ph-brain text-[10px]"></i>
                             <span class="text-[10px] font-bold tracking-wide uppercase">Use Memory</span>
@@ -591,7 +588,7 @@ body {
                         </label>
                     </div>
                     <div class="w-full h-px bg-gray-200/60"></div>
-                    <div class="flex justify-between items-center w-full group">
+                    <div id="feat-wrapper-save_data" class="flex justify-between items-center w-full group">
                         <div class="flex items-center gap-1.5 text-gray-600">
                             <i class="ph-bold ph-floppy-disk text-[10px]"></i>
                             <span class="text-[10px] font-bold tracking-wide uppercase">Save Data</span>
@@ -606,7 +603,7 @@ body {
         </div>
 
         <!-- Recent Chats History injected via JS -->
-        <div>
+        <div id="feat-section-recent_chats">
             <div class="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 Recent Chats
                 <span class="text-theme-600 normal-case font-medium cursor-pointer hover:underline transition-colors duration-500 text-[11px]">View all</span>
@@ -614,7 +611,7 @@ body {
             <div id="history-list" class="flex flex-col gap-0.5 px-1 overflow-y-auto max-h-[30vh] custom-scrollbar pb-2">
                 <!-- Chat items will be mapped here by renderHistoryList() -->
             </div>
-        </div>
+        </div>    
     </div>
 
     <!-- User Profile Footer -->
@@ -746,17 +743,16 @@ body {
                     <!-- Left Tools -->
                     <div class="flex items-center gap-1 sm:gap-2">
                         <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx">
-                        <button onclick="document.getElementById('file-upload').click()" class="p-2 sm:p-2.5 text-gray-400 hover:text-theme-600 hover:bg-theme-50 rounded-xl transition-colors flex items-center justify-center" title="Attach Files">
+                        <button id="feat-btn-attach_pdf" onclick="if(!isFeatureAllowed('attach_pdf')) return showToast('Feature disabled by administrator'); document.getElementById('file-upload').click();" class="p-2 sm:p-2.5 text-gray-400 hover:text-theme-600 hover:bg-theme-50 rounded-xl transition-colors flex items-center justify-center" title="Attach Files">
                             <i class="ph-bold ph-paperclip text-lg"></i>
                         </button>
-                        <button onclick="openDriveModal()" class="p-2 sm:p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center" title="Google Drive Mind-Sync">
+                        <button id="feat-btn-drive" onclick="if(!isFeatureAllowed('drive')) return showToast('Feature disabled by administrator'); openDriveModal();" class="p-2 sm:p-2.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center" title="Google Drive Mind-Sync">
                             <i class="ph-bold ph-google-logo text-lg"></i>
                         </button>
-                        <button onclick="openSentinelModal()" class="p-2 sm:p-2.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-colors flex items-center justify-center" title="Deploy Sentinel Agent">
+                        <button id="feat-btn-sentinel" onclick="if(!isFeatureAllowed('sentinel')) return showToast('Feature disabled by administrator'); openSentinelModal();" class="p-2 sm:p-2.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-xl transition-colors flex items-center justify-center" title="Deploy Sentinel Agent">
                             <i class="ph-bold ph-robot text-lg"></i>
                         </button>
                     </div>
-
                     <!-- Right Tools -->
                     <div class="flex items-center gap-2 sm:gap-3">
                         <button onclick="toggleVoice()" class="p-2 sm:p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center" title="Voice Input">
@@ -822,14 +818,112 @@ marked.setOptions({ breaks: true, gfm: true });
 // UI-Adapted Config for Light Theme Targeting
 const CONFIG = {
     models: {
-        spark: { id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-500', bg: 'bg-amber-50', glow: 'bg-amber-100' },
-        flux: { id: 'flux', name: 'Flux 1.5', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100' },
-        oracle: { id: 'oracle', name: 'Oracle 2.0[NEW]', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' },
-        sparker: { id: 'sparker', name: 'SPARKer (Offline)', icon: 'ph-cpu', color: 'text-emerald-500', bg: 'bg-emerald-50', glow: 'bg-emerald-100', mlcId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC' },
-        fluxero: { id: 'fluxero', name: 'FLUXero (Offline)', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' },
-        sparkerolite: { id: 'sparkerolite', name: 'SPARKero-lite (Offline)', icon: 'ph-paper-plane-tilt', color: 'text-rose-500', bg: 'bg-rose-50', glow: 'bg-rose-100', mlcId: 'SmolLM2-1.7B-Instruct-q4f16_1-MLC' }
+        spark: { id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-500', bg: 'bg-amber-50', glow: 'bg-amber-100', featKey: 'spark' },
+        flux: { id: 'flux', name: 'Flux 1.5', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100', featKey: 'flux' },
+        oracle: { id: 'oracle', name: 'Oracle 2.0', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100', featKey: 'oracle' },
+        sparker: { id: 'sparker', name: 'SPARKer', icon: 'ph-cpu', color: 'text-emerald-500', bg: 'bg-emerald-50', glow: 'bg-emerald-100', mlcId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC', featKey: 'sparker' },
+        FLiX: { id: 'FLiX', name: 'FLiX', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC', featKey: 'fluxero' }
+    }
 };
 
+// Global Permissions Matrix
+window.USER_PERMISSIONS = {};
+
+function isFeatureAllowed(featureKey) {
+    if (window.USER_PERMISSIONS && typeof window.USER_PERMISSIONS[featureKey] !== 'undefined') {
+        return window.USER_PERMISSIONS[featureKey] === true;
+    }
+    return true; // Default fallback while loading
+}
+
+async function syncUserPermissions() {
+    try {
+        const deviceId = getDeviceId();
+        const nickname = localStorage.getItem('Arix_nickname') || 'Anonymous';
+        const res = await fetch(`/api/usertracker?action=get_my_permissions&deviceId=${encodeURIComponent(deviceId)}&nickname=${encodeURIComponent(nickname)}`);
+        const data = await res.json();
+        if (data && data.success && data.permissions) {
+            window.USER_PERMISSIONS = data.permissions;
+            enforceUIPermissions();
+        }
+    } catch (e) {
+        console.warn("Permission sync failure:", e);
+    }
+}
+
+function enforceUIPermissions() {
+    const P = window.USER_PERMISSIONS;
+    if (!P) return;
+
+    // Feature to DOM element mapping
+    const elemMap = {
+        'research': 'deep-research-btn',
+        'slides': 'ppt-btn',
+        'math': 'math-btn',
+        'audio': 'podcast-btn',
+        'image': 'image-btn',
+        'code': 'app-btn',
+        'study': 'study-btn',
+        'your_tasks': 'feat-btn-your_tasks',
+        'invite_coop': 'feat-btn-invite_coop',
+        'manage_extensions': 'feat-btn-manage_extensions',
+        'constellation_map': 'feat-btn-constellation_map',
+        'share_chat': 'feat-btn-share_chat',
+        'experimental': 'feat-btn-experimental',
+        'your_projects': 'feat-btn-your_projects',
+        'sparker': 'feat-btn-sparker',
+        'fluxero': 'feat-btn-fluxero',
+        'use_memory': 'feat-wrapper-use_memory',
+        'save_data': 'feat-wrapper-save_data',
+        'recent_chats': 'feat-section-recent_chats',
+        'attach_pdf': 'feat-btn-attach_pdf',
+        'drive': 'feat-btn-drive',
+        'sentinel': 'feat-btn-sentinel'
+    };
+
+    Object.keys(elemMap).forEach(key => {
+        const el = document.getElementById(elemMap[key]);
+        if (el) {
+            if (P[key] === false) {
+                el.style.display = 'none';
+            } else {
+                el.style.display = '';
+            }
+        }
+    });
+
+    // Handle offline group header
+    const onDeviceGroup = document.getElementById('feat-group-ondevice');
+    if (onDeviceGroup) {
+        if (P['sparker'] === false && P['fluxero'] === false) {
+            onDeviceGroup.style.display = 'none';
+        } else {
+            onDeviceGroup.style.display = '';
+        }
+    }
+
+    // Handle memory group container
+    const memoryGroup = document.getElementById('feat-group-memory');
+    if (memoryGroup) {
+        if (P['use_memory'] === false && P['save_data'] === false) {
+            memoryGroup.style.display = 'none';
+        } else {
+            memoryGroup.style.display = '';
+        }
+    }
+
+    // Auto-fallback active model if currently selected one is disabled
+    const currentModelFeat = CONFIG.models[activeModelId]?.featKey;
+    if (currentModelFeat && P[currentModelFeat] === false) {
+        const allowedModel = Object.values(CONFIG.models).find(m => P[m.featKey] !== false);
+        if (allowedModel) {
+            activeModelId = allowedModel.id;
+            localStorage.setItem('Arix_active_model', activeModelId);
+        }
+    }
+
+    updateUIState();
+}
 const EXTENSION_MAP = {
     'txt': 'text/plain', 'md': 'text/markdown', 'csv': 'text/csv', 'html': 'text/html',
     'pdf': 'application/pdf', 'doc': 'application/msword', 
@@ -999,7 +1093,7 @@ function changeNickname() {
 }
 
 // Global Application State Variables
-let activeModelId = 'oracle';
+let activeModelId = localStorage.getItem('Arix_active_model') || 'spark';
 let isProcessing = false;
 let isDeepResearchOn = false;
 let isPresentationMode = false;
@@ -1067,6 +1161,8 @@ window.onload = async () => {
         navigator.serviceWorker.register('/sw.js').catch(err => console.error("Sentinel Reg failed:", err));
     }
     await DB.init(); 
+    await syncUserPermissions(); // Pull live admin controls before initializing UI
+    setInterval(syncUserPermissions, 15000); // Polling check for real-time permission updates
     updateUIState(); 
     refreshExtSelectors();
     checkNickname();
@@ -1516,6 +1612,7 @@ function resetAllModeUI() {
 }
 
 function toggleDeepResearch() {
+    if (!isFeatureAllowed('research')) return showToast("Research feature is disabled by administrator.");
     const wasOn = isDeepResearchOn;
     isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
@@ -1530,6 +1627,7 @@ function toggleDeepResearch() {
 }
 
 function togglePresentationMode() {
+    if (!isFeatureAllowed('slides')) return showToast("Slides feature is disabled by administrator.");
     const wasOn = isPresentationMode;
     isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
@@ -1544,6 +1642,7 @@ function togglePresentationMode() {
 }
 
 function toggleMathMode() {
+    if (!isFeatureAllowed('math')) return showToast("Math engine is disabled by administrator.");
     const wasOn = isMathMode;
     isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
@@ -1558,6 +1657,7 @@ function toggleMathMode() {
 }
 
 function togglePodcastMode() {
+    if (!isFeatureAllowed('audio')) return showToast("Audio engine is disabled by administrator.");
     const wasOn = isPodcastMode;
     isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
@@ -1572,6 +1672,7 @@ function togglePodcastMode() {
 }
 
 function toggleAppMode() {
+    if (!isFeatureAllowed('code')) return showToast("Code engine is disabled by administrator.");
     const wasOn = isAppMode;
     isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
@@ -1586,6 +1687,7 @@ function toggleAppMode() {
 }
 
 function toggleImageMode() {
+    if (!isFeatureAllowed('image')) return showToast("Image engine is disabled by administrator.");
     const wasOn = isImageMode;
     isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
@@ -1600,6 +1702,7 @@ function toggleImageMode() {
 }
 
 function toggleStudyMode() {
+    if (!isFeatureAllowed('study')) return showToast("Study deck engine is disabled by administrator.");
     const wasOn = isStudyMode;
     isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
     resetAllModeUI();
@@ -1612,7 +1715,6 @@ function toggleStudyMode() {
         showToast("Study Deck Generator Engaged");
     }
 }
-
 // ====== RENDERERS & FORMATTERS ======
 function renderMathAndMarkdown(text) {
     if (!text) return "";
@@ -2613,7 +2715,7 @@ function createNewChat() {
     renderMessagesToUI(); 
     if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
     renderHistoryList(); // Reset sidebar active states
-    appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
+    appendMessage('assistant', 'New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
     closeCanvas(); 
     renderPulseTodayWidget();
 }
@@ -2684,14 +2786,27 @@ function editMessage(msgId) {
     closeCanvas(); 
 }
 
+function switchModel(modelId) {
+    if (isProcessing) return;
+    activeModelId = modelId;
+    localStorage.setItem('Arix_active_model', activeModelId);
+    updateUIState();
+    if (modelId === 'sparker' || modelId === 'FLiX') {
+        if (window.loadLocalModel) window.loadLocalModel(modelId);
+    }
+}
+
 function renderModelSelector() { 
-    els.selector.innerHTML = Object.values(CONFIG.models).map(model => 
-        `<button onclick="if(!isProcessing) {activeModelId='${model.id}'; updateUIState();}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `bg-white ${model.color} shadow-sm border border-gray-200` : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'}">
+    const allowedModels = Object.values(CONFIG.models).filter(model => {
+        return isFeatureAllowed(model.featKey);
+    });
+
+    els.selector.innerHTML = allowedModels.map(model => 
+        `<button onclick="switchModel('${model.id}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `bg-white ${model.color} shadow-sm border border-gray-200` : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'}">
             <i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm"></i> ${model.name}
         </button>`
     ).join(""); 
 }
-
 function updateUIState() {
     renderModelSelector(); 
     const model = CONFIG.models[activeModelId];
@@ -2877,10 +2992,17 @@ function parseRichText(content, isStreaming = false, msgId = null) {
         return "";
     });
 
-    const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? 
+    let actionButtonsHtml = "";
+    if (isFeatureAllowed('copy_text')) {
+        actionButtonsHtml += `<button onclick="copyToClipboard('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-gray-900 shadow-sm"><i class="ph-bold ph-copy text-sm"></i> Copy Text</button>`;
+    }
+    if (isFeatureAllowed('download')) {
+        actionButtonsHtml += `<button onclick="openPdfModal('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-red-600 shadow-sm"><i class="ph-bold ph-file-pdf text-sm text-red-500"></i> Export PDF</button>`;
+    }
+
+    const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId && actionButtonsHtml) ? 
         `<div class="action-bar flex items-center gap-3 mt-4 pt-3 border-t border-gray-50/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button onclick="copyToClipboard('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-gray-900 shadow-sm"><i class="ph-bold ph-copy text-sm"></i> Copy Text</button>
-            <button onclick="openPdfModal('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-red-600 shadow-sm"><i class="ph-bold ph-file-pdf text-sm text-red-500"></i> Export PDF</button>
+            ${actionButtonsHtml}
         </div>` : "";
         
     return `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group">${renderMathAndMarkdown(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
@@ -2919,7 +3041,7 @@ function appendMessage(role, content, modelId, specificId = null, attachmentsMet
         div.className = `flex gap-4 sm:gap-5 max-w-3xl animate-fade-in-up mb-8`;
         const model = CONFIG.models[modelId] || CONFIG.models.oracle;
         
-        let nameStr = senderName === 'ArixAI' ? `<div class="text-[10px] text-theme-500 mb-2 font-bold uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> ArixAI (Co-Op)</div>` : "";
+        let nameStr = senderName === 'ArixAI' ? `<div class="text-[10px] text-theme-500 mb-2 font-bold uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> ArixAI</div>` : "";
         
         div.innerHTML = `
             <div class="w-10 h-10 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
@@ -3004,6 +3126,7 @@ async function handleSend() {
         attachmentsMeta: attachmentsMeta 
     };
     messages.push(currentMessage);
+    saveCurrentChat(); // <-- FIX: Saves immediately to prevent vanishing chats
     
     // 2. Multiplayer Sync
     if (currentMultiplayerRoom) {
@@ -3406,47 +3529,42 @@ async function handleSend() {
         const shouldReadMemory = document.getElementById('toggle-use-memory') ? document.getElementById('toggle-use-memory').checked : true;
         
         // ==========================================
-        // MAX-SPEED OFFLINE AI INFERENCE ENGINE
+        // LOCAL OFFLINE AI INFERENCE (SPARKer / FLiX)
         // ==========================================
-        if (activeModelId === 'sparker' || activeModelId === 'fluxero' || activeModelId === 'sparkerolite') {
+        if (activeModelId === 'sparker' || activeModelId === 'FLiX') {
             els.indicator.classList.add('hidden');
             const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
             const contentContainer = assistantMsgObj.container;
             contentContainer.classList.add('typing-cursor');
 
+            // Auto-Wake Engine if page was reloaded
             if (!window.localAIEngine) {
-                uiErrFlag = true;
-                contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Local Engine not loaded. Click the model in Advanced Integrations first.</span>`;
-                isProcessing = false; updateUIState(); return;
+                contentContainer.innerHTML = `<span class="text-emerald-600 font-semibold"><i class="ph-bold ph-spinner animate-spin"></i> Waking up Offline Engine...</span>`;
+                if (window.loadLocalModel) await window.loadLocalModel(activeModelId);
+                
+                // If it STILL fails to wake up
+                if (!window.localAIEngine) {
+                    contentContainer.classList.remove('typing-cursor');
+                    contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Engine failed to load. Click the model in Advanced Integrations to retry.</span>`;
+                    messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                    saveCurrentChat();
+                    isProcessing = false; return;
+                }
             }
-
+            
             try {
-                // --- ALGORITHM 1: KV-CACHE COMPRESSION ---
-                // Strict slicing: Only send the last 8 messages (4 turns) to keep VRAM usage low and prefill ultra-fast.
-                // Auto-truncates incredibly long past messages to 800 chars so the engine doesn't get bogged down.
-                const safeContextWindow = contextMessages.slice(-8).map((m, index, arr) => {
-                    const isLatestMessage = index === arr.length - 1;
-                    return {
-                        role: m.role,
-                        content: (!isLatestMessage && m.content.length > 800) ? m.content.substring(0, 800) + '...[Truncated]' : m.content
-                    };
-                });
+                // Fail-safe Context Window: Grabs last 30 messages (Safe 8k tokens) to prevent WebGPU OOM Crashes
+                const safeContextWindow = contextMessages.slice(-30).map(m => ({ role: m.role, content: m.content }));
 
-                // --- ALGORITHM 2: GREEDY DECODING ---
                 const stream = await window.localAIEngine.chat.completions.create({
                     messages: safeContextWindow,
                     stream: true,
-                    temperature: 0.2, // Extremely low temp forces faster, deterministic token math
-                    top_p: 0.9,       // Cuts off long-tail probabilities
-                    presence_penalty: 0.0,
-                    frequency_penalty: 0.0
+                    temperature: 0.7
                 });
 
                 let fullResponse = "";
                 for await (const chunk of stream) {
-                    const textChunk = chunk.choices[0]?.delta?.content || "";
-                    fullResponse += textChunk;
-                    // Pipe directly into KaTeX/Markdown parser
+                    fullResponse += chunk.choices[0]?.delta?.content || "";
                     contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id);
                     els.canvas.scrollTop = els.canvas.scrollHeight;
                 }
@@ -3455,11 +3573,13 @@ async function handleSend() {
                 contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
                 saveCurrentChat();
-                isProcessing = false; updateUIState(); return; // Exit early, skipping API fetch
+                isProcessing = false; updateUIState(); return; // Exit cleanly without calling cloud API
 
             } catch (err) {
                 contentContainer.classList.remove('typing-cursor');
-                contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Offline Inference Failed: ${err.message}. Try reloading or using Oracle.</span>`;
+                contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Offline Inference Failed: ${err.message}</span>`;
+                messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                saveCurrentChat();
                 isProcessing = false; updateUIState(); return;
             }
         }
@@ -3560,7 +3680,9 @@ async function handleSend() {
         
     } catch (error) {
         els.indicator.classList.add('hidden');
-        appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+        const errObj = appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+        messages.push({ role: 'assistant', content: `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, id: errObj.id, modelId: activeModelId });
+        saveCurrentChat(); // <-- FIX: Saves the error state so history chain isn't broken
         sendTelemetry(currentAction, activeModelId, 'error', error.message);
     }
     
