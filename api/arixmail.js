@@ -48,16 +48,19 @@ async function hashSecure(data) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// Proof of Work Verifier (Abuse Prevention)
+// Proof of Work Verifier (Abuse Prevention - Balanced 2-zero hex check)
 async function verifyProofOfWork(nonce, timestamp, deviceId) {
+  if (nonce === undefined || nonce === null || !timestamp) return false;
   const now = Date.now();
-  if (now - timestamp > 300000) return false; // PoW expires after 5 minutes
+  // Allow up to a 10-minute window for client clock drift
+  if (Math.abs(now - timestamp) > 600000) return false;
+  
   const challenge = `${deviceId}:${timestamp}:${nonce}`;
   const msgUint8 = new TextEncoder().encode(challenge);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-  return hex.startsWith('0000'); // Difficulty level 4
+  return hex.startsWith('00'); 
 }
 
 export default async function handler(req) {
@@ -69,12 +72,12 @@ export default async function handler(req) {
     const { action, payload, auth, adminKey } = body;
     const deviceId = req.headers.get('x-device-id') || 'unknown-device';
     
-    // IP-based Rate Limiting (Simple representation)
+    // IP-based Rate Limiting
     const clientIp = req.headers.get('x-forwarded-for') || '127.0.0.1';
     const rateLimitKey = `rate_limit:${clientIp}`;
     const requests = await redis("INCR", rateLimitKey);
     if (requests === 1) await redis("EXPIRE", rateLimitKey, "60");
-    if (requests > 50) return new Response(JSON.stringify({ error: "Rate limit exceeded. System locked." }), { status: 429, headers: CORS_HEADERS });
+    if (requests > 60) return new Response(JSON.stringify({ error: "Rate limit exceeded. System locked." }), { status: 429, headers: CORS_HEADERS });
 
     // ---------------------------------------------------------
     // ACCOUNT CREATION & AUTHENTICATION
@@ -87,11 +90,12 @@ export default async function handler(req) {
       if (!isValidPoW) throw new Error("Cryptographic Proof of Work failed. Botting detected.");
 
       // 2. Validate Identity
-      const email = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@amail.com`;
-      if (email.length < 12) throw new Error("Username must be at least 3 characters.");
+      const cleanUser = username.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (cleanUser.length < 3) throw new Error("Username must be at least 3 alphanumeric characters.");
+      const email = `${cleanUser}@amail.com`;
       
-      // 3. Strict Password Policy Check
-      const strongRegex = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{12,})");
+      // 3. Password Policy Check
+      const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{12,})/;
       if (!strongRegex.test(password)) throw new Error("Password does not meet strict Arix safety protocols.");
 
       // 4. Check Existence
@@ -109,7 +113,7 @@ export default async function handler(req) {
       };
 
       await redisPost("SET", `user:${email}`, userRecord);
-      await redis("SADD", "arix_all_users", email); // Global tracking
+      await redis("SADD", "arix_all_users", email);
       
       return new Response(JSON.stringify({ success: true, email, token: pwdHash }), { status: 200, headers: CORS_HEADERS });
     }
@@ -125,7 +129,6 @@ export default async function handler(req) {
       const attemptHash = await hashSecure(password);
       if (user.pwdHash !== attemptHash) throw new Error("Cryptographic mismatch. Access denied.");
 
-      // Update active device mapping
       await redis("HSET", "arix_active_sessions", email, Date.now());
 
       return new Response(JSON.stringify({ success: true, email: user.email, profile: user.profile, token: user.pwdHash }), { status: 200, headers: CORS_HEADERS });
@@ -134,7 +137,6 @@ export default async function handler(req) {
     // ---------------------------------------------------------
     // DUAL STORAGE SYNC & MAIL DELIVERY
     // ---------------------------------------------------------
-    // Verify Auth for all subsequent routes
     if (!auth || !auth.email || !auth.token) throw new Error("Authentication required.");
     const userAuthStr = await redis("GET", `user:${auth.email}`);
     if (!userAuthStr) throw new Error("Invalid session.");
@@ -142,16 +144,13 @@ export default async function handler(req) {
     if (userAuth.pwdHash !== auth.token) throw new Error("Session hijacked or expired.");
 
     if (action === 'sync_data') {
-      const { target, data } = payload; // target: 'chat' | 'mail' | 'profile'
+      const { target, data } = payload;
       const key = `vault:${auth.email}:${target}`;
       
-      // If data is provided, it's an UP-SYNC (Cloud Storage)
-      if (data) {
+      if (data !== undefined) {
         await redisPost("SET", key, data);
         return new Response(JSON.stringify({ success: true, message: "Encrypted vault synced." }), { status: 200, headers: CORS_HEADERS });
-      } 
-      // If no data, it's a DOWN-SYNC (Load from Cloud)
-      else {
+      } else {
         const cloudData = await redis("GET", key);
         return new Response(JSON.stringify({ success: true, data: cloudData }), { status: 200, headers: CORS_HEADERS });
       }
@@ -172,9 +171,7 @@ export default async function handler(req) {
         read: false
       };
 
-      // Push to recipient's inbox
       await redisPost("LPUSH", `inbox:${to}`, mailObj);
-      // Push to sender's outbox
       await redisPost("LPUSH", `outbox:${auth.email}`, mailObj);
 
       return new Response(JSON.stringify({ success: true, message: "Transmission complete." }), { status: 200, headers: CORS_HEADERS });
@@ -195,7 +192,7 @@ export default async function handler(req) {
     }
 
     // ---------------------------------------------------------
-    // ADMIN ACTIONS (Secure Routes)
+    // ADMIN ACTIONS
     // ---------------------------------------------------------
     if (action.startsWith('admin_')) {
       if (adminKey !== ADMIN_SECRET) throw new Error("Master Authorization Failed.");
@@ -225,7 +222,7 @@ export default async function handler(req) {
       }
 
       if (action === 'admin_action') {
-        const { targetEmail, command } = payload; // command: 'block' | 'unblock'
+        const { targetEmail, command } = payload;
         const uRaw = await redis("GET", `user:${targetEmail}`);
         if(uRaw) {
            const u = typeof uRaw === 'string' ? JSON.parse(uRaw) : uRaw;
@@ -250,7 +247,6 @@ export default async function handler(req) {
           read: false,
           isSystem: true
         };
-        // Fan-out broadcast
         for (let email of emails) {
           await redisPost("LPUSH", `inbox:${email}`, mailObj);
         }
