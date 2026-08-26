@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Browser Agent</title>
+</head>
+<body style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 12px; color: #1f2937; background-color: #f9fafb; font-size: 13px; line-height: 1.4;">
+
+  <!-- Header & Connection Status -->
+  <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px;">
+    <div>
+      <h2 style="margin: 0; font-size: 15px; font-weight: 700; color: #111827;">AI Browser Agent</h2>
+      <span style="font-size: 11px; color: #6b7280;">Autonomous Assistant</span>
+    </div>
+    <div id="status-badge" style="display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; background-color: #e5e7eb; color: #4b5563;">
+      IDLE
+    </div>
+  </header>
+
+  <!-- Proactive Alert Banner (Hidden by default) -->
+  <section id="notification-card" style="display: none; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px;">
+      <strong id="notification-title" style="color: #1e40af; font-size: 12px;">Proactive Notice</strong>
+      <button id="dismiss-notification-btn" type="button" style="background: none; border: none; color: #6b7280; font-size: 12px; cursor: pointer; padding: 0;">&times;</button>
+    </div>
+    <p id="notification-message" style="margin: 0 0 8px 0; font-size: 12px; color: #1e3a8a;"></p>
+    <button id="act-notification-btn" type="button" style="display: none; width: 100%; background-color: #2563eb; color: #ffffff; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; font-weight: 500; cursor: pointer;">
+      Run Suggested Task
+    </button>
+  </section>
+
+  <!-- Human Approval Request Card (Hidden by default) -->
+  <section id="approval-card" style="display: none; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+    <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+      <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #d97706;"></span>
+      <strong style="color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px;">Approval Required</strong>
+    </div>
+    
+    <div style="background-color: #ffffff; border: 1px solid #fef3c7; border-radius: 4px; padding: 8px; margin-bottom: 8px;">
+      <div style="font-size: 11px; color: #6b7280; margin-bottom: 2px;">Target Website: <strong id="approval-site" style="color: #374151;">-</strong></div>
+      <div style="font-size: 11px; color: #6b7280; margin-bottom: 4px;">Action Type: <code id="approval-action" style="background-color: #f3f4f6; padding: 1px 4px; border-radius: 3px; color: #1f2937;">-</code></div>
+      <div style="font-size: 12px; color: #1f2937; font-weight: 500;" id="approval-desc">The AI is requesting permission to perform an action.</div>
+      <div style="font-size: 10px; margin-top: 4px; color: #6b7280;" id="approval-reversible-badge">Reversible: Unknown</div>
+    </div>
+
+    <div style="display: flex; gap: 6px;">
+      <button id="approve-btn" type="button" style="flex: 1; background-color: #16a34a; color: #ffffff; border: none; border-radius: 4px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;">
+        Approve
+      </button>
+      <button id="reject-btn" type="button" style="flex: 1; background-color: #dc2626; color: #ffffff; border: none; border-radius: 4px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;">
+        Reject
+      </button>
+    </div>
+  </section>
+
+  <!-- Goal Input Form -->
+  <section style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+    <form id="goal-form">
+      <label for="goal-input" style="display: block; font-weight: 600; font-size: 12px; color: #374151; margin-bottom: 4px;">What should the AI do?</label>
+      <textarea id="goal-input" rows="3" placeholder="e.g. Find laptops under ₹80,000 and compare specifications..." style="width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; padding: 6px 8px; font-family: inherit; font-size: 12px; resize: vertical; margin-bottom: 8px;" required></textarea>
+      
+      <div style="display: flex; gap: 6px;">
+        <button id="start-btn" type="submit" style="flex: 2; background-color: #2563eb; color: #ffffff; border: none; border-radius: 4px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;">
+          Start Task
+        </button>
+        <button id="cancel-btn" type="button" disabled style="flex: 1; background-color: #f3f4f6; color: #9ca3af; border: 1px solid #d1d5db; border-radius: 4px; padding: 6px 10px; font-size: 12px; font-weight: 500; cursor: not-allowed;">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <!-- Active Task Progress & Execution Steps -->
+  <section id="task-section" style="display: none; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+      <strong style="font-size: 12px; color: #374151;">Task Execution</strong>
+      <span id="task-step-count" style="font-size: 11px; color: #6b7280;">Step 0</span>
+    </div>
+    
+    <div id="task-goal-display" style="font-size: 12px; color: #4b5563; font-style: italic; margin-bottom: 8px; word-break: break-word;"></div>
+
+    <!-- Error Banner inside task -->
+    <div id="task-error" style="display: none; background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 4px; padding: 6px 8px; font-size: 11px; color: #991b1b; margin-bottom: 8px; word-break: break-word;"></div>
+
+    <!-- Result Banner inside task -->
+    <div id="task-result" style="display: none; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 6px 8px; font-size: 11px; color: #166534; margin-bottom: 8px; word-break: break-word;"></div>
+
+    <!-- Ordered Step Timeline -->
+    <div style="font-size: 11px; font-weight: 600; color: #6b7280; margin-bottom: 4px;">Action History:</div>
+    <ol id="step-list" style="margin: 0; padding-left: 16px; font-size: 11px; color: #4b5563; max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;">
+    </ol>
+  </section>
+
+  <!-- Configuration & Backend Endpoint Settings -->
+  <details style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; margin-bottom: 12px;">
+    <summary style="font-size: 11px; font-weight: 600; color: #4b5563; cursor: pointer;">Settings & Connection</summary>
+    <div style="margin-top: 8px;">
+      <label for="config-api-url" style="display: block; font-size: 11px; color: #6b7280; margin-bottom: 2px;">Vercel Backend URL</label>
+      <input id="config-api-url" type="url" placeholder="https://your-app.vercel.app" style="width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 6px; font-size: 11px; margin-bottom: 6px;" />
+      <button id="save-config-btn" type="button" style="background-color: #4b5563; color: #ffffff; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer;">
+        Save Endpoint
+      </button>
+      <span id="config-status" style="font-size: 10px; color: #16a34a; margin-left: 6px;"></span>
+    </div>
+  </details>
+
+  <script src="sidepanel.js" type="module"></script>
+</body>
+</html>
