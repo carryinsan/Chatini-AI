@@ -11,10 +11,16 @@ const DEFAULT_CONFIG = {
   eventCooldownMs: 30000
 };
 
-// Runtime state
+// Runtime state with MV3 Service Worker wake-up recovery
 let currentTask = null;
 let pendingApproval = null;
 const eventHistory = new Map(); // deduplication cache for proactive events
+
+// Restore state if Service Worker was suspended
+chrome.storage.local.get(['currentTask', 'pendingApproval']).then((res) => {
+  if (res.currentTask) currentTask = res.currentTask;
+  if (res.pendingApproval) pendingApproval = res.pendingApproval;
+});
 
 // Register side panel opening behavior on extension action click
 chrome.runtime.onInstalled.addListener(() => {
@@ -29,8 +35,9 @@ async function getConfig() {
   return { ...DEFAULT_CONFIG, ...(result.agent_config || {}) };
 }
 
-// Helper: Broadcast state changes to sidepanel/UI
+// Helper: Broadcast state changes to sidepanel/UI and persist to storage
 function broadcastState(eventType, payload) {
+  chrome.storage.local.set({ currentTask, pendingApproval });
   chrome.runtime.sendMessage({ type: eventType, payload }).catch(() => {
     // Sidepanel might be closed, safely ignore
   });
@@ -63,7 +70,7 @@ async function sendTabMessage(tabId, message) {
     // Inject content script if not ready or on dynamic navigation
     try {
       await chrome.scripting.executeScript({
-        target: { tabId },
+        target: { tabId, allFrames: true },
         files: ["content.js"]
       });
       return await chrome.tabs.sendMessage(tabId, message);
@@ -278,8 +285,26 @@ async function executeValidatedAction(action, tabId) {
 
   if (action.type === "navigate") {
     try {
-      await chrome.tabs.update(tabId, { url: action.url });
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await new Promise((resolve, reject) => {
+        chrome.tabs.update(tabId, { url: action.url }, (tab) => {
+          if (chrome.runtime.lastError) {
+            return reject(new Error(chrome.runtime.lastError.message));
+          }
+          const listener = (updatedTabId, changeInfo) => {
+            if (updatedTabId === tabId && changeInfo.status === "complete") {
+              chrome.tabs.onUpdated.removeListener(listener);
+              resolve();
+            }
+          };
+          chrome.tabs.onUpdated.addListener(listener);
+          // Fallback to avoid hanging on infinite loaders
+          setTimeout(() => {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }, 10000);
+        });
+      });
+
       currentTask.steps.push({ action, result: { ok: true, navigatedTo: action.url } });
       broadcastState("TASK_UPDATED", currentTask);
       setTimeout(runTaskStep, 500);
