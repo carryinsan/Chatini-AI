@@ -1,14 +1,10 @@
-const fs = require('fs');
-const path = require('path');
-
-// Target password configured for Admin Access
 const ADMIN_PASSWORD = "Lexis-Admin-2026!";
 
-// Data Persistence Path (fallback to in-memory if disk write is restricted)
-const DATA_DIR = path.join(process.cwd(), 'data');
-const STORAGE_FILE = path.join(DATA_DIR, 'app_control.json');
+// Upstash Redis Database Connection Credentials
+const UPSTASH_URL = "https://immortal-eagle-36171.upstash.io".replace(/\/$/, '');
+const UPSTASH_TOKEN = "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw";
+const REDIS_KEY = "arix_app_control_store";
 
-// Default All Features Configuration (Admin can toggle visibility and usage per feature/model)
 const DEFAULT_FEATURE_CONFIG = {
     // Models
     spark: { visible: true, enabled: true, category: 'model', label: 'Spark Engine' },
@@ -37,56 +33,64 @@ const DEFAULT_FEATURE_CONFIG = {
     manage_extensions: { visible: true, enabled: true, category: 'tool', label: 'Manage Knowledge Extensions' },
     constellation_map: { visible: true, enabled: true, category: 'tool', label: 'Constellation Brain Map' },
     share_chat: { visible: true, enabled: true, category: 'tool', label: 'Share Chat Link' },
-    experimental: { visible: true, enabled: true, category: 'tool', label: 'Experimental Suite (The Lab / Twin)' },
+    experimental: { visible: true, enabled: true, category: 'tool', label: 'Experimental Suite' },
     your_projects: { visible: true, enabled: true, category: 'tool', label: 'Your Projects' },
+
+    // Settings
     use_memory: { visible: true, enabled: true, category: 'setting', label: 'Use Memory Toggle' },
     save_data: { visible: true, enabled: true, category: 'setting', label: 'Save Data Toggle' },
     recent_chats: { visible: true, enabled: true, category: 'setting', label: 'Recent Chats History' }
 };
 
-// In-Memory Database Structure
-let appStore = {
-    globalDefaults: JSON.parse(JSON.stringify(DEFAULT_FEATURE_CONFIG)),
-    users: {}, // deviceId -> { nickname, deviceInfo, lastSeen, customOverrides: {} }
-    activityLogs: []
-};
-
-// Load data from disk if available
-function loadStore() {
+async function redisCommand(commandArray) {
     try {
-        if (fs.existsSync(STORAGE_FILE)) {
-            const raw = fs.readFileSync(STORAGE_FILE, 'utf8');
-            const parsed = JSON.parse(raw);
-            appStore.globalDefaults = { ...DEFAULT_FEATURE_CONFIG, ...(parsed.globalDefaults || {}) };
-            appStore.users = parsed.users || {};
-            appStore.activityLogs = parsed.activityLogs || [];
-        }
-    } catch (e) {
-        console.error("UserTracker: Error reading data store", e.message);
+        const response = await fetch(UPSTASH_URL, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${UPSTASH_TOKEN}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(commandArray)
+        });
+        const data = await response.json();
+        return data.result;
+    } catch (err) {
+        console.error("Upstash Redis REST Error:", err);
+        return null;
     }
 }
 
-// Persist data to disk
-function saveStore() {
+async function loadStore() {
     try {
-        if (!fs.existsSync(DATA_DIR)) {
-            fs.mkdirSync(DATA_DIR, { recursive: true });
+        const raw = await redisCommand(["GET", REDIS_KEY]);
+        if (raw) {
+            const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            return {
+                globalDefaults: { ...DEFAULT_FEATURE_CONFIG, ...(parsed.globalDefaults || {}) },
+                users: parsed.users || {},
+                activityLogs: parsed.activityLogs || []
+            };
         }
-        fs.writeFileSync(STORAGE_FILE, JSON.stringify(appStore, null, 2), 'utf8');
     } catch (e) {
-        console.error("UserTracker: Error writing data store", e.message);
+        console.error("UserTracker: Error parsing Redis store", e.message);
+    }
+    return {
+        globalDefaults: JSON.parse(JSON.stringify(DEFAULT_FEATURE_CONFIG)),
+        users: {},
+        activityLogs: []
+    };
+}
+
+async function saveStore(store) {
+    try {
+        await redisCommand(["SET", REDIS_KEY, JSON.stringify(store)]);
+    } catch (e) {
+        console.error("UserTracker: Error saving Redis store", e.message);
     }
 }
 
-// Initialize on module load
-loadStore();
-
-/**
- * Universal Serverless Endpoint Handler
- * Compatible with Express, Node http, Vercel Serverless Functions
- */
 module.exports = async function handler(req, res) {
-    // CORS Headers
+    // Enable Global CORS for client communication
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-admin-password');
@@ -95,57 +99,33 @@ module.exports = async function handler(req, res) {
         return res.status(200).end();
     }
 
-    // Parse Body
     let body = req.body || {};
     if (typeof body === 'string') {
         try { body = JSON.parse(body); } catch (e) {}
     }
 
-    const action = req.query.action || body.action || (req.method === 'GET' ? 'get_user_config' : 'track');
-    const adminAuthHeader = req.headers['x-admin-password'] || body.adminPassword;
+    const urlParams = new URL(req.url, `http://${req.headers.host || 'localhost'}`).searchParams;
+    const action = req.query?.action || urlParams.get('action') || body.action || (req.method === 'GET' ? 'get_my_permissions' : 'track');
+    const adminAuthHeader = req.headers['x-admin-password'] || body.adminPassword || urlParams.get('adminPassword');
     const isAdmin = adminAuthHeader === ADMIN_PASSWORD;
+
+    const store = await loadStore();
 
     try {
         switch (action) {
             // -----------------------------------------------------------------
-            // PUBLIC ENDPOINTS (Used by app.html to check permissions & track)
+            // PUBLIC ENDPOINTS (Used by app.html to fetch permissions & track)
             // -----------------------------------------------------------------
 
+            case 'get_my_permissions':
             case 'get_user_config': {
-                const deviceId = req.query.deviceId || body.deviceId || 'anonymous';
-                const userObj = appStore.users[deviceId] || {};
-                const userOverrides = userObj.customOverrides || {};
+                const deviceId = req.query?.deviceId || urlParams.get('deviceId') || body.deviceId || 'anonymous';
+                const nickname = req.query?.nickname || urlParams.get('nickname') || body.nickname || 'Anonymous User';
+                const deviceInfo = body.deviceInfo || 'Browser';
 
-                // Merge Global Defaults with User-Specific Overrides
-                const finalConfig = {};
-                Object.keys(appStore.globalDefaults).forEach(key => {
-                    const globalItem = appStore.globalDefaults[key];
-                    const userOverride = userOverrides[key] || {};
-
-                    finalConfig[key] = {
-                        visible: userOverride.visible !== undefined ? userOverride.visible : globalItem.visible,
-                        enabled: userOverride.enabled !== undefined ? userOverride.enabled : globalItem.enabled,
-                        category: globalItem.category,
-                        label: globalItem.label
-                    };
-                });
-
-                return res.status(200).json({
-                    success: true,
-                    deviceId: deviceId,
-                    config: finalConfig
-                });
-            }
-
-            case 'track':
-            case 'ping': {
-                const deviceId = body.deviceId || 'anonymous';
-                const nickname = body.nickname || 'Anonymous User';
-                const deviceInfo = body.deviceInfo || 'Unknown Device';
-                const currentAction = body.userAction || 'Active Session';
-
-                if (!appStore.users[deviceId]) {
-                    appStore.users[deviceId] = {
+                // Auto-register device ID on visit
+                if (!store.users[deviceId]) {
+                    store.users[deviceId] = {
                         deviceId: deviceId,
                         nickname: nickname,
                         deviceInfo: deviceInfo,
@@ -154,28 +134,93 @@ module.exports = async function handler(req, res) {
                         customOverrides: {}
                     };
                 } else {
-                    appStore.users[deviceId].nickname = nickname || appStore.users[deviceId].nickname;
-                    appStore.users[deviceId].deviceInfo = deviceInfo || appStore.users[deviceId].deviceInfo;
-                    appStore.users[deviceId].lastSeen = Date.now();
+                    store.users[deviceId].nickname = nickname !== 'Anonymous User' ? nickname : store.users[deviceId].nickname;
+                    store.users[deviceId].lastSeen = Date.now();
                 }
 
-                // Append activity log (cap at last 500 actions)
-                appStore.activityLogs.unshift({
+                // Append initial ping log
+                store.activityLogs.unshift({
                     deviceId: deviceId,
-                    nickname: nickname,
+                    nickname: store.users[deviceId].nickname,
+                    action: 'App Session Check',
+                    timestamp: Date.now()
+                });
+                if (store.activityLogs.length > 500) {
+                    store.activityLogs = store.activityLogs.slice(0, 500);
+                }
+
+                await saveStore(store);
+
+                const userObj = store.users[deviceId] || {};
+                const userOverrides = userObj.customOverrides || {};
+
+                // Compute merged permissions (Global Defaults + User Overrides)
+                const finalConfig = {};
+                const permissionsMap = {};
+
+                Object.keys(store.globalDefaults).forEach(key => {
+                    const globalItem = store.globalDefaults[key];
+                    const userOverride = userOverrides[key] || {};
+
+                    const visible = userOverride.visible !== undefined ? userOverride.visible : globalItem.visible;
+                    const enabled = userOverride.enabled !== undefined ? userOverride.enabled : globalItem.enabled;
+
+                    finalConfig[key] = {
+                        visible,
+                        enabled,
+                        category: globalItem.category,
+                        label: globalItem.label
+                    };
+
+                    permissionsMap[key] = visible && enabled;
+                });
+
+                return res.status(200).json({
+                    success: true,
+                    deviceId: deviceId,
+                    config: finalConfig,
+                    permissions: permissionsMap
+                });
+            }
+
+            case 'track':
+            case 'ping': {
+                const deviceId = body.deviceId || req.query?.deviceId || 'anonymous';
+                const nickname = body.nickname || 'Anonymous User';
+                const deviceInfo = body.deviceInfo || 'Unknown Device';
+                const currentAction = body.userAction || 'Active Session';
+
+                if (!store.users[deviceId]) {
+                    store.users[deviceId] = {
+                        deviceId: deviceId,
+                        nickname: nickname,
+                        deviceInfo: deviceInfo,
+                        firstSeen: Date.now(),
+                        lastSeen: Date.now(),
+                        customOverrides: {}
+                    };
+                } else {
+                    store.users[deviceId].nickname = nickname || store.users[deviceId].nickname;
+                    store.users[deviceId].deviceInfo = deviceInfo || store.users[deviceId].deviceInfo;
+                    store.users[deviceId].lastSeen = Date.now();
+                }
+
+                store.activityLogs.unshift({
+                    deviceId: deviceId,
+                    nickname: store.users[deviceId].nickname,
                     action: currentAction,
                     timestamp: Date.now()
                 });
-                if (appStore.activityLogs.length > 500) {
-                    appStore.activityLogs = appStore.activityLogs.slice(0, 500);
+                if (store.activityLogs.length > 500) {
+                    store.activityLogs = store.activityLogs.slice(0, 500);
                 }
 
-                saveStore();
+                await saveStore(store);
                 return res.status(200).json({ success: true, registered: true });
             }
 
             // -----------------------------------------------------------------
-            // ADMIN ENDPOINTS (Protected by password Lexis-Admin-2026!)
+            // ADMIN ENDPOINTS (Protected by Lexis-Admin-2026!)
             // -----------------------------------------------------------------
 
             case 'admin_login': {
@@ -195,9 +240,9 @@ module.exports = async function handler(req, res) {
                 }
                 return res.status(200).json({
                     success: true,
-                    globalDefaults: appStore.globalDefaults,
-                    users: appStore.users,
-                    activityLogs: appStore.activityLogs.slice(0, 50)
+                    globalDefaults: store.globalDefaults,
+                    users: store.users,
+                    activityLogs: store.activityLogs
                 });
             }
 
@@ -210,19 +255,18 @@ module.exports = async function handler(req, res) {
                     return res.status(400).json({ success: false, error: 'Invalid defaults payload' });
                 }
 
-                // Update settings
                 Object.keys(newDefaults).forEach(key => {
-                    if (appStore.globalDefaults[key]) {
-                        appStore.globalDefaults[key].visible = !!newDefaults[key].visible;
-                        appStore.globalDefaults[key].enabled = !!newDefaults[key].enabled;
+                    if (store.globalDefaults[key]) {
+                        store.globalDefaults[key].visible = !!newDefaults[key].visible;
+                        store.globalDefaults[key].enabled = !!newDefaults[key].enabled;
                     }
                 });
 
-                saveStore();
+                await saveStore(store);
                 return res.status(200).json({
                     success: true,
                     message: 'Global default feature access updated',
-                    globalDefaults: appStore.globalDefaults
+                    globalDefaults: store.globalDefaults
                 });
             }
 
@@ -231,17 +275,17 @@ module.exports = async function handler(req, res) {
                     return res.status(401).json({ success: false, error: 'Unauthorized Access' });
                 }
                 const { targetDeviceId, customOverrides } = body;
-                if (!targetDeviceId || !appStore.users[targetDeviceId]) {
+                if (!targetDeviceId || !store.users[targetDeviceId]) {
                     return res.status(404).json({ success: false, error: 'User device ID not found' });
                 }
 
-                appStore.users[targetDeviceId].customOverrides = customOverrides || {};
-                saveStore();
+                store.users[targetDeviceId].customOverrides = customOverrides || {};
+                await saveStore(store);
 
                 return res.status(200).json({
                     success: true,
                     message: `Permissions updated for user ${targetDeviceId}`,
-                    user: appStore.users[targetDeviceId]
+                    user: store.users[targetDeviceId]
                 });
             }
 
@@ -250,9 +294,9 @@ module.exports = async function handler(req, res) {
                     return res.status(401).json({ success: false, error: 'Unauthorized Access' });
                 }
                 const { targetDeviceId } = body;
-                if (targetDeviceId && appStore.users[targetDeviceId]) {
-                    appStore.users[targetDeviceId].customOverrides = {};
-                    saveStore();
+                if (targetDeviceId && store.users[targetDeviceId]) {
+                    store.users[targetDeviceId].customOverrides = {};
+                    await saveStore(store);
                 }
                 return res.status(200).json({ success: true, message: 'User overrides reset to global defaults' });
             }
@@ -261,7 +305,7 @@ module.exports = async function handler(req, res) {
                 return res.status(400).json({ success: false, error: `Unknown action: ${action}` });
         }
     } catch (err) {
-        console.error("UserTracker Handler Error:", err);
+        console.error("UserTracker Handler Exception:", err);
         return res.status(500).json({ success: false, error: err.message });
     }
 };
