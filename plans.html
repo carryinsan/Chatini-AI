@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArixAI - Pricing</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            900: '#4c1d95',
+                        },
+                        dark: {
+                            bg: '#0f1117',
+                            card: '#1e212b',
+                            border: '#2d313f'
+                        }
+                    },
+                    animation: {
+                        'gradient-x': 'gradient-x 15s ease infinite',
+                    },
+                    keyframes: {
+                        'gradient-x': {
+                            '0%, 100%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'left center'
+                            },
+                            '50%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'right center'
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Smooth theme transitions */
+        body {
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        .glass-panel {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .dark ::-webkit-scrollbar-thumb {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-gray-100 font-sans antialiased min-h-screen flex flex-col selection:bg-brand-500 selection:text-white">
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 w-full border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-dark-bg/80 glass-panel transition-colors duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                    A
+                </div>
+                <span class="font-bold text-xl tracking-tight">ArixAI</span>
+            </div>
+            
+            <button id="themeToggle" class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-dark-card transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500" aria-label="Toggle Dark Mode">
+                <i data-lucide="sun" id="icon-sun" class="w-5 h-5 hidden dark:block text-yellow-400"></i>
+                <i data-lucide="moon" id="icon-moon" class="w-5 h-5 block dark:hidden text-slate-700"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Header Section -->
+    <main class="flex-grow w-full pb-24">
+        <!-- Hero -->
+        <div class="relative pt-20 pb-16 text-center px-4 overflow-hidden">
+            <!-- Background effects -->
+            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-brand-500/20 dark:bg-brand-600/20 blur-[120px] rounded-full pointer-events-none -z-10"></div>
+            
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6">
+                One Wallet. <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-blue-500 dark:from-brand-400 dark:to-blue-400 animate-gradient-x">Infinite Possibilities.</span>
+            </h1>
+            
+            <p class="mt-4 max-w-2xl mx-auto text-lg md:text-xl text-gray-600 dark:text-gray-300">
+                Every plan includes <strong>Arix Credits</strong>—your flexible AI wallet. No rigid quotas. Spend them exactly how you want.
+            </p>
+
+            <div class="mt-8 flex flex-wrap justify-center gap-3 text-sm font-medium text-gray-600 dark:text-gray-400">
+                <span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-dark-card border border-gray-200 dark:border-dark-border"><i data-lucide="brain" class="w-4 h-4 text-brand-500"></i> Deep AI</span>
+                <span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-dark-card border border-gray-200 dark:border-dark-border"><i data-lucide="zap" class="w-4 h-4 text-yellow-500"></i> Fast AI</span>
+                <span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-dark-card border border-gray-200 dark:border-dark-border"><i data-lucide="search" class="w-4 h-4 text-blue-500"></i> Research</span>
+                <span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-dark-card border border-gray-200 dark:border-dark-border"><i data-lucide="image" class="w-4 h-4 text-emerald-500"></i> Images</span>
+                <span class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gray-100 dark:bg-dark-card border border-gray-200 dark:border-dark-border"><i data-lucide="video" class="w-4 h-4 text-pink-500"></i> Video</span>
+            </div>
+        </div>
+
+        <!-- Pricing Grid Container -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start relative z-10" id="pricing-container">
+                <!-- Cards injected via JS to keep HTML DRY and structured -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-gray-200 dark:border-dark-border py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <p>&copy; 2026 ArixAI. All rights reserved. Flexible AI for everyone.</p>
+    </footer>
+
+    <script>
+        // Pricing Data Model - Updated with new model names (Spark, Flux, Oracle)
+        const plans = [
+            {
+                id: 'spark',
+                name: 'Spark',
+                tagline: 'Try the whole AI universe for less than a meal.',
+                price: '99',
+                credits: '200',
+                creditDesc: '200 credits. Use them anywhere.',
+                target: 'Target: acquisition plan.',
+                features: [
+                    'Spark Model',
+                    'Limited thinking Flux',
+                    'Web research',
+                    'Image generation',
+                    'Short video generation',
+                    'AI chat history',
+                    'Basic file upload',
+                    'Basic prompt library',
+                    'Basic export',
+                    'Personalized AI preferences',
+                    'Multi-model automatic routing'
+                ],
+                highlight: false,
+                buttonType: 'default'
+            },
+            {
+                id: 'starter',
+                name: 'Starter',
+                tagline: 'More AI. Still pocket money.',
+                price: '149',
+                credits: '300',
+                creditDesc: '1.5× the wallet of Spark.',
+                features: [
+                    '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Spark, plus:</span>',
+                    'More thinking Flux',
+                    'Longer conversations',
+                    'Larger file limits',
+                    'Better research mode',
+                    'More image resolution options',
+                    'Longer video option',
+                    'Saved projects',
+                    'More chat history',
+                    'Custom instructions',
+                    'Priority over free users'
+                ],
+                highlight: false,
+                buttonType: 'default'
+            },
+            {
+                id: 'plus',
+                name: 'Plus',
+                badge: 'MOST POPULAR',
+                tagline: 'The sweet spot.',
+                price: '299',
+                credits: '600',
+                creditDesc: 'Power across models & media tools.',
+                features: [
+                    '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Starter, plus:</span>',
+                    'Limited Oracle model',
+                    'Advanced research & multi-source',
+                    'PDF/document analysis',
+                    'Better model routing',
+                    'Custom AI assistants',
+                    'Project workspaces',
+                    'Image editing',
+                    'Higher file limits & video options',
+                    'Export to PDF/DOCX/Markdown',
+                    'Prompt templates & folders',
+                    'Priority generation queue'
+                ],
+                highlight: 'primary',
+                buttonType: 'primary'
+            },
+            {
+                id: 'pro',
+                name: 'Pro',
+                badge: 'MAIN PRODUCT',
+                tagline: 'One AI workspace. No switching.',
+                price: '499',
+                credits: '1000',
+                creditDesc: '1000 credits. Spend them your way.',
+                features: [
+                    '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Plus, plus:</span>',
+                    'Full Oracle model & Limited Oracle thinking',
+                    'Advanced Flux & heavy Spark usage',
+                    'Highest normal chat priority',
+                    'Larger document processing',
+                    'Better image & video limits',
+                    'Multiple projects & assistants',
+                    'Advanced prompt controls',
+                    'Usage analytics & Model selection',
+                    'Auto cheapest/best-model routing',
+                    'Early access to new features'
+                ],
+                highlight: 'secondary',
+                buttonType: 'gradient'
+            },
+            {
+                id: 'max',
+                name: 'Max',
+                tagline: 'For people who actually use AI every day.',
+                price: '1,499',
+                credits: '3000',
+                creditDesc: 'Stop thinking about quotas. Think about work.',
+                features: [
+                    '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Pro, plus:</span>',
+                    'Higher Oracle thinking',
+                    'Very high Flux & Spark capacity',
+                    'Heavy research & Larger files',
+                    'Long-context projects',
+                    'More image & video generation',
+                    'Priority processing',
+                    'Advanced project memory',
+                    'Batch generation',
+                    'Custom workflows & advanced exports',
+                    'Higher concurrency'
+                ],
+                highlight: false,
+                buttonType: 'default'
+            },
+            {
+                id: 'ultra',
+                name: 'Ultra',
+                badge: 'THE WORKSTATION',
+                tagline: 'Built for people who measure work in hours saved, not messages.',
+                price: '2,999',
+                credits: '6000',
+                creditDesc: 'Maximum capacity & infrastructure.',
+                features: [
+                    '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Max, plus:</span>',
+                    'Maximum Oracle thinking',
+                    'Highest priority queue',
+                    'Max available context',
+                    'Heavy research workflows',
+                    'Large project workspaces',
+                    'Batch image & video generation',
+                    'Multiple simultaneous jobs',
+                    'Advanced workflow automation',
+                    'Premium support channel',
+                    'Team/project features (coming soon)'
+                ],
+                highlight: false,
+                buttonType: 'outline'
+            }
+        ];
+
+        // Render Function
+        const renderPricing = () => {
+            const container = document.getElementById('pricing-container');
+            
+            let html = '';
+            
+            plans.forEach((plan, index) => {
+                // Determine styling based on highlight types
+                let cardClass = 'bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-3xl p-8 flex flex-col shadow-sm hover:shadow-xl transition-all duration-300 relative group h-full';
+                let buttonClass = 'mt-8 w-full py-3 px-4 rounded-xl font-semibold transition-all duration-200 flex justify-center items-center gap-2 ';
+                
+                if (plan.highlight === 'primary') {
+                    // Plus Plan Styling
+                    cardClass = 'bg-white dark:bg-dark-card border-2 border-brand-500 rounded-3xl p-8 flex flex-col shadow-xl shadow-brand-500/10 hover:shadow-brand-500/20 md:-mt-4 relative group h-full transform transition-all duration-300 z-20';
+                    buttonClass += 'bg-brand-600 hover:bg-brand-700 text-white shadow-md hover:shadow-lg';
+                } else if (plan.highlight === 'secondary') {
+                    // Pro Plan Styling
+                    cardClass = 'bg-white dark:bg-dark-card border-2 border-transparent bg-clip-padding rounded-3xl p-8 flex flex-col shadow-lg relative group h-full transition-all duration-300 z-10 before:absolute before:inset-0 before:-z-10 before:rounded-3xl before:p-[2px] before:bg-gradient-to-br before:from-brand-400 before:to-blue-500';
+                    buttonClass += 'bg-gradient-to-r from-brand-600 to-blue-500 hover:from-brand-700 hover:to-blue-600 text-white shadow-md';
+                } else if (plan.buttonType === 'outline') {
+                    buttonClass += 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-800';
+                } else {
+                    buttonClass += 'bg-gray-100 dark:bg-dark-border text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700';
+                }
+
+                // Render Badge
+                let badgeHtml = '';
+                if (plan.badge) {
+                    const badgeColors = plan.highlight === 'primary' 
+                        ? 'bg-brand-500 text-white' 
+                        : 'bg-gradient-to-r from-brand-500 to-blue-500 text-white';
+                    
+                    badgeHtml = `
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${badgeColors} shadow-sm z-30">
+                            ${plan.badge}
+                        </div>
+                    `;
+                }
+
+                // Render Features
+                let featuresHtml = plan.features.map(f => `
+                    <li class="flex items-start gap-3">
+                        <i data-lucide="check" class="w-5 h-5 text-brand-500 flex-shrink-0 mt-0.5"></i>
+                        <span class="text-sm text-gray-600 dark:text-gray-300 leading-tight">${f}</span>
+                    </li>
+                `).join('');
+
+                html += `
+                    <div class="${cardClass}">
+                        ${badgeHtml}
+                        
+                        <div class="mb-6">
+                            <h3 class="text-2xl font-bold text-gray-900 dark:text-white">${plan.name}</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-2 h-10">${plan.tagline}</p>
+                        </div>
+
+                        <div class="mb-6 flex items-baseline gap-1">
+                            <span class="text-4xl font-extrabold text-gray-900 dark:text-white">₹${plan.price}</span>
+                            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">/mo</span>
+                        </div>
+
+                        <div class="p-4 bg-brand-50 dark:bg-brand-900/20 border border-brand-100 dark:border-brand-900/50 rounded-xl mb-6 flex flex-col gap-1">
+                            <div class="flex items-center gap-2 font-bold text-brand-700 dark:text-brand-300">
+                                <i data-lucide="coins" class="w-5 h-5"></i>
+                                ${plan.credits} Arix Credits
+                            </div>
+                            <div class="text-xs text-brand-600/80 dark:text-brand-400/80 font-medium italic">
+                                "${plan.creditDesc}"
+                            </div>
+                        </div>
+
+                        <ul class="flex flex-col gap-3 flex-grow mb-8">
+                            ${featuresHtml}
+                        </ul>
+
+                        <div class="mt-auto pt-4 border-t border-gray-100 dark:border-dark-border">
+                            <button class="${buttonClass}">
+                                Get ${plan.name}
+                                <i data-lucide="arrow-right" class="w-4 h-4 transition-transform group-hover:translate-x-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            lucide.createIcons();
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPricing();
+
+            // Theme Toggling Logic
+            const themeToggleBtn = document.getElementById('themeToggle');
+            const htmlElement = document.documentElement;
+
+            // Check system/local preference (Optional: strict defaulting to dark)
+            if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                htmlElement.classList.add('dark');
+            } else if (localStorage.theme === 'light') {
+                htmlElement.classList.remove('dark');
+            }
+
+            themeToggleBtn.addEventListener('click', () => {
+                htmlElement.classList.toggle('dark');
+                if (htmlElement.classList.contains('dark')) {
+                    localStorage.theme = 'dark';
+                } else {
+                    localStorage.theme = 'light';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
