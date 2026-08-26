@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -317,16 +318,6 @@ body {
 
             <button id="arix-submit-btn" onclick="submitArixAuth()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-colors mt-2 text-sm shadow-sm flex justify-center items-center gap-2">
                 Sign In
-            </button>
-
-            <div class="relative flex py-1 items-center">
-                <div class="flex-grow border-t border-gray-200"></div>
-                <span class="flex-shrink mx-3 text-gray-400 text-xs uppercase font-medium">Or</span>
-                <div class="flex-grow border-t border-gray-200"></div>
-            </div>
-
-            <button type="button" onclick="continueOnDevice()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-2.5 rounded-lg transition-colors text-xs flex justify-center items-center gap-2 border border-gray-200">
-                <i class="ph-bold ph-hard-drive text-sm text-gray-600"></i> Store on Device Only (Skip Mail Account)
             </button>
         </div>
     </div>
@@ -1104,7 +1095,7 @@ function toggleVoice() {
 
 let currentArixAuthMode = 'login';
 let arixUserEmail = localStorage.getItem('arix_email') || null;
-let arixStorageMode = localStorage.getItem('arix_storage') || null;
+let arixStorageMode = localStorage.getItem('arix_storage') || 'database';
 
 function switchArixTab(mode) {
     currentArixAuthMode = mode;
@@ -1130,28 +1121,13 @@ function switchArixTab(mode) {
 }
 
 function checkNickname() {
-    if (!arixUserEmail && arixStorageMode !== 'device') {
+    if (!arixUserEmail) {
         document.getElementById('arix-auth-modal').classList.remove('hidden');
     } else {
         document.getElementById('arix-auth-modal').classList.add('hidden');
-        const displayName = arixUserEmail || localStorage.getItem('Arix_nickname') || 'Device User';
-        updateSidebarName(displayName);
+        updateSidebarName(arixUserEmail);
         loadArixData();
     }
-}
-
-function continueOnDevice() {
-    arixStorageMode = 'device';
-    localStorage.setItem('arix_storage', 'device');
-    
-    const existingNick = localStorage.getItem('Arix_nickname');
-    const displayName = arixUserEmail || (existingNick && existingNick !== 'Anonymous' ? existingNick : 'Device User');
-    localStorage.setItem('Arix_nickname', displayName);
-    
-    document.getElementById('arix-auth-modal').classList.add('hidden');
-    updateSidebarName(displayName);
-    showToast("Operating in Local Device Mode");
-    loadArixData();
 }
 
 async function submitArixAuth() {
@@ -1159,18 +1135,9 @@ async function submitArixAuth() {
     const pwd = document.getElementById('arix-password').value;
     const btn = document.getElementById('arix-submit-btn');
     const err = document.getElementById('arix-error');
-    const storagePref = document.querySelector('input[name="storage_pref"]:checked')?.value || 'database';
-
-    // If device storage is chosen and credentials are omitted, proceed locally without requiring an account
-    if (currentArixAuthMode === 'signup' && storagePref === 'device' && (!username && !pwd)) {
-        continueOnDevice();
-        return;
-    }
-
+    
     if (!username || !pwd) {
-        err.innerText = storagePref === 'device' 
-            ? "Fill in fields to create an account, or click 'Store on Device Only' to skip." 
-            : "Please fill in all fields.";
+        err.innerText = "Please fill in all fields.";
         err.classList.remove('hidden');
         return;
     }
@@ -1186,6 +1153,8 @@ async function submitArixAuth() {
     btn.disabled = true;
 
     try {
+        const storagePref = document.querySelector('input[name="storage_pref"]:checked')?.value || 'database';
+        
         // Simulating PoW Challenge & Backend Handshake
         await new Promise(r => setTimeout(r, currentArixAuthMode === 'signup' ? 2000 : 800));
 
@@ -1216,15 +1185,11 @@ function updateSidebarName(name) {
 }
 
 function changeNickname() {
-    // Allows user to sign out, switch accounts, or switch storage modes
+    // Allows user to sign out or switch accounts
     localStorage.removeItem('arix_email');
-    localStorage.removeItem('arix_storage');
     arixUserEmail = null;
-    arixStorageMode = null;
-    document.getElementById('arix-username').value = '';
     document.getElementById('arix-password').value = '';
     document.getElementById('arix-auth-modal').classList.remove('hidden');
-}
 }
 // Global Application State Variables
 let activeModelId = localStorage.getItem('Arix_active_model') || 'spark';
