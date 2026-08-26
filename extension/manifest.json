@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "AI Browser Agent",
+  "version": "1.0.0",
+  "description": "Secure AI browser agent with human-in-the-loop approvals, proactive monitoring, and permission firewalls.",
+  "permissions": [
+    "sidePanel",
+    "activeTab",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "action": {
+    "default_title": "Open AI Agent Sidepanel"
+  }
+}
