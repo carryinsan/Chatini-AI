@@ -1,27 +1,36 @@
 <!DOCTYPE html>
-<html lang="en" class="light">
+<html lang="en" class="h-full bg-slate-900 text-slate-100">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ArixMail | Professional Email & AI</title>
+  <title>ArixMail | Simple & Private Email</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/@phosphor-icons/web"></script>
   
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif'],
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
           },
           colors: {
             brand: {
-              50: '#eff6ff',
-              100: '#dbeafe',
+              50: '#f0f7ff',
+              100: '#e0effe',
               500: '#3b82f6',
               600: '#2563eb',
               700: '#1d4ed8',
+              900: '#1e3a8a',
+            },
+            surface: {
+              800: '#1e293b',
+              850: '#151e2e',
+              900: '#0f172a',
+              950: '#080d1a',
             }
           }
         }
@@ -29,305 +38,405 @@
     }
   </script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body { background-color: #f8fafc; color: #0f172a; font-family: 'Inter', sans-serif; overflow: hidden; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
     
-    /* Smooth custom scrollbars */
-    ::-webkit-scrollbar { width: 6px; }
+    body { font-family: 'Inter', sans-serif; overflow: hidden; }
+    
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-card {
+      background: rgba(30, 41, 59, 0.5);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-    
-    /* Subtle animations */
-    .fade-in { animation: fadeIn 0.3s ease-in-out; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+
+    .fade-in { animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
     @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(5px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(4px) scale(0.99); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
   </style>
 </head>
-<body class="h-screen w-full flex items-center justify-center selection:bg-brand-100 selection:text-brand-700">
+<body class="h-full w-full bg-surface-950 text-slate-100 selection:bg-brand-500/30 selection:text-brand-400">
 
-  <div id="auth-view" class="w-full max-w-md p-8 bg-white rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative z-10 transition-all duration-500">
-    <div class="flex flex-col items-center gap-3 mb-8">
-      <div class="w-14 h-14 rounded-xl bg-brand-50 flex items-center justify-center border border-brand-100 text-brand-600">
-        <i class="ph-fill ph-envelope-simple text-3xl"></i>
-      </div>
-      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Sign in to ArixMail</h1>
-      <p class="text-sm text-slate-500">Secure, private email and AI workspace.</p>
-    </div>
+  <!-- ================= AUTHENTICATION VIEW ================= -->
+  <div id="auth-view" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-brand-900/30 via-surface-950 to-surface-950">
+    <div class="w-full max-w-md p-8 glass-panel rounded-2xl shadow-2xl relative overflow-hidden border border-slate-800">
+      <div class="absolute -top-20 -left-20 w-40 h-40 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-    <div class="space-y-5">
-      <div>
-        <label class="text-sm font-semibold text-slate-700 mb-1.5 block">Username</label>
-        <div class="relative flex items-center">
-          <input type="text" id="auth-username" placeholder="yourname" class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-4 pr-28 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all sm:text-sm">
-          <span class="absolute right-4 text-slate-400 text-sm pointer-events-none">@amail.com</span>
+      <div class="flex flex-col items-center text-center gap-2 mb-8">
+        <div class="w-13 h-13 rounded-2xl bg-brand-600/20 border border-brand-500/30 flex items-center justify-center text-brand-400 p-3 shadow-inner">
+          <i class="ph-fill ph-envelope-simple text-3xl"></i>
+        </div>
+        <div class="mt-1">
+          <h1 class="text-2xl font-bold tracking-tight text-white">Welcome to ArixMail</h1>
+          <p class="text-xs text-slate-400 mt-1">Fast, private, and simple email service</p>
         </div>
       </div>
 
-      <div>
-        <label class="text-sm font-semibold text-slate-700 mb-1.5 block">Password</label>
-        <input type="password" id="auth-password" placeholder="Min 12 chars (upper, lower, num, symbol)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all sm:text-sm">
-        <p id="pwd-strength" class="text-xs text-slate-500 mt-2 h-4"></p>
-      </div>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 block">Username</label>
+          <div class="relative flex items-center">
+            <input type="text" id="auth-username" placeholder="alex" class="w-full bg-surface-900/90 border border-slate-700/60 rounded-xl pl-4 pr-28 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+            <span class="absolute right-4 text-xs font-mono text-brand-400 pointer-events-none">@amail.com</span>
+          </div>
+        </div>
 
-      <!-- Security Check / Proof of Work Visual -->
-      <div id="pow-container" class="hidden bg-slate-50 border border-slate-100 rounded-lg p-4 flex flex-col items-center justify-center gap-2">
-        <i class="ph-bold ph-spinner animate-spin text-brand-500 text-xl"></i>
-        <span class="text-xs font-medium text-slate-600" id="pow-status-text">Running security check...</span>
-      </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 block">Password</label>
+          <input type="password" id="auth-password" placeholder="Min 12 characters (uppercase, number, symbol)" class="w-full bg-surface-900/90 border border-slate-700/60 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all">
+          <p id="pwd-strength" class="text-[11px] text-slate-400 mt-1.5 h-4"></p>
+        </div>
 
-      <div class="pt-2 space-y-3">
-        <button onclick="handleAuth('login')" id="btn-login" class="w-full bg-brand-600 text-white font-medium py-3 rounded-lg hover:bg-brand-700 transition-all shadow-sm flex items-center justify-center gap-2">
-          Log In
-        </button>
-        <button onclick="handleAuth('register')" id="btn-register" class="w-full bg-white border border-slate-200 text-slate-700 font-medium py-3 rounded-lg hover:bg-slate-50 hover:text-slate-900 transition-all flex items-center justify-center gap-2">
-          Create Account
-        </button>
-      </div>
+        <!-- Connection Check Loading Box -->
+        <div id="pow-container" class="hidden bg-surface-900 border border-brand-500/30 rounded-xl p-3 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2.5">
+            <i class="ph-bold ph-spinner animate-spin text-brand-400 text-base"></i>
+            <span class="font-sans text-slate-300 text-xs" id="pow-status-text">Creating account securely...</span>
+          </div>
+          <span class="text-[10px] bg-brand-500/20 text-brand-300 px-2 py-0.5 rounded font-mono">Secure</span>
+        </div>
 
-      <p id="auth-error" class="text-red-600 text-sm font-medium text-center hidden p-3 bg-red-50 rounded-lg border border-red-100"></p>
+        <div class="pt-2 space-y-2.5">
+          <button onclick="handleAuth('login')" id="btn-login" class="w-full bg-brand-600 hover:bg-brand-500 text-white font-medium py-3 rounded-xl transition-all shadow-lg shadow-brand-600/20 flex items-center justify-center gap-2 text-sm">
+            <i class="ph-bold ph-sign-in"></i> Log In
+          </button>
+          <button onclick="handleAuth('register')" id="btn-register" class="w-full bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700/50 font-medium py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-sm">
+            <i class="ph-bold ph-user-plus"></i> Create New Account
+          </button>
+        </div>
+
+        <p id="auth-error" class="text-red-400 text-xs font-medium text-center hidden p-3 bg-red-950/40 rounded-xl border border-red-800/50"></p>
+      </div>
     </div>
   </div>
 
-  <div id="app-view" class="hidden w-full h-full flex z-10 bg-slate-50">
+  <!-- ================= MAIN APP WORKSPACE ================= -->
+  <div id="app-view" class="hidden h-full w-full flex flex-col bg-surface-950 overflow-hidden">
     
-    <!-- Sidebar -->
-    <aside class="w-64 border-r border-slate-200 bg-white flex flex-col shadow-sm z-20">
-      <div class="h-16 border-b border-slate-100 flex items-center px-5 gap-3 shrink-0">
-        <div class="w-8 h-8 rounded-lg bg-brand-50 text-brand-600 flex items-center justify-center">
-          <i class="ph-fill ph-envelope-simple text-xl"></i>
+    <!-- TOP NAVBAR -->
+    <header class="h-14 border-b border-slate-800/60 bg-surface-900/50 flex items-center justify-between px-4 shrink-0 z-30">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white shadow-md">
+          <i class="ph-fill ph-envelope-simple text-lg"></i>
         </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-[10px] font-semibold text-slate-400 uppercase">Logged in as</p>
-          <p id="active-handle" class="text-sm font-semibold text-slate-800 truncate"></p>
-        </div>
+        <span class="font-bold tracking-tight text-white text-base">Arix<span class="text-brand-400">Mail</span></span>
       </div>
 
-      <!-- Storage Toggle -->
-      <div class="p-5 border-b border-slate-100">
-        <div class="text-xs font-semibold text-slate-800 mb-3">Data Storage Preference</div>
-        <div class="bg-slate-100 rounded-lg p-1 flex relative">
-          <div id="storage-slider" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white rounded-md transition-transform duration-300 shadow-sm border border-slate-200/60"></div>
-          <button onclick="setStorage('local')" class="flex-1 py-1.5 text-xs font-medium z-10 text-slate-800 transition-colors" id="tab-local">
-            This Device
-          </button>
-          <button onclick="setStorage('cloud')" class="flex-1 py-1.5 text-xs font-medium z-10 text-slate-500 transition-colors" id="tab-cloud">
-            Cloud
+      <!-- Quick Command Bar Trigger -->
+      <button onclick="toggleCommandPalette()" class="hidden md:flex items-center gap-3 bg-surface-950/80 border border-slate-800 hover:border-slate-700 px-3 py-1.5 rounded-lg text-xs text-slate-400 transition-all w-72 justify-between group">
+        <span class="flex items-center gap-2"><i class="ph-bold ph-magnifying-glass text-slate-500 group-hover:text-slate-300"></i> Search messages or press ⌘K...</span>
+        <kbd class="bg-slate-800 text-slate-400 text-[10px] px-1.5 py-0.5 rounded border border-slate-700 font-mono">⌘K</kbd>
+      </button>
+
+      <!-- User Profile Header -->
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-surface-800/50 border border-slate-800 rounded-full pl-2 pr-3 py-1">
+          <div class="w-6 h-6 rounded-full bg-brand-500/20 border border-brand-400/40 text-brand-300 flex items-center justify-center text-xs font-bold" id="user-avatar">A</div>
+          <span id="active-handle" class="text-xs font-mono text-slate-300 truncate max-w-[150px]"></span>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative">
+
+      <!-- LEFT NAVIGATION RAIL -->
+      <aside class="w-60 border-r border-slate-800/60 bg-surface-900/30 flex flex-col shrink-0">
+        
+        <!-- Primary Compose Action -->
+        <div class="p-3">
+          <button onclick="openComposeModal()" class="w-full bg-brand-600 hover:bg-brand-500 text-white rounded-xl py-2.5 px-4 font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-600/20">
+            <i class="ph-bold ph-plus-circle text-lg"></i> Compose Mail
           </button>
         </div>
-        <p id="storage-desc" class="text-[10px] text-slate-500 mt-2 text-center">Saved locally. Never touches the cloud.</p>
-      </div>
 
-      <!-- Navigation -->
-      <nav class="flex-1 overflow-y-auto p-3 space-y-1 mt-2">
-        <button onclick="switchView('inbox')" id="nav-inbox" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-50 text-brand-700 font-medium transition-all text-sm">
-          <i class="ph-fill ph-tray text-lg"></i> Inbox
-        </button>
-        <button onclick="switchView('compose')" id="nav-compose" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all font-medium text-sm">
-          <i class="ph-fill ph-pencil-simple text-lg"></i> Compose
-        </button>
-        <button onclick="switchView('ai')" id="nav-ai" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all font-medium text-sm">
-          <i class="ph-fill ph-sparkle text-lg"></i> AI Assistant
-        </button>
-        <button onclick="switchView('settings')" id="nav-settings" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all font-medium text-sm mt-6">
-          <i class="ph-fill ph-gear text-lg"></i> Settings
-        </button>
-      </nav>
-
-      <div class="p-4 border-t border-slate-100 shrink-0">
-        <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-all text-sm border border-slate-200">
-          <i class="ph-bold ph-sign-out"></i> Log Out
-        </button>
-      </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 flex flex-col relative h-full overflow-hidden">
-      
-      <!-- INBOX VIEW -->
-      <div id="view-inbox" class="flex-1 flex flex-col h-full bg-slate-50">
-        <header class="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-8 shrink-0">
-          <h2 class="text-lg font-semibold text-slate-800">Inbox</h2>
-          <button onclick="fetchMails()" class="text-slate-500 hover:text-brand-600 transition-colors flex items-center gap-2 text-sm font-medium">
-            <i class="ph-bold ph-arrows-clockwise text-lg"></i> Refresh
+        <!-- Navigation Folders -->
+        <nav class="flex-1 px-2 space-y-1 overflow-y-auto">
+          <button onclick="setFilterCategory('all')" id="cat-all" class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-brand-500/10 text-brand-400 text-xs font-medium transition-all">
+            <span class="flex items-center gap-2.5"><i class="ph-bold ph-tray text-base"></i> Inbox</span>
+            <span class="bg-brand-500/20 text-brand-300 text-[10px] px-2 py-0.5 rounded-full font-mono" id="badge-inbox-count">0</span>
           </button>
-        </header>
-        <div class="flex-1 overflow-y-auto p-8" id="mail-list">
-          <div class="flex flex-col items-center justify-center h-full text-slate-400">
-            <i class="ph-fill ph-tray text-5xl mb-3 text-slate-300"></i>
-            <p class="text-sm font-medium">Your inbox is empty.</p>
+
+          <button onclick="setFilterCategory('starred')" id="cat-starred" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 text-xs font-medium transition-all">
+            <span class="flex items-center gap-2.5"><i class="ph-bold ph-star text-base"></i> Starred</span>
+            <span class="text-[10px] text-slate-500 font-mono" id="badge-starred-count">0</span>
+          </button>
+
+          <button onclick="setFilterCategory('system')" id="cat-system" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 text-xs font-medium transition-all">
+            <span class="flex items-center gap-2.5"><i class="ph-bold ph-bell-simple text-base"></i> System Updates</span>
+          </button>
+
+          <div class="pt-4 pb-1 px-3 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Workspace</div>
+
+          <button onclick="switchMainTab('notes')" id="tab-nav-notes" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 text-xs font-medium transition-all">
+            <span class="flex items-center gap-2.5"><i class="ph-bold ph-notebook text-base text-brand-400"></i> Quick Notes</span>
+          </button>
+
+          <button onclick="switchMainTab('settings')" id="tab-nav-settings" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 text-xs font-medium transition-all">
+            <span class="flex items-center gap-2.5"><i class="ph-bold ph-gear text-base"></i> Settings</span>
+          </button>
+        </nav>
+
+        <!-- Storage Preference & Logout Footer -->
+        <div class="p-3 border-t border-slate-800/60 bg-surface-900/40">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-medium text-slate-400">Save Data To</span>
+            <span class="text-[10px] font-mono text-brand-400" id="storage-mode-label">This Device</span>
+          </div>
+          <div class="bg-surface-950 p-1 rounded-lg border border-slate-800 flex relative">
+            <div id="storage-slider" class="absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-brand-600 rounded-md transition-transform duration-300 shadow-sm"></div>
+            <button onclick="setStorageMode('local')" class="flex-1 py-1 text-[11px] font-medium z-10 text-center text-white transition-colors" id="btn-mode-local">Device</button>
+            <button onclick="setStorageMode('cloud')" class="flex-1 py-1 text-[11px] font-medium z-10 text-center text-slate-400 transition-colors" id="btn-mode-cloud">Cloud</button>
+          </div>
+          <button onclick="logout()" class="w-full mt-3 py-1.5 rounded-lg border border-slate-800 hover:border-slate-700 hover:bg-slate-800/40 text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 transition-all">
+            <i class="ph-bold ph-sign-out"></i> Log Out
+          </button>
+        </div>
+      </aside>
+
+      <!-- MIDDLE MAIL FEED PANE -->
+      <section id="pane-mail-list" class="w-80 border-r border-slate-800/60 bg-surface-950 flex flex-col shrink-0">
+        <!-- Feed Header -->
+        <div class="p-3 border-b border-slate-800/60 space-y-2">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-bold text-white tracking-wide" id="feed-title">Inbox</h2>
+            <button onclick="fetchMails()" title="Refresh Mailbox" class="text-slate-400 hover:text-brand-400 p-1 rounded-md hover:bg-slate-800/50 transition-all">
+              <i class="ph-bold ph-arrows-clockwise text-base"></i>
+            </button>
+          </div>
+          <div class="relative">
+            <i class="ph-bold ph-magnifying-glass absolute left-2.5 top-2.5 text-slate-500 text-xs"></i>
+            <input type="text" id="mail-search-input" onkeyup="filterMailFeed()" placeholder="Search by subject or sender..." class="w-full bg-surface-900 border border-slate-800 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500">
           </div>
         </div>
-      </div>
 
-      <!-- COMPOSE VIEW -->
-      <div id="view-compose" class="hidden flex-1 flex flex-col h-full w-full bg-white">
-        <header class="h-16 border-b border-slate-200 bg-white flex items-center px-8 shrink-0">
-          <h2 class="text-lg font-semibold text-slate-800">New Message</h2>
-        </header>
-        <div class="flex-1 overflow-y-auto p-8 max-w-4xl mx-auto w-full">
-          <div class="space-y-5 flex flex-col h-full">
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1">To</label>
-              <input type="text" id="compose-to" placeholder="username@amail.com" class="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none text-sm">
+        <!-- Dynamic Feed List -->
+        <div class="flex-1 overflow-y-auto divide-y divide-slate-800/40" id="mail-items-container">
+          <!-- Dynamic Mail Items Injected Here -->
+        </div>
+      </section>
+
+      <!-- RIGHT MAIN CONTENT PANE -->
+      <main class="flex-1 flex flex-col bg-surface-900/20 overflow-hidden relative">
+
+        <!-- VIEW 1: EMAIL READER (Default View) -->
+        <div id="view-mail-reader" class="flex-1 flex flex-col h-full overflow-hidden">
+          
+          <!-- Empty State -->
+          <div id="reader-empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
+            <div class="w-16 h-16 rounded-2xl bg-surface-900 border border-slate-800 flex items-center justify-center text-slate-600 mb-4 shadow-inner">
+              <i class="ph-fill ph-envelope-open text-3xl"></i>
             </div>
-            <div>
-              <label class="block text-sm font-medium text-slate-700 mb-1">Subject</label>
-              <input type="text" id="compose-subject" placeholder="What is this about?" class="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none text-sm font-medium">
+            <h3 class="text-sm font-semibold text-slate-300">No Email Selected</h3>
+            <p class="text-xs text-slate-500 max-w-xs mt-1">Select an email from your list on the left to read its full message.</p>
+          </div>
+
+          <!-- Message Active Content State -->
+          <div id="reader-content-state" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+            <!-- Reader Action Toolbar -->
+            <div class="h-14 border-b border-slate-800/60 px-6 flex items-center justify-between bg-surface-900/40 shrink-0">
+              <div class="flex items-center gap-2">
+                <button onclick="toggleStarCurrentMail()" id="btn-star-active" class="p-2 text-slate-400 hover:text-amber-400 rounded-lg hover:bg-slate-800/50 transition-all" title="Star Email">
+                  <i class="ph-bold ph-star text-lg"></i>
+                </button>
+                <button onclick="openReplyModal()" class="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 bg-slate-800 border border-slate-700 text-slate-200 rounded-lg hover:bg-slate-700 transition-all">
+                  <i class="ph-bold ph-arrow-u-up-left text-sm"></i> Reply
+                </button>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-slate-400 font-mono" id="reader-date"></div>
             </div>
-            <div class="flex-1 flex flex-col min-h-[300px]">
-              <label class="block text-sm font-medium text-slate-700 mb-1">Message</label>
-              <textarea id="compose-body" placeholder="Write your message here..." class="flex-1 w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none resize-none text-sm leading-relaxed"></textarea>
+
+            <!-- Reader Body -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-6">
+              <div>
+                <h1 class="text-xl font-bold text-white tracking-tight" id="reader-subject"></h1>
+                <div class="flex items-center gap-3 mt-3 pb-4 border-b border-slate-800/60">
+                  <div class="w-10 h-10 rounded-full bg-brand-600/20 border border-brand-500/30 text-brand-300 flex items-center justify-center font-bold text-sm" id="reader-sender-avatar">A</div>
+                  <div>
+                    <p class="text-xs font-semibold text-white" id="reader-sender-name"></p>
+                    <p class="text-[11px] text-slate-400 font-mono" id="reader-sender-email"></p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap font-sans" id="reader-body-text"></div>
+
+              <!-- Custom Layout Display for System Messages -->
+              <div id="reader-custom-html" class="hidden mt-4 pt-4 border-t border-slate-800/60"></div>
             </div>
-            <div class="flex justify-end pt-2 shrink-0">
-              <button onclick="sendMail()" id="btn-send" class="bg-brand-600 hover:bg-brand-700 text-white font-medium px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-sm text-sm">
-                <i class="ph-bold ph-paper-plane-right"></i> Send Message
+          </div>
+        </div>
+
+        <!-- VIEW 2: QUICK NOTES WORKSPACE -->
+        <div id="view-notes-workspace" class="hidden flex-1 flex flex-col h-full bg-surface-950">
+          <header class="h-14 border-b border-slate-800/60 px-6 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2">
+              <i class="ph-bold ph-notebook text-brand-400 text-lg"></i>
+              <h2 class="text-sm font-bold text-white">Quick Notes & Ideas</h2>
+            </div>
+            <span class="text-[10px] bg-brand-500/10 text-brand-300 px-2.5 py-1 rounded-full border border-brand-500/20 font-mono" id="notes-mode-badge">Saved on Device</span>
+          </header>
+
+          <div class="flex-1 p-6 flex flex-col max-w-4xl w-full mx-auto space-y-4">
+            <p class="text-xs text-slate-400">Keep personal notes, task lists, or email drafts here. Your notes update automatically.</p>
+            <textarea id="personal-notes-textarea" oninput="savePersonalNotes()" placeholder="Write down your thoughts, reminders, or drafts here..." class="flex-1 w-full bg-surface-900 border border-slate-800 rounded-2xl p-4 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-brand-500 resize-none leading-relaxed font-sans"></textarea>
+          </div>
+        </div>
+
+        <!-- VIEW 3: SETTINGS VIEW -->
+        <div id="view-settings" class="hidden flex-1 overflow-y-auto p-8 max-w-2xl mx-auto w-full">
+          <h2 class="text-lg font-bold text-white mb-6">Account Settings</h2>
+          
+          <div class="space-y-6">
+            <div class="glass-card rounded-xl p-6 border border-slate-800 space-y-4">
+              <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Your Email Account</h3>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Registered Address</label>
+                <input type="text" id="settings-email" class="w-full bg-surface-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-400 font-mono cursor-not-allowed" disabled>
+              </div>
+            </div>
+
+            <div class="glass-card rounded-xl p-6 border border-red-900/30 bg-red-950/10 space-y-3">
+              <h3 class="text-xs font-bold text-red-400 uppercase tracking-wider">Delete Account</h3>
+              <p class="text-xs text-slate-400">Permanently remove your account, messages, and settings from the mail network.</p>
+              <button onclick="deleteAccount()" class="bg-red-600/80 hover:bg-red-600 text-white font-medium px-4 py-2 rounded-lg text-xs transition-all flex items-center gap-2">
+                <i class="ph-bold ph-trash"></i> Delete Account Permanently
               </button>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- AI CORE VIEW -->
-      <div id="view-ai" class="hidden flex-1 flex flex-col h-full bg-slate-50">
-        <header class="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-8 shrink-0">
-          <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2"><i class="ph-fill ph-sparkle text-brand-500"></i> AI Assistant</h2>
-          <span class="text-xs bg-brand-50 text-brand-700 px-3 py-1 rounded-full font-medium border border-brand-100" id="chat-target-lbl">Saved on Device</span>
-        </header>
-        
-        <div class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6" id="chat-container">
-          <!-- Initial AI Greeting -->
-          <div class="flex gap-4 max-w-3xl">
-            <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0 border border-brand-200 text-brand-600 mt-1">
-              <i class="ph-fill ph-robot text-lg"></i>
-            </div>
-            <div class="bg-white border border-slate-200 shadow-sm rounded-2xl rounded-tl-sm p-4 text-slate-700 text-sm leading-relaxed">
-              Hello! I'm your integrated AI assistant. I can help you draft emails, organize your thoughts, or answer questions. How can I help you today?
-            </div>
-          </div>
-        </div>
-
-        <div class="p-4 sm:p-6 shrink-0 border-t border-slate-200 bg-white">
-          <div class="max-w-3xl mx-auto relative flex items-center">
-            <input type="text" id="chat-input" placeholder="Message the AI Assistant..." class="w-full bg-slate-50 border border-slate-200 rounded-full pl-5 pr-14 py-3.5 text-slate-900 focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 outline-none shadow-sm text-sm" onkeypress="if(event.key==='Enter') sendChat()">
-            <button onclick="sendChat()" class="absolute right-2 w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center hover:bg-brand-700 transition-colors">
-              <i class="ph-bold ph-arrow-up"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- SETTINGS VIEW -->
-      <div id="view-settings" class="hidden flex-1 overflow-y-auto p-8 w-full bg-slate-50">
-        <div class="max-w-2xl mx-auto space-y-8">
-          <h2 class="text-2xl font-bold text-slate-800">Settings</h2>
-          
-          <!-- Profile Settings -->
-          <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
-            <h3 class="text-sm font-bold text-slate-800 mb-4">Profile Information</h3>
-            <div class="space-y-4">
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Email Address</label>
-                <input type="text" id="set-handle" class="w-full bg-slate-100 border border-slate-200 rounded-lg px-4 py-2.5 text-slate-500 font-mono text-sm cursor-not-allowed" disabled>
-                <p class="text-xs text-slate-500 mt-1.5">Your email address cannot be changed.</p>
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Display Name</label>
-                <input type="text" id="set-display" placeholder="Your Name" class="w-full bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-slate-900 focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none text-sm">
-              </div>
-              <button onclick="showToast('Profile Updated Successfully')" class="bg-brand-50 hover:bg-brand-100 text-brand-700 border border-brand-200 font-medium px-5 py-2 rounded-lg transition-colors text-sm">Save Profile</button>
-            </div>
-          </div>
-
-          <!-- Danger Zone -->
-          <div class="bg-red-50 border border-red-200 rounded-xl p-6">
-            <h3 class="text-sm font-bold text-red-700 mb-2 flex items-center gap-2">Danger Zone</h3>
-            <p class="text-sm text-red-600 mb-5 leading-relaxed">Deleting your account will permanently remove your email address, inbox contents, and settings. This action cannot be undone.</p>
-            <button onclick="deleteAccount()" class="bg-red-600 hover:bg-red-700 text-white font-medium px-5 py-2.5 rounded-lg flex items-center gap-2 transition-all text-sm shadow-sm">
-              <i class="ph-bold ph-trash"></i> Delete Account
-            </button>
-          </div>
-        </div>
-      </div>
-
-    </main>
+      </main>
+    </div>
   </div>
 
-  <!-- Toast Notifier -->
-  <div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white px-5 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 translate-y-20 opacity-0 z-50 flex items-center gap-2 text-sm">
-    <i class="ph-bold ph-info" id="toast-icon"></i> <span id="toast-msg">Notification</span>
+  <!-- ================= COMPOSE / REPLY MODAL ================= -->
+  <div id="modal-compose" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm fade-in">
+    <div class="w-full max-w-2xl bg-surface-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+      <div class="h-12 border-b border-slate-800/80 px-4 flex items-center justify-between bg-surface-950">
+        <span class="text-xs font-bold text-white flex items-center gap-2"><i class="ph-bold ph-pencil-simple text-brand-400"></i> New Email Message</span>
+        <button onclick="closeComposeModal()" class="text-slate-500 hover:text-slate-300 text-sm"><i class="ph-bold ph-x"></i></button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">To</label>
+          <input type="text" id="compose-to" placeholder="user@amail.com" class="w-full bg-surface-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 font-mono">
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Subject</label>
+          <input type="text" id="compose-subject" placeholder="Project Update..." class="w-full bg-surface-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 font-medium">
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1 block">Message</label>
+          <textarea id="compose-body" rows="8" placeholder="Type your email here..." class="w-full bg-surface-950 border border-slate-800 rounded-xl p-3.5 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-brand-500 resize-none leading-relaxed"></textarea>
+        </div>
+      </div>
+
+      <div class="h-14 border-t border-slate-800/80 px-6 flex items-center justify-end gap-3 bg-surface-950">
+        <button onclick="closeComposeModal()" class="px-4 py-2 rounded-xl border border-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium">Cancel</button>
+        <button onclick="sendMail()" id="btn-send-mail" class="bg-brand-600 hover:bg-brand-500 text-white px-5 py-2 rounded-xl text-xs font-medium transition-all shadow-lg shadow-brand-600/20 flex items-center gap-2">
+          <i class="ph-bold ph-paper-plane-right"></i> Send Message
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= COMMAND PALETTE ================= -->
+  <div id="modal-cmd" class="hidden fixed inset-0 z-50 flex items-start justify-center pt-24 p-4 bg-slate-950/80 backdrop-blur-sm fade-in">
+    <div class="w-full max-w-lg bg-surface-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="p-3 border-b border-slate-800 flex items-center gap-3">
+        <i class="ph-bold ph-magnifying-glass text-slate-500 text-sm"></i>
+        <input type="text" id="cmd-input" placeholder="Type a quick command (compose, notes, refresh)..." class="w-full bg-transparent text-xs text-white placeholder-slate-500 focus:outline-none">
+      </div>
+      <div class="p-2 space-y-1 text-xs">
+        <button onclick="openComposeModal(); toggleCommandPalette()" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 flex items-center justify-between">
+          <span class="flex items-center gap-2"><i class="ph-bold ph-plus-circle text-brand-400"></i> Compose New Message</span>
+          <kbd class="text-[10px] text-slate-500 font-mono">C</kbd>
+        </button>
+        <button onclick="switchMainTab('notes'); toggleCommandPalette()" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 flex items-center justify-between">
+          <span class="flex items-center gap-2"><i class="ph-bold ph-notebook text-brand-400"></i> Open Quick Notes</span>
+          <kbd class="text-[10px] text-slate-500 font-mono">N</kbd>
+        </button>
+        <button onclick="fetchMails(); toggleCommandPalette()" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800 flex items-center justify-between">
+          <span class="flex items-center gap-2"><i class="ph-bold ph-arrows-clockwise text-brand-400"></i> Refresh Mailbox</span>
+          <kbd class="text-[10px] text-slate-500 font-mono">R</kbd>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFIER -->
+  <div id="toast" class="fixed bottom-6 right-6 bg-surface-800 border border-slate-700 text-white px-4 py-3 rounded-xl shadow-2xl transition-all duration-300 translate-y-20 opacity-0 z-50 flex items-center gap-2.5 text-xs">
+    <i class="ph-bold ph-info text-brand-400 text-base" id="toast-icon"></i> <span id="toast-msg">Notification</span>
   </div>
 
   <script>
-    // System Constants mapped to the existing backend
     const API_URL = '/api/arixmail';
     let currentUser = null;
     let authHeader = null;
-    let storageMode = 'local'; // 'local' or 'cloud'
+    let storageMode = 'local';
+    let mailState = [];
+    let activeMailId = null;
+    let activeFilter = 'all';
 
-    // Simple DOM Helpers
     const getEl = id => document.getElementById(id);
-    
+
     function showToast(msg, isError=false) {
       const toast = getEl('toast');
       const icon = getEl('toast-icon');
       
-      toast.className = `fixed bottom-6 right-6 px-5 py-3 rounded-lg font-medium shadow-lg transition-all duration-300 z-50 flex items-center gap-2 text-sm ${isError ? 'bg-red-600 text-white' : 'bg-slate-800 text-white'}`;
-      icon.className = isError ? "ph-bold ph-warning-circle" : "ph-bold ph-check-circle";
+      toast.className = `fixed bottom-6 right-6 px-4 py-3 rounded-xl border font-medium shadow-2xl transition-all duration-300 z-50 flex items-center gap-2.5 text-xs ${isError ? 'bg-red-950/90 border-red-800 text-red-200' : 'bg-surface-800 border-slate-700 text-slate-100'}`;
+      icon.className = isError ? "ph-bold ph-warning-circle text-red-400 text-base" : "ph-bold ph-check-circle text-brand-400 text-base";
       getEl('toast-msg').innerText = msg;
       
       toast.classList.remove('translate-y-20', 'opacity-0');
       setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
     }
 
-    // Password Policy Checking (Visual Feedback)
-    getEl('auth-password').addEventListener('input', (e) => {
-      const p = e.target.value;
-      const strEl = getEl('pwd-strength');
-      if(p.length === 0) return strEl.innerText = "";
-      
-      // Matches the strict backend regex
-      const strong = new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{12,})").test(p);
-      
-      if(strong) {
-        strEl.innerHTML = '<span class="text-emerald-600 font-medium flex items-center gap-1"><i class="ph-bold ph-check-circle"></i> Password meets security requirements.</span>';
-      } else {
-        strEl.innerHTML = '<span class="text-slate-500">Must be 12+ characters with uppercase, lowercase, number, and symbol.</span>';
-      }
-    });
-
-    // Hardware ID Generator (Device Fingerprinting)
     function getHardwareId() {
       let id = localStorage.getItem('arix_hw_id');
       if(!id) {
-        id = 'hw_' + Math.random().toString(36).substr(2, 9) + Date.now();
+        id = 'hw_' + Math.random().toString(36).substring(2, 9) + Date.now();
         localStorage.setItem('arix_hw_id', id);
       }
       return id;
     }
 
-    // Security Check Simulator (Replaces flashy PoW text)
-    async function executeSecurityCheck(username) {
+    // Fast SHA-256 Proof of Work calculation for backend authentication
+    async function solveProofOfWork(deviceId) {
       const container = getEl('pow-container');
       const statusText = getEl('pow-status-text');
       container.classList.remove('hidden');
+      statusText.innerText = "Setting up secure connection...";
       
-      let nonce = 0;
       const ts = Date.now();
+      let nonce = 0;
+      const enc = new TextEncoder();
+
+      while (true) {
+        const challenge = `${deviceId}:${ts}:${nonce}`;
+        const hashBuffer = await crypto.subtle.digest('SHA-256', enc.encode(challenge));
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        if (hex.startsWith('00')) break;
+        nonce++;
+      }
       
-      // Simulate verification delay
-      statusText.innerText = "Verifying secure connection...";
-      await new Promise(r => setTimeout(r, 600));
-      statusText.innerText = "Checking browser integrity...";
-      await new Promise(r => setTimeout(r, 600));
-      statusText.innerText = "Connection verified.";
-      
-      await new Promise(r => setTimeout(r, 300));
       container.classList.add('hidden');
-      
-      return { nonce: Math.floor(Math.random()*1000000), timestamp: ts };
+      return { nonce, timestamp: ts };
     }
 
     async function handleAuth(action) {
@@ -344,11 +453,11 @@
       }
 
       try {
-        // Prepare payload exactly as backend expects it
+        const hwId = getHardwareId();
         let payload = {};
         
         if (action === 'register') {
-          const pow = await executeSecurityCheck(userRaw);
+          const pow = await solveProofOfWork(hwId);
           payload = { 
             username: userRaw, 
             password: pwd,
@@ -356,21 +465,16 @@
             powTimestamp: pow.timestamp
           };
         } else if (action === 'login') {
-          // Backend login expects the full email address
           const formattedEmail = userRaw.includes('@') ? userRaw : `${userRaw.toLowerCase().replace(/[^a-z0-9]/g, '')}@amail.com`;
-          payload = { 
-            email: formattedEmail, 
-            password: pwd 
-          };
+          payload = { email: formattedEmail, password: pwd };
         }
 
-        // Disable buttons during request
         getEl('btn-login').disabled = true;
         getEl('btn-register').disabled = true;
 
         const res = await fetch(API_URL, {
           method: 'POST', 
-          headers: { 'Content-Type': 'application/json', 'x-device-id': getHardwareId() },
+          headers: { 'Content-Type': 'application/json', 'x-device-id': hwId },
           body: JSON.stringify({ action, payload })
         });
         
@@ -381,13 +485,12 @@
           authHeader = { email: data.email, token: data.token };
           sessionStorage.setItem('arix_session', JSON.stringify(authHeader));
           
-          // Smooth transition to app
           getEl('auth-view').classList.add('opacity-0', 'scale-95', 'pointer-events-none');
           setTimeout(() => {
             getEl('auth-view').classList.add('hidden');
             getEl('app-view').classList.remove('hidden');
             initWorkspace();
-          }, 500);
+          }, 400);
         } else {
           throw new Error(data.error || "Authentication failed");
         }
@@ -402,232 +505,274 @@
 
     function initWorkspace() {
       getEl('active-handle').innerText = currentUser;
-      getEl('set-handle').value = currentUser;
+      getEl('user-avatar').innerText = currentUser.charAt(0).toUpperCase();
+      getEl('settings-email').value = currentUser;
       fetchMails();
-      loadChatHistory();
+      loadPersonalNotes();
     }
 
-    function switchView(target) {
-      ['inbox', 'compose', 'ai', 'settings'].forEach(v => {
-        getEl(`view-${v}`).classList.add('hidden');
-        getEl(`nav-${v}`).className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all font-medium text-sm";
-      });
-      getEl(`view-${target}`).classList.remove('hidden');
-      
-      const activeNav = getEl(`nav-${target}`);
-      if(activeNav) {
-        activeNav.className = "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-brand-50 text-brand-700 font-medium transition-all text-sm";
-      }
-    }
-
-    function setStorage(mode) {
+    function setStorageMode(mode) {
       storageMode = mode;
       const slider = getEl('storage-slider');
-      const lLbl = getEl('tab-local');
-      const cLbl = getEl('tab-cloud');
-      const desc = getEl('storage-desc');
+      const btnLocal = getEl('btn-mode-local');
+      const btnCloud = getEl('btn-mode-cloud');
+      const label = getEl('storage-mode-label');
 
       if (mode === 'local') {
         slider.style.transform = 'translateX(0)';
-        lLbl.classList.replace('text-slate-500', 'text-slate-800');
-        cLbl.classList.replace('text-slate-800', 'text-slate-500');
-        desc.innerText = "Saved locally. Never touches the cloud.";
-        getEl('chat-target-lbl').innerText = "Saved on Device";
+        btnLocal.className = "flex-1 py-1 text-[11px] font-medium z-10 text-center text-white transition-colors";
+        btnCloud.className = "flex-1 py-1 text-[11px] font-medium z-10 text-center text-slate-400 transition-colors";
+        label.innerText = "This Device";
+        getEl('notes-mode-badge').innerText = "Saved on Device";
       } else {
         slider.style.transform = 'translateX(100%)';
-        cLbl.classList.replace('text-slate-500', 'text-slate-800');
-        lLbl.classList.replace('text-slate-800', 'text-slate-500');
-        desc.innerText = "Saved to cloud. Accessible anywhere.";
-        getEl('chat-target-lbl').innerText = "Saved to Cloud";
-        syncDataToCloud(); 
+        btnCloud.className = "flex-1 py-1 text-[11px] font-medium z-10 text-center text-white transition-colors";
+        btnLocal.className = "flex-1 py-1 text-[11px] font-medium z-10 text-center text-slate-400 transition-colors";
+        label.innerText = "Cloud";
+        getEl('notes-mode-badge').innerText = "Cloud Sync";
+        syncDataToCloud();
       }
-      loadChatHistory(); 
+      loadPersonalNotes();
+    }
+
+    async function fetchMails() {
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST', 
+          headers: {'Content-Type': 'application/json', 'x-device-id': getHardwareId()},
+          body: JSON.stringify({ action: 'get_inbox', auth: authHeader })
+        });
+        const data = await res.json();
+        
+        if(res.ok && data.success) {
+          mailState = data.mails || [];
+          renderMailFeed();
+        }
+      } catch(e) { 
+        console.error("Failed to fetch mails", e); 
+      }
+    }
+
+    function renderMailFeed() {
+      const container = getEl('mail-items-container');
+      const query = getEl('mail-search-input').value.toLowerCase();
+      
+      let filtered = mailState.filter(m => {
+        if (activeFilter === 'starred') return m.starred;
+        if (activeFilter === 'system') return m.isSystem;
+        return true;
+      }).filter(m => m.subject.toLowerCase().includes(query) || m.from.toLowerCase().includes(query));
+
+      getEl('badge-inbox-count').innerText = mailState.length;
+      getEl('badge-starred-count').innerText = mailState.filter(m => m.starred).length;
+
+      if(filtered.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center text-slate-500">
+            <i class="ph-bold ph-tray text-2xl mb-2 text-slate-600"></i>
+            <p class="text-xs">No emails in this folder.</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(m => `
+        <div onclick="selectMail('${m.id}')" class="p-3.5 hover:bg-surface-900/60 cursor-pointer transition-all ${m.id === activeMailId ? 'bg-surface-900 border-l-2 border-brand-500' : ''}">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold ${m.isSystem ? 'text-brand-400' : 'text-slate-200'} truncate max-w-[150px]">${m.from}</span>
+            <span class="text-[10px] text-slate-500 font-mono">${new Date(m.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+          </div>
+          <h4 class="text-xs font-medium text-slate-300 truncate mb-1">${m.subject}</h4>
+          <p class="text-[11px] text-slate-500 line-clamp-2 leading-tight">${m.content.replace(/<[^>]*>?/gm, '')}</p>
+        </div>
+      `).join('');
+    }
+
+    function filterMailFeed() {
+      renderMailFeed();
+    }
+
+    function setFilterCategory(cat) {
+      activeFilter = cat;
+      ['all', 'starred', 'system'].forEach(c => {
+        const el = getEl(`cat-${c}`);
+        if (el) el.className = c === cat ? 
+          "w-full flex items-center justify-between px-3 py-2 rounded-lg bg-brand-500/10 text-brand-400 text-xs font-medium transition-all" : 
+          "w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 text-xs font-medium transition-all";
+      });
+      renderMailFeed();
+    }
+
+    function selectMail(id) {
+      activeMailId = id;
+      const mail = mailState.find(m => m.id === id);
+      if(!mail) return;
+
+      renderMailFeed();
+
+      getEl('reader-empty-state').classList.add('hidden');
+      getEl('reader-content-state').classList.remove('hidden');
+
+      getEl('reader-subject').innerText = mail.subject;
+      getEl('reader-sender-name').innerText = mail.isSystem ? "Arix System Update" : mail.from.split('@')[0];
+      getEl('reader-sender-email').innerText = mail.from;
+      getEl('reader-sender-avatar').innerText = mail.from.charAt(0).toUpperCase();
+      getEl('reader-date').innerText = new Date(mail.timestamp).toLocaleString();
+      getEl('reader-body-text').innerText = mail.content;
+
+      const customHtmlEl = getEl('reader-custom-html');
+      if(mail.uiHtml) {
+        customHtmlEl.innerHTML = mail.uiHtml;
+        customHtmlEl.classList.remove('hidden');
+      } else {
+        customHtmlEl.classList.add('hidden');
+      }
+
+      getEl('btn-star-active').className = mail.starred ? 
+        "p-2 text-amber-400 hover:text-amber-300 rounded-lg hover:bg-slate-800/50 transition-all" : 
+        "p-2 text-slate-400 hover:text-amber-400 rounded-lg hover:bg-slate-800/50 transition-all";
+    }
+
+    function toggleStarCurrentMail() {
+      if(!activeMailId) return;
+      const mail = mailState.find(m => m.id === activeMailId);
+      if(mail) {
+        mail.starred = !mail.starred;
+        selectMail(activeMailId);
+        showToast(mail.starred ? "Email starred" : "Email unstarred");
+      }
+    }
+
+    function openComposeModal() { getEl('modal-compose').classList.remove('hidden'); }
+    function closeComposeModal() { getEl('modal-compose').classList.add('hidden'); }
+    function toggleCommandPalette() { getEl('modal-cmd').classList.toggle('hidden'); }
+
+    function openReplyModal() {
+      if(!activeMailId) return;
+      const mail = mailState.find(m => m.id === activeMailId);
+      if(!mail) return;
+
+      getEl('compose-to').value = mail.from;
+      getEl('compose-subject').value = mail.subject.startsWith('Re:') ? mail.subject : `Re: ${mail.subject}`;
+      getEl('compose-body').value = `\n\n--- Original Message ---\nFrom: ${mail.from}\n${mail.content}`;
+      openComposeModal();
     }
 
     async function sendMail() {
       let to = getEl('compose-to').value.trim();
       const subject = getEl('compose-subject').value.trim();
       const content = getEl('compose-body').value.trim();
-      const btn = getEl('btn-send');
+      const btn = getEl('btn-send-mail');
 
-      if(!to || !subject || !content) {
-        return showToast("Please fill out all fields.", true);
-      }
-      
-      // Auto-append domain if missing
+      if(!to || !subject || !content) return showToast("Please fill out all fields.", true);
       if (!to.includes('@')) to = `${to}@amail.com`;
 
-      btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Sending...`;
       btn.disabled = true;
+      btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Sending...`;
 
       try {
         const res = await fetch(API_URL, {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
+          method: 'POST', 
+          headers: {'Content-Type': 'application/json', 'x-device-id': getHardwareId()},
           body: JSON.stringify({ action: 'send_mail', auth: authHeader, payload: { to, subject, content } })
         });
         const data = await res.json();
         
         if(res.ok && data.success) {
-          showToast("Message sent successfully.");
-          getEl('compose-to').value = ""; 
-          getEl('compose-subject').value = ""; 
-          getEl('compose-body').value = "";
-          switchView('inbox');
+          showToast("Email sent successfully.");
+          closeComposeModal();
+          getEl('compose-to').value = ""; getEl('compose-subject').value = ""; getEl('compose-body').value = "";
           fetchMails();
-        } else { throw new Error(data.error); }
+        } else {
+          throw new Error(data.error);
+        }
       } catch(e) { 
         showToast(e.message, true); 
       } finally {
-        btn.innerHTML = `<i class="ph-bold ph-paper-plane-right"></i> Send Message`;
         btn.disabled = false;
+        btn.innerHTML = `<i class="ph-bold ph-paper-plane-right"></i> Send Message`;
       }
     }
 
-    async function fetchMails() {
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ action: 'get_inbox', auth: authHeader })
-        });
-        const data = await res.json();
-        
-        const listContainer = getEl('mail-list');
-        
-        if(res.ok && data.success && data.mails.length > 0) {
-          listContainer.innerHTML = data.mails.map(m => `
-            <div class="bg-white border ${m.isSystem ? 'border-brand-200 shadow-md ring-1 ring-brand-50' : 'border-slate-200 shadow-sm'} rounded-xl p-5 mb-4 hover:shadow-md transition-shadow cursor-pointer">
-              <div class="flex justify-between items-start mb-3">
-                <div class="flex items-center gap-2">
-                  ${m.isSystem ? '<i class="ph-fill ph-broadcast text-brand-500"></i>' : '<div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">' + m.from.charAt(0).toUpperCase() + '</div>'}
-                  <div class="flex flex-col">
-                    <span class="text-sm font-semibold ${m.isSystem ? 'text-brand-700' : 'text-slate-800'}">${m.from}</span>
-                    <span class="text-[10px] text-slate-400 font-medium">${new Date(m.timestamp).toLocaleDateString()} at ${new Date(m.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                  </div>
-                </div>
-              </div>
-              <h4 class="text-base font-bold text-slate-900 mb-1.5">${m.subject}</h4>
-              <p class="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">${m.content}</p>
-              ${m.uiHtml ? `<div class="mt-5 pt-5 border-t border-slate-100">${m.uiHtml}</div>` : ''}
-            </div>
-          `).join('');
-        } else {
-          listContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-slate-400"><i class="ph-fill ph-tray text-5xl mb-3 text-slate-300"></i><p class="text-sm font-medium">Your inbox is empty.</p></div>`;
-        }
-      } catch(e) { console.error("Failed to fetch mails", e); }
+    function switchMainTab(tab) {
+      getEl('view-mail-reader').classList.add('hidden');
+      getEl('view-notes-workspace').classList.add('hidden');
+      getEl('view-settings').classList.add('hidden');
+
+      if (tab === 'reader') getEl('view-mail-reader').classList.remove('hidden');
+      if (tab === 'notes') getEl('view-notes-workspace').classList.remove('hidden');
+      if (tab === 'settings') getEl('view-settings').classList.remove('hidden');
     }
 
-    function sendChat() {
-      const input = getEl('chat-input');
-      const txt = input.value.trim();
-      if(!txt) return;
-
-      const container = getEl('chat-container');
-      
-      // Render User Message
-      container.innerHTML += `
-        <div class="flex gap-4 max-w-3xl ml-auto justify-end fade-in">
-          <div class="bg-brand-600 text-white rounded-2xl rounded-tr-sm p-4 text-sm leading-relaxed shadow-sm">${txt}</div>
-        </div>`;
-      
-      input.value = "";
-      container.scrollTop = container.scrollHeight;
-
-      // Mock AI Delay & Response
-      setTimeout(() => {
-        const response = `I have received your message. I am currently operating in <strong>${storageMode === 'local' ? 'Local Device' : 'Cloud Sync'}</strong> mode. All data is securely handled according to your preferences.`;
-        
-        container.innerHTML += `
-          <div class="flex gap-4 max-w-3xl fade-in">
-            <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0 border border-brand-200 text-brand-600 mt-1">
-              <i class="ph-fill ph-robot text-lg"></i>
-            </div>
-            <div class="bg-white border border-slate-200 shadow-sm rounded-2xl rounded-tl-sm p-4 text-slate-700 text-sm leading-relaxed">${response}</div>
-          </div>`;
-          
-        container.scrollTop = container.scrollHeight;
-        saveChatLocally(container.innerHTML);
-      }, 600);
-    }
-
-    function saveChatLocally(html) {
-      if(storageMode === 'local') {
-        localStorage.setItem(`arix_chat_${currentUser}`, html);
-      } else {
-        // Sync to cloud backend without waiting
-        fetch(API_URL, {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ action: 'sync_data', auth: authHeader, payload: { target: 'chat', data: html } })
-        }).catch(e => console.error("Sync failed", e));
-      }
-    }
-
-    async function loadChatHistory() {
-      const container = getEl('chat-container');
-      
-      // Default empty state
-      const defaultState = `
-        <div class="flex gap-4 max-w-3xl">
-          <div class="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center shrink-0 border border-brand-200 text-brand-600 mt-1">
-            <i class="ph-fill ph-robot text-lg"></i>
-          </div>
-          <div class="bg-white border border-slate-200 shadow-sm rounded-2xl rounded-tl-sm p-4 text-slate-700 text-sm leading-relaxed">
-            Hello! I'm your integrated AI assistant. I can help you draft emails, organize your thoughts, or answer questions. How can I help you today?
-          </div>
-        </div>`;
-
+    function savePersonalNotes() {
+      const val = getEl('personal-notes-textarea').value;
       if (storageMode === 'local') {
-        const hist = localStorage.getItem(`arix_chat_${currentUser}`);
-        container.innerHTML = hist ? hist : defaultState;
+        localStorage.setItem(`arix_notes_${currentUser}`, val);
+      } else {
+        fetch(API_URL, {
+          method: 'POST', 
+          headers: {'Content-Type': 'application/json', 'x-device-id': getHardwareId()},
+          body: JSON.stringify({ action: 'sync_data', auth: authHeader, payload: { target: 'chat', data: val } })
+        }).catch(e => console.error(e));
+      }
+    }
+
+    async function loadPersonalNotes() {
+      const txtArea = getEl('personal-notes-textarea');
+      if (storageMode === 'local') {
+        txtArea.value = localStorage.getItem(`arix_notes_${currentUser}`) || "";
       } else {
         try {
           const res = await fetch(API_URL, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json', 'x-device-id': getHardwareId()},
             body: JSON.stringify({ action: 'sync_data', auth: authHeader, payload: { target: 'chat' } })
           });
           const data = await res.json();
-          container.innerHTML = (data.success && data.data) ? data.data : defaultState;
-        } catch(e) {
-          container.innerHTML = defaultState;
-        }
+          txtArea.value = (data.success && data.data) ? data.data : "";
+        } catch(e) { txtArea.value = ""; }
       }
-      container.scrollTop = container.scrollHeight;
     }
 
     async function syncDataToCloud() {
-      const localHist = localStorage.getItem(`arix_chat_${currentUser}`);
-      if(localHist) {
+      const localNotes = localStorage.getItem(`arix_notes_${currentUser}`);
+      if(localNotes) {
         showToast("Syncing data to cloud...");
         try {
           await fetch(API_URL, {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ action: 'sync_data', auth: authHeader, payload: { target: 'chat', data: localHist } })
+            method: 'POST', 
+            headers: {'Content-Type': 'application/json', 'x-device-id': getHardwareId()},
+            body: JSON.stringify({ action: 'sync_data', auth: authHeader, payload: { target: 'chat', data: localNotes } })
           });
           showToast("Sync complete.");
-        } catch(e) {
-          showToast("Failed to sync.", true);
-        }
+        } catch(e) { showToast("Sync failed.", true); }
       }
     }
 
     async function deleteAccount() {
-      if(!confirm("Are you absolutely sure you want to delete your account? This action is permanent and removes all your emails and settings.")) return;
+      if(!confirm("Are you sure you want to delete your account? This will permanently delete your emails and settings.")) return;
       try {
         await fetch(API_URL, {
-          method: 'POST', headers: {'Content-Type': 'application/json'},
+          method: 'POST', 
+          headers: {'Content-Type': 'application/json', 'x-device-id': getHardwareId()},
           body: JSON.stringify({ action: 'delete_account', auth: authHeader })
         });
-        localStorage.removeItem(`arix_chat_${currentUser}`);
+        localStorage.removeItem(`arix_notes_${currentUser}`);
         sessionStorage.removeItem('arix_session');
         location.reload();
-      } catch(e) { 
-        showToast("Failed to delete account.", true); 
-      }
+      } catch(e) { showToast("Failed to delete account.", true); }
     }
 
     function logout() {
       sessionStorage.removeItem('arix_session');
       location.reload();
     }
+
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        toggleCommandPalette();
+      }
+    });
   </script>
 </body>
 </html>
