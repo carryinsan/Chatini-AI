@@ -1,0 +1,14 @@
+{
+  "name": "ai-browser-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Secure AI browser agent with human-in-the-loop approvals, proactive monitoring, and multi-provider model routing.",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {}
+}
