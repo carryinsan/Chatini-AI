@@ -203,8 +203,19 @@
       el.value = "";
     }
 
-    // Set value and trigger standard change/input events
-    el.value = (el.value || "") + text;
+    // React/Framework compatible native value setter
+    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value")?.set;
+
+    if (nativeInputValueSetter && el.tagName === "INPUT") {
+      nativeInputValueSetter.call(el, (el.value || "") + text);
+    } else if (nativeTextAreaValueSetter && el.tagName === "TEXTAREA") {
+      nativeTextAreaValueSetter.call(el, (el.value || "") + text);
+    } else {
+      el.value = (el.value || "") + text;
+    }
+
+    // Dispatch standard change/input events for frameworks listening to bubbling
     el.dispatchEvent(new Event("input", { bubbles: true, cancelable: true }));
     el.dispatchEvent(new Event("change", { bubbles: true, cancelable: true }));
 
