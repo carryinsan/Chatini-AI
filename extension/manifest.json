@@ -7,7 +7,8 @@
     "sidePanel",
     "activeTab",
     "storage",
-    "tabs"
+    "tabs",
+    "scripting"
   ],
   "host_permissions": [
     "http://*/*",
@@ -26,7 +27,8 @@
       "js": [
         "content.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ],
   "side_panel": {
