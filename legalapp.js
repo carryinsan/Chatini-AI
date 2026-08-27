@@ -302,6 +302,7 @@ const app = {
             this.hideModal('new-case-modal');
             this.openCase(response.matter_id || 'new');
         } catch (error) {
+            this.hideModal('new-case-modal'); // FIX: Close overlay so error is visible
             ui.showError(
                 "Workspace Creation Failed",
                 "Could not initialize secure workspace for the new matter. Please check your connection.",
