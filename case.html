@@ -443,9 +443,13 @@
         </div>
     </div>
 
-    <!-- Application Architecture Files (Loaded sequentially) -->
+    <!-- Application Architecture Files (Strict Sequential Loading) -->
+    <script src="privacy.js"></script>
     <script src="legalapp.js"></script>
-    <!-- Note: case.js is logically dependent here, but per rules, files are loaded individually via the user testing framework -->
+    <script src="document.js"></script>
+    <script src="legal.js"></script>
+    <script src="safety.js"></script>
+    <script src="case.js"></script>
 
 </body>
 </html>
