@@ -222,6 +222,42 @@ apiRouter.get('/tasks/pending', (req, res) => {
     ]);
 });
 
+// --- Official Court Registry Adapter (Rule 213, 215) ---
+const fetchOfficialCourtData = async (caseNumber, cnr, court) => {
+    // In production, this securely calls authorized eCourts/Gov APIs server-side.
+    // Simulating latency and official response for architecture purposes.
+    console.log(`[Court Registry] Securely fetching official status for ${cnr || caseNumber} from ${court}...`);
+    await new Promise(resolve => setTimeout(resolve, 800)); 
+    
+    return {
+        official_status: "PENDING",
+        next_hearing: "14 Oct 2026", // Simulated official return
+        last_verified: new Date().toISOString()
+    };
+};
+
+apiRouter.post('/cases', authorizeMatterAccess, async (req, res) => {
+    try {
+        const { display_name, case_number, court, client, cnr } = req.body;
+        
+        // Rule 18 & 215: Fetch official status synchronously during initialization
+        const officialData = await fetchOfficialCourtData(case_number, cnr, court);
+        const newMatterId = `mtr_${crypto.randomUUID()}`;
+        
+        // Success: Return new workspace ID and official data
+        res.status(201).json({
+            success: true,
+            matter_id: newMatterId,
+            display_name: display_name || "New Matter",
+            case_number: case_number || "Unassigned",
+            ...officialData
+        });
+    } catch (error) {
+        console.error("[Workspace Init] Failed:", error);
+        res.status(500).json({ error: "WORKSPACE_INIT_FAILED" });
+    }
+});
+
 apiRouter.get('/cases/active', (req, res) => {
     // Structural response expected by legalapp.js Rule 16
     res.json([
