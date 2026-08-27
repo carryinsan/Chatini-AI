@@ -170,10 +170,11 @@ apiRouter.get('/dashboard/metrics', (req, res) => {
     });
 });
 
-apiRouter.post('/cases', (req, res) => {
-    // Generates a new secure workspace instance
-    const { display_name, case_number, court, client, cnr } = req.body;
-    const newMatterId = `mtr_${Date.now()}`;
+// Removed authorizeMatterAccess here since new cases don't have a matter_id yet
+apiRouter.post('/cases', async (req, res) => {
+    try {
+        const { display_name, case_number, court, client, cnr } = req.body;
+        const newMatterId = `mtr_${Date.now()}`;
     
     res.status(201).json({
         success: true,
