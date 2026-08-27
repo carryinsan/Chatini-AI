@@ -5,9 +5,10 @@
  */
 
 const ARIXConfig = {
-    // Backend API base URL. In production, this would point to the secure gateway.
-    API_BASE: '/api/v1',
-    // Fallback data for offline/degraded mode to prevent indefinite hanging UI
+    // Automatically routes API requests to localhost:3000 if frontend is running on a different port
+    API_BASE: window.location.port === '3000' || window.location.hostname !== 'localhost' 
+        ? '/api/v1' 
+        : 'http://localhost:3000/api/v1',
     OFFLINE_MODE: false
 };
 
@@ -133,6 +134,13 @@ const app = {
     showModal: (id) => ui.showModal(id),
     hideModal: (id) => ui.hideModal(id),
     dismissError: () => ui.dismissError(),
+    
+    navigateTo: (viewId) => {
+        if (viewId === 'my-cases') {
+            const container = document.getElementById('case-list-container');
+            if (container) container.scrollIntoView({ behavior: 'smooth' });
+        }
+    },
     
     async init() {
         this.updateDateDisplay();
