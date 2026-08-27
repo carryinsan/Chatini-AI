@@ -372,6 +372,36 @@
         </div>
     </div>
 
+    <!-- Global Search Modal -->
+    <div id="global-search-modal" class="fixed inset-0 bg-legal-900/75 flex items-center justify-center z-50 hidden opacity-0 transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden transform scale-95 transition-transform">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">Advanced Legal Search</h3>
+                <button onclick="app.hideModal('global-search-modal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <input type="text" placeholder="Enter keywords, citations, or party names..." class="w-full p-3 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <div class="mt-4 flex justify-end">
+                    <button onclick="app.hideModal('global-search-modal')" class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow text-sm font-medium">Search</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global Upload Modal -->
+    <div id="upload-modal" class="fixed inset-0 bg-legal-900/75 flex items-center justify-center z-50 hidden opacity-0 transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">Global Upload</h3>
+                <button onclick="app.hideModal('upload-modal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 text-center">
+                <p class="text-gray-600 text-sm mb-4">Please open a specific Matter Workspace to upload and parse documents securely.</p>
+                <button onclick="app.hideModal('upload-modal')" class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300 rounded text-sm font-medium">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Application Core Script - Required Architecture File 3 -->
     <script src="legalapp.js"></script>
 
