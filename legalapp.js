@@ -5,10 +5,8 @@
  */
 
 const ARIXConfig = {
-    // Automatically routes API requests to localhost:3000 if frontend is running on a different port
-    API_BASE: window.location.port === '3000' || window.location.hostname !== 'localhost' 
-        ? '/api/v1' 
-        : 'http://localhost:3000/api/v1',
+    // Strictly target the Express backend port to prevent 127.0.0.1 vs localhost mismatches
+    API_BASE: 'http://localhost:3000/api/v1',
     OFFLINE_MODE: false
 };
 
