@@ -300,12 +300,14 @@ const app = {
             this.hideModal('new-case-modal');
             this.openCase(response.matter_id || 'new');
         } catch (error) {
-            this.hideModal('new-case-modal'); // FIX: Close overlay so error is visible
+            this.hideModal('new-case-modal'); 
+            console.error("[Debug] Full error:", error);
             ui.showError(
                 "Workspace Creation Failed",
-                "Could not initialize secure workspace for the new matter. Please check your connection.",
+                `System rejected initialization. Exact reason: ${error.message}`,
                 [{ label: "Dismiss", onClick: () => {} }]
             );
+        }
             if (submitBtn) {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = 'Create Workspace <i class="fa-solid fa-arrow-right ml-2"></i>';
