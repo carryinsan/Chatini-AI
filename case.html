@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matter Workspace | ARIXlegal</title>
+    
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src https://cdnjs.cloudflare.com; connect-src 'self' https://vvcpdfdofihdmzshglxr.supabase.co; img-src 'self' data: blob:;">
+    
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        legal: {
+                            900: '#0f172a', 
+                            800: '#1e293b', 
+                            700: '#334155', 
+                            100: '#f1f5f9', 
+                            50: '#f8fafc'
+                        },
+                        status: {
+                            none: '#10b981',    // Green (No change)
+                            info: '#eab308',    // Yellow (New info)
+                            action: '#f97316',  // Orange (Action required)
+                            urgent: '#ef4444',  // Red (Urgent)
+                            unknown: '#94a3b8', // Gray (Unable to verify)
+                            verified: '#059669',
+                            conflicting: '#dc2626'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-legal-100 text-gray-800 font-sans h-screen overflow-hidden flex">
+
+    <!-- Case-Specific Sidebar -->
+    <aside class="w-64 bg-legal-900 text-white flex flex-col h-full shadow-xl z-20">
+        <div class="p-4 border-b border-legal-700">
+            <button onclick="window.location.href='index.html'" class="text-sm text-gray-400 hover:text-white flex items-center mb-4 transition-colors">
+                <i class="fa-solid fa-arrow-left mr-2"></i> Back to Dashboard
+            </button>
+            <h2 class="text-lg font-bold truncate" id="sidebar-case-name">Loading Matter...</h2>
+            <p class="text-xs text-gray-400 font-mono mt-1" id="sidebar-case-number">---</p>
+        </div>
+        
+        <nav class="flex-1 overflow-y-auto py-4">
+            <ul class="space-y-1">
+                <li>
+                    <a href="#" onclick="caseApp.switchTab('overview')" id="tab-btn-overview" class="block px-6 py-3 bg-legal-800 border-l-4 border-blue-500 text-white font-medium tab-nav-btn">
+                        <i class="fa-solid fa-chart-pie w-6 text-center"></i> Overview
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="caseApp.switchTab('documents')" id="tab-btn-documents" class="block px-6 py-3 text-gray-300 hover:bg-legal-800 hover:text-white transition-colors tab-nav-btn">
+                        <i class="fa-solid fa-file-pdf w-6 text-center"></i> Documents
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="caseApp.switchTab('issues-evidence')" id="tab-btn-issues-evidence" class="block px-6 py-3 text-gray-300 hover:bg-legal-800 hover:text-white transition-colors tab-nav-btn">
+                        <i class="fa-solid fa-scale-balanced w-6 text-center"></i> Issues & Evidence
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="caseApp.switchTab('research')" id="tab-btn-research" class="block px-6 py-3 text-gray-300 hover:bg-legal-800 hover:text-white transition-colors tab-nav-btn">
+                        <i class="fa-solid fa-book-open w-6 text-center"></i> Legal Research
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="caseApp.switchTab('drafting')" id="tab-btn-drafting" class="block px-6 py-3 text-gray-300 hover:bg-legal-800 hover:text-white transition-colors tab-nav-btn">
+                        <i class="fa-solid fa-pen-nib w-6 text-center"></i> Drafting
+                    </a>
+                </li>
+                <li>
+                    <a href="#" onclick="caseApp.switchTab('tasks')" id="tab-btn-tasks" class="block px-6 py-3 text-gray-300 hover:bg-legal-800 hover:text-white transition-colors tab-nav-btn">
+                        <i class="fa-solid fa-list-check w-6 text-center"></i> Next Actions
+                    </a>
+                </li>
+                <li class="mt-4 border-t border-legal-700 pt-2">
+                    <a href="#" onclick="caseApp.switchTab('safety')" id="tab-btn-safety" class="block px-6 py-3 text-gray-300 hover:bg-legal-800 hover:text-white transition-colors flex justify-between items-center tab-nav-btn">
+                        <span><i class="fa-solid fa-shield-check w-6 text-center"></i> Safety Center</span>
+                        <span id="case-safety-badge" class="bg-status-conflicting text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        
+        <div class="p-4 bg-legal-800 border-t border-legal-700">
+            <button onclick="caseApp.showModal('upload-modal')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded shadow text-sm font-medium transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Add File
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Case Content -->
+    <main class="flex-1 flex flex-col h-full overflow-hidden bg-legal-50 relative">
+        
+        <!-- Case Header (Rule 16: Display Model) -->
+        <header class="bg-white shadow-sm flex flex-col z-10 border-b border-gray-200">
+            <div class="px-8 py-4 flex justify-between items-start">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-3 mb-1">
+                        <h1 class="text-2xl font-bold text-gray-900 truncate" id="header-case-name">Loading...</h1>
+                        <span id="header-official-status" class="px-2.5 py-0.5 rounded text-xs font-semibold uppercase tracking-wider bg-gray-100 text-gray-700 border border-gray-200">Pending</span>
+                    </div>
+                    <div class="flex flex-wrap items-center text-sm text-gray-500 gap-y-1 gap-x-4">
+                        <span class="flex items-center"><i class="fa-solid fa-hashtag mr-1.5 text-gray-400"></i> <span id="header-case-number" class="font-mono">---</span></span>
+                        <span class="flex items-center"><i class="fa-solid fa-building-columns mr-1.5 text-gray-400"></i> <span id="header-court">---</span></span>
+                        <span class="flex items-center" title="16-digit CNR"><i class="fa-solid fa-barcode mr-1.5 text-gray-400"></i> <span id="header-cnr" class="font-mono text-xs">---</span></span>
+                    </div>
+                </div>
+                
+                <div class="text-right flex flex-col items-end shrink-0 ml-6">
+                    <div class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-2 mb-2 shadow-sm text-left">
+                        <div class="text-[10px] uppercase font-bold text-blue-800 tracking-wide mb-0.5 flex items-center">
+                            AI-Interpreted Stage <i class="fa-solid fa-robot text-blue-500 ml-1.5"></i>
+                        </div>
+                        <div class="text-sm font-semibold text-gray-900" id="header-ai-stage">Analyzing...</div>
+                    </div>
+                    <div class="text-xs text-gray-500 flex items-center">
+                        <i class="fa-solid fa-clock-rotate-left mr-1.5"></i> Last Verified: <span id="header-last-verified" class="ml-1 font-medium text-gray-700">Just now</span>
+                        <button onclick="caseApp.refreshCaseStatus()" class="ml-2 text-blue-600 hover:text-blue-800" title="Force Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Context & Coverage Warning Bar (Rule 58 & 59) -->
+            <div id="coverage-warning-bar" class="hidden bg-yellow-50 border-t border-b border-yellow-200 px-8 py-2 flex items-center justify-between">
+                <div class="flex items-center text-xs text-yellow-800">
+                    <i class="fa-solid fa-triangle-exclamation mr-2"></i>
+                    <span><strong>Coverage Alert:</strong> 3 recent documents have not yet been fully indexed. AI insights may be incomplete.</span>
+                </div>
+                <button class="text-xs bg-yellow-100 hover:bg-yellow-200 text-yellow-800 px-3 py-1 rounded font-medium transition-colors">Process Now</button>
+            </div>
+        </header>
+
+        <!-- Dynamic Error Container specific to case actions -->
+        <div id="case-error-container" class="hidden bg-red-50 border-b border-red-200 px-8 py-3 relative z-10 shadow-sm">
+            <div class="flex items-start">
+                <i class="fa-solid fa-circle-exclamation text-red-500 mt-0.5 mr-3"></i>
+                <div class="flex-1">
+                    <h3 class="text-sm font-bold text-red-800" id="case-error-title">Task Failed</h3>
+                    <p class="text-sm text-red-700 mt-0.5" id="case-error-message">Error details</p>
+                    <div class="mt-2 text-xs" id="case-error-actions"></div>
+                </div>
+                <button onclick="caseApp.dismissError()" class="text-red-400 hover:text-red-600 ml-4"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        </div>
+
+        <!-- Tab Views Container -->
+        <div class="flex-1 overflow-y-auto relative p-8" id="tab-content-container">
+            
+            <!-- OVERVIEW TAB (Rule 111 & 147 & 148) -->
+            <div id="view-overview" class="tab-view space-y-6 block">
+                
+                <!-- What Changed Module (Rule 148) -->
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                            <i class="fa-solid fa-bolt text-status-info mr-2"></i> What Changed?
+                        </h3>
+                        <span class="text-xs text-gray-500">Since last review</span>
+                    </div>
+                    <div id="what-changed-container" class="space-y-3">
+                        <!-- Populated by case.js -->
+                        <div class="animate-pulse flex space-x-4">
+                            <div class="h-4 bg-gray-200 rounded w-3/4"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- AI Case Brief (Rule 147) -->
+                    <div class="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col">
+                        <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-3">
+                            <h3 class="text-lg font-bold text-gray-800"><i class="fa-solid fa-file-lines text-blue-500 mr-2"></i> AI Case Brief</h3>
+                            <button class="text-xs text-gray-500 hover:text-blue-600 flex items-center"><i class="fa-solid fa-download mr-1"></i> Export PDF</button>
+                        </div>
+                        <div id="case-brief-content" class="flex-1 prose prose-sm max-w-none text-gray-600">
+                            <!-- Populated by case.js. Must include source traceability links. -->
+                            <p class="italic text-gray-400">Synthesizing matter details...</p>
+                        </div>
+                    </div>
+
+                    <!-- Side Panel: Next Hearing & Urgent Risks -->
+                    <div class="space-y-6">
+                        <!-- Hearing Prep (Rule 149) -->
+                        <div class="bg-blue-50 rounded-xl shadow-sm border border-blue-200 p-5">
+                            <h3 class="font-bold text-blue-900 mb-3 flex items-center"><i class="fa-solid fa-calendar-gavel mr-2"></i> Next Hearing</h3>
+                            <div class="text-2xl font-bold text-gray-900 mb-1" id="overview-next-hearing-date">Unknown</div>
+                            <div class="text-sm text-gray-700 mb-4" id="overview-next-hearing-purpose">Pending scheduling</div>
+                            <button class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-2 rounded shadow transition-colors">
+                                Prepare Hearing Material
+                            </button>
+                        </div>
+
+                        <!-- Risks / Contradictions (Rule 172) -->
+                        <div class="bg-red-50 rounded-xl shadow-sm border border-red-200 p-5">
+                            <h3 class="font-bold text-red-900 mb-3 flex items-center"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Critical Risks</h3>
+                            <ul id="overview-risks-list" class="space-y-2 text-sm text-red-800">
+                                <li>Scanning for procedural vulnerabilities...</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DOCUMENTS TAB (Rule 112 & 31) -->
+            <div id="view-documents" class="tab-view space-y-6 hidden h-full flex-col">
+                <div class="flex justify-between items-center bg-white p-4 rounded-lg shadow-sm border border-gray-200 shrink-0">
+                    <div class="flex space-x-2">
+                        <button class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-medium rounded transition-colors">All</button>
+                        <button class="px-4 py-2 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded transition-colors">Pleadings</button>
+                        <button class="px-4 py-2 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded transition-colors">Orders</button>
+                        <button class="px-4 py-2 text-gray-600 hover:bg-gray-50 text-sm font-medium rounded transition-colors">Evidence</button>
+                    </div>
+                    <div class="flex space-x-3 items-center">
+                        <div class="relative w-64">
+                            <input type="text" placeholder="Search documents..." class="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:outline-none">
+                            <i class="fa-solid fa-search absolute left-2.5 top-2 text-gray-400 text-xs"></i>
+                        </div>
+                        <button onclick="caseApp.showModal('upload-modal')" class="bg-blue-600 text-white px-4 py-1.5 rounded shadow text-sm font-medium hover:bg-blue-700">
+                            <i class="fa-solid fa-upload mr-1"></i> Upload
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-200 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 font-semibold">Document Name</th>
+                                    <th scope="col" class="px-6 py-3 font-semibold">Type</th>
+                                    <th scope="col" class="px-6 py-3 font-semibold">Date</th>
+                                    <th scope="col" class="px-6 py-3 font-semibold">Quality/OCR</th>
+                                    <th scope="col" class="px-6 py-3 font-semibold text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="document-list-tbody" class="divide-y divide-gray-100">
+                                <!-- Documents injected here -->
+                                <tr>
+                                    <td colspan="5" class="px-6 py-12 text-center text-gray-400">
+                                        <i class="fa-regular fa-folder-open text-4xl mb-3"></i>
+                                        <p>No documents found in this view.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ISSUES & EVIDENCE TAB (Rule 113, 169) -->
+            <div id="view-issues-evidence" class="tab-view space-y-6 hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-xl font-bold text-gray-800">Evidence Matrix</h2>
+                    <button class="text-sm bg-white border border-gray-300 px-3 py-1.5 rounded hover:bg-gray-50 font-medium">
+                        <i class="fa-solid fa-plus mr-1"></i> Add Issue
+                    </button>
+                </div>
+                
+                <div id="issues-container" class="space-y-6">
+                    <!-- Issue Card Template Usage -->
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-start">
+                            <div>
+                                <span class="text-xs font-bold uppercase tracking-wider text-blue-600 mb-1 block">Issue 1</span>
+                                <h3 class="text-lg font-bold text-gray-900">Whether the Plaintiff is the prior user of the trademark 'XYZ'?</h3>
+                            </div>
+                            <span class="px-2 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full border border-green-200">Strong Position</span>
+                        </div>
+                        <div class="p-6 grid grid-cols-2 gap-6">
+                            <!-- Supporting -->
+                            <div>
+                                <h4 class="font-semibold text-gray-700 text-sm mb-3 flex items-center"><i class="fa-solid fa-check text-green-500 mr-2"></i> Supporting Evidence</h4>
+                                <ul class="space-y-3 text-sm">
+                                    <li class="bg-green-50 p-3 rounded border border-green-100">
+                                        <p class="text-gray-800 mb-1">Invoices from 2015 show sales under the mark.</p>
+                                        <a href="#" class="text-xs text-blue-600 hover:underline"><i class="fa-solid fa-file-invoice mr-1"></i> Plaintiff Exhibit P-1, Page 4</a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <!-- Contradicting/Missing -->
+                            <div>
+                                <h4 class="font-semibold text-gray-700 text-sm mb-3 flex items-center"><i class="fa-solid fa-xmark text-red-500 mr-2"></i> Contrary / Missing</h4>
+                                <ul class="space-y-3 text-sm">
+                                    <li class="bg-red-50 p-3 rounded border border-red-100">
+                                        <p class="text-gray-800 mb-1">Defendant claims registration in 2014.</p>
+                                        <a href="#" class="text-xs text-blue-600 hover:underline"><i class="fa-solid fa-file-contract mr-1"></i> Written Statement, Para 12</a>
+                                        <div class="mt-2 text-xs text-red-600 font-medium"><i class="fa-solid fa-magnifying-glass-arrow-right mr-1"></i> Requires rebuttal evidence of invalidity.</div>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEGAL RESEARCH TAB (Rule 114) -->
+            <div id="view-research" class="tab-view space-y-6 hidden h-full flex-col">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 shrink-0">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Case-Specific Research</h2>
+                    <div class="flex space-x-4">
+                        <div class="flex-1 relative">
+                            <textarea id="research-query" rows="2" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm" placeholder="Ask a legal question based on the facts of this matter..."></textarea>
+                            <div class="absolute bottom-3 right-3 text-xs text-gray-400">
+                                <i class="fa-solid fa-shield-halved mr-1"></i> Queries are pseudonymized
+                            </div>
+                        </div>
+                        <div class="flex flex-col space-y-2 shrink-0">
+                            <button onclick="caseApp.executeResearch()" class="bg-legal-900 hover:bg-black text-white px-6 py-2 rounded-lg shadow text-sm font-medium transition-colors flex-1 flex items-center justify-center">
+                                <i class="fa-solid fa-magnifying-glass mr-2"></i> Search Law
+                            </button>
+                            <label class="flex items-center text-xs text-gray-600 cursor-pointer">
+                                <input type="checkbox" checked class="mr-1.5 rounded text-blue-600"> Limit to Supreme Court
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Results Area -->
+                <div class="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-6 overflow-y-auto" id="research-results">
+                    <div class="h-full flex flex-col items-center justify-center text-gray-400 space-y-4">
+                        <i class="fa-solid fa-scale-balanced text-5xl opacity-20"></i>
+                        <p class="text-sm">Search results, citations, and verified propositions will appear here.</p>
+                        <p class="text-xs max-w-md text-center opacity-70">Citations are strictly verified against source material (Rule 41: "Does this case really say that?").</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DRAFTING TAB (Rule 115 & 210) -->
+            <div id="view-drafting" class="tab-view space-y-6 hidden h-full">
+                <div class="grid grid-cols-4 gap-6 h-full">
+                    <div class="col-span-1 bg-white border border-gray-200 rounded-xl p-4 shadow-sm h-full overflow-y-auto">
+                        <h3 class="font-bold text-gray-800 text-sm uppercase tracking-wider mb-4 border-b pb-2">Generate Document</h3>
+                        <ul class="space-y-2">
+                            <li><button class="w-full text-left px-3 py-2 rounded text-sm bg-blue-50 text-blue-700 font-medium border border-blue-100">Application</button></li>
+                            <li><button class="w-full text-left px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-50">Reply / Rejoinder</button></li>
+                            <li><button class="w-full text-left px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-50">Evidence Affidavit</button></li>
+                            <li><button class="w-full text-left px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-50">Written Submissions</button></li>
+                            <li><button class="w-full text-left px-3 py-2 rounded text-sm text-gray-600 hover:bg-gray-50">Legal Opinion</button></li>
+                        </ul>
+                    </div>
+                    <div class="col-span-3 bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col relative">
+                        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                            <h3 class="font-bold text-gray-800">Draft Editor <span class="text-xs font-normal text-gray-500 ml-2">Source Traceability Active</span></h3>
+                            <div class="space-x-2">
+                                <button class="text-sm px-3 py-1.5 border border-gray-300 rounded text-gray-600 hover:bg-gray-50"><i class="fa-solid fa-shield-check text-green-500 mr-1"></i> Verify Safety</button>
+                                <button class="text-sm px-3 py-1.5 bg-blue-600 text-white rounded shadow hover:bg-blue-700">Export</button>
+                            </div>
+                        </div>
+                        <div class="flex-1 p-6 text-gray-400 flex items-center justify-center bg-gray-50">
+                            Select a document type to begin guided drafting.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TASKS TAB (Rule 116) -->
+            <div id="view-tasks" class="tab-view space-y-6 hidden">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-4 border-b border-gray-200 bg-gray-50">
+                        <h3 class="font-bold text-gray-800">Pending Actions</h3>
+                    </div>
+                    <div class="divide-y divide-gray-100" id="case-tasks-list">
+                        <!-- Populated by case.js -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- SAFETY CENTER TAB (Rule 205) -->
+            <div id="view-safety" class="tab-view space-y-6 hidden">
+                <div class="bg-red-50 border border-red-200 rounded-xl p-6">
+                    <div class="flex items-start">
+                        <i class="fa-solid fa-shield-halved text-4xl text-red-500 mr-4"></i>
+                        <div>
+                            <h2 class="text-xl font-bold text-red-900">Safety & Verification Center</h2>
+                            <p class="text-sm text-red-700 mt-1 max-w-3xl">The system has detected potential anomalies in the AI outputs, conflicting factual records, or unverified legal citations. Review and resolve these issues to maintain case integrity.</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 gap-4" id="safety-issues-container">
+                    <!-- Sample Safety Warning Template -->
+                    <div class="bg-white border-l-4 border-status-conflicting rounded shadow-sm p-5">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center space-x-2 mb-1">
+                                    <span class="text-xs font-bold text-red-600 uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded">Source Conflict</span>
+                                    <span class="text-xs text-gray-500"><i class="fa-solid fa-clock mr-1"></i> Detected during Timeline Generation</span>
+                                </div>
+                                <h4 class="text-base font-bold text-gray-900 mt-2">Conflicting limitation dates detected in generated output vs pleadings.</h4>
+                            </div>
+                            <button class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-sm font-medium rounded text-gray-700">Resolve</button>
+                        </div>
+                        <div class="mt-4 bg-gray-50 p-3 rounded border border-gray-200 text-sm">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <strong class="text-gray-700 block mb-1">Generated Output claimed:</strong>
+                                    <span class="text-gray-600">"Cause of action arose on 12-May-2023."</span>
+                                </div>
+                                <div>
+                                    <strong class="text-gray-700 block mb-1">Plaint (Page 14, Para 18) states:</strong>
+                                    <span class="text-gray-600">"Cause of action arose on 12-May-2021."</span>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-red-600 font-medium text-xs">
+                                <i class="fa-solid fa-arrow-right mr-1"></i> AI self-correction blocked (Rule 181: Never silently self-correct critical facts). Human review required.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Document Upload Modal (Rule 22 & 189) -->
+    <div id="upload-modal" class="fixed inset-0 bg-legal-900/75 flex items-center justify-center z-50 hidden opacity-0 transition-opacity">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden transform scale-95 transition-transform">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-800">Upload to Workspace</h3>
+                <button onclick="caseApp.hideModal('upload-modal')" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+            </div>
+            <div class="p-6 text-center">
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-10 bg-gray-50 hover:bg-blue-50 hover:border-blue-300 transition-colors cursor-pointer" id="drop-zone">
+                    <i class="fa-solid fa-cloud-arrow-up text-4xl text-gray-400 mb-3"></i>
+                    <p class="text-gray-700 font-medium">Click to browse or drag files here</p>
+                    <p class="text-xs text-gray-500 mt-2">Supports PDF, JPG, PNG, DOCX (Max 50MB/file)</p>
+                </div>
+                <div class="mt-4 bg-yellow-50 text-left p-3 rounded border border-yellow-100 flex items-start text-sm">
+                    <i class="fa-solid fa-camera mt-0.5 mr-2 text-yellow-600"></i>
+                    <p class="text-yellow-800 text-xs">If uploading photographs of documents, ensure good lighting and avoid glare. The AI Quality Engine will reject unreadable pages. (Rule 27)</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Architecture Files (Loaded sequentially) -->
+    <script src="app.js"></script>
+    <!-- Note: case.js is logically dependent here, but per rules, files are loaded individually via the user testing framework -->
+
+</body>
+</html>
