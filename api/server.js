@@ -9,12 +9,18 @@
 
 const express = require('express');
 const crypto = require('crypto');
+const cors = require('cors');
+const path = require('path');
 // In a real environment, load these from 'dotenv' package.
 // require('dotenv').config();
 
 const app = express();
+app.use(cors()); // Enable CORS to allow local HTML files to connect
 app.use(express.json({ limit: '10mb' })); // Strict JSON parsing
-// app.use(cors()); // Enable in production with strict origin lists
+
+// Serve static HTML/JS files from the parent directory 
+// (Assumes server.js is inside an /api folder)
+app.use(express.static(path.join(__dirname, '../')));
 
 // ==========================================
 // 1. SECURE CONFIGURATION (Rule 124 & 125)
@@ -162,6 +168,58 @@ apiRouter.get('/dashboard/metrics', (req, res) => {
         newOrders: 3,
         safetyReviews: 1
     });
+});
+
+apiRouter.post('/cases', (req, res) => {
+    // Generates a new secure workspace instance
+    const { display_name, case_number, court, client, cnr } = req.body;
+    const newMatterId = `mtr_${Date.now()}`;
+    
+    res.status(201).json({
+        success: true,
+        matter_id: newMatterId,
+        display_name: display_name || "New Matter",
+        case_number: case_number || "Unassigned"
+    });
+});
+
+apiRouter.get('/tasks/pending', (req, res) => {
+    // Supplies dashboard with actionable items
+    res.json([
+        {
+            title: "File Evidence Affidavit",
+            case_name: "ABC Pvt Ltd v. XYZ Ltd",
+            source: "Order dated 15-Aug-2026",
+            urgency: "CRITICAL",
+            icon: "fa-file-signature"
+        }
+    ]);
+});
+
+apiRouter.post('/cases', (req, res) => {
+    // Generates a new secure workspace instance
+    const { display_name, case_number, court, client, cnr } = req.body;
+    const newMatterId = `mtr_${Date.now()}`;
+    
+    res.status(201).json({
+        success: true,
+        matter_id: newMatterId,
+        display_name: display_name || "New Matter",
+        case_number: case_number || "Unassigned"
+    });
+});
+
+apiRouter.get('/tasks/pending', (req, res) => {
+    // Supplies dashboard with actionable items
+    res.json([
+        {
+            title: "File Evidence Affidavit",
+            case_name: "ABC Pvt Ltd v. XYZ Ltd",
+            source: "Order dated 15-Aug-2026",
+            urgency: "CRITICAL",
+            icon: "fa-file-signature"
+        }
+    ]);
 });
 
 apiRouter.get('/cases/active', (req, res) => {
