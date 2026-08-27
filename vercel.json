@@ -1,9 +1,9 @@
 {
-  "crons": [
+  "version": 2,
+  "rewrites": [
     {
-      "path": "/api/cron",
-      "schedule": "0 0 * * *"
+      "source": "/api/(.*)",
+      "destination": "/api/server.js"
     }
   ]
 }
-
