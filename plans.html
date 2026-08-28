@@ -130,7 +130,7 @@
 
         <!-- Pricing Grid Container -->
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start relative z-10" id="pricing-container">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 items-start relative z-10 justify-center" id="pricing-container">
                 <!-- Cards injected via JS to keep HTML DRY and structured -->
             </div>
         </div>
@@ -142,8 +142,28 @@
     </footer>
 
     <script>
-        // Pricing Data Model - Updated with new model names (Spark, Flux, Oracle)
         const plans = [
+            {
+                id: 'free',
+                name: 'Free',
+                tagline: 'Dip your toes into the AI universe.',
+                price: '0',
+                credits: '50',
+                creditDesc: 'Renewed monthly. Get a taste.',
+                features: [
+                    'Standard AI Chat & History',
+                    'Share Chat (Basic link sharing)',
+                    'Your Tasks (Basic daily smart AI reminders)',
+                    'Manage Extensions (Upload & attach 1 file/link to any chat)',
+                    'Your Projects (Personal group chats)',
+                    'Experimental (Sneak peek at new features)',
+                    'Offline-Device AI (No quota limit)',
+                    'SPARKer (Faster offline model - Preview)',
+                    'FLiX (More thinking - Preview)'
+                ],
+                highlight: false,
+                buttonType: 'outline'
+            },
             {
                 id: 'spark',
                 name: 'Spark',
@@ -153,16 +173,19 @@
                 creditDesc: '200 credits. Use them anywhere.',
                 target: 'Target: acquisition plan.',
                 features: [
-                    'Spark Model',
-                    'Limited thinking Flux',
-                    'Web research',
-                    'Image generation',
+                    '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Free, plus:</span>',
+                    'Spark Model & Limited thinking Flux',
+                    'Web research & Image generation',
                     'Short video generation',
-                    'AI chat history',
-                    'Basic file upload',
-                    'Basic prompt library',
-                    'Basic export',
-                    'Personalized AI preferences',
+                    'Share Chat (Unlimited & Interactive)',
+                    'Your Tasks (Smart AI Reminders & Planning)',
+                    'Invite Co-Op Friend (Create a group with You, AI & 1 Teammate)',
+                    'Manage Extensions (Upload & attach up to 5 files/links)',
+                    'Your Projects (Up to 3 shared group chats)',
+                    'Experimental (Basic stunning new features)',
+                    'Offline-Device AI (No quota limit)',
+                    'SPARKer (Faster offline model - Full Access)',
+                    'FLiX (More thinking - Limited Access)',
                     'Multi-model automatic routing'
                 ],
                 highlight: false,
@@ -178,15 +201,17 @@
                 features: [
                     '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Spark, plus:</span>',
                     'More thinking Flux',
-                    'Longer conversations',
-                    'Larger file limits',
-                    'Better research mode',
-                    'More image resolution options',
-                    'Longer video option',
-                    'Saved projects',
-                    'More chat history',
-                    'Custom instructions',
-                    'Priority over free users'
+                    'Longer conversations & Larger file limits',
+                    'Better research mode & More image resolution options',
+                    'Share Chat (Analytics & History included)',
+                    'Your Tasks (Advanced automated scheduling)',
+                    'Invite Co-Op Friend (Workspace with up to 3 Teammates)',
+                    'Manage Extensions (Upload & attach up to 15 files/links)',
+                    'Your Projects (Unlimited active group chats & sharing)',
+                    'Experimental (Standard new stunning features)',
+                    'Offline-Device AI (No quota limit)',
+                    'SPARKer (Faster offline model - Standard)',
+                    'FLiX (More thinking - Standard)'
                 ],
                 highlight: false,
                 buttonType: 'default'
@@ -201,17 +226,18 @@
                 creditDesc: 'Power across models & media tools.',
                 features: [
                     '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Starter, plus:</span>',
-                    'Limited Oracle model',
+                    'Limited Oracle model & PDF/document analysis',
                     'Advanced research & multi-source',
-                    'PDF/document analysis',
-                    'Better model routing',
-                    'Custom AI assistants',
-                    'Project workspaces',
-                    'Image editing',
-                    'Higher file limits & video options',
-                    'Export to PDF/DOCX/Markdown',
-                    'Prompt templates & folders',
-                    'Priority generation queue'
+                    'Custom AI assistants & Image editing',
+                    'Share Chat (Custom branding)',
+                    'Your Tasks (Calendar & Email AI integrations)',
+                    'Invite Co-Op Friend (Workspace with up to 5 Teammates)',
+                    'Manage Extensions (Unlimited files/links to any chat)',
+                    'Your Projects (Team workspaces)',
+                    'Experimental (Early access to new stunning beta features)',
+                    'Offline-Device AI (No quota limit)',
+                    'SPARKer (Faster offline model - Advanced)',
+                    'FLiX (More thinking - Advanced)'
                 ],
                 highlight: 'primary',
                 buttonType: 'primary'
@@ -229,13 +255,15 @@
                     'Full Oracle model & Limited Oracle thinking',
                     'Advanced Flux & heavy Spark usage',
                     'Highest normal chat priority',
-                    'Larger document processing',
-                    'Better image & video limits',
-                    'Multiple projects & assistants',
-                    'Advanced prompt controls',
-                    'Usage analytics & Model selection',
                     'Auto cheapest/best-model routing',
-                    'Early access to new features'
+                    'Share Chat (Secure password protected)',
+                    'Your Tasks (Team delegation & tracking)',
+                    'Invite Co-Op Friend (Workspace with up to 10 Teammates)',
+                    'Your Projects (Advanced analytics & roles)',
+                    'Experimental (Exclusive access to stunning beta features)',
+                    'Offline-Device AI (No quota limit)',
+                    'SPARKer (Faster offline model - Pro)',
+                    'FLiX (More thinking - Pro)'
                 ],
                 highlight: 'secondary',
                 buttonType: 'gradient'
@@ -249,16 +277,18 @@
                 creditDesc: 'Stop thinking about quotas. Think about work.',
                 features: [
                     '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Pro, plus:</span>',
-                    'Higher Oracle thinking',
+                    'Higher Oracle thinking & Priority processing',
                     'Very high Flux & Spark capacity',
                     'Heavy research & Larger files',
-                    'Long-context projects',
-                    'More image & video generation',
-                    'Priority processing',
-                    'Advanced project memory',
-                    'Batch generation',
-                    'Custom workflows & advanced exports',
-                    'Higher concurrency'
+                    'Batch generation & Custom workflows',
+                    'Share Chat (Enterprise controls)',
+                    'Your Tasks (Custom AI workflow automation)',
+                    'Invite Co-Op Friend (Unlimited Teammates for any group)',
+                    'Manage Extensions (Global organization extensions)',
+                    'Experimental (VIP feature access)',
+                    'Offline-Device AI (No quota limit)',
+                    'SPARKer (Faster offline model - Max)',
+                    'FLiX (More thinking - Max)'
                 ],
                 highlight: false,
                 buttonType: 'default'
@@ -273,23 +303,23 @@
                 creditDesc: 'Maximum capacity & infrastructure.',
                 features: [
                     '<span class="font-semibold text-brand-600 dark:text-brand-400">Everything in Max, plus:</span>',
-                    'Maximum Oracle thinking',
+                    'Maximum Oracle thinking & Context',
                     'Highest priority queue',
-                    'Max available context',
-                    'Heavy research workflows',
-                    'Large project workspaces',
-                    'Batch image & video generation',
                     'Multiple simultaneous jobs',
-                    'Advanced workflow automation',
-                    'Premium support channel',
-                    'Team/project features (coming soon)'
+                    'Share Chat (White-labeled sharing)',
+                    'Your Tasks (Enterprise-wide autonomous agents)',
+                    'Your Projects (Unlimited scale & governance)',
+                    'Experimental (Direct engineering team access)',
+                    'Offline-Device AI (No quota limit)',
+                    'SPARKer (Faster offline model - Workstation)',
+                    'FLiX (More thinking - Workstation)',
+                    'Premium support channel'
                 ],
                 highlight: false,
                 buttonType: 'outline'
             }
         ];
 
-        // Render Function
         const renderPricing = () => {
             const container = document.getElementById('pricing-container');
             
@@ -322,7 +352,7 @@
                         : 'bg-gradient-to-r from-brand-500 to-blue-500 text-white';
                     
                     badgeHtml = `
-                        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${badgeColors} shadow-sm z-30">
+                        <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-1 text-xs font-bold uppercase tracking-wider rounded-full ${badgeColors} shadow-sm z-30 whitespace-nowrap">
                             ${plan.badge}
                         </div>
                     `;
