@@ -60,11 +60,20 @@ export async function createNewMatter(matterDetails) {
 
         if (error) throw error;
 
-        console.log(`[CourtSync] Matter created with ID: ${data.id}. Triggering initial sync...`);
+        console.log(`[CourtSync] Matter created with ID: ${data.id}.`);
         
-        // Trigger background sync without awaiting it to keep UI fast
-        // The UI can show a "Syncing..." spinner while this runs
-        triggerCourtSync(data.id, data.cnr_number, matterDetails.fallbackParams, true);
+        const hasCourtLookup =
+            Boolean(data.cnr_number) ||
+            Boolean(matterDetails.fallbackParams);
+            
+        if (hasCourtLookup) {
+            void triggerCourtSync(
+                data.id,
+                data.cnr_number,
+                matterDetails.fallbackParams || null,
+                false
+            );
+        }
 
         return { success: true, matter: data, error: null };
 
@@ -89,7 +98,7 @@ export async function fetchUserMatters() {
         console.log("[CourtSync] Fetching advocate matters from database...");
         const { data, error } = await supabase
             .from('matters')
-            .select('*')
+            .select('id, display_name, case_number, cnr_number, court_forum, client_name, status, next_hearing_date, last_synced_at, created_at')
             .eq('user_id', session.user.id)
             .order('created_at', { ascending: false });
 
