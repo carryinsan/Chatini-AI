@@ -115,20 +115,22 @@ async function handleCreateWorkspace(event) {
 /**
  * Silently checks if any cases need court data updates in the background.
  */
-function triggerBackgroundUpdates(matters) {
-    matters.forEach(matter => {
+async function triggerBackgroundUpdates(matters) {
+    for (const matter of matters) {
         if (isSyncOverdue(matter)) {
             console.log(`[App] Matter ${matter.id} is overdue for sync. Triggering background update...`);
-            // Calls the resilient scraper endpoint defined in courtSync.js
-            triggerCourtSync(matter.id, matter.cnr_number, null, false)
-                .then(res => {
-                    if (res.success) {
-                        console.log(`[App] Background sync successful for ${matter.id}`);
-                        // Optionally refresh the UI for this specific matter row
-                    }
-                });
+            try {
+                const res = await triggerCourtSync(matter.id, matter.cnr_number, null, false);
+                if (res?.success) {
+                    console.log(`[App] Background sync successful for ${matter.id}`);
+                }
+            } catch (err) {
+                console.error(`[App] Sync error for ${matter.id}`, err);
+            }
+            // Add a 3-second delay between headless scrapes to prevent server overload
+            await new Promise(resolve => setTimeout(resolve, 3000));
         }
-    });
+    }
 }
 
 // ==========================================
