@@ -244,9 +244,100 @@
             document.getElementById('view-cnr').textContent = matterData.cnr_number || 'Pending Sync';
             document.getElementById('view-status').textContent = matterData.status || 'Active';
             
-            // Clear previous AI output
-            document.getElementById('ai-output-container').textContent = "Click 'Analyze Case File' to generate a secure, PII-redacted summary and legal strategy.";
+            // Set local loading placeholders
+            document.getElementById('view-court-history').innerHTML = `
+                <div class="space-y-2">
+                    <div class="h-4 bg-slate-200 rounded animate-pulse w-3/4"></div>
+                    <div class="h-4 bg-slate-200 rounded animate-pulse w-1/2"></div>
+                    <div class="h-4 bg-slate-200 rounded animate-pulse w-5/6"></div>
+                    <div class="text-xs text-slate-400 pt-2">
+                        Loading court history…
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('ai-output-container').innerHTML = `
+                <div class="space-y-2">
+                    <div class="h-4 bg-slate-200 rounded animate-pulse w-5/6"></div>
+                    <div class="h-4 bg-slate-200 rounded animate-pulse w-4/6"></div>
+                    <div class="h-4 bg-slate-200 rounded animate-pulse w-3/5"></div>
+                    <div class="text-xs text-slate-400 pt-2">
+                        Waiting for case data…
+                    </div>
+                </div>
+            `;
         }
+
+        window.renderProgressiveCaseData = function(matterData) {
+            if (!matterData) return;
+            const historyContainer = document.getElementById('view-court-history');
+            const aiContainer = document.getElementById('ai-output-container');
+
+            if (!historyContainer || !aiContainer) return;
+
+            const caseData = matterData.case_data;
+
+            if (!caseData) {
+                historyContainer.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="h-4 bg-slate-200 rounded animate-pulse w-3/4"></div>
+                        <div class="h-4 bg-slate-200 rounded animate-pulse w-1/2"></div>
+                        <div class="h-4 bg-slate-200 rounded animate-pulse w-5/6"></div>
+                        <div class="text-xs text-slate-400 pt-2">
+                            Loading court history…
+                        </div>
+                    </div>
+                `;
+
+                aiContainer.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="h-4 bg-slate-200 rounded animate-pulse w-5/6"></div>
+                        <div class="h-4 bg-slate-200 rounded animate-pulse w-4/6"></div>
+                        <div class="h-4 bg-slate-200 rounded animate-pulse w-3/5"></div>
+                        <div class="text-xs text-slate-400 pt-2">
+                            Waiting for case data…
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const history = Array.isArray(caseData.history) ? caseData.history : [];
+
+            if (history.length === 0) {
+                historyContainer.innerHTML = `<div class="text-slate-500">No hearing history is currently available.</div>`;
+            } else {
+                const fragment = document.createDocumentFragment();
+
+                history.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'border-b border-slate-100 py-3';
+
+                    row.innerHTML = `
+                        <div class="font-medium text-slate-800">
+                            ${window.escapeHTML(item.businessOnDate || item.hearingDate || 'Hearing')}
+                        </div>
+                        <div class="text-xs text-slate-500 mt-1">
+                            ${window.escapeHTML(item.purpose || 'Purpose unavailable')}
+                        </div>
+                        <div class="text-xs text-slate-400 mt-1">
+                            ${window.escapeHTML(item.judge || 'Judge unavailable')}
+                        </div>
+                    `;
+                    fragment.appendChild(row);
+                });
+
+                historyContainer.innerHTML = '';
+                historyContainer.appendChild(fragment);
+            }
+
+            aiContainer.innerHTML = `
+                <div class="text-slate-500">
+                    Case data loaded successfully.
+                    Click "Analyze Case File" to generate the AI analysis.
+                </div>
+            `;
+        };
     </script>
     
     <!-- Load main application logic after DOM -->
