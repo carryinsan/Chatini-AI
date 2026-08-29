@@ -53,17 +53,32 @@ function initializeUI() {
  * Loads matters from Supabase via courtSync and renders them.
  */
 async function loadMatters() {
+    // Do not block the whole dashboard while matters are being fetched.
     showLoading(true, "Loading your matters...");
     try {
         AppState.matters = await fetchUserMatters();
+
+        // Render lightweight matter records immediately.
         renderMatterList(AppState.matters);
-        
-        // Background check for overdue syncs
-        triggerBackgroundUpdates(AppState.matters);
+
+        // Global loader can now disappear.
+        showLoading(false);
+
+        // Court synchronization happens completely independently.
+        void triggerBackgroundUpdates(AppState.matters);
+
+        // Progressive enrichment of visible/selected cases.
+        for (const matter of AppState.matters) {
+            if (matter.case_data && AppState.selectedMatter?.id === matter.id) {
+                if (typeof window.renderProgressiveCaseData === 'function') {
+                    window.renderProgressiveCaseData(matter);
+                }
+            }
+        }
+
     } catch (error) {
-        showNotification("Error loading matters. Please refresh.", "error");
         console.error("[App Error]", error);
-    } finally {
+        showNotification("Error loading matters. Please refresh.", "error");
         showLoading(false);
     }
 }
@@ -96,18 +111,60 @@ async function handleCreateWorkspace(event) {
 
     try {
         const result = await createNewMatter(matterDetails);
-        
-        if (result.success) {
-            showNotification(`Workspace '${result.matter.display_name}' created securely.`, "success");
-            closeModal('create-workspace-modal'); // Custom UI closer
-            await loadMatters(); // Refresh list
-        } else {
-            throw new Error(result.error);
+        if (!result.success) {
+            throw new Error(result.error || "Failed to create workspace.");
         }
+
+        const newMatter = result.matter;
+
+        // Make the newly-created matter available immediately.
+        AppState.matters = [
+            newMatter,
+            ...AppState.matters.filter(m => m.id !== newMatter.id)
+        ];
+
+        closeModal('create-workspace-modal');
+
+        // Immediately render the newly-created matter.
+        renderMatterList(AppState.matters);
+
+        // Immediately open the new workspace without waiting for court sync.
+        AppState.selectedMatter = newMatter;
+
+        if (typeof window.switchDashboardView === 'function') {
+            window.switchDashboardView(newMatter);
+        }
+
+        // Show local syncing state inside the workspace, not a global blocking loader.
+        setMatterSyncState(newMatter.id, 'syncing');
+
+        showNotification(
+            `Workspace '${newMatter.display_name}' created securely. Court data is syncing in the background.`,
+            "success"
+        );
+
+        // Background synchronization.
+        // NEVER await this operation.
+        void triggerCourtSync(
+            newMatter.id,
+            newMatter.cnr_number,
+            newMatter.fallbackParams || null,
+            false
+        ).then(syncResult => {
+            if (syncResult?.success && syncResult.data) {
+                applySyncedMatterData(newMatter.id, syncResult.data);
+            } else {
+                setMatterSyncState(newMatter.id, 'error');
+            }
+        }).catch(error => {
+            console.error("[App] Background court sync failed:", error);
+            setMatterSyncState(newMatter.id, 'error');
+        });
     } catch (error) {
         showNotification(error.message || "Failed to create workspace.", "error");
     } finally {
         AppState.isProcessing = false;
+        // Do NOT globally wait for background court synchronization.
         showLoading(false);
     }
 }
@@ -115,21 +172,100 @@ async function handleCreateWorkspace(event) {
 /**
  * Silently checks if any cases need court data updates in the background.
  */
+function setMatterSyncState(matterId, state) {
+    const matter = AppState.matters.find(m => m.id === matterId);
+    if (!matter) return;
+    matter._syncState = state;
+
+    if (
+        AppState.selectedMatter &&
+        AppState.selectedMatter.id === matterId &&
+        typeof window.updateMatterSyncUI === 'function'
+    ) {
+        window.updateMatterSyncUI(matter, state);
+    }
+
+    renderMatterList(AppState.matters);
+}
+
+function applySyncedMatterData(matterId, syncedData) {
+    const index = AppState.matters.findIndex(m => m.id === matterId);
+    if (index === -1) return;
+    const oldMatter = AppState.matters[index];
+
+    const mergedMatter = {
+        ...oldMatter,
+        case_data: syncedData,
+        status: syncedData?.status || oldMatter.status,
+        next_hearing_date: syncedData?.nextHearingDate
+            ? convertDdMmYyyyToIso(syncedData.nextHearingDate)
+            : oldMatter.next_hearing_date,
+        last_synced_at: new Date().toISOString(),
+        _syncState: 'ready'
+    };
+
+    AppState.matters[index] = mergedMatter;
+
+    if (
+        AppState.selectedMatter &&
+        AppState.selectedMatter.id === matterId
+    ) {
+        AppState.selectedMatter = mergedMatter;
+
+        if (typeof window.switchDashboardView === 'function') {
+            window.switchDashboardView(mergedMatter);
+        }
+
+        if (typeof window.renderProgressiveCaseData === 'function') {
+            window.renderProgressiveCaseData(mergedMatter);
+        }
+    }
+
+    renderMatterList(AppState.matters);
+}
+
+function convertDdMmYyyyToIso(value) {
+    if (!value) return null;
+    const parts = String(value).split('-');
+    if (parts.length !== 3) return null;
+
+    const [day, month, year] = parts;
+
+    if (
+        !/^\d{2}$/.test(day) ||
+        !/^\d{2}$/.test(month) ||
+        !/^\d{4}$/.test(year)
+    ) {
+        return null;
+    }
+
+    return `${year}-${month}-${day}`;
+}
+
 async function triggerBackgroundUpdates(matters) {
     for (const matter of matters) {
-        if (isSyncOverdue(matter)) {
-            console.log(`[App] Matter ${matter.id} is overdue for sync. Triggering background update...`);
-            try {
-                const res = await triggerCourtSync(matter.id, matter.cnr_number, null, false);
-                if (res?.success) {
-                    console.log(`[App] Background sync successful for ${matter.id}`);
-                }
-            } catch (err) {
-                console.error(`[App] Sync error for ${matter.id}`, err);
+        if (!isSyncOverdue(matter)) continue;
+        setMatterSyncState(matter.id, 'syncing');
+
+        // Intentionally do not block dashboard rendering.
+        void triggerCourtSync(
+            matter.id,
+            matter.cnr_number,
+            matter.fallbackParams || null,
+            false
+        ).then(result => {
+            if (result?.success && result.data) {
+                applySyncedMatterData(matter.id, result.data);
+            } else {
+                setMatterSyncState(matter.id, 'error');
             }
-            // Add a 3-second delay between headless scrapes to prevent server overload
-            await new Promise(resolve => setTimeout(resolve, 3000));
-        }
+        }).catch(error => {
+            console.error(`[App] Background sync failed for ${matter.id}:`, error);
+            setMatterSyncState(matter.id, 'error');
+        });
+
+        // Small stagger only to avoid launching every scraper simultaneously.
+        await new Promise(resolve => setTimeout(resolve, 250));
     }
 }
 
@@ -224,31 +360,74 @@ async function callGeminiAI(sanitizedText) {
 function renderMatterList(matters) {
     const container = document.getElementById('matter-list-container');
     if (!container) return;
-
-    if (matters.length === 0) {
-        container.innerHTML = `<div class="p-4 text-gray-500 text-center">No matters found. Create a workspace to begin.</div>`;
+    if (!matters || matters.length === 0) {
+        container.innerHTML =
+            `<div class="p-4 text-gray-500 text-center">No matters found. Create a workspace to begin.</div>`;
         return;
     }
 
-    // Map through matters and create safe HTML elements (prevent XSS)
     container.innerHTML = '';
-    matters.forEach(matter => {
+
+    const fragment = document.createDocumentFragment();
+
+    for (const matter of matters) {
         const el = document.createElement('div');
-        el.className = 'p-4 border-b hover:bg-gray-50 cursor-pointer transition-colors';
+        el.className =
+            'p-4 border-b hover:bg-gray-50 cursor-pointer transition-colors';
+
+        const syncState = matter._syncState || (
+            matter.case_data ? 'ready' : 'syncing'
+        );
+
+        let syncLabel = 'Ready';
+
+        if (syncState === 'syncing') {
+            syncLabel = 'Syncing court data…';
+        } else if (syncState === 'error') {
+            syncLabel = 'Court sync needs attention';
+        }
+
         el.innerHTML = `
-            <div class="font-bold text-blue-800">${escapeHTML(matter.display_name)}</div>
-            <div class="text-sm text-gray-600">Case No: ${escapeHTML(matter.case_number || 'N/A')} | CNR: ${escapeHTML(matter.cnr_number || 'Pending')}</div>
-            <div class="mt-2 inline-block px-2 py-1 bg-gray-200 text-xs rounded-full">${escapeHTML(matter.status)}</div>
+            <div class="font-bold text-blue-800">
+                ${escapeHTML(matter.display_name)}
+            </div>
+
+            <div class="text-sm text-gray-600">
+                Case No: ${escapeHTML(matter.case_number || 'N/A')}
+                |
+                CNR: ${escapeHTML(matter.cnr_number || 'Pending')}
+            </div>
+
+            <div class="mt-2 inline-block px-2 py-1 bg-gray-200 text-xs rounded-full">
+                ${escapeHTML(matter.status || 'Initializing')}
+            </div>
+
+            <div class="mt-1 text-xs text-slate-400">
+                ${escapeHTML(syncLabel)}
+            </div>
         `;
+
         el.addEventListener('click', () => {
             AppState.selectedMatter = matter;
-            // Update Dashboard View here
-            console.log("Selected:", matter);
-        });
-        container.appendChild(el);
-    });
-}
 
+            if (typeof window.switchDashboardView === 'function') {
+                window.switchDashboardView(matter);
+            }
+
+            if (typeof window.renderProgressiveCaseData === 'function') {
+                window.renderProgressiveCaseData(matter);
+            }
+
+            if (matter.case_data) {
+                setMatterSyncState(matter.id, 'ready');
+            }
+        });
+
+        fragment.appendChild(el);
+    }
+
+    container.appendChild(fragment);
+}
 function renderAiResponse(markdownText) {
     const aiContainer = document.getElementById('ai-output-container');
     if (aiContainer) {
@@ -296,8 +475,13 @@ function closeModal(modalId) {
 
 // XSS Prevention Utility
 function escapeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>'"]/g, tag => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
     }[tag] || tag));
 }
+window.escapeHTML = escapeHTML;
