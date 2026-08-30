@@ -58,7 +58,8 @@ export default async function handler(req) {
 
         if (!groqRes.ok) throw new Error("Pass 1: Groq Architecture Failed.");
         const groqData = await groqRes.json();
-        const uiSkeleton = JSON.parse(groqData.choices[0].message.content);
+        const rawJson = groqData.choices[0].message.content.replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+        const uiSkeleton = JSON.parse(rawJson);
 
         // Instantly render the top half of the structural UI
         if (uiSkeleton.topHtml) sendUIChunk(uiSkeleton.topHtml);
