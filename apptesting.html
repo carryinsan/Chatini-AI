@@ -537,6 +537,12 @@ body {
                     </div>
                     Study
                 </button>
+                <button id="dynamic-ui-btn" onclick="toggleDynamicUIMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
+                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-teal-50">
+                        <i id="dynamic-ui-icon" class="ph-bold ph-layout text-teal-500"></i>
+                    </div>
+                    Dynamic UI
+                </button>
             </div>
         </div>
 
@@ -1005,6 +1011,7 @@ let isAppMode = false;
 let isStudyMode = false;
 let isCanvasMaximized = false;
 let isImageMode = false;
+let isDynamicUIMode = false;
 let currentChatId = Date.now().toString();
 let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
 let messages = [];
@@ -1054,7 +1061,9 @@ const els = {
     studyBtn: document.getElementById('study-btn'),
     studyIcon: document.getElementById('study-icon'),
     imageBtn: document.getElementById('image-btn'),
-    imageIcon: document.getElementById('image-icon')
+    imageIcon: document.getElementById('image-icon'),
+    dynamicUiBtn: document.getElementById('dynamic-ui-btn'),
+    dynamicUiIcon: document.getElementById('dynamic-ui-icon')
 };
 
 window.onload = async () => {
@@ -1500,7 +1509,8 @@ function resetAllModeUI() {
         { btn: els.podcastBtn, icon: els.podcastIcon, textClass: 'text-pink-600', bgClass: 'bg-pink-50', borderClass: 'border-pink-200' },
         { btn: els.appBtn, icon: els.appIcon, textClass: 'text-orange-600', bgClass: 'bg-orange-50', borderClass: 'border-orange-200' },
         { btn: els.studyBtn, icon: els.studyIcon, textClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-200' },
-        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' }
+        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' },
+        { btn: els.dynamicUiBtn, icon: els.dynamicUiIcon, textClass: 'text-teal-600', bgClass: 'bg-teal-50', borderClass: 'border-teal-200' }
     ];
 
     modes.forEach(m => {
@@ -1513,7 +1523,7 @@ function resetAllModeUI() {
 
 function toggleDeepResearch() {
     const wasOn = isDeepResearchOn;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isDynamicUIMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isDeepResearchOn = true;
@@ -1597,7 +1607,7 @@ function toggleImageMode() {
 
 function toggleStudyMode() {
     const wasOn = isStudyMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isDynamicUIMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isStudyMode = true;
@@ -1605,7 +1615,21 @@ function toggleStudyMode() {
         els.studyBtn.classList.replace('border-transparent', 'border-indigo-200');
         els.studyBtn.classList.add('bg-indigo-50');
         els.studyIcon.classList.add('animate-pulse');
-        showToast("Study Deck Generator Engaged");
+        showToast("Study Deck Generator");
+    }
+}
+
+function toggleDynamicUIMode() {
+    const wasOn = isDynamicUIMode;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isDynamicUIMode = false;
+    resetAllModeUI();
+    if (!wasOn) {
+        isDynamicUIMode = true;
+        els.dynamicUiBtn.classList.replace('text-gray-500', 'text-teal-600');
+        els.dynamicUiBtn.classList.replace('border-transparent', 'border-teal-200');
+        els.dynamicUiBtn.classList.add('bg-teal-50');
+        els.dynamicUiIcon.classList.add('animate-pulse');
+        showToast("Dynamic UI ");
     }
 }
 
@@ -3313,6 +3337,62 @@ async function handleSend() {
         } catch (err) {
             logContainer.parentElement.parentElement.remove();
             appendMessage('assistant', `<span class="text-red-500 font-medium">Network Error.</span>`, activeModelId);
+        }
+        isProcessing = false; updateUIState(); return;
+    }
+
+    // 5G. DYNAMIC UI ENGINE
+    if (isDynamicUIMode) {
+        els.indicator.classList.add('hidden');
+        const logContainer = appendResearchTerminal('Architecting dynamic view...', 'math');
+        try {
+            const res = await fetch('/api/dynamic-ui', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify({ prompt: text }) 
+            });
+            
+            const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+            const contentContainer = assistantMsgObj.container;
+            contentContainer.classList.add('typing-cursor');
+            
+            const reader = res.body.getReader(); 
+            const decoder = new TextDecoder();
+            let fullResponse = ""; 
+            let buffer = "";
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                
+                buffer += decoder.decode(value, { stream: true }); 
+                let lines = buffer.split('\n'); 
+                buffer = lines.pop();
+                
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const dataStr = line.slice(6).trim(); 
+                        if (dataStr === '[DONE]') continue;
+                        try {
+                            const data = JSON.parse(dataStr);
+                            if (data.ui_error) throw new Error(data.ui_error);
+                            
+                            let textChunk = data.candidates?.[0]?.content?.parts?.[0]?.text || ""; 
+                            fullResponse += textChunk;
+                            // Bypass Markdown parsing to natively render structural Tailwind HTML
+                            contentContainer.innerHTML = fullResponse;
+                            els.canvas.scrollTop = els.canvas.scrollHeight;
+                        } catch (e) {}
+                    }
+                }
+            }
+            logContainer.parentElement.parentElement.remove();
+            contentContainer.classList.remove('typing-cursor');
+            messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
+            saveCurrentChat();
+        } catch (err) {
+            logContainer.parentElement.parentElement.remove();
+            appendMessage('assistant', `<span class="text-red-500 font-medium">Dynamic UI Error: ${err.message}</span>`, activeModelId);
         }
         isProcessing = false; updateUIState(); return;
     }
