@@ -1,8 +1,7 @@
 import { verifyAndLimit } from './auth.js';
 import { PrivacyEngine } from '../lib/privacyEngine.js';
-
 export const config = {
-    runtime: 'edge', 
+    runtime: 'nodejs', 
     // Increase timeout tolerances for massive file conversions
     maxDuration: 300 
 };
