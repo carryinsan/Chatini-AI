@@ -3775,7 +3775,6 @@ async function runAccessTool() {
         accessToolChats[activeAccessTool] = [];
     }
 
-    // Append User Message
     const userEntry = {
         role: 'user',
         content: text,
@@ -3783,26 +3782,30 @@ async function runAccessTool() {
     };
     accessToolChats[activeAccessTool].push(userEntry);
     
-    // Append Assistant Placeholder Turn
     const assistantEntry = {
         role: 'assistant',
         content: ''
     };
     accessToolChats[activeAccessTool].push(assistantEntry);
 
-    // Save state & update UI
     saveAccessChats();
     renderAccessChat();
 
-    // Prepare Past 20 Messages Context
+    // Directly bind to the newest assistant bubble for 60fps live streaming
+    const output = document.getElementById('access-output');
+    const proseNodes = output ? output.querySelectorAll('.prose') : [];
+    const liveTarget = proseNodes.length > 0 ? proseNodes[proseNodes.length - 1] : null;
+    if (liveTarget) {
+        liveTarget.innerHTML = '<span class="text-teal-600 font-medium flex items-center gap-2"><i class="ph-bold ph-circle-notch animate-spin"></i> Generating response...</span>';
+    }
+
     const conversationHistory = accessToolChats[activeAccessTool]
-        .slice(0, -2) // exclude latest turn pair
-        .slice(-20)   // limit to last 20 messages
+        .slice(0, -2)
+        .slice(-20)
         .map(m => ({ role: m.role, content: m.content }));
 
     const payloadFiles = accessFileBuffer ? [accessFileBuffer] : [];
 
-    // Reset controls & set loading state
     isAccessProcessing = true;
     btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Generating...`;
     btn.disabled = true;
@@ -3834,11 +3837,12 @@ async function runAccessTool() {
 
             buffer += decoder.decode(value, { stream: true });
             const lines = buffer.split('\n');
-            buffer = lines.pop(); // Retain incomplete JSON chunk
+            buffer = lines.pop();
 
             for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const dataStr = line.slice(6).trim();
+                const cleanLine = line.trim();
+                if (cleanLine.startsWith('data: ')) {
+                    const dataStr = cleanLine.slice(6).trim();
                     if (!dataStr || dataStr === '[DONE]') continue;
 
                     try {
@@ -3849,16 +3853,19 @@ async function runAccessTool() {
                             const chunk = parsed.choices?.[0]?.delta?.content || parsed.candidates?.[0]?.content?.parts?.[0]?.text || "";
                             assistantEntry.content += chunk;
                         }
-                        renderAccessChat();
-                    } catch (err) {
-                        // Suppress individual chunk framing errors
-                    }
+                        if (liveTarget) {
+                            liveTarget.innerHTML = marked.parse(assistantEntry.content);
+                        }
+                        if (output) output.scrollTop = output.scrollHeight;
+                    } catch (err) {}
                 }
             }
         }
     } catch (err) {
         assistantEntry.content = `> ⚠️ **Fail-Safe Halt:** ${err.message}`;
-        renderAccessChat();
+        if (liveTarget) {
+            liveTarget.innerHTML = marked.parse(assistantEntry.content);
+        }
     } finally {
         isAccessProcessing = false;
         saveAccessChats();
