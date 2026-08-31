@@ -264,140 +264,6 @@ body {
 
 <!-- ==================== MODALS ==================== -->
 
-<!-- Accessibility Suite Modal -->
-<div id="accessibility-modal" class="fixed inset-0 bg-gray-900/40 z-[90] hidden flex items-center justify-center backdrop-blur-sm px-4 transition-opacity duration-300 opacity-0">
-    <div class="bg-white p-6 sm:p-8 max-w-4xl w-full rounded-3xl border border-teal-100 shadow-[0_8px_40px_rgba(20,184,166,0.15)] flex flex-col h-[85vh]">
-        <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 shrink-0">
-            <h2 class="text-xl sm:text-2xl font-bold flex items-center gap-3 text-gray-900 tracking-tight">
-                <div class="w-10 h-10 rounded-xl bg-teal-50 flex items-center justify-center text-teal-600 border border-teal-100">
-                    <i class="ph-fill ph-wheelchair text-2xl"></i>
-                </div>
-                Universal Accessibility Suite
-            </h2>
-            <button onclick="closeAccessibilityModal()" class="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 p-2 rounded-xl transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
-        </div>
-        
-        <!-- Dynamic Content Area -->
-        <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar relative min-h-0" id="access-content-area">
-            <p class="text-sm text-gray-500 mb-6 font-medium">Select a tool to enhance your workspace or perform fail-safe conversions.</p>
-            
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="access-tools-grid">
-                <!-- Tool 57: Universal Converter -->
-                <div class="bg-white border border-gray-200 rounded-2xl p-5 hover:border-teal-400 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-3" onclick="loadAccessTool('converter')">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-400 to-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform"><i class="ph-bold ph-arrows-left-right text-2xl"></i></div>
-                        <div>
-                            <h3 class="text-[15px] font-bold text-gray-900 group-hover:text-teal-700 transition-colors">Universal File Converter (57)</h3>
-                            <p class="text-[11px] text-gray-500 font-medium">Any-to-Any errorless format conversion</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tool 8: Vision TTS -->
-                <div class="bg-white border border-gray-200 rounded-2xl p-5 hover:border-blue-400 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-3" onclick="toggleAccessFeature('tts', this)">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 group-hover:bg-blue-100 transition-colors"><i class="ph-bold ph-speaker-high text-2xl"></i></div>
-                        <div>
-                            <h3 class="text-[15px] font-bold text-gray-900">Neural TTS Reader (8)</h3>
-                            <p class="text-[11px] text-gray-500 font-medium">Read interface text aloud automatically</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tool 3: High Contrast -->
-                <div class="bg-white border border-gray-200 rounded-2xl p-5 hover:border-amber-400 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-3" onclick="toggleAccessFeature('contrast', this)">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 group-hover:bg-amber-100 transition-colors"><i class="ph-bold ph-drop-half text-2xl"></i></div>
-                        <div>
-                            <h3 class="text-[15px] font-bold text-gray-900">Max Contrast Mode (3)</h3>
-                            <p class="text-[11px] text-gray-500 font-medium">Colorblind-safe forced UI contrast</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tool 10: Dyslexia Font -->
-                <div class="bg-white border border-gray-200 rounded-2xl p-5 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-3" onclick="toggleAccessFeature('dyslexia', this)">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:bg-purple-100 transition-colors"><i class="ph-bold ph-text-aa text-2xl"></i></div>
-                        <div>
-                            <h3 class="text-[15px] font-bold text-gray-900">Dyslexic Font Engine (10)</h3>
-                            <p class="text-[11px] text-gray-500 font-medium">Bottom-heavy weighted typography</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tool 15: Focus Mask -->
-                <div class="bg-white border border-gray-200 rounded-2xl p-5 hover:border-pink-400 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-3" onclick="toggleAccessFeature('focus', this)">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-pink-50 text-pink-600 flex items-center justify-center shrink-0 group-hover:bg-pink-100 transition-colors"><i class="ph-bold ph-eye text-2xl"></i></div>
-                        <div>
-                            <h3 class="text-[15px] font-bold text-gray-900">ADHD Focus Mask (15)</h3>
-                            <p class="text-[11px] text-gray-500 font-medium">Dim peripheral UI to isolate text</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tool 41: Screen Magnifier -->
-                <div class="bg-white border border-gray-200 rounded-2xl p-5 hover:border-indigo-400 hover:shadow-md transition-all cursor-pointer group flex flex-col gap-3" onclick="toggleAccessFeature('zoom', this)">
-                    <div class="flex items-center gap-3">
-                        <div class="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0 group-hover:bg-indigo-100 transition-colors"><i class="ph-bold ph-magnifying-glass-plus text-2xl"></i></div>
-                        <div>
-                            <h3 class="text-[15px] font-bold text-gray-900">Smart UI Magnifier (41)</h3>
-                            <p class="text-[11px] text-gray-500 font-medium">Cursor-tracked responsive zoom</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Hidden Converter Screen -->
-            <div id="access-converter-screen" class="hidden flex-col h-full animate-fade-in-up">
-                <button onclick="showAccessGrid()" class="text-sm font-bold text-teal-600 hover:text-teal-700 flex items-center gap-1.5 mb-4 w-fit bg-teal-50 px-3 py-1.5 rounded-lg"><i class="ph-bold ph-arrow-left"></i> Back to Tools</button>
-                
-                <div class="bg-white border border-gray-200 rounded-2xl p-6 flex flex-col flex-1 shadow-sm">
-                    <h3 class="text-lg font-bold text-gray-900 mb-2">Universal Converter (Tool 57)</h3>
-                    <p class="text-xs text-gray-500 mb-6">Fail-safe architecture enabled. Convert images, documents, or data with zero data loss.</p>
-                    
-                    <div class="flex-1 border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center text-center p-6 bg-gray-50 hover:bg-teal-50 hover:border-teal-300 transition-all cursor-pointer group" onclick="document.getElementById('access-file-in').click()">
-                        <input type="file" id="access-file-in" class="hidden" onchange="handleAccessFile(event)">
-                        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm border border-gray-100 mb-4 group-hover:scale-110 transition-transform">
-                            <i class="ph-bold ph-upload-simple text-3xl text-teal-500"></i>
-                        </div>
-                        <span class="font-bold text-gray-700 mb-1" id="access-file-name">Click to Upload File</span>
-                        <span class="text-xs text-gray-400">Max size: 500MB. Protected by CircuitBreaker.</span>
-                    </div>
-
-                    <div class="mt-6 grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Target Format</label>
-                            <select id="access-target-fmt" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all cursor-pointer">
-                                <option value="pdf">PDF Document (.pdf)</option>
-                                <option value="png">PNG Image (.png)</option>
-                                <option value="webp">WebP Image (.webp)</option>
-                                <option value="txt">Plain Text (.txt)</option>
-                                <option value="csv">Data CSV (.csv)</option>
-                                <option value="md">Markdown (.md)</option>
-                            </select>
-                        </div>
-                        <div class="flex items-end">
-                            <button onclick="runFailSafeConversion()" id="access-convert-btn" class="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                                <i class="ph-bold ph-arrows-left-right"></i> Start Conversion
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <div id="access-progress-area" class="hidden mt-6 bg-gray-900 rounded-xl p-4 font-mono text-[11px] text-teal-400 flex flex-col gap-2">
-                        <div class="flex justify-between items-center text-gray-300">
-                            <span>[SYSTEM] API Orchestrator Active...</span>
-                            <i class="ph-bold ph-spinner animate-spin"></i>
-                        </div>
-                        <div id="access-log" class="text-gray-400"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Nickname Modal -->
 <div id="username-modal" class="fixed inset-0 bg-gray-900/40 z-[100] flex items-center justify-center backdrop-blur-sm px-4 hidden transition-opacity">
     <div class="p-8 max-w-sm w-full text-center rounded-3xl border border-gray-100 bg-white shadow-2xl">
@@ -584,6 +450,50 @@ body {
         </div>
     </div>
 </div>
+<!-- Accessibility Full Screen Suite -->
+<div id="access-screen" class="fixed inset-0 bg-gray-50 z-[200] hidden flex-col transition-opacity duration-300">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-100 p-4 px-6 flex items-center justify-between shadow-sm shrink-0">
+        <h2 class="text-xl font-bold text-gray-900 flex items-center gap-2 tracking-tight"><i class="ph-fill ph-wheelchair text-teal-500"></i> Accessibility Suite</h2>
+        <button onclick="closeAccessScreen()" class="text-gray-400 hover:text-gray-900 transition-colors p-2 bg-gray-50 hover:bg-gray-200 rounded-full"><i class="ph-bold ph-x"></i></button>
+    </div>
+    
+    <!-- Split Layout -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Tools Sidebar -->
+        <div class="w-full md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-4 flex flex-col gap-2 custom-scrollbar shrink-0" id="access-tool-list">
+            <!-- Injected dynamically via JS -->
+        </div>
+        
+        <!-- Action & Output Area -->
+        <div class="flex-1 flex flex-col relative bg-[#FAFAFA]">
+            <!-- Results Canvas -->
+            <div id="access-output" class="flex-1 overflow-y-auto p-8 prose prose-sm max-w-none custom-scrollbar text-gray-800">
+                <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-3">
+                    <i class="ph-bold ph-command text-4xl opacity-20"></i>
+                    <p class="font-medium text-sm">Select a tool and provide data to begin secure processing.</p>
+                </div>
+            </div>
+            
+            <!-- Input Console -->
+            <div class="p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.02)] shrink-0">
+                <div class="max-w-4xl mx-auto flex flex-col gap-3 relative">
+                    <!-- Staging Badge -->
+                    <div id="access-file-badge" class="hidden absolute -top-10 left-0 bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm flex items-center gap-2"></div>
+                    
+                    <textarea id="access-input" placeholder="Type prompt or context here..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-800 outline-none focus:border-teal-300 focus:bg-white resize-none h-24 custom-scrollbar transition-all"></textarea>
+                    
+                    <div class="flex justify-between items-center">
+                        <input type="file" id="access-file" class="hidden">
+                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2 border border-transparent hover:border-teal-100"><i class="ph-bold ph-paperclip text-lg"></i> Attach Data</button>
+                        
+                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-8 py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-2"><i class="ph-bold ph-play"></i> Execute Tool</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 
 <!-- ==================== SIDEBAR ==================== -->
@@ -688,7 +598,7 @@ body {
                 <button onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-indigo-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat</button>
                 <button onclick="openExperimentalModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-fuchsia-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-flask text-sm text-fuchsia-500 group-hover:scale-110 transition-transform"></i> Experimental</button>
                 <button onclick="openProjectsModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-amber-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-folder-open text-sm text-amber-500 group-hover:scale-110 transition-transform"></i>Your Projects</button>
-                <button onclick="openAccessibilityModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-teal-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-wheelchair text-sm text-teal-500 group-hover:scale-110 transition-transform"></i>Accessibility Suite</button>
+                <button onclick="openAccessScreen()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-teal-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-wheelchair text-sm text-teal-500 group-hover:scale-110 transition-transform"></i> Accessibility Tools</button>
                 
                 <!-- OFFLINE LOCAL MODELS -->
                 <div class="pt-2 mt-2 border-t border-gray-100 px-1">
@@ -2608,163 +2518,6 @@ function closeExperimentalModal() {
     document.getElementById('experimental-modal').classList.add('hidden'); 
 }
 
-// ====== ACCESSIBILITY SUITE (Fail-Safe Frontend Implementation) ======
-function openAccessibilityModal() {
-    const mod = document.getElementById('accessibility-modal');
-    mod.classList.remove('hidden');
-    // Frame delay to trigger Tailwind transition safely
-    setTimeout(() => mod.classList.replace('opacity-0', 'opacity-100'), 10);
-    if(window.innerWidth < 1024) toggleSidebar();
-}
-
-function closeAccessibilityModal() {
-    const mod = document.getElementById('accessibility-modal');
-    mod.classList.replace('opacity-100', 'opacity-0');
-    setTimeout(() => mod.classList.add('hidden'), 300);
-    showAccessGrid(); // Reset view natively
-}
-
-function showAccessGrid() {
-    document.getElementById('access-tools-grid').classList.remove('hidden');
-    document.getElementById('access-converter-screen').classList.add('hidden');
-    document.getElementById('access-converter-screen').classList.remove('flex');
-    document.getElementById('access-file-name').innerText = "Click to Upload File";
-    document.getElementById('access-progress-area').classList.add('hidden');
-    window._accessPendingFile = null;
-}
-
-function loadAccessTool(tool) {
-    if(tool === 'converter') {
-        document.getElementById('access-tools-grid').classList.add('hidden');
-        const screen = document.getElementById('access-converter-screen');
-        screen.classList.remove('hidden');
-        screen.classList.add('flex');
-    }
-}
-
-// Toggle visual/DOM accessibility features with try/catch fail-safes preventing crash loops
-window._activeAccessFeatures = {};
-function toggleAccessFeature(feature, btnEl) {
-    try {
-        const isActive = window._activeAccessFeatures[feature];
-        window._activeAccessFeatures[feature] = !isActive;
-        
-        // UI State protection
-        if(!isActive) {
-            btnEl.classList.add('ring-2', 'ring-teal-500', 'bg-teal-50');
-        } else {
-            btnEl.classList.remove('ring-2', 'ring-teal-500', 'bg-teal-50');
-        }
-
-        // Apply Logic safely to document DOM
-        if(feature === 'contrast') {
-            document.body.classList.toggle('contrast-125');
-            document.body.classList.toggle('saturate-150');
-        }
-        else if(feature === 'dyslexia') {
-            document.body.style.fontFamily = !isActive ? '"Comic Sans MS", "OpenDyslexic", sans-serif' : '';
-            document.body.style.letterSpacing = !isActive ? '0.05em' : '';
-            document.body.style.lineHeight = !isActive ? '1.8' : '';
-        }
-        else if(feature === 'focus') {
-            const canvas = document.getElementById('chat-canvas');
-            if(canvas) {
-                canvas.style.backgroundColor = !isActive ? '#000000' : '';
-                canvas.style.color = !isActive ? '#ffffff' : '';
-            }
-        }
-        showToast(isActive ? "Feature Disabled" : "Feature Enabled & Applied");
-    } catch(e) {
-        console.error("Accessibility Error intercepted:", e);
-        showToast("Error toggling feature. App stabilized.");
-    }
-}
-
-// Tool 57 API Buffer Connection
-function handleAccessFile(e) {
-    try {
-        const file = e.target.files[0];
-        if(!file) return;
-        
-        // 500MB Hard limit fail-safe check locally before touching RAM
-        if(file.size > 500 * 1024 * 1024) {
-            showToast("Error: File exceeds 500MB safety limit.");
-            return;
-        }
-
-        document.getElementById('access-file-name').innerText = file.name;
-        
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            window._accessPendingFile = {
-                name: file.name,
-                type: file.type || 'application/octet-stream',
-                base64: ev.target.result.split(',')[1]
-            };
-        };
-        reader.readAsDataURL(file);
-    } catch(err) {
-        showToast("File reading error intercepted.");
-    }
-}
-
-async function runFailSafeConversion() {
-    if(!window._accessPendingFile) {
-        showToast("Please upload a file first.");
-        return;
-    }
-
-    const targetFmt = document.getElementById('access-target-fmt').value;
-    const btn = document.getElementById('access-convert-btn');
-    const progress = document.getElementById('access-progress-area');
-    const log = document.getElementById('access-log');
-    
-    btn.disabled = true;
-    btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Converting...`;
-    progress.classList.remove('hidden');
-    log.innerHTML = `> Executing Tool 57 API Protocol...<br>> Isolating memory stack...<br>`;
-
-    try {
-        const res = await fetch('/api/accessibility', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                feature: 57,
-                action: 'convert',
-                file: window._accessPendingFile,
-                targetFormat: targetFmt
-            })
-        });
-
-        const data = await res.json();
-        
-        if(data.success && data.convertedBase64) {
-            log.innerHTML += `> Conversion successful. Rebuilding file payload...<br>`;
-            
-            // Create download link dynamically, isolate DOM injection
-            const link = document.createElement('a');
-            link.href = `data:${data.mimeType};base64,${data.convertedBase64}`;
-            link.download = data.fileName;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            log.innerHTML += `> <span class="text-teal-300">File delivered to user. Memory cleared safely.</span>`;
-            showToast("Conversion Complete!");
-        } else {
-            throw new Error(data.error || "Circuit Breaker tripped or format unsupported.");
-        }
-    } catch(e) {
-        log.innerHTML += `> <span class="text-red-400">[FAIL-SAFE TRIGGERED]: ${e.message}</span><br>> Operation aborted cleanly. Core app remains stable.`;
-        showToast("Conversion failed, but app is safe.");
-    } finally {
-        setTimeout(() => {
-            btn.disabled = false;
-            btn.innerHTML = `<i class="ph-bold ph-arrows-left-right"></i> Start Conversion`;
-        }, 1500);
-    }
-}
-
 function generateBrainMap() {
     if(window.innerWidth < 1024) toggleSidebar();
     els.input.value = "Create a comprehensive Constellation Brain Map of the key concepts from our conversation so far.";
@@ -3865,6 +3618,141 @@ async function handleSend() {
     updateUIState();
 }
 
+// ====== ACCESSIBILITY & FAIL-SAFE ENGINE ======
+const accessTools = [
+    { id: "3", name: "Syllabus Compare", icon: "ph-books", desc: "Map exact course overlaps." },
+    { id: "8", name: "Tax Finder", icon: "ph-receipt", desc: "Identify HSN/SAC GST rates." },
+    { id: "10", name: "Formula Gen", icon: "ph-function", desc: "Build safe Excel logics." },
+    { id: "15", name: "Bundle Pricing", icon: "ph-tag", desc: "Calculate profit margins." },
+    { id: "25", name: "Content Calendar", icon: "ph-calendar", desc: "Structure 30-day schedules." },
+    { id: "31", name: "Bill Split", icon: "ph-users", desc: "Calculate precise ledger debts." },
+    { id: "32", name: "Medical Terms", icon: "ph-heartbeat", desc: "Translate clinical jargon." },
+    { id: "35", name: "Telecom Cost", icon: "ph-phone", desc: "Expose true annual fees." },
+    { id: "41", name: "Price Scrape", icon: "ph-currency-dollar", desc: "Extract competitor matrices." },
+    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "Swap CSV/JSON/XML formats." }
+];
+
+let activeAccessTool = "57";
+let accessFileBuffer = null;
+
+function openAccessScreen() {
+    document.getElementById('access-screen').classList.remove('hidden');
+    document.getElementById('access-screen').classList.add('flex');
+    if (window.innerWidth < 1024) toggleSidebar();
+    renderAccessTools();
+}
+
+function closeAccessScreen() {
+    document.getElementById('access-screen').classList.remove('flex');
+    document.getElementById('access-screen').classList.add('hidden');
+}
+
+function renderAccessTools() {
+    const list = document.getElementById('access-tool-list');
+    list.innerHTML = accessTools.map(t => `
+        <div onclick="selectAccessTool('${t.id}')" class="cursor-pointer p-4 rounded-2xl border transition-all duration-300 ${activeAccessTool === t.id ? 'bg-teal-50 border-teal-200 shadow-sm' : 'bg-white border-gray-100 hover:border-teal-100 hover:bg-gray-50'} flex items-center gap-4">
+            <div class="w-12 h-12 rounded-xl ${activeAccessTool === t.id ? 'bg-teal-600 text-white shadow-md' : 'bg-gray-100 text-gray-500'} flex items-center justify-center shrink-0 transition-colors"><i class="ph-bold ${t.icon} text-2xl"></i></div>
+            <div class="flex flex-col overflow-hidden">
+                <span class="text-[14px] font-bold text-gray-900 truncate">${t.name}</span>
+                <span class="text-[11px] font-medium text-gray-500 truncate mt-0.5">${t.desc}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectAccessTool(id) {
+    activeAccessTool = id;
+    renderAccessTools();
+}
+
+document.getElementById('access-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        accessFileBuffer = { name: file.name, type: file.type, base64: ev.target.result.split(',')[1] };
+        const badge = document.getElementById('access-file-badge');
+        badge.innerHTML = `<i class="ph-bold ph-file-text"></i> Stacked: ${file.name} <button onclick="accessFileBuffer=null; this.parentElement.classList.add('hidden')" class="ml-2 hover:text-red-600"><i class="ph-bold ph-x"></i></button>`;
+        badge.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+});
+
+async function runAccessTool() {
+    const input = document.getElementById('access-input');
+    const output = document.getElementById('access-output');
+    const btn = document.getElementById('access-btn');
+    const text = input.value.trim();
+
+    if (!text && !accessFileBuffer) return showToast("Prompt or file required to execute.");
+
+    btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Processing...`;
+    btn.disabled = true;
+    output.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-teal-600 gap-4"><i class="ph-bold ph-circle-notch animate-spin text-5xl"></i><span class="font-bold text-sm uppercase tracking-widest animate-pulse">Running Safe Sequence...</span></div>`;
+
+    try {
+        const payload = {
+            toolId: activeAccessTool,
+            query: text,
+            files: accessFileBuffer ? [accessFileBuffer] : []
+        };
+
+        const res = await fetch('/api/accessibility', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("Endpoint verification failed.");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let chunkData = "";
+        output.innerHTML = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const rawChunk = decoder.decode(value, { stream: true });
+            const segments = rawChunk.split('\\n\\n');
+            
+            for (const seg of segments) {
+                if (seg.startsWith('data: ')) {
+                    const cleanObj = seg.replace('data: ', '').trim();
+                    if (cleanObj === '[DONE]') continue;
+                    
+                    try {
+                        const parsed = JSON.parse(cleanObj);
+                        
+                        // Fail-Safe Engine Intercept
+                        if (parsed.ui_error) {
+                            chunkData += `<br><div class="bg-red-50 text-red-600 font-bold p-4 rounded-xl border border-red-200 mt-2"><i class="ph-bold ph-warning-circle text-lg mr-2"></i>${parsed.ui_error}</div>`;
+                        } else {
+                            const snippet = parsed.choices?.[0]?.delta?.content || "";
+                            chunkData += snippet;
+                        }
+                        
+                        output.innerHTML = marked.parse(chunkData);
+                        output.scrollTop = output.scrollHeight;
+                        
+                    } catch (e) {
+                        // Suppresses fragmented SSE chunk crashes seamlessly
+                    }
+                }
+            }
+        }
+    } catch (err) {
+        output.innerHTML = `<div class="text-red-600 font-bold bg-red-50 p-6 rounded-2xl border border-red-100 flex items-center gap-3"><i class="ph-bold ph-shield-warning text-3xl"></i> Execution halted by fail-safe parameters: ${err.message}</div>`;
+    }
+
+    btn.innerHTML = `<i class="ph-bold ph-play"></i> Execute Tool`;
+    btn.disabled = false;
+    accessFileBuffer = null;
+    document.getElementById('access-file-badge').classList.add('hidden');
+    input.value = "";
+}
 // ====== EXPERIMENTAL LAB ENGINE HANDLERS ======
 async function executeLabTool() {
     const input = document.getElementById('lab-idea-input');
