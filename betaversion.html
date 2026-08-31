@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>LexisAI Workspace</title>
+<title>ArixAI Workspace</title>
 
 <!-- External Scripts & Libraries -->
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
@@ -14,7 +14,7 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 
-<!-- Global Quota Interceptor Logic -->
+<!-- Global Quota Interceptor Logic. -->
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     // 1. Inject Modal HTML safely into the body
@@ -71,7 +71,7 @@ window.requestMoreLimits = async function() {
     btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Submitting Request...';
     btn.disabled = true;
     try {
-        const deviceId = typeof getDeviceId === 'function' ? getDeviceId() : (localStorage.getItem('lexis_device_id') || 'Anonymous');
+        const deviceId = typeof getDeviceId === 'function' ? getDeviceId() : (localStorage.getItem('Arix_device_id') || 'Anonymous');
         await fetch('/api/subscription', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ action: 'request_limit', userId: deviceId, message: "User requested limit increase from modal." })
@@ -213,6 +213,15 @@ body {
 </div>
 
 <!-- Root Application Wrapper -->
+<!-- Local Offline AI Progress Bar -->
+<div id="local-ai-progress-container" class="fixed top-0 left-0 w-full h-1.5 bg-gray-200 z-[200] hidden">
+    <div id="local-ai-progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-300 w-0 shadow-[0_0_10px_rgba(16,185,129,0.8)]"></div>
+</div>
+<div id="local-ai-status-text" class="fixed top-2 left-1/2 transform -translate-x-1/2 z-[200] bg-gray-900/90 text-white text-[10px] font-bold px-3 py-1 rounded-full hidden shadow-lg backdrop-blur-sm flex items-center gap-2">
+    <i class="ph-bold ph-spinner animate-spin"></i> <span id="local-ai-text">Initializing Engine...</span>
+</div>
+
+<!-- Root Application Wrapper -->
 <div class="flex h-full w-full bg-white relative overflow-hidden">
 
 
@@ -261,13 +270,13 @@ body {
         <div class="w-16 h-16 mx-auto rounded-2xl bg-theme-50 flex items-center justify-center mb-6 shadow-sm transition-colors duration-500">
             <i class="ph-fill ph-user text-3xl text-theme-600 transition-colors duration-500"></i>
         </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-2 tracking-tight">Welcome to LexisAI</h2>
+        <h2 class="text-2xl font-bold text-gray-900 mb-2 tracking-tight">Welcome to ArixAI</h2>
         <p class="text-gray-500 text-sm mb-6">Enter a nickname to begin your session.</p>
         <input type="text" id="nickname-input" placeholder="Your Name..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-center focus:outline-none focus:border-theme-300 focus:bg-white transition-all mb-4" onkeypress="if(event.key === 'Enter') saveNickname()">
         <div class="flex items-start mb-4 text-left px-2">
             <input type="checkbox" id="tc-checkbox" class="w-4 h-4 mt-0.5 border-gray-300 rounded cursor-pointer accent-theme-600">
             <label for="tc-checkbox" class="ml-2 text-[11px] text-gray-500 leading-tight select-none cursor-pointer">
-                I have read and agree to the <a href="https://lexis-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="text-theme-600 font-semibold hover:underline">Terms & Conditions</a>
+                I have read and agree to the <a href="https://Arix-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="text-theme-600 font-semibold hover:underline">Terms & Conditions</a>
             </label>
         </div>
         <button onclick="saveNickname()" class="w-full bg-theme-600 text-white font-medium py-3 rounded-xl hover:bg-theme-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-theme-200">
@@ -283,7 +292,7 @@ body {
         <div class="space-y-5">
             <div>
                 <label class="text-xs text-gray-500 mb-1.5 block uppercase tracking-wider font-semibold">File Name</label>
-                <input type="text" id="pdf-filename" value="LexisAI_Analysis" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-theme-300 focus:bg-white transition-all">
+                <input type="text" id="pdf-filename" value="ArixAI_Analysis" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-theme-300 focus:bg-white transition-all">
             </div>
             <label class="flex items-center gap-3 cursor-pointer p-3 bg-gray-50 rounded-xl border border-gray-100 hover:bg-gray-100 transition-colors">
                 <input type="checkbox" id="pdf-include-sources" checked class="w-4 h-4 rounded border-gray-300 text-theme-500 accent-theme-500">
@@ -409,12 +418,30 @@ body {
     </div>
 </div>
 
-<!-- Lexis Pulse Task Manager Modal -->
+<!-- Custom Projects Modal -->
+<div id="projects-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
+    <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-amber-100 shadow-[0_8px_40px_rgba(245,158,11,0.1)] flex flex-col max-h-[85vh]">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold flex items-center gap-2 text-gray-900 tracking-tight"><i class="ph-fill ph-folder-open text-amber-500"></i> Custom Projects</h2>
+            <button onclick="closeProjectsModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        <div class="mb-4 shrink-0">
+            <button onclick="createProject()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md shadow-amber-200 transition-all flex items-center justify-center gap-2">
+                <i class="ph-bold ph-plus"></i> Create New Project
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto space-y-3 pr-1 custom-scrollbar" id="projects-list-container">
+            <!-- Projects injected via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- Arix Pulse Task Manager Modal -->
 <div id="pulse-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
     <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-cyan-100 shadow-[0_8px_40px_rgba(6,182,212,0.1)] flex flex-col max-h-[85vh]">
         <div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
             <h2 class="text-xl font-bold flex items-center gap-2 text-gray-900 tracking-tight">
-                <i class="ph-fill ph-lightning text-cyan-500"></i> Lexis Pulse Vault
+                <i class="ph-fill ph-lightning text-cyan-500"></i> Arix Pulse Vault
             </h2>
             <button onclick="closePulseModal()" class="text-gray-400 hover:text-gray-600 transition-colors"><i class="ph-bold ph-x text-xl"></i></button>
         </div>
@@ -423,7 +450,62 @@ body {
         </div>
     </div>
 </div>
-
+<!-- Accessibility Full Screen Suite -->
+<div id="access-screen" class="fixed inset-0 bg-gray-50 z-[200] hidden flex-col transition-opacity duration-300">
+    <!-- Header -->
+    <div class="bg-white border-b border-gray-100 p-4 px-6 flex items-center justify-between shadow-sm shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
+                <i class="ph-fill ph-wheelchair text-xl"></i>
+            </div>
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-gray-900 leading-tight">Accessibility Suite</h2>
+                <p id="access-active-tool-title" class="text-xs text-teal-600 font-semibold">Select Tool</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="resetCurrentToolChat()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                <i class="ph-bold ph-plus"></i> New Chat
+            </button>
+            <button onclick="closeAccessScreen()" class="text-gray-400 hover:text-gray-900 transition-colors p-2 bg-gray-50 hover:bg-gray-200 rounded-xl">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+        </div>
+    </div>
+    
+    <!-- Split Layout -->
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Tools Sidebar -->
+        <div class="w-full md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-4 flex flex-col gap-2 custom-scrollbar shrink-0" id="access-tool-list"></div>
+        
+        <!-- Action & Output Area -->
+        <div class="flex-1 flex flex-col relative bg-[#FAFAFA]">
+            <!-- Results / Chat Canvas -->
+            <div id="access-output" class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 custom-scrollbar"></div>
+            
+            <!-- Input Console -->
+            <div class="p-4 sm:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.02)] shrink-0">
+                <div class="max-w-4xl mx-auto flex flex-col gap-3 relative">
+                    <!-- Staging Badge -->
+                    <div id="access-file-badge" class="hidden absolute -top-10 left-0 bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm flex items-center gap-2"></div>
+                    
+                    <textarea id="access-input" placeholder="Type prompt or query for this tool..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-800 outline-none focus:border-teal-300 focus:bg-white resize-none h-24 custom-scrollbar transition-all"></textarea>
+                    
+                    <div class="flex justify-between items-center">
+                        <input type="file" id="access-file" class="hidden">
+                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2 border border-transparent hover:border-teal-100 text-xs sm:text-sm">
+                            <i class="ph-bold ph-paperclip text-lg"></i> Attach Data
+                        </button>
+                        
+                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-2 text-xs sm:text-sm">
+                            <i class="ph-bold ph-paper-plane-right"></i> Send Message
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- ==================== SIDEBAR ==================== -->
 
@@ -438,7 +520,7 @@ body {
                 <i class="ph-fill ph-hexagon text-theme-600 text-xl transition-colors duration-500"></i>
             </div>
             <div>
-                <h1 class="font-semibold text-gray-900 text-lg leading-tight">LexisAI</h1>
+                <h1 class="font-semibold text-gray-900 text-lg leading-tight">ArixAI</h1>
                 <p class="text-[11px] text-gray-400 font-medium" id="sidebar-username-display">Anonymous</p>
             </div>
         </div>
@@ -513,19 +595,35 @@ body {
             </div>
         </div>
 
-        <!-- Advanced Tools / "More" Menu equivalent from Original UI -->
+       <!-- Advanced Tools / "More" Menu equivalent from Original UI -->
         <div>
-            <div class="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <div onclick="document.getElementById('adv-int-content').classList.toggle('hidden'); document.getElementById('adv-int-icon').classList.toggle('rotate-180');" class="px-3 mb-2 flex items-center justify-between text-xs font-semibold text-gray-500 uppercase tracking-wider cursor-pointer hover:text-gray-700 transition-colors select-none">
                 Advanced Integrations
+                <i id="adv-int-icon" class="ph-bold ph-caret-down transition-transform"></i>
             </div>
-            <div class="space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
+            <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
                 <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
                 <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
                 <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
                 <button onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-graph text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Constellation Map</button>
                 <button onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-indigo-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat</button>
                 <button onclick="openExperimentalModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-fuchsia-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-flask text-sm text-fuchsia-500 group-hover:scale-110 transition-transform"></i> Experimental</button>
+                <button onclick="openProjectsModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-amber-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-folder-open text-sm text-amber-500 group-hover:scale-110 transition-transform"></i>Your Projects</button>
+                <button onclick="openAccessScreen()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-teal-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-wheelchair text-sm text-teal-500 group-hover:scale-110 transition-transform"></i> Accessibility Tools</button>
                 
+                <!-- OFFLINE LOCAL MODELS -->
+                <div class="pt-2 mt-2 border-t border-gray-100 px-1">
+                    <div class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1 pl-2">On-Device AI (No Wi-Fi)</div>
+                    <button onclick="window.loadLocalModel('sparker')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-emerald-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
+                        <div class="flex items-center gap-2"><i class="ph-bold ph-cpu text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> SPARKer <span class="font-medium text-[9px] text-gray-400">(880MB)</span></div>
+                        <i class="ph-bold ph-download-simple text-gray-300"></i>
+                    </button>
+                    <button onclick="window.loadLocalModel('FLiX')" class="w-full flex items-center justify-between px-2 gap-2.5 hover:bg-indigo-50 text-gray-700 py-2 rounded-xl text-xs font-bold transition-colors group">
+                        <div class="flex items-center gap-2"><i class="ph-bold ph-microchip text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> FLiX <span class="font-medium text-[9px] text-gray-400">(2GB)</span></div>
+                        <i class="ph-bold ph-download-simple text-gray-300"></i>
+                    </button>
+                </div>
+
                 <!-- Selectors & Toggles -->
                 <div class="relative w-full pt-2 mb-2 px-1">
                     <select id="chat-ext-selector" onchange="assignExtToCurrentChat()" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-[11px] font-medium text-gray-600 outline-none appearance-none cursor-pointer hover:border-gray-300 transition-colors shadow-sm">
@@ -607,13 +705,19 @@ body {
                 <i class="ph-bold ph-magnifying-glass text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg"></i>
                 <input 
                     type="text" 
-                    placeholder="Search anything..." 
+                    id="global-search-input"
+                    placeholder="Search all chats & messages..." 
+                    oninput="handleGlobalSearch(this.value)"
+                    onfocus="if(this.value.trim()) document.getElementById('search-results-dropdown').classList.remove('hidden')"
                     class="w-full bg-gray-50 border border-transparent hover:border-gray-200 focus:border-theme-300 focus:bg-white focus:ring-4 focus:ring-theme-50 transition-all duration-500 rounded-full py-2.5 pl-11 pr-12 text-sm outline-none text-gray-700"
                 />
-                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 shadow-sm">
+                <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 shadow-sm pointer-events-none">
                     <i class="ph-bold ph-command text-[10px]"></i>
                     <span class="text-[10px] font-medium">K</span>
                 </div>
+
+                <!-- Live Search Results Dropdown -->
+                <div id="search-results-dropdown" class="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 hidden max-h-80 overflow-y-auto custom-scrollbar p-2"></div>
             </div>
         </div>
 
@@ -623,35 +727,11 @@ body {
             <!-- Dynamic Model Selector Injector -->
             <div id="model-selector" class="flex bg-gray-50 p-1 rounded-full border border-gray-200 shadow-inner flex-shrink-0"></div>
             
-            <!-- AI App Modes (Functional Bound to Target UI) -->
-            <div class="flex items-center gap-1.5 flex-shrink-0 border-l border-gray-200 pl-3 sm:pl-4">
-                <button id="deep-research-btn" onclick="toggleDeepResearch()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-transparent text-gray-500 hover:text-blue-600 hover:bg-blue-50 transition-all duration-300" title="Auto-Pilot Deep Research">
-                    <i id="deep-research-icon" class="ph-bold ph-radar text-sm"></i> <span class="hidden xl:inline">Research</span>
-                </button>
-                <button id="ppt-btn" onclick="togglePresentationMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-transparent text-gray-500 hover:text-amber-600 hover:bg-amber-50 transition-all duration-300" title="Premium Presentation Engine">
-                    <i id="ppt-icon" class="ph-bold ph-presentation-chart text-sm"></i> <span class="hidden xl:inline">Slides</span>
-                </button>
-                <button id="math-btn" onclick="toggleMathMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-transparent text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 transition-all duration-300" title="Cartesian Engine">
-                    <i id="math-icon" class="ph-bold ph-function text-sm"></i> <span class="hidden xl:inline">Math</span>
-                </button>
-                <button id="podcast-btn" onclick="togglePodcastMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-transparent text-gray-500 hover:text-pink-600 hover:bg-pink-50 transition-all duration-300" title="Neural Podcast Producer">
-                    <i id="podcast-icon" class="ph-bold ph-headphones text-sm"></i> <span class="hidden xl:inline">Audio</span>
-                </button>
-                <button id="app-btn" onclick="toggleAppMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-transparent text-gray-500 hover:text-orange-600 hover:bg-orange-50 transition-all duration-300" title="Web App Builder">
-                    <i id="app-icon" class="ph-bold ph-code text-sm"></i> <span class="hidden xl:inline">App</span>
-                </button>
-                <button id="image-btn" onclick="toggleImageMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-transparent text-gray-500 hover:text-fuchsia-600 hover:bg-fuchsia-50 transition-all duration-300" title="AI Visual Engine">
-                    <i id="image-icon" class="ph-bold ph-aperture text-sm"></i> <span class="hidden xl:inline">Image</span>
-                </button>
-                <button id="study-btn" onclick="toggleStudyMode()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-transparent text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all duration-300" title="Study Deck Generator">
-                    <i id="study-icon" class="ph-bold ph-cards text-sm"></i> <span class="hidden xl:inline">Study</span>
-                </button>
-            </div>
-
+            
             <!-- Pro Badge (Target UI) -->
             <button class="hidden md:flex items-center gap-2 bg-theme-50 text-theme-700 border border-theme-100 px-4 py-2 rounded-full text-sm font-semibold hover:bg-theme-100 transition-colors duration-500 flex-shrink-0 ml-2">
                 <i class="ph-fill ph-sparkle text-theme-500"></i>
-                LexisAI Pro
+                ArixAI Pro
                 <i class="ph-bold ph-caret-right opacity-50"></i>
             </button>
         </div>
@@ -661,14 +741,14 @@ body {
     <div id="chat-canvas" class="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-8 md:px-12 pt-8 pb-48 custom-scrollbar scroll-smooth min-h-0 relative">
         <div class="max-w-4xl mx-auto w-full relative">
 
-            <!-- Lexis Pulse Today Widget (Injected dynamically by JS, styled here) -->
+            <!-- Arix Pulse Today Widget (Injected dynamically by JS, styled here) -->
             <div id="pulse-today-widget" class="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] mb-8 hidden hover:border-cyan-200 transition-all relative overflow-hidden group">
                 <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-blue-500"></div>
                 <div class="flex items-center justify-between mb-4 border-b border-gray-50 pb-3">
                     <div class="flex items-center gap-2.5">
                         <span class="w-2.5 h-2.5 rounded-full bg-cyan-500 animate-pulse"></span>
                         <h3 class="text-xs font-bold uppercase tracking-widest text-gray-700 flex items-center gap-1.5">
-                            <i class="ph-bold ph-lightning text-cyan-500 text-lg"></i> Lexis Pulse • Today
+                            <i class="ph-bold ph-lightning text-cyan-500 text-lg"></i> Arix Pulse • Today
                         </h3>
                     </div>
                     <span id="pulse-today-count" class="text-[10px] bg-cyan-50 text-cyan-700 border border-cyan-100 px-2.5 py-1 rounded-full font-bold shadow-sm">0 pending</span>
@@ -708,7 +788,7 @@ body {
                 <!-- Main Textarea -->
                 <textarea 
                     id="chat-input"
-                    placeholder="Ask anything, type @lexis in Co-Op..."
+                    placeholder="Ask anything, type @Arix in Co-Op..."
                     class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
                     rows="1"
                 ></textarea>
@@ -797,10 +877,11 @@ const CONFIG = {
     models: {
         spark: { id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-500', bg: 'bg-amber-50', glow: 'bg-amber-100' },
         flux: { id: 'flux', name: 'Flux 1.5', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100' },
-        oracle: { id: 'oracle', name: 'Oracle 2.0[NEW]', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' }
+        oracle: { id: 'oracle', name: 'Oracle 2.0', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' },
+        sparker: { id: 'sparker', name: 'SPARKer', icon: 'ph-cpu', color: 'text-emerald-500', bg: 'bg-emerald-50', glow: 'bg-emerald-100', mlcId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC' },
+        FLiX: { id: 'FLiX', name: 'FLiX', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' }
     }
 };
-
 const EXTENSION_MAP = {
     'txt': 'text/plain', 'md': 'text/markdown', 'csv': 'text/csv', 'html': 'text/html',
     'pdf': 'application/pdf', 'doc': 'application/msword', 
@@ -839,10 +920,10 @@ const DB = {
 };
 
 function getDeviceId() {
-    let id = localStorage.getItem('lexis_device_id');
+    let id = localStorage.getItem('Arix_device_id');
     if (!id) { 
         id = 'dev_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-        localStorage.setItem('lexis_device_id', id); 
+        localStorage.setItem('Arix_device_id', id); 
     }
     return id;
 }
@@ -867,7 +948,7 @@ function sendTelemetry(action, model, status, errorDetails = "") {
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ 
                 deviceId: getDeviceId(), 
-                nickname: localStorage.getItem('lexis_nickname') || 'Anonymous', 
+                nickname: localStorage.getItem('Arix_nickname') || 'Anonymous', 
                 deviceInfo: getDeviceInfo(), 
                 action: action, 
                 model: model, 
@@ -878,7 +959,7 @@ function sendTelemetry(action, model, status, errorDetails = "") {
     } catch(e) {}
 }
 
-let userProfile = JSON.parse(localStorage.getItem('lexis_user_profile')) || {};
+let userProfile = JSON.parse(localStorage.getItem('Arix_user_profile')) || {};
 let msgCountForMemory = 0;
 
 async function updateMemoryAsync() {
@@ -893,48 +974,143 @@ async function updateMemoryAsync() {
         const data = await res.json();
         if(data.success && data.profile) {
             userProfile = data.profile;
-            localStorage.setItem('lexis_user_profile', JSON.stringify(userProfile));
+            localStorage.setItem('Arix_user_profile', JSON.stringify(userProfile));
         }
     } catch(e) {}
 }
 
 let recognition;
 let isRecording = false;
+let isVoiceModeActive = false;
+let synth = window.speechSynthesis;
+let availableVoices = [];
 
+// Populate and prioritize natural, high-fidelity neural/human voices
+function loadVoices() {
+    if (!synth) return;
+    availableVoices = synth.getVoices();
+}
+if (synth) {
+    loadVoices();
+    if (synth.onvoiceschanged !== undefined) {
+        synth.onvoiceschanged = loadVoices;
+    }
+}
+
+function getBestHumanVoice() {
+    if (!availableVoices.length && synth) availableVoices = synth.getVoices();
+    
+    // Priority order: Natural Cloud/OS Voices (Edge Natural, Google US English, Apple Enhanced)
+    const preferredVoices = [
+        /Google US English/i,
+        /Microsoft Jenny Online \(Natural\)/i,
+        /Microsoft Guy Online \(Natural\)/i,
+        /Microsoft Aria Online \(Natural\)/i,
+        /Samantha \(Enhanced\)/i,
+        /Karen \(Enhanced\)/i,
+        /Natural/i,
+        /Neural/i,
+        /en[-_]US/i
+    ];
+
+    for (const pattern of preferredVoices) {
+        const match = availableVoices.find(v => pattern.test(v.name) || pattern.test(v.lang));
+        if (match) return match;
+    }
+    return availableVoices.find(v => v.lang.startsWith('en')) || availableVoices[0] || null;
+}
+
+// Strip markdown, code blocks, LaTeX, and artifact tags for clean speech synthesis
+function cleanTextForSpeech(rawText) {
+    if (!rawText) return "";
+    return rawText
+        .replace(/<artifact[\s\S]*?<\/artifact>/gi, '') // Remove canvas artifacts
+        .replace(/```[\s\S]*?```/g, 'Code block omitted.') // Skip raw code blocks
+        .replace(/`([^`]+)`/g, '$1') // Inline code
+        .replace(/\$\$[\s\S]*?\$\$/g, 'Mathematical formula.') // Math blocks
+        .replace(/\$([^\$]+)\$/g, '$1')
+        .replace(/[*#_~>\[\]\(\)]/g, '') // Markdown symbols
+        .replace(/\n+/g, '. ') // Turn line breaks into natural pauses
+        .trim();
+}
+
+function speakResponse(text) {
+    if (!synth) return;
+    synth.cancel(); // Stop any overlapping speech
+
+    const cleanText = cleanTextForSpeech(text);
+    if (!cleanText) return;
+
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    const voice = getBestHumanVoice();
+    if (voice) utterance.voice = voice;
+
+    utterance.rate = 1.02; // Natural conversational tempo
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    synth.speak(utterance);
+}
+
+function stopSpeaking() {
+    if (synth) synth.cancel();
+}
+
+// Speech-to-Text Setup with automatic response voicing
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRec();
-    recognition.continuous = false; 
+    recognition.continuous = false;
     recognition.interimResults = true;
+
     recognition.onresult = (e) => {
-        let text = ""; 
+        let text = "";
         for (let i = e.resultIndex; i < e.results.length; ++i) {
             text += e.results[i][0].transcript;
         }
-        els.input.value = text; 
-        els.input.style.height = 'auto'; 
-        els.input.style.height = els.input.scrollHeight + 'px'; 
+        els.input.value = text;
+        els.input.style.height = 'auto';
+        els.input.style.height = els.input.scrollHeight + 'px';
         updateUIState();
     };
-    recognition.onend = () => { 
+
+    recognition.onend = () => {
         isRecording = false;
-        document.getElementById('mic-icon').classList.remove('text-red-500', 'animate-pulse'); 
+        const micIcon = document.getElementById('mic-icon');
+        if (micIcon) micIcon.classList.remove('text-red-500', 'animate-pulse');
+        
+        // If query captured, flag voice-mode active so response is spoken out loud
+        if (els.input.value.trim().length > 0) {
+            isVoiceModeActive = true;
+        }
+    };
+
+    recognition.onerror = () => {
+        isRecording = false;
+        const micIcon = document.getElementById('mic-icon');
+        if (micIcon) micIcon.classList.remove('text-red-500', 'animate-pulse');
     };
 }
 
 function toggleVoice() {
-    if(!recognition) return showToast("Voice not supported on this browser");
-    if(isRecording) {
+    if (!recognition) return showToast("Voice not supported on this browser");
+    if (synth && synth.speaking) {
+        stopSpeaking();
+        return;
+    }
+    if (isRecording) {
         recognition.stop();
-    } else { 
-        recognition.start(); 
+    } else {
+        stopSpeaking();
+        recognition.start();
         isRecording = true;
-        document.getElementById('mic-icon').classList.add('text-red-500', 'animate-pulse'); 
+        const micIcon = document.getElementById('mic-icon');
+        if (micIcon) micIcon.classList.add('text-red-500', 'animate-pulse');
     }
 }
 
 function checkNickname() {
-    const nick = localStorage.getItem('lexis_nickname');
+    const nick = localStorage.getItem('Arix_nickname');
     if (!nick) {
         document.getElementById('username-modal').classList.remove('hidden');
     } else {
@@ -951,7 +1127,7 @@ function saveNickname() {
     }
     
     if(val) {
-        localStorage.setItem('lexis_nickname', val);
+        localStorage.setItem('Arix_nickname', val);
         document.getElementById('username-modal').classList.add('hidden');
         updateSidebarName(val);
         showToast("Nickname Saved!");
@@ -965,12 +1141,12 @@ function updateSidebarName(name) {
 }
 
 function changeNickname() {
-    document.getElementById('nickname-input').value = localStorage.getItem('lexis_nickname') || "";
+    document.getElementById('nickname-input').value = localStorage.getItem('Arix_nickname') || "";
     document.getElementById('username-modal').classList.remove('hidden');
 }
 
 // Global Application State Variables
-let activeModelId = 'oracle';
+let activeModelId = localStorage.getItem('Arix_active_model') || 'spark';
 let isProcessing = false;
 let isDeepResearchOn = false;
 let isPresentationMode = false;
@@ -989,7 +1165,8 @@ let extForm = { id: "", name: "", links: [], files: [] };
 let currentMultiplayerRoom = null;
 let pollInterval = null;
 let lastMessageTs = 0;
-let pulseTasks = JSON.parse(localStorage.getItem('lexis_pulse_tasks')) || [];
+let pulseTasks = JSON.parse(localStorage.getItem('Arix_pulse_tasks')) || [];
+let customProjects = JSON.parse(localStorage.getItem('Arix_custom_projects')) || [];
 
 window.ARTIFACT_STORE = {};
 window.CURRENT_CANVAS_ID = null;
@@ -1041,12 +1218,55 @@ window.onload = async () => {
     refreshExtSelectors();
     checkNickname();
     if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
+    renderHistoryList(); // Initialize chat history in sidebar on load
     getDeviceId();
     const urlParams = new URLSearchParams(window.location.search);
     const shareId = urlParams.get('share');
     const roomId = urlParams.get('room');
     const fullChatId = urlParams.get('chat');
-    if (roomId) {
+    const projectId = urlParams.get('project');
+    
+    if (projectId) {
+        // --- NEW: Load Shared Custom Project & Import all its chats ---
+        try {
+            showToast("Loading Shared Project...");
+            let pwd = null;
+            let res = await fetch(`/api/project?action=get&id=${projectId}`);
+            let data = await res.json();
+            
+            if (!data.success && data.isPasswordProtected) {
+                pwd = prompt("This project is protected. Enter Password:");
+                if (pwd) {
+                    res = await fetch(`/api/project?action=get&id=${projectId}&pwd=${pwd}`);
+                    data = await res.json();
+                }
+            }
+            
+            if (data.success && data.project) {
+                let importedCount = 0;
+                data.project.chats.forEach(projChat => {
+                    const newChatId = Date.now().toString() + Math.random().toString(36).substr(2,4);
+                    chats.unshift({
+                        id: newChatId,
+                        title: "[Project] " + projChat.title,
+                        messages: projChat.messages,
+                        date: Date.now(),
+                        extId: null
+                    });
+                    importedCount++;
+                });
+                
+                localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+                window.history.replaceState({}, document.title, window.location.pathname);
+                showToast(`Imported ${importedCount} chats from Project!`);
+                renderHistoryList();
+                if(chats.length > 0) loadChat(chats[0].id);
+            } else {
+                showToast("Invalid or expired Project link.");
+                createNewChat();
+            }
+        } catch(e) { createNewChat(); }
+    } else if (roomId) {
         joinMultiplayerRoom(roomId);
     } else if (fullChatId) {
         // --- NEW: Load Shared Chat from Supabase Branch (Password Protected) ---
@@ -1161,7 +1381,7 @@ async function createMultiplayerRoom() {
     currentMultiplayerRoom = roomId;
     messages = [];
     els.container.innerHTML = "";
-    appendMessage('assistant', 'You created a Co-Op Collaboration room! Share this link with your friend to join. Type @lexis to ask the AI.', 'oracle');
+    appendMessage('assistant', 'You created a Co-Op Collaboration room! Share this link with your friend to join. Type @Arix to ask the AI.', 'oracle');
     const link = window.location.origin + '?room=' + roomId;
     await navigator.clipboard.writeText(link);
     showToast("Co-Op Link Copied!");
@@ -1172,7 +1392,7 @@ function joinMultiplayerRoom(roomId) {
     currentMultiplayerRoom = roomId;
     messages = [];
     els.container.innerHTML = "";
-    appendMessage('assistant', 'You joined a Co-Op Collaboration room! Type @lexis to ask the AI.', 'oracle');
+    appendMessage('assistant', 'You joined a Co-Op Collaboration room! Type @Arix to ask the AI.', 'oracle');
     startPolling();
 }
 
@@ -1190,15 +1410,15 @@ function startPolling() {
                 data.messages.forEach(m => {
                     if (m.ts > lastMessageTs) {
                         lastMessageTs = m.ts;
-                        const myNick = localStorage.getItem('lexis_nickname') || 'Anonymous';
+                        const myNick = localStorage.getItem('Arix_nickname') || 'Anonymous';
                         
                         if (m.nickname === myNick) {
                             if (!document.getElementById('msg-wrapper-' + m.id)) {
                                 appendMessage('user', m.message, null, m.id, [], m.nickname);
                             }
-                        } else if (m.nickname === 'LexisAI') {
+                        } else if (m.nickname === 'ArixAI') {
                             if (!document.getElementById('msg-wrapper-' + m.id)) {
-                                const msgObj = appendMessage('assistant', "", 'oracle', m.id, [], 'LexisAI');
+                                const msgObj = appendMessage('assistant', "", 'oracle', m.id, [], 'ArixAI');
                                 msgObj.container.innerHTML = parseRichText(m.message, false, m.id);
                             }
                         } else {
@@ -1293,7 +1513,7 @@ async function importDriveFile(id, name) {
 
 
 // ====== SENTINEL TASK ENGINE (OS-LEVEL INTEGRATION) ======
-let activeSentinelTasks = JSON.parse(localStorage.getItem('lexis_sentinel_tasks')) || [];
+let activeSentinelTasks = JSON.parse(localStorage.getItem('Arix_sentinel_tasks')) || [];
 
 function renderSentinelTasks() {
     const list = document.getElementById('sentinel-task-list');
@@ -1301,7 +1521,7 @@ function renderSentinelTasks() {
     
     // Auto-clean expired tasks that are more than 1 day old
     activeSentinelTasks = activeSentinelTasks.filter(t => (now - t.timestamp) < 86400000);
-    localStorage.setItem('lexis_sentinel_tasks', JSON.stringify(activeSentinelTasks));
+    localStorage.setItem('Arix_sentinel_tasks', JSON.stringify(activeSentinelTasks));
     
     if (activeSentinelTasks.length === 0) {
         list.innerHTML = '<div class="text-center text-gray-500 text-xs font-medium py-10">No active tasks.</div>';
@@ -1330,7 +1550,7 @@ function renderSentinelTasks() {
 
 function deleteSentinelTask(id) {
     activeSentinelTasks = activeSentinelTasks.filter(t => t.id !== id);
-    localStorage.setItem('lexis_sentinel_tasks', JSON.stringify(activeSentinelTasks));
+    localStorage.setItem('Arix_sentinel_tasks', JSON.stringify(activeSentinelTasks));
     renderSentinelTasks();
 }
 
@@ -1389,7 +1609,7 @@ async function deploySentinel() {
             // 2. Local Tab Fail-safe Backup
             const delay = data.timestamp - Date.now();
             if (delay > 0 && delay < 2147483647) { 
-                setTimeout(() => { new Notification("LexisAI Sentinel", { body: data.task }); }, delay);
+                setTimeout(() => { new Notification("ArixAI Sentinel", { body: data.task }); }, delay);
             }
             
             // 3. Save to UI History
@@ -1398,7 +1618,7 @@ async function deploySentinel() {
                 task: data.task,
                 timestamp: data.timestamp
             });
-            localStorage.setItem('lexis_sentinel_tasks', JSON.stringify(activeSentinelTasks));
+            localStorage.setItem('Arix_sentinel_tasks', JSON.stringify(activeSentinelTasks));
             document.getElementById('sentinel-prompt').value = "";
             renderSentinelTasks();
             showToast("Agent Deployed!");
@@ -1812,7 +2032,7 @@ function renderPresentationPreview(payload) {
     let html = `<div class="flex justify-between items-center mb-6 border-b border-gray-100 pb-4 px-6 pt-6 bg-white sticky top-0 z-20">
         <div>
             <h3 class="text-xl font-bold text-gray-900 mb-1 tracking-tight flex items-center gap-2"><i class="ph-fill ph-presentation-chart text-amber-500"></i> ${payload.metadata.title}</h3>
-            <p class="text-xs text-gray-500 font-medium">${payload.metadata.slideCount} Slides Auto-Generated by LexisAI</p>
+            <p class="text-xs text-gray-500 font-medium">${payload.metadata.slideCount} Slides Auto-Generated by ArixAI</p>
         </div>
         <button onclick="downloadPPTX('${window.CURRENT_CANVAS_ID}')" class="bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-4 py-2.5 rounded-xl font-bold shadow-sm hover:scale-105 transition-all flex items-center gap-2">
             <i class="ph-bold ph-download-simple text-lg"></i> Export PPTX
@@ -2044,7 +2264,7 @@ async function generatePdf() {
     btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i>`; 
     btn.disabled = true;
     
-    const filename = document.getElementById('pdf-filename').value.trim() || 'LexisAI_Analysis';
+    const filename = document.getElementById('pdf-filename').value.trim() || 'ArixAI_Analysis';
     const wrapper = document.getElementById('msg-wrapper-' + currentPdfMsgId); 
     
     if (!wrapper) {
@@ -2091,7 +2311,7 @@ async function generatePdf() {
     clone.style.color = '#1f2937';
     clone.style.fontFamily = 'Inter, system-ui, sans-serif';
     clone.prepend(Object.assign(document.createElement('div'), {
-        innerHTML: `<h2 style="color: #4f46e5; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; font-size: 24px; font-weight: bold;">LexisAI Premium Analysis</h2>`
+        innerHTML: `<h2 style="color: #4f46e5; margin-bottom: 20px; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; font-size: 24px; font-weight: bold;">ArixAI Premium Analysis</h2>`
     }));
     
     try { 
@@ -2116,14 +2336,14 @@ async function downloadPPTX(artifactId) {
         const payload = JSON.parse(raw);
         let pptx = new pptxgen();
         pptx.layout = 'LAYOUT_16x9'; 
-        pptx.author = 'LexisAI Premium'; 
-        pptx.company = 'LexisAI';
+        pptx.author = 'ArixAI Premium'; 
+        pptx.company = 'ArixAI';
         pptx.subject = payload.metadata.title;
         
         for(let i=0; i<payload.slides.length; i++) {
             const s = payload.slides[i];
             let slide = pptx.addSlide();
-            slide.addText(payload.metadata.watermark || "© LexisAI Premium", {x: 0.5, y: '95%', w: '90%', fontSize: 10, color: '888888', align: 'center' });
+            slide.addText(payload.metadata.watermark || "© ArixAI Premium", {x: 0.5, y: '95%', w: '90%', fontSize: 10, color: '888888', align: 'center' });
             
             if (s.layout === 'title_slide') {
                 if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: 0, y: 0, w: '100%', h: '100%', sizing: { type: 'cover' } });
@@ -2212,6 +2432,181 @@ function closeCanvas() {
 }
 
 // ====== ADVANCED INTEGRATIONS FIXES ======
+function openProjectsModal() { 
+    document.getElementById('projects-modal').classList.remove('hidden'); 
+    renderProjectsList(); 
+}
+function closeProjectsModal() { document.getElementById('projects-modal').classList.add('hidden'); }
+
+function createProject() {
+    const name = prompt("Enter Project Name:");
+    if(name && name.trim()) {
+        customProjects.unshift({ id: 'proj_' + Date.now(), name: name.trim(), chats: [], createdAt: Date.now() });
+        saveProjects();
+    }
+}
+
+function saveProjects() {
+    localStorage.setItem('Arix_custom_projects', JSON.stringify(customProjects));
+    renderProjectsList();
+}
+
+function importCurrentChatToProject(projId) {
+    if(messages.length === 0) return showToast("Current chat is empty!");
+    const proj = customProjects.find(p => p.id === projId);
+    if(proj) {
+        const chatSnapshot = {
+            id: currentChatId,
+            title: chats.find(c => c.id === currentChatId)?.title || "Untitled Chat",
+            messages: JSON.parse(JSON.stringify(messages)),
+            addedAt: Date.now()
+        };
+        const existingIdx = proj.chats.findIndex(c => c.id === currentChatId);
+        if(existingIdx > -1) proj.chats[existingIdx] = chatSnapshot;
+        else proj.chats.push(chatSnapshot);
+        saveProjects();
+        showToast(`Chat imported to ${proj.name}!`);
+    }
+}
+
+function renameProject(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(proj) {
+        const newName = prompt("Rename Project:", proj.name);
+        if(newName && newName.trim()) { proj.name = newName.trim(); saveProjects(); }
+    }
+}
+
+function deleteProject(projId) {
+    if(confirm("Delete this project completely?")) {
+        customProjects = customProjects.filter(p => p.id !== projId);
+        saveProjects();
+    }
+}
+async function shareProjectAPI(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(!proj || proj.chats.length === 0) return showToast("Add chats to this project first!");
+    
+    const pwd = prompt("Set a password to lock this project? (Leave blank for public)");
+    showToast("Publishing Project...");
+    
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'share', project: proj, password: pwd, deviceId: getDeviceId() })
+        });
+        const data = await res.json();
+        
+        if (data.success && data.shareId) {
+            proj.shareId = data.shareId; // Bind the URL to the local project
+            saveProjects();
+            const link = window.location.origin + window.location.pathname + '?project=' + data.shareId;
+            await navigator.clipboard.writeText(link);
+            showToast("Project Published & Link Copied!");
+        } else { showToast(data.error || "Failed to share project."); }
+    } catch(e) { showToast("Backend API error."); }
+}
+
+async function syncSharedProject(projId) {
+    const proj = customProjects.find(p => p.id === projId);
+    if(!proj || !proj.shareId) return;
+    showToast("Syncing project...");
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', shareId: proj.shareId, project: proj, deviceId: getDeviceId() })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast("Project Synced Successfully!");
+        } else { showToast(data.error || "Sync failed."); }
+    } catch(e) { showToast("Backend API error."); }
+}
+
+async function fetchProjectAnalytics(projId, shareId) {
+    const badge = document.getElementById(`analytics-badge-${projId}`);
+    if(badge) badge.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Loading...`;
+    
+    try {
+        const res = await fetch('/api/project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'analytics', projectId: shareId, shareId: shareId })
+        });
+        const data = await res.json();
+        if (data.success) {
+            alert(`Project Analytics:\n\n👁️ Unique Views: ${data.views || 0}\n🌿 Forks/Clones: ${data.forks || 0}`);
+            if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> ${data.views||0} V / ${data.forks||0} F`;
+        } else {
+            if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> Stats`;
+            showToast(data.error || "Analytics failed");
+        }
+    } catch(e) { 
+        if(badge) badge.innerHTML = `<i class="ph-bold ph-chart-bar"></i> Stats`;
+        showToast("Backend API error."); 
+    }
+}
+
+function removeChatFromProject(projId, chatId) {
+    if(confirm("Remove this chat from the project?")) {
+        const proj = customProjects.find(p => p.id === projId);
+        if(proj) {
+            proj.chats = proj.chats.filter(c => c.id !== chatId);
+            saveProjects();
+        }
+    }
+}
+
+function renderProjectsList() {
+    const list = document.getElementById('projects-list-container');
+    if(!list) return;
+    if(customProjects.length === 0) { list.innerHTML = '<div class="text-center text-gray-500 py-10 text-xs font-medium">No projects created.</div>'; return; }
+    
+    list.innerHTML = customProjects.map(p => {
+        const isShared = !!p.shareId;
+        const chatsListHtml = p.chats.length === 0 
+            ? `<div class="text-[10px] text-gray-400 italic px-2 py-1 text-center">No chats imported yet.</div>`
+            : p.chats.map(c => `
+                <div class="flex justify-between items-center bg-white border border-gray-100 rounded-lg p-2 shadow-sm mb-1 group/chat transition-colors hover:border-amber-200">
+                    <span class="text-[11px] font-semibold text-gray-700 truncate max-w-[200px] cursor-pointer hover:text-amber-600 flex items-center gap-1.5" onclick="loadChat('${c.id}'); closeProjectsModal();">
+                        <i class="ph-bold ph-chat-circle text-amber-500"></i> ${c.title}
+                    </span>
+                    <button onclick="removeChatFromProject('${p.id}', '${c.id}')" class="text-gray-300 hover:text-red-500 opacity-0 group-hover/chat:opacity-100 transition-opacity p-1"><i class="ph-bold ph-x"></i></button>
+                </div>
+            `).join('');
+
+        return `
+        <div class="bg-gray-50 border border-gray-200 rounded-2xl p-4 flex flex-col gap-3 group transition-colors hover:border-amber-200 shadow-sm" id="proj-card-${p.id}">
+            <div class="flex justify-between items-center">
+                <h4 class="font-bold text-gray-900 text-[14px] flex items-center gap-2 truncate pr-2"><i class="ph-fill ph-folder text-amber-500 text-lg flex-shrink-0"></i> <span class="truncate">${p.name}</span></h4>
+                <div class="flex gap-2 flex-shrink-0">
+                    ${isShared ? `<span class="text-[10px] bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full text-blue-700 font-bold shadow-sm cursor-pointer hover:bg-blue-100 flex items-center gap-1 transition-colors" onclick="fetchProjectAnalytics('${p.id}', '${p.shareId}')" id="analytics-badge-${p.id}"><i class="ph-bold ph-chart-bar"></i> Stats</span>` : ''}
+                    <span class="text-[10px] bg-white border border-gray-200 px-2 py-0.5 rounded-full text-gray-600 font-bold shadow-sm">${p.chats.length} Chats</span>
+                </div>
+            </div>
+            
+            <!-- Internal Chat Viewer -->
+            <div class="bg-gray-100/50 rounded-xl p-2 max-h-32 overflow-y-auto custom-scrollbar border border-gray-100 shadow-inner">
+                ${chatsListHtml}
+            </div>
+
+            <div class="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
+                <button onclick="importCurrentChatToProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-blue-600 hover:border-blue-300 hover:bg-blue-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-download-simple"></i> Add Active Chat</button>
+                
+                ${isShared 
+                    ? `<button onclick="syncSharedProject('${p.id}')" class="text-[11px] bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold" title="Push new chats to the published link"><i class="ph-bold ph-arrows-clockwise"></i> Sync Updates</button>
+                       <button onclick="navigator.clipboard.writeText(window.location.origin + window.location.pathname + '?project=' + '${p.shareId}'); showToast('Link Copied!')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-copy"></i> Copy Link</button>`
+                    : `<button onclick="shareProjectAPI('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-700 hover:text-emerald-600 hover:border-emerald-300 hover:bg-emerald-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 font-semibold"><i class="ph-bold ph-share-network"></i> Publish Link</button>`
+                }
+                
+                <button onclick="renameProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-amber-600 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1 ml-auto"><i class="ph-bold ph-pencil-simple"></i></button>
+                <button onclick="deleteProject('${p.id}')" class="text-[11px] bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 px-2 py-1.5 rounded-lg shadow-sm transition-colors flex items-center gap-1"><i class="ph-bold ph-trash"></i></button>
+            </div>
+        </div>
+    `}).join('');
+}
 function openPulseModal() { 
     document.getElementById('pulse-modal').classList.remove('hidden');
     if (typeof renderPulseVault === 'function') renderPulseVault();
@@ -2352,6 +2747,7 @@ function saveCurrentChat() {
     if (chatIndex > -1) chats[chatIndex] = chatData; 
     else chats.unshift(chatData);
     try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) {}
+    renderHistoryList(); // Refresh the UI immediately after saving
 }
 
 function createNewChat() { 
@@ -2363,7 +2759,8 @@ function createNewChat() {
     renderStagingArea();
     renderMessagesToUI(); 
     if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
-    appendMessage('assistant', 'System Initialized. New chat created. How may I assist you today?', activeModelId, 'init', [], 'LexisAI'); 
+    renderHistoryList(); // Reset sidebar active states
+    appendMessage('assistant', 'New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
     closeCanvas(); 
     renderPulseTodayWidget();
 }
@@ -2434,14 +2831,23 @@ function editMessage(msgId) {
     closeCanvas(); 
 }
 
+function switchModel(modelId) {
+    if (isProcessing) return;
+    activeModelId = modelId;
+    localStorage.setItem('Arix_active_model', activeModelId);
+    updateUIState();
+    if (modelId === 'sparker' || modelId === 'FLiX') {
+        if (window.loadLocalModel) window.loadLocalModel(modelId);
+    }
+}
+
 function renderModelSelector() { 
     els.selector.innerHTML = Object.values(CONFIG.models).map(model => 
-        `<button onclick="if(!isProcessing) {activeModelId='${model.id}'; updateUIState();}" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `bg-white ${model.color} shadow-sm border border-gray-200` : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'}">
+        `<button onclick="switchModel('${model.id}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-semibold transition-all duration-300 whitespace-nowrap ${activeModelId === model.id ? `bg-white ${model.color} shadow-sm border border-gray-200` : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border border-transparent'}">
             <i class="${model.icon} ${activeModelId === model.id ? 'ph-fill animate-pulse-slow' : 'ph-bold'} text-sm"></i> ${model.name}
         </button>`
     ).join(""); 
 }
-
 function updateUIState() {
     renderModelSelector(); 
     const model = CONFIG.models[activeModelId];
@@ -2451,7 +2857,7 @@ function updateUIState() {
     else if (activeModelId === 'spark') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-amber-400`;
     else if (activeModelId === 'flux') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-cyan-400`;
 
-    els.input.placeholder = `Message LexisAI (${model.name})...`;
+    els.input.placeholder = `Message ArixAI (${model.name})...`;
     
     if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { 
         els.sendBtn.className = 'bg-theme-600 text-white p-2.5 sm:p-3 rounded-full shadow-md shadow-theme-200 transition-all duration-300 flex items-center justify-center cursor-pointer hover:bg-theme-700 transform hover:scale-105';
@@ -2669,7 +3075,7 @@ function appendMessage(role, content, modelId, specificId = null, attachmentsMet
         div.className = `flex gap-4 sm:gap-5 max-w-3xl animate-fade-in-up mb-8`;
         const model = CONFIG.models[modelId] || CONFIG.models.oracle;
         
-        let nameStr = senderName === 'LexisAI' ? `<div class="text-[10px] text-theme-500 mb-2 font-bold uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> LexisAI (Co-Op)</div>` : "";
+        let nameStr = senderName === 'ArixAI' ? `<div class="text-[10px] text-theme-500 mb-2 font-bold uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> ArixAI</div>` : "";
         
         div.innerHTML = `
             <div class="w-10 h-10 rounded-xl bg-white border border-gray-100 shadow-sm flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors">
@@ -2725,7 +3131,7 @@ function appendResearchTerminal(initText = 'Initializing Agent...', type = 'rese
 function renderMessagesToUI() { 
     els.container.innerHTML = ""; 
     window.ARTIFACT_STORE = {};
-    messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta, msg.role === 'user' ? (currentMultiplayerRoom ? localStorage.getItem('lexis_nickname') : null) : (currentMultiplayerRoom ? 'LexisAI' : null))); 
+    messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta, msg.role === 'user' ? (currentMultiplayerRoom ? localStorage.getItem('Arix_nickname') : null) : (currentMultiplayerRoom ? 'ArixAI' : null))); 
 }
 
 // ====== CORE NETWORK PROCESSING LOOP (handleSend) ======
@@ -2734,7 +3140,7 @@ async function handleSend() {
     if ((!text && pendingFiles.length === 0) || isProcessing) return;
     
     const attachmentsMeta = pendingFiles.map(f => ({ name: f.name, type: f.type }));
-    const myNick = localStorage.getItem('lexis_nickname') || 'Anonymous';
+    const myNick = localStorage.getItem('Arix_nickname') || 'Anonymous';
     
     // 1. Render User Message
     const userMsgObj = appendMessage('user', text, null, null, attachmentsMeta, currentMultiplayerRoom ? myNick : null);
@@ -2754,6 +3160,7 @@ async function handleSend() {
         attachmentsMeta: attachmentsMeta 
     };
     messages.push(currentMessage);
+    saveCurrentChat(); // <-- FIX: Saves immediately to prevent vanishing chats
     
     // 2. Multiplayer Sync
     if (currentMultiplayerRoom) {
@@ -2763,7 +3170,7 @@ async function handleSend() {
             body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'send', message: text, nickname: myNick })
         }).catch(()=>{});
         
-        if (!text.toLowerCase().includes('@lexis')) {
+        if (!text.toLowerCase().includes('@Arix')) {
             els.input.value = ""; 
             els.input.style.height = 'auto'; 
             pendingFiles = []; 
@@ -2840,7 +3247,7 @@ async function handleSend() {
             logContainer.parentElement.parentElement.remove();
             
             if (compiledPayload) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
                 const rawJson = JSON.stringify(compiledPayload);
                 const artifactContent = `<artifact title="${compiledPayload.title}" type="math">\n${rawJson}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
@@ -2913,7 +3320,7 @@ async function handleSend() {
             logContainer.parentElement.parentElement.remove();
             
             if (compiledPayload) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
                 const rawJson = JSON.stringify(compiledPayload);
                 const artifactContent = `<artifact title="${compiledPayload.metadata.title}" type="presentation">\n${rawJson}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
@@ -2942,7 +3349,7 @@ async function handleSend() {
             const data = await res.json();
             logContainer.parentElement.parentElement.remove();
             if (data.success && data.data) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
                 const artifactContent = `<artifact title="${data.data.title}" type="podcast">\n${JSON.stringify(data.data)}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
@@ -2970,7 +3377,7 @@ async function handleSend() {
             const data = await res.json();
             logContainer.parentElement.parentElement.remove();
             if (data.success && data.html) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
                 const artifactContent = `<artifact title="Interactive Web App" type="html">\n${data.html}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
@@ -2990,7 +3397,7 @@ async function handleSend() {
         els.indicator.classList.add('hidden');
         const logContainer = appendResearchTerminal('Initializing Neural Visual Engine...', 'presentation');
         
-        const aiMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+        const aiMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
         
         try {
             const res = await fetch('/api/image', { 
@@ -3046,7 +3453,7 @@ async function handleSend() {
             const data = await res.json();
             logContainer.parentElement.parentElement.remove();
             if (data.success && data.data) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
                 const artifactContent = `<artifact title="${data.data.deckName}" type="study_deck">\n${JSON.stringify(data.data)}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
@@ -3136,7 +3543,7 @@ async function handleSend() {
     if (!isDeepResearchOn) {
         const currentModel = CONFIG.models[activeModelId];
         els.indicatorIcon.className = `ph-bold text-lg text-theme-600 transition-colors duration-500 ${currentModel.icon}`;
-        els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension Data..." : "LexisAI is analyzing...";
+        els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension Data..." : "ArixAI is analyzing...";
         els.indicator.classList.remove('hidden'); 
         els.canvas.scrollTop = els.canvas.scrollHeight;
     }
@@ -3155,6 +3562,63 @@ async function handleSend() {
         
         const shouldReadMemory = document.getElementById('toggle-use-memory') ? document.getElementById('toggle-use-memory').checked : true;
         
+        // ==========================================
+        // LOCAL OFFLINE AI INFERENCE (SPARKer / FLiX)
+        // ==========================================
+        if (activeModelId === 'sparker' || activeModelId === 'FLiX') {
+            els.indicator.classList.add('hidden');
+            const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+            const contentContainer = assistantMsgObj.container;
+            contentContainer.classList.add('typing-cursor');
+
+            // Auto-Wake Engine if page was reloaded
+            if (!window.localAIEngine) {
+                contentContainer.innerHTML = `<span class="text-emerald-600 font-semibold"><i class="ph-bold ph-spinner animate-spin"></i> Waking up Offline Engine...</span>`;
+                if (window.loadLocalModel) await window.loadLocalModel(activeModelId);
+                
+                // If it STILL fails to wake up
+                if (!window.localAIEngine) {
+                    contentContainer.classList.remove('typing-cursor');
+                    contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Engine failed to load. Click the model in Advanced Integrations to retry.</span>`;
+                    messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                    saveCurrentChat();
+                    isProcessing = false; return;
+                }
+            }
+            
+            try {
+                // Fail-safe Context Window: Grabs last 30 messages (Safe 8k tokens) to prevent WebGPU OOM Crashes
+                const safeContextWindow = contextMessages.slice(-30).map(m => ({ role: m.role, content: m.content }));
+
+                const stream = await window.localAIEngine.chat.completions.create({
+                    messages: safeContextWindow,
+                    stream: true,
+                    temperature: 0.7
+                });
+
+                let fullResponse = "";
+                for await (const chunk of stream) {
+                    fullResponse += chunk.choices[0]?.delta?.content || "";
+                    contentContainer.innerHTML = parseRichText(fullResponse, true, assistantMsgObj.id);
+                    els.canvas.scrollTop = els.canvas.scrollHeight;
+                }
+
+                contentContainer.classList.remove('typing-cursor');
+                contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
+                messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
+                saveCurrentChat();
+                isProcessing = false; updateUIState(); return; // Exit cleanly without calling cloud API
+
+            } catch (err) {
+                contentContainer.classList.remove('typing-cursor');
+                contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Offline Inference Failed: ${err.message}</span>`;
+                messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                saveCurrentChat();
+                isProcessing = false; updateUIState(); return;
+            }
+        }
+        // ==========================================
+
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -3169,7 +3633,7 @@ async function handleSend() {
         });
         
         els.indicator.classList.add('hidden');
-        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
         const contentContainer = assistantMsgObj.container;
         contentContainer.classList.add('typing-cursor');
         
@@ -3243,14 +3707,16 @@ async function handleSend() {
             fetch('/api/multiplayer', {
                 method: 'POST', 
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'send', message: fullResponse, nickname: 'LexisAI' })
+                body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'send', message: fullResponse, nickname: 'ArixAI' })
             }).catch(()=>{});
         }
         if (!uiErrFlag) sendTelemetry(currentAction, activeModelId, 'success');
         
     } catch (error) {
         els.indicator.classList.add('hidden');
-        appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+        const errObj = appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+        messages.push({ role: 'assistant', content: `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, id: errObj.id, modelId: activeModelId });
+        saveCurrentChat(); // <-- FIX: Saves the error state so history chain isn't broken
         sendTelemetry(currentAction, activeModelId, 'error', error.message);
     }
     
@@ -3258,6 +3724,251 @@ async function handleSend() {
     updateUIState();
 }
 
+// ====== ACCESSIBILITY & FAIL-SAFE ENGINE ======
+const accessTools = [
+    { id: "3", name: "Syllabus Compare", icon: "ph-books", desc: "Map exact course overlaps." },
+    { id: "8", name: "Tax Finder", icon: "ph-receipt", desc: "Identify HSN/SAC GST rates." },
+    { id: "10", name: "Formula Gen", icon: "ph-function", desc: "Build safe Excel logics." },
+    { id: "15", name: "Bundle Pricing", icon: "ph-tag", desc: "Calculate profit margins." },
+    { id: "25", name: "Content Calendar", icon: "ph-calendar", desc: "Structure 30-day schedules." },
+    { id: "31", name: "Bill Split", icon: "ph-users", desc: "Calculate precise ledger debts." },
+    { id: "32", name: "Medical Terms", icon: "ph-heartbeat", desc: "Translate clinical jargon." },
+    { id: "35", name: "Telecom Cost", icon: "ph-phone", desc: "Expose true annual fees." },
+    { id: "41", name: "Price Scrape", icon: "ph-currency-dollar", desc: "Extract competitor matrices." },
+    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "Swap CSV/JSON/XML formats." }
+];
+
+let activeAccessTool = localStorage.getItem('arix_active_access_tool') || "57";
+let accessToolChats = JSON.parse(localStorage.getItem('arix_access_tool_chats')) || {};
+let accessFileBuffer = null;
+let isAccessProcessing = false;
+
+function saveAccessChats() {
+    localStorage.setItem('arix_access_tool_chats', JSON.stringify(accessToolChats));
+}
+
+function openAccessScreen() {
+    document.getElementById('access-screen').classList.remove('hidden');
+    document.getElementById('access-screen').classList.add('flex');
+    if (window.innerWidth < 1024) toggleSidebar();
+    renderAccessTools();
+    renderAccessChat();
+}
+
+function closeAccessScreen() {
+    document.getElementById('access-screen').classList.remove('flex');
+    document.getElementById('access-screen').classList.add('hidden');
+}
+
+function renderAccessTools() {
+    const list = document.getElementById('access-tool-list');
+    if (!list) return;
+    list.innerHTML = accessTools.map(t => {
+        const isActive = activeAccessTool === t.id;
+        return `
+        <div onclick="selectAccessTool('${t.id}')" class="cursor-pointer p-3.5 rounded-2xl border transition-all duration-300 ${isActive ? 'bg-teal-50 border-teal-200 shadow-sm' : 'bg-white border-gray-100 hover:border-teal-100 hover:bg-gray-50'} flex items-center gap-3.5">
+            <div class="w-11 h-11 rounded-xl ${isActive ? 'bg-teal-600 text-white shadow-md' : 'bg-gray-100 text-gray-500'} flex items-center justify-center shrink-0 transition-colors">
+                <i class="ph-bold ${t.icon} text-xl"></i>
+            </div>
+            <div class="flex flex-col overflow-hidden">
+                <span class="text-[13px] font-bold text-gray-900 truncate">${t.name}</span>
+                <span class="text-[10px] font-medium text-gray-500 truncate mt-0.5">${t.desc}</span>
+            </div>
+        </div>`;
+    }).join('');
+
+    const activeObj = accessTools.find(t => t.id === activeAccessTool);
+    const titleEl = document.getElementById('access-active-tool-title');
+    if (titleEl && activeObj) {
+        titleEl.innerText = `${activeObj.name} • ${activeObj.desc}`;
+    }
+}
+
+function selectAccessTool(id) {
+    if (isAccessProcessing) return;
+    activeAccessTool = id;
+    localStorage.setItem('arix_active_access_tool', id);
+    renderAccessTools();
+    renderAccessChat();
+}
+
+function resetCurrentToolChat() {
+    if (isAccessProcessing) return;
+    accessToolChats[activeAccessTool] = [];
+    saveAccessChats();
+    renderAccessChat();
+    showToast("New chat started for this tool");
+}
+
+function renderAccessChat() {
+    const output = document.getElementById('access-output');
+    if (!output) return;
+    
+    const history = accessToolChats[activeAccessTool] || [];
+    if (history.length === 0) {
+        const currentTool = accessTools.find(t => t.id === activeAccessTool);
+        output.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-3 py-16">
+                <div class="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-3xl mb-1 shadow-sm">
+                    <i class="ph-bold ${currentTool ? currentTool.icon : 'ph-command'}"></i>
+                </div>
+                <h3 class="text-sm font-bold text-gray-800">${currentTool ? currentTool.name : 'Tool Ready'}</h3>
+                <p class="font-medium text-xs text-gray-500 max-w-sm text-center">Type your message or attach data below to interact with Gemini.</p>
+            </div>`;
+        return;
+    }
+
+    output.innerHTML = history.map((m) => {
+        if (m.role === 'user') {
+            return `
+            <div class="flex justify-end w-full animate-fade-in-up">
+                <div class="bg-gray-100 text-gray-800 px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-sm text-sm leading-relaxed max-w-2xl font-medium">
+                    ${m.fileName ? `<div class="text-[11px] font-bold text-teal-700 mb-1 flex items-center gap-1.5"><i class="ph-bold ph-paperclip"></i> ${m.fileName}</div>` : ''}
+                    ${m.content ? marked.parse(m.content) : ''}
+                </div>
+            </div>`;
+        } else {
+            return `
+            <div class="flex gap-3 sm:gap-4 w-full max-w-3xl animate-fade-in-up">
+                <div class="w-8 h-8 rounded-xl bg-teal-600 text-white shadow-sm flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="ph-bold ph-sparkle text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0 prose prose-sm max-w-none text-gray-800 leading-relaxed bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
+                    ${marked.parse(m.content || '')}
+                </div>
+            </div>`;
+        }
+    }).join('');
+
+    output.scrollTop = output.scrollHeight;
+}
+
+document.getElementById('access-file')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        accessFileBuffer = { name: file.name, type: file.type, base64: ev.target.result.split(',')[1] };
+        const badge = document.getElementById('access-file-badge');
+        badge.innerHTML = `<i class="ph-bold ph-file-text"></i> Attached: ${file.name} <button onclick="accessFileBuffer=null; this.parentElement.classList.add('hidden')" class="ml-2 hover:text-red-600"><i class="ph-bold ph-x"></i></button>`;
+        badge.classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+});
+
+async function runAccessTool() {
+    const input = document.getElementById('access-input');
+    const btn = document.getElementById('access-btn');
+    const text = input.value.trim();
+
+    if ((!text && !accessFileBuffer) || isAccessProcessing) {
+        return showToast("Please enter a query or attach a file.");
+    }
+
+    if (!accessToolChats[activeAccessTool]) {
+        accessToolChats[activeAccessTool] = [];
+    }
+
+    const userEntry = {
+        role: 'user',
+        content: text,
+        fileName: accessFileBuffer ? accessFileBuffer.name : null
+    };
+    accessToolChats[activeAccessTool].push(userEntry);
+    
+    const assistantEntry = {
+        role: 'assistant',
+        content: ''
+    };
+    accessToolChats[activeAccessTool].push(assistantEntry);
+
+    saveAccessChats();
+    renderAccessChat();
+
+    // Directly bind to the newest assistant bubble for 60fps live streaming
+    const output = document.getElementById('access-output');
+    const proseNodes = output ? output.querySelectorAll('.prose') : [];
+    const liveTarget = proseNodes.length > 0 ? proseNodes[proseNodes.length - 1] : null;
+    if (liveTarget) {
+        liveTarget.innerHTML = '<span class="text-teal-600 font-medium flex items-center gap-2"><i class="ph-bold ph-circle-notch animate-spin"></i> Generating response...</span>';
+    }
+
+    const conversationHistory = accessToolChats[activeAccessTool]
+        .slice(0, -2)
+        .slice(-20)
+        .map(m => ({ role: m.role, content: m.content }));
+
+    const payloadFiles = accessFileBuffer ? [accessFileBuffer] : [];
+
+    isAccessProcessing = true;
+    btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Generating...`;
+    btn.disabled = true;
+    input.value = "";
+    accessFileBuffer = null;
+    document.getElementById('access-file-badge')?.classList.add('hidden');
+
+    try {
+        const res = await fetch('/api/accessibility', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                toolId: activeAccessTool,
+                query: text,
+                files: payloadFiles,
+                history: conversationHistory
+            })
+        });
+
+        if (!res.ok) throw new Error("Connection failed with upstream server.");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                const cleanLine = line.trim();
+                if (cleanLine.startsWith('data: ')) {
+                    const dataStr = cleanLine.slice(6).trim();
+                    if (!dataStr || dataStr === '[DONE]') continue;
+
+                    try {
+                        const parsed = JSON.parse(dataStr);
+                        if (parsed.ui_error) {
+                            assistantEntry.content += `\n\n> ⚠️ **Error:** ${parsed.ui_error}`;
+                        } else {
+                            const chunk = parsed.choices?.[0]?.delta?.content || parsed.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                            assistantEntry.content += chunk;
+                        }
+                        if (liveTarget) {
+                            liveTarget.innerHTML = marked.parse(assistantEntry.content);
+                        }
+                        if (output) output.scrollTop = output.scrollHeight;
+                    } catch (err) {}
+                }
+            }
+        }
+    } catch (err) {
+        assistantEntry.content = `> ⚠️ **Fail-Safe Halt:** ${err.message}`;
+        if (liveTarget) {
+            liveTarget.innerHTML = marked.parse(assistantEntry.content);
+        }
+    } finally {
+        isAccessProcessing = false;
+        saveAccessChats();
+        renderAccessChat();
+        btn.innerHTML = `<i class="ph-bold ph-paper-plane-right"></i> Send Message`;
+        btn.disabled = false;
+    }
+}
 // ====== EXPERIMENTAL LAB ENGINE HANDLERS ======
 async function executeLabTool() {
     const input = document.getElementById('lab-idea-input');
@@ -3266,7 +3977,7 @@ async function executeLabTool() {
     closeExperimentalModal();
     if (input) input.value = "";
     
-    const userMsgObj = appendMessage('user', `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('lexis_nickname') : null);
+    const userMsgObj = appendMessage('user', `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('Arix_nickname') : null);
     messages.push({ role: 'user', content: `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, id: userMsgObj.id });
     isProcessing = true;
     updateUIState();
@@ -3284,7 +3995,7 @@ async function executeLabTool() {
             })
         });
         
-        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
         const contentContainer = assistantMsgObj.container;
         contentContainer.classList.add('typing-cursor');
         const reader = res.body.getReader();
@@ -3339,7 +4050,7 @@ async function executeTwinTool() {
     closeExperimentalModal();
     if (input) input.value = "";
     
-    const userMsgObj = appendMessage('user', `[DIGITAL TWIN SIMULATION]: ${promptText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('lexis_nickname') : null);
+    const userMsgObj = appendMessage('user', `[DIGITAL TWIN SIMULATION]: ${promptText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('Arix_nickname') : null);
     messages.push({ role: 'user', content: `[DIGITAL TWIN SIMULATION]: ${promptText}`, id: userMsgObj.id });
     isProcessing = true;
     updateUIState();
@@ -3357,7 +4068,7 @@ async function executeTwinTool() {
                 userProfile: userProfile
             })
         });
-        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'LexisAI' : null);
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
         const contentContainer = assistantMsgObj.container;
         contentContainer.classList.add('typing-cursor');
         const reader = res.body.getReader();
@@ -3431,7 +4142,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 500);
 });
 
-// ====== LEXIS PULSE FRONTEND ENGINE (TARGET UI BOUND) ======
+// ====== Arix PULSE FRONTEND ENGINE (TARGET UI BOUND) ======
 function renderPulseTodayWidget() {
     const widget = document.getElementById('pulse-today-widget');
     const list = document.getElementById('pulse-today-list');
@@ -3569,19 +4280,19 @@ function renderPulseSuggestionCard(item) {
 function confirmPulseTask(cardId, item) {
     item.status = 'confirmed';
     pulseTasks.push(item);
-    localStorage.setItem('lexis_pulse_tasks', JSON.stringify(pulseTasks));
+    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
     const card = document.getElementById(cardId);
     if (card) {
         card.className = "mt-4 p-3 border border-emerald-100 bg-emerald-50 rounded-2xl flex items-center justify-between text-[11px] text-emerald-700 font-bold ml-auto max-w-sm mr-4 shadow-sm";
         card.innerHTML = `<span class="flex items-center gap-1.5"><i class="ph-fill ph-check-circle text-emerald-500 text-lg"></i> Saved to Pulse: "${item.title}"</span> <button onclick="undoPulseTask('${item.id}', '${cardId}')" class="text-emerald-600 underline font-semibold text-[10px] hover:text-emerald-800 bg-white px-2 py-1 rounded shadow-sm">Undo</button>`;
     }
-    showToast("Added to Lexis Pulse!");
+    showToast("Added to Arix Pulse!");
     renderPulseTodayWidget();
 }
 
 function undoPulseTask(taskId, cardId) {
     pulseTasks = pulseTasks.filter(t => t.id !== taskId);
-    localStorage.setItem('lexis_pulse_tasks', JSON.stringify(pulseTasks));
+    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
     dismissPulseTask(cardId);
     showToast("Task undone.");
     renderPulseTodayWidget();
@@ -3594,14 +4305,14 @@ function dismissPulseTask(cardId) {
 
 function markPulseTaskDone(taskId) {
     pulseTasks = pulseTasks.filter(t => t.id !== taskId);
-    localStorage.setItem('lexis_pulse_tasks', JSON.stringify(pulseTasks));
+    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
     renderPulseTodayWidget();
     showToast("Task completed! 🎉");
 }
 
 function deletePulseTask(taskId) {
     pulseTasks = pulseTasks.filter(t => t.id !== taskId);
-    localStorage.setItem('lexis_pulse_tasks', JSON.stringify(pulseTasks));
+    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
     renderPulseVault();
     renderPulseTodayWidget();
     showToast("Task deleted.");
@@ -3625,9 +4336,168 @@ if (els && els.sendBtn) {
     els.sendBtn.addEventListener('click', handleSend);
 }
 
+// ====== GLOBAL DEEP SEARCH ENGINE ======
+function handleGlobalSearch(query) {
+    const dropdown = document.getElementById('search-results-dropdown');
+    const q = query.trim().toLowerCase();
+    
+    if (!q) {
+        dropdown.classList.add('hidden');
+        dropdown.innerHTML = "";
+        return;
+    }
+
+    const matches = [];
+
+    chats.forEach(chat => {
+        const titleMatch = (chat.title || "").toLowerCase().includes(q);
+        const matchingMessages = [];
+
+        (chat.messages || []).forEach(m => {
+            if (m.content && m.content.toLowerCase().includes(q)) {
+                // Generate a highlighted excerpt around the match
+                const idx = m.content.toLowerCase().indexOf(q);
+                const start = Math.max(0, idx - 30);
+                const end = Math.min(m.content.length, idx + q.length + 50);
+                let snippet = m.content.substring(start, end).replace(/\n/g, ' ');
+                if (start > 0) snippet = '...' + snippet;
+                if (end < m.content.length) snippet = snippet + '...';
+                matchingMessages.push({ role: m.role, snippet });
+            }
+        });
+
+        if (titleMatch || matchingMessages.length > 0) {
+            matches.push({ chat, titleMatch, matchingMessages });
+        }
+    });
+
+    if (matches.length === 0) {
+        dropdown.innerHTML = `<div class="text-center text-gray-400 text-xs py-6 font-medium">No results found for "<strong>${query}</strong>"</div>`;
+    } else {
+        dropdown.innerHTML = matches.map(res => `
+            <div class="p-3 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors border-b border-gray-100 last:border-b-0" onclick="selectSearchResult('${res.chat.id}')">
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="ph-bold ph-chat-circle text-theme-600 text-sm"></i>
+                    <span class="text-xs font-bold text-gray-900 truncate">${res.chat.title}</span>
+                </div>
+                ${res.matchingMessages.slice(0, 2).map(m => `
+                    <div class="text-[11px] text-gray-500 pl-4 border-l border-gray-200 my-1 font-mono truncate">
+                        <strong class="text-gray-700 capitalize">${m.role}:</strong> ${m.snippet}
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+    }
+
+    dropdown.classList.remove('hidden');
+}
+
+function selectSearchResult(chatId) {
+    loadChat(chatId);
+    document.getElementById('search-results-dropdown').classList.add('hidden');
+    document.getElementById('global-search-input').value = "";
+}
+
+// Close dropdown on outside click
+document.addEventListener('click', (e) => {
+    const searchWrap = document.getElementById('global-search-input')?.parentElement;
+    if (searchWrap && !searchWrap.contains(e.target)) {
+        document.getElementById('search-results-dropdown')?.classList.add('hidden');
+    }
+});
+
+// Cmd/Ctrl + K Hotkey Handler
+document.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        const searchInput = document.getElementById('global-search-input');
+        if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+        }
+    }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     setTimeout(renderPulseTodayWidget, 300);
 });
+</script>
+
+<!-- ========================================== -->
+<!-- OFFLINE AI ENGINE (WebLLM via WebGPU)      -->
+<!-- ========================================== -->
+<script type="module">
+    import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+
+    window.localAIEngine = null;
+    window.currentLoadedOfflineModel = null;
+
+    const progContainer = document.getElementById('local-ai-progress-container');
+    const progBar = document.getElementById('local-ai-progress-bar');
+    const statusText = document.getElementById('local-ai-status-text');
+    const statusTextInner = document.getElementById('local-ai-text');
+
+    window.loadLocalModel = async function(modelId) {
+        // Fail-safe 1: Check WebGPU
+        if (!navigator.gpu) {
+            alert("WebGPU is not supported on this browser/device. Offline models require WebGPU (Chrome/Edge on Desktop/Android).");
+            return;
+        }
+
+        const modelConfig = CONFIG.models[modelId];
+        if (!modelConfig || !modelConfig.mlcId) return;
+
+        // Don't reload if already active
+        if (window.localAIEngine && window.currentLoadedOfflineModel === modelId) {
+            activeModelId = modelId;
+            updateUIState();
+            showToast(`${modelConfig.name} is ready!`);
+            if (window.innerWidth < 1024) toggleSidebar();
+            return;
+        }
+
+        // Setup UI for loading
+        progContainer.classList.remove('hidden');
+        statusText.classList.remove('hidden');
+        statusTextInner.innerText = `Connecting to ${modelConfig.name}...`;
+        progBar.style.width = "0%";
+        
+        try {
+            // MLCEngine initializes, downloads, and caches to IndexedDB
+            window.localAIEngine = await CreateMLCEngine(modelConfig.mlcId, {
+                initProgressCallback: (progress) => {
+                    // Update UI with real download/load percentage
+                    const percent = Math.round(progress.progress * 100);
+                    progBar.style.width = `${percent}%`;
+                    statusTextInner.innerText = `[${percent}%] Loading ${modelConfig.name}: ${progress.text.split(']')[1] || progress.text}`;
+                }
+            });
+
+            window.currentLoadedOfflineModel = modelId;
+            activeModelId = modelId; // Switch active UI model to offline
+            updateUIState();
+            
+            // Clean up UI
+            progBar.style.width = "100%";
+            setTimeout(() => {
+                progContainer.classList.add('hidden');
+                statusText.classList.add('hidden');
+                showToast(`Offline Model Active: ${modelConfig.name}`);
+                if (window.innerWidth < 1024) toggleSidebar();
+            }, 1000);
+
+        } catch (error) {
+            // Fail-safe 2: Catch VRAM/Download errors
+            console.error("Local Engine Error:", error);
+            progContainer.classList.add('hidden');
+            statusText.classList.add('hidden');
+            alert(`Failed to load ${modelConfig.name}. Your device might not have enough RAM/VRAM, or the connection dropped.\n\nReverting to Oracle.`);
+            
+            // Fallback to Oracle
+            activeModelId = 'oracle';
+            updateUIState();
+        }
+    };
 </script>
 </body>
 </html>
