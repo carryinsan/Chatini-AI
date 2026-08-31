@@ -401,19 +401,14 @@ export default async function handler(req) {
                     return; 
                 }
 
-                // 4. API Key Verification & Fallback Array Initialization
+                // 4. API Key Verification (Gemini Strictly Enforced)
                 const GEMINI_KEYS = [
                     process.env.GEMINI_API_KEY_1, process.env.GEMINI_API_KEY_2, process.env.GEMINI_API_KEY
                 ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
-                const GROQ_KEYS = [
-                    process.env.GROQ_API_KEY, process.env.GROQ_API_KEY_2
-                ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
-
-                if (GEMINI_KEYS.length === 0 && GROQ_KEYS.length === 0) {
-                    throw new Error("No upstream AI inference keys available in environment variables.");
+                if (GEMINI_KEYS.length === 0) {
+                    throw new Error("No Gemini API keys found. Please set GEMINI_API_KEY in your environment variables.");
                 }
-
                 // ====================================================================
                 // EXECUTION FOR ID 57: OMNI DATA-STRUCTURE TRANSFORMER (SPECIAL CASE)
                 // ====================================================================
@@ -438,19 +433,19 @@ export default async function handler(req) {
                     
                     let targetFormat = "json"; // Default
                     try {
-                        const intentRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        const intentRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEYS[0]}`, {
                             method: 'POST',
-                            headers: { 'Authorization': `Bearer ${GROQ_KEYS[0]}`, 'Content-Type': 'application/json' },
+                            headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                model: 'llama3-8b-8192',
-                                messages: [{ role: 'user', content: intentPrompt }],
-                                response_format: { type: "json_object" }
+                                contents: [{ role: 'user', parts: [{ text: intentPrompt }] }],
+                                generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
                             })
                         });
                         if (intentRes.ok) {
                             const data = await intentRes.json();
-                            const intentJSON = FailSafeEngine.safeParseJSON(data.choices[0].message.content, { targetFormat: 'json' });
-                            targetFormat = intentJSON.targetFormat.toLowerCase();
+                            const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{"targetFormat": "json"}';
+                            const intentJSON = FailSafeEngine.safeParseJSON(responseText, { targetFormat: 'json' });
+                            targetFormat = (intentJSON.targetFormat || 'json').toLowerCase();
                         }
                     } catch (e) {
                         // Suppress intent extraction failure and default to JSON to maintain stability
@@ -553,31 +548,68 @@ export default async function handler(req) {
                     }
                 }
 
-                // Ultimate Fallback to Groq if Gemini completely fails (and if no images are attached)
-                let isGroqFallback = false;
-                if ((!llmRes || !llmRes.ok) && geminiInlineParts.length === 0 && GROQ_KEYS.length > 0) {
-                    for (let i = 0; i < GROQ_KEYS.length; i++) {
-                        const groqPayload = {
-                            model: 'llama-3.1-70b-versatile',
-                            messages: [
-                                { role: 'system', content: finalSystemInstruction },
-                                { role: 'user', content: userContent }
-                            ],
-                            stream: true,
-                            temperature: 0.1
-                        }; 
-                        llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { 
-                            method: 'POST', 
-                            headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' }, 
-                            body: JSON.stringify(groqPayload) 
-                        });
-                        if (llmRes.ok) {
-                            isGroqFallback = true;
-                            break;
+                if (!llmRes || !llmRes.ok) {
+                    throw new Error(`Gemini API connection failed or payload was blocked. Error details: ${lastErr}`);
+                }
+
+                // ================================================================
+                // SECURE STREAM PARSING FOR GEMINI (PREVENTS UI CRASHES & INCOMPLETE REPLIES)
+                // ================================================================
+                const reader = llmRes.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        // Flush remaining buffer securely
+                        if (buffer.trim()) {
+                            const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
+                            if (jsonStr && jsonStr !== '[DONE]') {
+                                const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
+                                if (rawData && rawData.candidates && rawData.candidates.length > 0) {
+                                    const part = rawData.candidates[0]?.content?.parts?.[0]?.text || "";
+                                    if (part) sendUIChunk(part, false);
+                                }
+                            }
+                        }
+                        sendUIChunk("", true); // Hard signal end-of-stream to client UI
+                        break;
+                    }
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const chunks = buffer.split(/\r?\n\r?\n/);
+                    buffer = chunks.pop(); // Retain incomplete chunk in buffer for next pass
+
+                    for (const chunk of chunks) {
+                        const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
+                        if (!jsonStr || jsonStr === '[DONE]') continue;
+
+                        const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
+                        if (!rawData) continue; // Skip broken frames
+
+                        // Handle native safety blocks or abrupt stop reasons seamlessly
+                        if (rawData.promptFeedback && rawData.promptFeedback.blockReason) {
+                            throw new Error(`Gemini actively blocked the prompt. Reason: ${rawData.promptFeedback.blockReason}`);
+                        }
+                        
+                        if (rawData.candidates && rawData.candidates.length > 0) {
+                            const candidate = rawData.candidates[0];
+                            
+                            // Prevent empty replies if Gemini triggers early STOP without token generation
+                            if (candidate.finishReason && candidate.finishReason !== 'STOP' && !candidate.content) {
+                                sendUIChunk(`\n\n*[Notice: Response artificially halted by Gemini due to: ${candidate.finishReason}]*`, false);
+                                continue;
+                            }
+                            
+                            const cleanText = candidate.content?.parts?.[0]?.text || "";
+                            if (cleanText) {
+                                sendUIChunk(cleanText, false);
+                            }
                         }
                     }
                 }
-
                 if (!llmRes || !llmRes.ok) {
                     throw new Error(`All upstream cognitive endpoints exhausted or payload blocked. Last state: ${lastErr}`);
                 }
