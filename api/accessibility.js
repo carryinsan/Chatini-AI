@@ -347,15 +347,17 @@ export default async function handler(req) {
         async start(controller) {
             
             // --- Helper: Clean Stream Output ---
-            const sendUIChunk = (textChunk, isFinal = false) => {
+            const sendUIChunk = (textChunk) => {
                 if (!textChunk) return;
                 const safeChunk = FailSafeEngine.sanitizeStreamChunk(textChunk);
                 const payload = {
-                    id: "access-" + Math.random().toString(36).substring(2, 10),
-                    object: "chat.completion.chunk",
-                    model: "arix-accessibility-engine",
-                    choices: [{ delta: { content: safeChunk }, finish_reason: isFinal ? "stop" : null }]
+                    choices: [{ delta: { content: safeChunk } }]
                 };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+            };
+
+            const sendUIError = (errorMessage) => {
+                const payload = { ui_error: `${errorMessage}` };
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
             };
 
@@ -432,7 +434,7 @@ export default async function handler(req) {
                     
                     let targetFormat = "json"; // Default
                     try {
-                        const intentRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEYS[0]}`, {
+                        const intentRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_KEYS[0]}`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -530,7 +532,7 @@ export default async function handler(req) {
                 // Exhaustive Key Rotation Fail-Safe Loop
                 for (let i = 0; i < GEMINI_KEYS.length; i++) {
                     try {
-                        llmRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEYS[i]}`, { 
+                        llmRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEYS[i]}`, { 
                             method: 'POST', 
                             headers: { 'Content-Type': 'application/json' }, 
                             body: JSON.stringify(finalPayload) 
@@ -567,37 +569,39 @@ export default async function handler(req) {
                             if (jsonStr && jsonStr !== '[DONE]') {
                                 const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
                                 const part = rawData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                                if (part) sendUIChunk(part, false);
+                                if (part) sendUIChunk(part);
                             }
                         }
-                        sendUIChunk("", true);
+                        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
                         break;
                     }
                     
                     buffer += decoder.decode(value, { stream: true });
-                    const chunks = buffer.split(/\r?\n\r?\n/);
-                    buffer = chunks.pop();
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop();
 
-                    for (const chunk of chunks) {
-                        const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
+                    for (const line of lines) {
+                        const cleanLine = line.trim();
+                        if (!cleanLine.startsWith('data: ')) continue;
+                        const jsonStr = cleanLine.slice(6).trim();
                         if (!jsonStr || jsonStr === '[DONE]') continue;
 
                         const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
                         if (!rawData) continue;
 
                         if (rawData.promptFeedback?.blockReason) {
-                            throw new Error(`Gemini actively blocked the prompt: ${rawData.promptFeedback.blockReason}`);
+                            throw new Error(`Prompt blocked: ${rawData.promptFeedback.blockReason}`);
                         }
                         
                         if (rawData.candidates?.[0]) {
                             const candidate = rawData.candidates[0];
                             if (candidate.finishReason && candidate.finishReason !== 'STOP' && !candidate.content) {
-                                sendUIChunk(`\n\n*[Notice: Response halted by safety filter: ${candidate.finishReason}]*`, false);
+                                sendUIChunk(`\n\n*[Halted: ${candidate.finishReason}]*`);
                                 continue;
                             }
                             const cleanText = candidate.content?.parts?.[0]?.text || "";
                             if (cleanText) {
-                                sendUIChunk(cleanText, false);
+                                sendUIChunk(cleanText);
                             }
                         }
                     }
