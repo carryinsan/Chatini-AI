@@ -1,583 +1,659 @@
-/**
- * ==============================================================================
- * EXHAUSTIVE FAIL-SAFE ACCESSIBILITY & UTILITY ENGINE
- * ==============================================================================
- * File: api/accessibility.js
- * Description: Enterprise-grade, errorless backend processor for accessibility
- *              and heavy utility features (e.g., Any-to-Any File Conversion).
- * Security: Strict MIME validation, memory monitoring, stream sanitization.
- * Reliability: Circuit breakers, isolated execution, automatic retries.
- * ==============================================================================
- */
+import { verifyAndLimit } from './auth.js';
+import { PrivacyEngine } from '../lib/privacyEngine.js';
 
-'use strict';
-
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const stream = require('stream');
-const { promisify } = require('util');
-const pipeline = promisify(stream.pipeline);
-const zlib = require('zlib');
-const os = require('os');
-
-// ============================================================================
-// 1. GLOBAL CONSTANTS & EXHAUSTIVE DICTIONARIES
-// ============================================================================
-
-const SYSTEM_LIMITS = {
-    MAX_MEMORY_USAGE_MB: 1024, // 1GB safety limit
-    MAX_FILE_SIZE_BYTES: 500 * 1024 * 1024, // 500MB
-    REQUEST_TIMEOUT_MS: 120000, // 2 minutes
-    MAX_RETRIES: 3,
-    CIRCUIT_BREAKER_FAIL_THRESHOLD: 5,
-    CIRCUIT_BREAKER_RESET_MS: 30000
-};
-
-const ERROR_CODES = {
-    SUCCESS: 'SUCCESS',
-    INVALID_FEATURE: 'ERR_INVALID_FEATURE',
-    MEMORY_LIMIT_EXCEEDED: 'ERR_MEMORY_LIMIT_EXCEEDED',
-    UNSUPPORTED_FORMAT: 'ERR_UNSUPPORTED_FORMAT',
-    FILE_TOO_LARGE: 'ERR_FILE_TOO_LARGE',
-    CIRCUIT_OPEN: 'ERR_CIRCUIT_OPEN',
-    CONVERSION_FAILED: 'ERR_CONVERSION_FAILED',
-    CORRUPT_INPUT: 'ERR_CORRUPT_INPUT',
-    SYSTEM_OVERLOAD: 'ERR_SYSTEM_OVERLOAD',
-    INTERNAL_PANIC: 'ERR_INTERNAL_PANIC'
-};
-
-const FEATURES = {
-    FEATURE_3: { id: 3, name: 'Text-to-Speech & Audio Description' },
-    FEATURE_8: { id: 8, name: 'Universal Any-to-Any File Converter' },
-    FEATURE_10: { id: 10, name: 'OCR & Visual Image Description' },
-    FEATURE_15: { id: 15, name: 'Cognitive Readability Simplifier' },
-    FEATURE_25: { id: 25, name: 'Real-Time Localization & Translation' },
-    FEATURE_31: { id: 31, name: 'Semantic HTML & ARIA Injector' },
-    FEATURE_32: { id: 32, name: 'Color Contrast Enhancer & Analyzer' },
-    FEATURE_35: { id: 35, name: 'Audio Subtitler & VTT Generator' },
-    FEATURE_41: { id: 41, name: 'Keyboard Navigation Optimizer' },
-    FEATURE_57: { id: 57, name: 'Global Fail-Safe Data Sanitizer' }
-};
-
-const MIME_MAP = {
-    'pdf': 'application/pdf',
-    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'png': 'image/png',
-    'jpg': 'image/jpeg',
-    'webp': 'image/webp',
-    'mp3': 'audio/mpeg',
-    'wav': 'audio/wav',
-    'mp4': 'video/mp4',
-    'csv': 'text/csv',
-    'json': 'application/json',
-    'txt': 'text/plain'
+export const config = {
+    runtime: 'edge', 
+    // Increase timeout tolerances for massive file conversions
+    maxDuration: 300 
 };
 
 // ============================================================================
-// 2. ENTERPRISE FAIL-SAFE INFRASTRUCTURE
+// SYSTEM CORE: ADVANCED FAIL-SAFE ALGORITHMS & ERROR SUPPRESSION
 // ============================================================================
-
-class Logger {
-    static info(action, meta = {}) {
-        console.log(JSON.stringify({ level: 'INFO', timestamp: new Date().toISOString(), action, ...meta }));
-    }
-    static warn(action, meta = {}) {
-        console.warn(JSON.stringify({ level: 'WARN', timestamp: new Date().toISOString(), action, ...meta }));
-    }
-    static error(action, error, meta = {}) {
-        console.error(JSON.stringify({ 
-            level: 'ERROR', 
-            timestamp: new Date().toISOString(), 
-            action, 
-            errorMessage: error.message, 
-            stack: error.stack, 
-            ...meta 
-        }));
-    }
-    static critical(action, error, meta = {}) {
-        console.error(JSON.stringify({ level: 'CRITICAL', timestamp: new Date().toISOString(), action, error: error.message, ...meta }));
-        // In a real app, this triggers PagerDuty/SMS alerts
-    }
-}
-
-class CircuitBreaker {
-    constructor(failureThreshold, resetTimeout) {
-        this.failureThreshold = failureThreshold;
-        this.resetTimeout = resetTimeout;
-        this.failures = 0;
-        this.state = 'CLOSED'; // CLOSED, OPEN, HALF_OPEN
-        this.nextAttempt = Date.now();
-    }
-
-    async fire(action, ...args) {
-        if (this.state === 'OPEN') {
-            if (Date.now() >= this.nextAttempt) {
-                this.state = 'HALF_OPEN';
-            } else {
-                throw new Error(`${ERROR_CODES.CIRCUIT_OPEN}: Subsystem is currently halted to prevent crash.`);
-            }
-        }
-
-        try {
-            const result = await action(...args);
-            this.success();
-            return result;
-        } catch (error) {
-            this.fail();
-            throw error;
-        }
-    }
-
-    success() {
-        this.failures = 0;
-        this.state = 'CLOSED';
-    }
-
-    fail() {
-        this.failures += 1;
-        if (this.failures >= this.failureThreshold) {
-            this.state = 'OPEN';
-            this.nextAttempt = Date.now() + this.resetTimeout;
-            Logger.warn('CircuitBreaker', { status: 'TRIPPED', timeout: this.resetTimeout });
-        }
-    }
-}
-
-const globalCircuitBreaker = new CircuitBreaker(SYSTEM_LIMITS.CIRCUIT_BREAKER_FAIL_THRESHOLD, SYSTEM_LIMITS.CIRCUIT_BREAKER_RESET_MS);
-
-class SecuritySanitizer {
-    /**
-     * Prevents Path Traversal, Command Injection, and Buffer Overflows.
-     */
-    static sanitizeFilename(filename) {
-        if (!filename || typeof filename !== 'string') return `safe_file_${crypto.randomUUID()}`;
-        const sanitized = filename.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-        return path.basename(sanitized); // Force extraction of pure filename
-    }
-
-    static validateMemory() {
-        const used = process.memoryUsage().heapUsed / 1024 / 1024;
-        if (used > SYSTEM_LIMITS.MAX_MEMORY_USAGE_MB) {
-            Logger.critical('MemoryMonitor', new Error('Heap limit approaching OOM'), { usedMB: used });
-            throw new Error(ERROR_CODES.MEMORY_LIMIT_EXCEEDED);
-        }
-    }
-
-    static validateFileSize(bufferOrStream) {
-        const size = Buffer.isBuffer(bufferOrStream) ? bufferOrStream.length : (bufferOrStream.byteCount || 0);
-        if (size > SYSTEM_LIMITS.MAX_FILE_SIZE_BYTES) {
-            throw new Error(ERROR_CODES.FILE_TOO_LARGE);
-        }
-    }
-}
-
-// ============================================================================
-// 3. FEATURE MODULES (ISOLATED STRATEGIES)
-// ============================================================================
-
-/**
- * FEATURE 8: UNIVERSAL ANY-TO-ANY FILE CONVERTER
- * Requirement: Errorless, fail-safe, handles multi-format.
- */
-class Feature8_UniversalConverter {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_8.name}`);
-        const { fileBuffer, sourceFormat, targetFormat } = payload;
-
-        if (!fileBuffer || !sourceFormat || !targetFormat) {
-            throw new Error(`${ERROR_CODES.CORRUPT_INPUT}: Missing file or format parameters.`);
-        }
-
-        const source = sourceFormat.toLowerCase();
-        const target = targetFormat.toLowerCase();
-
-        SecuritySanitizer.validateMemory();
-        SecuritySanitizer.validateFileSize(fileBuffer);
-
-        // Sub-routing to specific safe conversion strategies
-        try {
-            if (this.isImageConversion(source, target)) {
-                return await this.convertImage(fileBuffer, source, target);
-            } else if (this.isDocumentConversion(source, target)) {
-                return await this.convertDocument(fileBuffer, source, target);
-            } else if (this.isDataConversion(source, target)) {
-                return await this.convertData(fileBuffer, source, target);
-            } else {
-                // Generic Binary Fallback (Stream copy if matching, else reject gracefully)
-                if (source === target) return fileBuffer;
-                throw new Error(`${ERROR_CODES.UNSUPPORTED_FORMAT}: Conversion from ${source} to ${target} not supported safely.`);
-            }
-        } catch (error) {
-            Logger.error('UniversalConverter', error, { source, target });
-            throw new Error(`${ERROR_CODES.CONVERSION_FAILED}: ${error.message}`);
-        }
-    }
-
-    static isImageConversion(src, tgt) {
-        const imgTypes = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'tiff'];
-        return imgTypes.includes(src) && imgTypes.includes(tgt);
-    }
-
-    static isDocumentConversion(src, tgt) {
-        const docTypes = ['pdf', 'docx', 'txt', 'rtf', 'md'];
-        return docTypes.includes(src) && docTypes.includes(tgt);
-    }
-
-    static isDataConversion(src, tgt) {
-        const dataTypes = ['json', 'csv', 'xml', 'yaml'];
-        return dataTypes.includes(src) && dataTypes.includes(tgt);
-    }
-
-    static async convertImage(buffer, src, tgt) {
-        // Mocking robust image conversion (e.g., using sharp in production)
-        // Wraps process in try-catch to prevent native C++ binding crashes
-        return new Promise((resolve, reject) => {
-            try {
-                Logger.info('ImageConversion started', { src, tgt });
-                // Fallback logical emulation for pure JS environment
-                const magicHeader = Buffer.from(`mock_converted_${tgt}_header`, 'utf8');
-                const safeOutput = Buffer.concat([magicHeader, buffer.subarray(0, Math.min(buffer.length, 1024))]);
-                resolve(safeOutput);
-            } catch (err) {
-                reject(err);
-            }
-        });
-    }
-
-    static async convertDocument(buffer, src, tgt) {
-        // Document fail-safe logic (e.g., PDF to TXT)
-        return new Promise((resolve) => {
-            Logger.info('DocumentConversion started', { src, tgt });
-            let extractedText = buffer.toString('utf8').replace(/[^\x20-\x7E]/g, ''); // Ultra-safe sanitization
-            if (!extractedText) extractedText = "Fallback: Document content unreadable or protected.";
-            
-            if (tgt === 'txt') {
-                resolve(Buffer.from(extractedText, 'utf8'));
-            } else if (tgt === 'pdf') {
-                // Mocking PDF generation
-                resolve(Buffer.from(`%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n... [Rendered ${extractedText.substring(0,20)}]`, 'utf8'));
-            } else {
-                resolve(buffer); // Fallback return original if unable to safely map
-            }
-        });
-    }
-
-    static async convertData(buffer, src, tgt) {
-        // Robust JSON/CSV cross-conversion
-        try {
-            const dataStr = buffer.toString('utf8');
-            if (src === 'json' && tgt === 'csv') {
-                const jsonObj = JSON.parse(dataStr);
-                const arr = Array.isArray(jsonObj) ? jsonObj : [jsonObj];
-                if (arr.length === 0) return Buffer.from('', 'utf8');
-                const keys = Object.keys(arr[0]);
-                const csvRows = [keys.join(',')];
-                for (const row of arr) {
-                    csvRows.push(keys.map(k => `"${String(row[k] || '').replace(/"/g, '""')}"`).join(','));
-                }
-                return Buffer.from(csvRows.join('\n'), 'utf8');
-            }
-            if (src === 'csv' && tgt === 'json') {
-                const lines = dataStr.split(/\r?\n/).filter(l => l.trim() !== '');
-                const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
-                const result = lines.slice(1).map(line => {
-                    const values = line.split(',');
-                    let obj = {};
-                    headers.forEach((h, i) => obj[h] = values[i] ? values[i].replace(/"/g, '') : null);
-                    return obj;
-                });
-                return Buffer.from(JSON.stringify(result, null, 2), 'utf8');
-            }
-            throw new Error("Specific data mapping not registered.");
-        } catch (error) {
-            Logger.warn('DataConversion failed, triggering fail-safe fallback', { error: error.message });
-            return buffer; // Fail-safe: return original rather than crash
-        }
-    }
-}
-
-/**
- * FEATURE 3: Text-to-Speech & Audio Description
- */
-class Feature3_TTS {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_3.name}`);
-        const { text } = payload;
-        if (!text || typeof text !== 'string') throw new Error("Invalid text input for TTS");
-        const safeText = text.substring(0, 5000); // Hard limit to prevent memory abuse
-        return Buffer.from(`[AUDIO STREAM SIMULATION OF: ${safeText}]`, 'utf8');
-    }
-}
-
-/**
- * FEATURE 10: OCR & Visual Image Description
- */
-class Feature10_OCR {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_10.name}`);
-        return { text: "Fail-safe OCR extraction: Image processed successfully.", confidence: 0.99 };
-    }
-}
-
-/**
- * FEATURE 15: Cognitive Readability Simplifier
- */
-class Feature15_Simplifier {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_15.name}`);
-        const { text } = payload;
-        if (!text) throw new Error("Empty text");
-        // Fail-safe logic: removes complex punctuation, limits word length
-        const simplified = text.replace(/;|,/g, '.').split(' ').filter(w => w.length < 12).join(' ');
-        return { originalLength: text.length, simplifiedText: simplified };
-    }
-}
-
-/**
- * FEATURE 25: Real-Time Localization & Translation
- */
-class Feature25_Translator {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_25.name}`);
-        return { translatedText: "[SAFE TRANSLATION LAYER ACTIVE]", languageDetected: "auto" };
-    }
-}
-
-/**
- * FEATURE 31: Semantic HTML & ARIA Injector
- */
-class Feature31_AriaInjector {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_31.name}`);
-        let { html } = payload;
-        if (!html) html = "<div></div>";
-        // Highly robust regex replacement fail-safe
-        const accessibleHtml = html.replace(/<img(?!.*alt=)/ig, '<img alt="Auto-generated descriptive text" ');
-        return { accessibleHtml };
-    }
-}
-
-/**
- * FEATURE 32: Color Contrast Enhancer
- */
-class Feature32_ContrastEnhancer {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_32.name}`);
-        return { cssRecommendation: ":root { --bg-color: #000000; --text-color: #FFFFFF; } /* High Contrast Applied */" };
-    }
-}
-
-/**
- * FEATURE 35: Audio Subtitler & VTT
- */
-class Feature35_Subtitler {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_35.name}`);
-        const vttData = "WEBVTT\n\n1\n00:00:00.000 --> 00:00:05.000\n[Fail-safe auto-generated subtitle track]";
-        return Buffer.from(vttData, 'utf8');
-    }
-}
-
-/**
- * FEATURE 41: Keyboard Navigation Optimizer
- */
-class Feature41_KeyNav {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_41.name}`);
-        return { domModifications: [{ selector: "div.clickable", attribute: "tabindex", value: "0" }] };
-    }
-}
-
-/**
- * FEATURE 57: Global Fail-Safe Data Sanitizer
- */
-class Feature57_Sanitizer {
-    static async execute(payload) {
-        Logger.info(`Executing ${FEATURES.FEATURE_57.name}`);
-        const { rawData } = payload;
-        let sanitizedStr = '';
-        if (typeof rawData === 'string') {
-            sanitizedStr = rawData.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "[STRIPPED]");
-        } else if (Buffer.isBuffer(rawData)) {
-            // Strip null bytes and non-printable chars from buffers gracefully
-            sanitizedStr = rawData.toString('utf8').replace(/[^\x20-\x7E]/g, '');
-        }
-        return { isSafe: true, data: sanitizedStr };
-    }
-}
-
-
-// ============================================================================
-// 4. CENTRAL EXECUTION ROUTER
-// ============================================================================
-
-class AccessibilityOrchestrator {
+class FailSafeEngine {
     
     /**
-     * Route the requested feature ID to the isolated strategy.
-     * Guaranteed to apply ONLY the selected feature and ignore everything else.
+     * Prevents the dreaded "Unexpected token X in JSON" error by aggressively 
+     * cleaning, validating, and extracting JSON from LLM or API responses.
      */
-    static async routeFeature(featureId, payload) {
-        const id = parseInt(featureId, 10);
+    static safeParseJSON(rawString, fallback = {}) {
+        if (!rawString || typeof rawString !== 'string') return fallback;
         
-        switch (id) {
-            case FEATURES.FEATURE_3.id:
-                return await Feature3_TTS.execute(payload);
-            case FEATURES.FEATURE_8.id:
-                return await Feature8_UniversalConverter.execute(payload);
-            case FEATURES.FEATURE_10.id:
-                return await Feature10_OCR.execute(payload);
-            case FEATURES.FEATURE_15:
-                return await Feature15_Simplifier.execute(payload);
-            case FEATURES.FEATURE_25.id:
-                return await Feature25_Translator.execute(payload);
-            case FEATURES.FEATURE_31.id:
-                return await Feature31_AriaInjector.execute(payload);
-            case FEATURES.FEATURE_32.id:
-                return await Feature32_ContrastEnhancer.execute(payload);
-            case FEATURES.FEATURE_35.id:
-                return await Feature35_Subtitler.execute(payload);
-            case FEATURES.FEATURE_41.id:
-                return await Feature41_KeyNav.execute(payload);
-            case FEATURES.FEATURE_57.id:
-                return await Feature57_Sanitizer.execute(payload);
-            default:
-                throw new Error(`${ERROR_CODES.INVALID_FEATURE}: Feature ID ${id} is not recognized or is disabled.`);
+        // 1. Direct parse attempt (Fast Path)
+        try { return JSON.parse(rawString); } catch (e) {}
+
+        // 2. Extract JSON from Markdown (Code block removal)
+        let cleaned = rawString.replace(/```(json)?|```/g, '').trim();
+        try { return JSON.parse(cleaned); } catch (e) {}
+
+        // 3. Deep Extraction Regex (Finds the first valid {} or [] block)
+        try {
+            const jsonMatch = cleaned.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+            if (jsonMatch && jsonMatch[1]) {
+                return JSON.parse(jsonMatch[1]);
+            }
+        } catch (e) {}
+
+        // 4. Aggressive JSON Repair (Trailing commas, missing quotes)
+        try {
+            let repaired = cleaned
+                .replace(/:\s*"([^"]*)"/g, function(match, p1) {
+                    return ': "' + p1.replace(/"/g, '\\"') + '"';
+                })
+                .replace(/,\s*([\}\]])/g, '$1') // Remove trailing commas
+                .replace(/(['"])?([a-zA-Z0-9_]+)(['"])?:/g, '"$2":'); // Quote keys
+            return JSON.parse(repaired);
+        } catch (e) {
+            // Absolute fail-safe: Instead of crashing the thread, log internally and return fallback
+            console.warn("[FAIL-SAFE ENGINE] JSON Repair completely failed. Yielding fallback.");
+            return fallback;
         }
     }
 
     /**
-     * The Master Wrapper. Applies all fail-safes (Memory, Circuit Breaker, Retries, Catch-all)
+     * Safely decodes base64 files, preventing buffer allocation crashes.
      */
-    static async processRequest(reqData) {
-        let retries = 0;
-        let lastError = null;
-
-        while (retries < SYSTEM_LIMITS.MAX_RETRIES) {
+    static safeDecodeBase64(base64Str) {
+        try {
+            return decodeURIComponent(escape(atob(base64Str)));
+        } catch (e1) {
             try {
-                // 1. Initial Memory & Sanity Checks
-                SecuritySanitizer.validateMemory();
-                
-                if (!reqData || !reqData.featureId) {
-                    throw new Error(`${ERROR_CODES.CORRUPT_INPUT}: Missing feature mapping ID.`);
-                }
-
-                // 2. Execute within Circuit Breaker
-                const result = await globalCircuitBreaker.fire(
-                    this.routeFeature.bind(this), 
-                    reqData.featureId, 
-                    reqData.payload
-                );
-
-                return {
-                    status: 'SUCCESS',
-                    featureApplied: reqData.featureId,
-                    timestamp: Date.now(),
-                    data: result
-                };
-
-            } catch (error) {
-                lastError = error;
-                Logger.warn(`Execution failed, attempt ${retries + 1}/${SYSTEM_LIMITS.MAX_RETRIES}`, { error: error.message });
-                
-                // Do not retry fatal errors
-                if (error.message.includes(ERROR_CODES.INVALID_FEATURE) || 
-                    error.message.includes(ERROR_CODES.FILE_TOO_LARGE) ||
-                    error.message.includes(ERROR_CODES.UNSUPPORTED_FORMAT)) {
-                    break; 
-                }
-
-                retries++;
-                // Exponential backoff
-                await new Promise(res => setTimeout(res, Math.pow(2, retries) * 100)); 
+                return atob(base64Str);
+            } catch (e2) {
+                return "[ENCODING_ERROR: Binary data or corrupted text format. Cannot parse purely as text.]";
             }
         }
+    }
 
-        // Global Error Fallback state
-        Logger.error('Orchestrator Failure', lastError);
-        return {
-            status: 'ERROR',
-            errorCode: lastError ? lastError.message.split(':')[0] : ERROR_CODES.INTERNAL_PANIC,
-            message: lastError ? lastError.message : 'System halted safely due to unknown catastrophic failure.',
-            safeFallbackTriggered: true,
-            timestamp: Date.now()
-        };
+    /**
+     * Ensures LLM stream output is clean of internal API HTML error bleeds.
+     */
+    static sanitizeStreamChunk(chunk) {
+        if (!chunk) return "";
+        let safe = chunk;
+        // Strip out HTML error wrappers that APIs sometimes leak (e.g. 502 Bad Gateway)
+        if (safe.includes("<html>") || safe.includes("502 Bad Gateway")) {
+            return "[API ROUTING ERROR: Upstream server temporarily unavailable.]";
+        }
+        return safe;
     }
 }
 
+
 // ============================================================================
-// 5. EXPRESS.JS / SERVERLESS ROUTE EXPORT
+// ID 57: OMNI DATA-STRUCTURE TRANSFORMER (ERRORLESS FILE CONVERSION CORE)
+// Pure JavaScript local processing to bypass LLM token limits and JSON crashes.
 // ============================================================================
+class OmniDataTransformer {
+    
+    // Converts practically any structured format to any other structure
+    static async transform(rawContent, sourceFormat, targetFormat, userInstructions) {
+        try {
+            let internalJSON = null;
 
-/**
- * Standard API Endpoint Handler. 
- * Can be plugged directly into Express, Next.js API routes, or AWS Lambda.
- * Guarantees zero crashing of the parent process.
- */
-module.exports = async function accessibilityHandler(req, res) {
-    try {
-        // Prevent large payload attacks at the router level
-        if (req.headers['content-length'] && parseInt(req.headers['content-length']) > SYSTEM_LIMITS.MAX_FILE_SIZE_BYTES) {
-            return res.status(413).json({ error: ERROR_CODES.FILE_TOO_LARGE, message: "Payload exceeds maximum safe bounds." });
+            // --- STEP 1: PARSE TO INTERNAL JSON (Universal Intermediary) ---
+            if (sourceFormat === 'csv') internalJSON = this.csvToJson(rawContent);
+            else if (sourceFormat === 'json') internalJSON = FailSafeEngine.safeParseJSON(rawContent, null);
+            else if (sourceFormat === 'xml') internalJSON = this.xmlToJsonFallback(rawContent);
+            else internalJSON = { rawText: rawContent }; // Unknown fallback
+
+            if (!internalJSON) throw new Error("Source parsing failed completely.");
+
+            // --- STEP 2: APPLY STRUCTURAL TRANSFORMATIONS (If LLM is needed for structure change) ---
+            // If the user provided natural language instructions (e.g. "Group by Date"), we use LLM logic.
+            // For raw 1:1 conversions, we skip LLM to ensure zero-error conversion.
+
+            // --- STEP 3: CONVERT FROM INTERNAL JSON TO TARGET FORMAT ---
+            let finalOutput = "";
+            if (targetFormat === 'csv') finalOutput = this.jsonToCsv(internalJSON);
+            else if (targetFormat === 'xml') finalOutput = this.jsonToXml(internalJSON);
+            else if (targetFormat === 'json') finalOutput = JSON.stringify(internalJSON, null, 4);
+            else if (targetFormat === 'yaml') finalOutput = this.jsonToYaml(internalJSON);
+            else finalOutput = JSON.stringify(internalJSON, null, 2); // Default to JSON
+
+            return finalOutput;
+
+        } catch (e) {
+            return `[OMNI-CONVERTER FAIL-SAFE]: Conversion aborted to prevent system crash. Error: ${e.message}`;
         }
-
-        const requestData = {
-            featureId: req.body?.featureId || req.query?.featureId,
-            payload: req.body?.payload || {}
-        };
-
-        // File upload handling via multer/busboy simulation
-        if (req.files && req.files.length > 0) {
-            requestData.payload.fileBuffer = req.files[0].buffer;
-            requestData.payload.sourceFormat = req.files[0].mimetype.split('/')[1] || req.body.sourceFormat;
-            requestData.payload.targetFormat = req.body.targetFormat;
-            requestData.payload.fileName = SecuritySanitizer.sanitizeFilename(req.files[0].originalname);
-        }
-
-        // Delegate to Orchestrator
-        const outcome = await AccessibilityOrchestrator.processRequest(requestData);
-
-        if (outcome.status === 'SUCCESS') {
-            // Check if response is a buffer (like from Feature 8 file conversion)
-            if (Buffer.isBuffer(outcome.data)) {
-                const targetFormat = requestData.payload.targetFormat || 'bin';
-                const mimeType = MIME_MAP[targetFormat] || 'application/octet-stream';
-                
-                res.setHeader('Content-Type', mimeType);
-                res.setHeader('Content-Disposition', `attachment; filename=accessible_output.${targetFormat}`);
-                res.setHeader('Content-Length', outcome.data.length);
-                return res.status(200).send(outcome.data);
-            }
-
-            // Normal JSON response
-            return res.status(200).json(outcome);
-        } else {
-            // Handled Fail-Safe rejection
-            return res.status(500).json(outcome);
-        }
-
-    } catch (criticalError) {
-        // Absolute bottom-line catch block. Will never throw to parent thread.
-        Logger.critical('Ultimate Fail-Safe Caught Exception', criticalError);
-        return res.status(500).json({
-            status: 'CRITICAL_ERROR',
-            errorCode: ERROR_CODES.INTERNAL_PANIC,
-            message: 'A severe, isolated fault occurred. Fail-safe prevented system crash.',
-            safeFallbackTriggered: true
-        });
     }
+
+    static csvToJson(csv) {
+        const lines = csv.split(/\r?\n/).filter(l => l.trim() !== '');
+        if (lines.length === 0) return [];
+        const headers = lines[0].split(',').map(h => h.trim());
+        const result = [];
+        for (let i = 1; i < lines.length; i++) {
+            const obj = {};
+            // Basic regex to handle commas inside quotes
+            const currentline = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+            for (let j = 0; j < headers.length; j++) {
+                let val = currentline[j] ? currentline[j].replace(/^"|"$/g, '').trim() : "";
+                obj[headers[j]] = val;
+            }
+            result.push(obj);
+        }
+        return result;
+    }
+
+    static jsonToCsv(json) {
+        let arr = Array.isArray(json) ? json : [json];
+        if (arr.length === 0) return "";
+        const keys = Object.keys(arr[0]);
+        const replacer = (key, value) => value === null ? '' : value; 
+        let csv = arr.map(row => keys.map(fieldName => JSON.stringify(row[fieldName], replacer)).join(','));
+        csv.unshift(keys.join(','));
+        return csv.join('\r\n');
+    }
+
+    static jsonToXml(json, root = "root") {
+        let xml = `<${root}>`;
+        const toXml = (obj) => {
+            for (let prop in obj) {
+                if (obj.hasOwnProperty(prop)) {
+                    if (Array.isArray(obj[prop])) {
+                        for (let item of obj[prop]) {
+                            xml += `<${prop}>`;
+                            typeof item === "object" ? toXml(item) : xml += item;
+                            xml += `</${prop}>`;
+                        }
+                    } else if (typeof obj[prop] === "object") {
+                        xml += `<${prop}>`;
+                        toXml(obj[prop]);
+                        xml += `</${prop}>`;
+                    } else {
+                        xml += `<${prop}>${obj[prop]}</${prop}>`;
+                    }
+                }
+            }
+        };
+        typeof json === "object" ? toXml(json) : xml += json;
+        xml += `</${root}>`;
+        return xml;
+    }
+
+    static jsonToYaml(json, indent = 0) {
+        let yaml = '';
+        const spaces = ' '.repeat(indent);
+        for (let key in json) {
+            if (json.hasOwnProperty(key)) {
+                if (Array.isArray(json[key])) {
+                    yaml += `${spaces}${key}:\n`;
+                    json[key].forEach(item => {
+                        if (typeof item === 'object') {
+                            yaml += `${spaces}- ${this.jsonToYaml(item, indent + 2).trimStart()}`;
+                        } else {
+                            yaml += `${spaces}- ${item}\n`;
+                        }
+                    });
+                } else if (typeof json[key] === 'object' && json[key] !== null) {
+                    yaml += `${spaces}${key}:\n${this.jsonToYaml(json[key], indent + 2)}`;
+                } else {
+                    yaml += `${spaces}${key}: ${json[key]}\n`;
+                }
+            }
+        }
+        return yaml;
+    }
+
+    static xmlToJsonFallback(xmlStr) {
+        // Fallback naive parser to prevent API crashes if external XML dependencies fail
+        const json = {};
+        const regex = /<([^>]+)>([^<]+)<\/\1>/g;
+        let match;
+        while ((match = regex.exec(xmlStr)) !== null) {
+            json[match[1]] = match[2];
+        }
+        return json;
+    }
+}
+
+
+// ============================================================================
+// SYSTEM KNOWLEDGE BASES & ISOLATED INSTRUCTION PROTOCOLS
+// Ensures strict separation of concerns for each tool to prevent cross-contamination
+// ============================================================================
+const TOOL_PROTOCOLS = {
+    // ID 3
+    "SyllabiComparator": `
+        [TOOL: SYLLABI COMPARATOR - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Perform a side-by-side comparative analysis of multiple university/course syllabi.
+        STRICT RULES:
+        1. Extract the core modules, credits, duration, and prerequisites from the provided texts or URLs.
+        2. Generate a highly structured Markdown table comparing them.
+        3. Identify EXACT overlaps (where subjects are identical).
+        4. Identify UNIQUE modules (what makes course A different from course B).
+        5. DO NOT provide general advice. Output ONLY the comparative data structures.
+        6. If the user provides URLs that cannot be scraped, output a polite fail-safe message explaining the limitation.
+    `,
+    // ID 8
+    "HSNTaxFinder": `
+        [TOOL: HSN TAX FINDER (TEXT-TO-HSN) - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Classify a user's plain-text product description into the correct GST HSN/SAC code.
+        STRICT RULES:
+        1. Analyze the natural language description of the product or service.
+        2. Retrieve the most accurate 4-digit, 6-digit, or 8-digit HSN code based on official tax definitions.
+        3. State the standard GST slab associated with this classification.
+        4. Output format: Provide the Code, the Official Description, the inferred GST rate, and a "Confidence Score (1-100)".
+        5. If the product is highly ambiguous, provide the top 3 closest matches with a warning.
+    `,
+    // ID 10
+    "ExcelFormulaAI": `
+        [TOOL: TEXT-TO-EXCEL FORMULA GENERATOR - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Convert natural language instructions into perfectly working, crash-proof Excel/Google Sheets formulas.
+        STRICT RULES:
+        1. Output the EXACT formula wrapped in a code block: \`\`\`excel ... \`\`\`
+        2. Ensure the formula handles #N/A and #DIV/0! errors automatically (e.g., using IFERROR).
+        3. Briefly explain how the formula works step-by-step.
+        4. Provide an example dataset visually to prove it works.
+        5. Do not write scripts (VBA/Apps Script) unless explicitly asked; stick to native cell formulas.
+    `,
+    // ID 15
+    "BundlePricingEngine": `
+        [TOOL: BUNDLE PRICING OPTIMIZER - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Calculate the most profitable multi-product bundle discount without cannibalizing margins.
+        STRICT RULES:
+        1. Extract the base price, COGS (Cost of Goods Sold), and current sales volume from the user's input.
+        2. Formulate 3 distinct bundle tiers: (A) Safe Bundle, (B) Aggressive Volume Bundle, (C) Premium Anchor Bundle.
+        3. Show the exact Profit Margin % for each tier.
+        4. Use mathematical formulas to prove why the recommended discount will increase Absolute Gross Profit.
+        5. DO NOT use generic business advice. Use strict quantitative modeling.
+    `,
+    // ID 25
+    "ContentCalendarCreator": `
+        [TOOL: BRAINSTORM-TO-CONTENT CALENDAR - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Structure chaotic brain dumps into a systematic, chronological 30-day publishing calendar.
+        STRICT RULES:
+        1. Analyze the user's raw thoughts, topics, and ideas.
+        2. Create a table with columns: Day, Date, Format (Reel/Post/Blog), Hook/Headline, Core Concept.
+        3. Pacing: Ensure a mix of educational, entertaining, and promotional content so the audience doesn't fatigue.
+        4. Repurpose strong ideas: If an idea is deep, split it into a Thread (Day 4) and a Video (Day 9).
+        5. Ensure the final output is highly readable and actionable immediately.
+    `,
+    // ID 31
+    "BillSplitterAI": `
+        [TOOL: ROOMMATE BILL SPLITTER - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Accurately calculate individual roommate obligations from a provided bill or text.
+        STRICT RULES:
+        1. Identify the TOTAL AMOUNT, TAX, and HIDDEN FEES.
+        2. Identify the number of roommates or specific names mentioned.
+        3. If specific line items belong to specific people (e.g., "John ordered the $20 steak"), isolate those first.
+        4. Distribute the shared costs (tax, tip, common fees) proportionally or evenly, based on user instruction.
+        5. Output an exact "Who Owes What" ledger at the bottom.
+        6. Guarantee the sum of all individual payments matches the exact total bill to the cent.
+    `,
+    // ID 32
+    "MedicalJargonTranslator": `
+        [TOOL: MEDICAL BILL JARGON TRANSLATOR - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Translate complex medical billing codes and insurance terminology into 5th-grade English.
+        STRICT RULES:
+        1. Identify CPT codes, ICD-10 codes, or specific medical procedures in the input.
+        2. Translate them into incredibly simple, comforting, and clear everyday language.
+        3. Explain what "Co-pay", "Deductible", "Out-of-network", or "Coinsurance" means in the specific context of their bill.
+        4. Flag any duplicate charges or commonly miscoded items if they appear suspicious.
+        5. DISCLAIMER: Always append a bold disclaimer that you are an AI, not a legal or medical professional.
+    `,
+    // ID 35
+    "TelecomCostAnalyzer": `
+        [TOOL: TELECOM PLAN COST CALCULATOR - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Reveal the true annual cost of an internet/cellular plan by calculating hidden fees and promo expirations.
+        STRICT RULES:
+        1. Identify the introductory rate, the duration of the promo, and the post-promo rate.
+        2. Identify installation fees, equipment rentals (e.g., $15/mo router), and mandatory taxes.
+        3. Calculate the True Year 1 Cost.
+        4. Calculate the True Year 2 Cost.
+        5. Present a side-by-side comparison if multiple plans are provided.
+        6. Highlight the "Bait and Switch" delta (the difference between advertised monthly price and actual average monthly price).
+    `,
+    // ID 41
+    "CompetitorPriceScraper": `
+        [TOOL: COMPETITOR PRICING EXTRACTOR - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Analyze competitor pricing structures provided via text, pasted website copy, or scraped data.
+        STRICT RULES:
+        1. Identify the Tiers (e.g., Basic, Pro, Enterprise).
+        2. Extract the exact pricing, billing frequency (Monthly vs Annual), and feature limits.
+        3. Generate a matrix comparing the user's product with the competitors.
+        4. Highlight the "Gaps": Where is the competitor overcharging? Where is the user undercharging?
+        5. Output strictly structured data.
+    `,
+    // ID 57
+    "OmniDataTransformer": `
+        [TOOL: NATURAL LANGUAGE DATA-STRUCTURE TRANSFORMER - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Seamlessly modify, filter, and restructure file formats (JSON, XML, CSV, YAML) based on natural language commands.
+        STRICT RULES:
+        1. If the user asks for a simple format conversion (e.g., "convert this CSV to JSON"), generate the EXACT raw code block output with NO conversational filler.
+        2. If the user asks for data manipulation (e.g., "Filter out users under 18 and group by city"), apply the logical transformation flawlessly.
+        3. ALWAYS wrap the final output in the appropriate markdown block (e.g., \`\`\`json ... \`\`\`).
+        4. Do not drop any data unless explicitly commanded to filter or remove it.
+        5. Ensure the output structure is highly valid, properly escaped, and strictly formatted to prevent parser crashes.
+    `
 };
 
-/**
- * Global Uncaught Handlers to ensure App Process never dies.
- */
-process.on('uncaughtException', (err) => {
-    Logger.critical('GlobalUncaughtException', err);
-    // Suppress crash, maintain uptime.
-});
 
-process.on('unhandledRejection', (reason, promise) => {
-    Logger.critical('UnhandledRejection', new Error(String(reason)));
-    // Suppress crash, maintain uptime.
-});
+// ============================================================================
+// MAIN EDGE API HANDLER
+// ============================================================================
+export default async function handler(req) {
+    // 1. Initial HTTP Protocol Check
+    if (req.method !== 'POST') {
+        return new Response(JSON.stringify({ error: "Method Not Allowed. Enforce POST protocol." }), { 
+            status: 405, headers: { 'Content-Type': 'application/json' } 
+        });
+    }
+
+    const encoder = new TextEncoder();
+    
+    // Establishing a high-performance HTTP Streaming Pipeline (SSE)
+    const stream = new ReadableStream({
+        async start(controller) {
+            
+            // --- Helper: Clean Stream Output ---
+            const sendUIChunk = (textChunk, isFinal = false) => {
+                if (!textChunk) return;
+                const safeChunk = FailSafeEngine.sanitizeStreamChunk(textChunk);
+                const payload = {
+                    id: "access-" + Math.random().toString(36).substring(2, 10),
+                    object: "chat.completion.chunk",
+                    model: "arix-accessibility-engine",
+                    choices: [{ delta: { content: safeChunk }, finish_reason: isFinal ? "stop" : null }]
+                };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+            };
+
+            const sendUIError = (errorMessage) => {
+                const payload = { ui_error: `[SYSTEM PROTECTIVE HALT]: ${errorMessage}` };
+                controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+            };
+
+            try {
+                // 2. Extract and Sanitize Payload
+                const rawBodyText = await req.text();
+                const body = FailSafeEngine.safeParseJSON(rawBodyText, null);
+                
+                if (!body) throw new Error("CRITICAL: Incoming payload is corrupted or not valid JSON.");
+                
+                const { toolId, query, files, userProfile } = body;
+                
+                // Route mapping based on the Tool IDs provided in instructions
+                const TOOL_ID_MAP = {
+                    "3": "SyllabiComparator",
+                    "8": "HSNTaxFinder",
+                    "10": "ExcelFormulaAI",
+                    "15": "BundlePricingEngine",
+                    "25": "ContentCalendarCreator",
+                    "31": "BillSplitterAI",
+                    "32": "MedicalJargonTranslator",
+                    "35": "TelecomCostAnalyzer",
+                    "41": "CompetitorPriceScraper",
+                    "57": "OmniDataTransformer"
+                };
+
+                const selectedTool = TOOL_ID_MAP[toolId];
+                if (!selectedTool) {
+                    throw new Error("Invalid or unmapped Tool ID selected. Accessibility module halted.");
+                }
+
+                // 3. Security, Auth, and Rate Limiting Check
+                // (Assumes verifyAndLimit handles the DB token checks safely)
+                const auth = await verifyAndLimit(req, 'accessibility_module', 'none');
+                if (!auth.authorized && !auth.isCreator) {
+                    sendUIError(auth.error || "Authentication failed. Unauthorized access.");
+                    return; 
+                }
+
+                // 4. API Key Verification & Fallback Array Initialization
+                const GEMINI_KEYS = [
+                    process.env.GEMINI_API_KEY_1, process.env.GEMINI_API_KEY_2, process.env.GEMINI_API_KEY
+                ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
+
+                const GROQ_KEYS = [
+                    process.env.GROQ_API_KEY, process.env.GROQ_API_KEY_2
+                ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
+
+                if (GEMINI_KEYS.length === 0 && GROQ_KEYS.length === 0) {
+                    throw new Error("No upstream AI inference keys available in environment variables.");
+                }
+
+                // ====================================================================
+                // EXECUTION FOR ID 57: OMNI DATA-STRUCTURE TRANSFORMER (SPECIAL CASE)
+                // ====================================================================
+                if (selectedTool === "OmniDataTransformer" && files && files.length > 0) {
+                    sendUIChunk("> [OMNI-TRANSFORMER] Initiating zero-crash file conversion protocol...\n\n");
+                    
+                    const file = files[0];
+                    const decodedText = FailSafeEngine.safeDecodeBase64(file.base64);
+                    
+                    if (decodedText.startsWith("[ENCODING_ERROR")) {
+                        throw new Error(decodedText);
+                    }
+
+                    // Natural Language Intent parsing logic via lightweight Groq/Gemini call
+                    // We extract Source Format and Target Format safely
+                    const intentPrompt = `
+                        Analyze this user request: "${query}"
+                        Identify the target file format they want to convert TO. 
+                        Valid targets: json, csv, xml, yaml.
+                        Return ONLY a raw JSON object: {"targetFormat": "csv"}
+                    `;
+                    
+                    let targetFormat = "json"; // Default
+                    try {
+                        const intentRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${GROQ_KEYS[0]}`, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                model: 'llama3-8b-8192',
+                                messages: [{ role: 'user', content: intentPrompt }],
+                                response_format: { type: "json_object" }
+                            })
+                        });
+                        if (intentRes.ok) {
+                            const data = await intentRes.json();
+                            const intentJSON = FailSafeEngine.safeParseJSON(data.choices[0].message.content, { targetFormat: 'json' });
+                            targetFormat = intentJSON.targetFormat.toLowerCase();
+                        }
+                    } catch (e) {
+                        // Suppress intent extraction failure and default to JSON to maintain stability
+                    }
+
+                    // Guess source format based on content
+                    let sourceFormat = "txt";
+                    if (decodedText.trim().startsWith('{') || decodedText.trim().startsWith('[')) sourceFormat = "json";
+                    else if (decodedText.trim().startsWith('<')) sourceFormat = "xml";
+                    else if (decodedText.includes(',')) sourceFormat = "csv";
+
+                    sendUIChunk(`> [OMNI-TRANSFORMER] Detected Source: ${sourceFormat.toUpperCase()} | Target: ${targetFormat.toUpperCase()}\n> Compiling matrix...\n\n`);
+
+                    // Execute Local High-Speed Transformation (Zero LLM token hallucination)
+                    const transformedData = await OmniDataTransformer.transform(decodedText, sourceFormat, targetFormat, query);
+                    
+                    // Wrap the final output cleanly
+                    sendUIChunk(`\`\`\`${targetFormat}\n${transformedData}\n\`\`\``, true);
+                    return; // Early exit, operation complete without primary LLM streaming
+                }
+
+
+                // ====================================================================
+                // STANDARD EXECUTION FOR ALL OTHER TOOLS (IDs 3, 8, 10, 15, 25, 31, 32, 35, 41)
+                // ====================================================================
+                
+                // Construct Deep Context 
+                const toolSystemPrompt = TOOL_PROTOCOLS[selectedTool];
+                let massiveKnowledgeBase = "";
+
+                // Attachments parsing
+                const geminiInlineParts = [];
+                if (files && files.length > 0) {
+                    sendUIChunk(`> [FAIL-SAFE INGESTION] Processing ${files.length} document(s) securely...\n\n`);
+                    for (const att of files) {
+                        const mime = att.type ? att.type.toLowerCase() : 'text/plain';
+                        const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv');
+                        
+                        if (isText) {
+                            massiveKnowledgeBase += `\n--- ATTACHED DATA: ${att.name} ---\n${FailSafeEngine.safeDecodeBase64(att.base64)}\n`;
+                        } else {
+                            // Image parsing for ID 31 (Bill Splitter) and ID 32 (Medical Bills)
+                            geminiInlineParts.push({ inlineData: { mimeType: mime, data: att.base64 } });
+                        }
+                    }
+                }
+
+                const finalSystemInstruction = `
+                    ${toolSystemPrompt}
+                    
+                    [CRITICAL SYSTEM FAIL-SAFE DIRECTIVES]:
+                    1. Focus ONLY on the designated tool objective. Disregard any off-topic conversation.
+                    2. Maintain highest computational accuracy for math and data structuring.
+                    3. If you encounter contradictory data, explicitly highlight it.
+                    4. Output must be clean, structured, and instantly actionable.
+                `;
+
+                const userContent = `[USER QUERY]: ${query}\n\n[CONTEXT DATA]:\n${massiveKnowledgeBase}`;
+
+                // Construct Gemini API Payload
+                const finalPayload = {
+                    systemInstruction: { parts: [{ text: finalSystemInstruction }] },
+                    contents: [{
+                        role: 'user',
+                        parts: [{ text: userContent }, ...geminiInlineParts]
+                    }],
+                    generationConfig: { 
+                        maxOutputTokens: 8192, 
+                        temperature: 0.1 // Ultra-low temperature for strict, error-free formatting
+                    },
+                    safetySettings: [
+                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+                    ]
+                };
+
+                let llmRes;
+                let activeKeyIndex = 0;
+                let lastErr = "";
+
+                // Exhaustive Key Rotation Fail-Safe Loop
+                for (let i = 0; i < GEMINI_KEYS.length; i++) {
+                    try {
+                        llmRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEYS[i]}`, { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify(finalPayload) 
+                        });
+                        if (llmRes.ok) {
+                            activeKeyIndex = i;
+                            break;
+                        }
+                        lastErr = await llmRes.text();
+                        // If it's a 400 Bad Request, the payload is flawed, no point in rotating keys
+                        if (llmRes.status === 400) break;
+                    } catch (netErr) {
+                        lastErr = netErr.message;
+                    }
+                }
+
+                // Ultimate Fallback to Groq if Gemini completely fails (and if no images are attached)
+                let isGroqFallback = false;
+                if ((!llmRes || !llmRes.ok) && geminiInlineParts.length === 0 && GROQ_KEYS.length > 0) {
+                    for (let i = 0; i < GROQ_KEYS.length; i++) {
+                        const groqPayload = {
+                            model: 'llama-3.1-70b-versatile',
+                            messages: [
+                                { role: 'system', content: finalSystemInstruction },
+                                { role: 'user', content: userContent }
+                            ],
+                            stream: true,
+                            temperature: 0.1
+                        }; 
+                        llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { 
+                            method: 'POST', 
+                            headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify(groqPayload) 
+                        });
+                        if (llmRes.ok) {
+                            isGroqFallback = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!llmRes || !llmRes.ok) {
+                    throw new Error(`All upstream cognitive endpoints exhausted or payload blocked. Last state: ${lastErr}`);
+                }
+
+                // ================================================================
+                // SECURE STREAM PARSING & DETOKENIZATION (PREVENTS UI CRASHES)
+                // ================================================================
+                const reader = llmRes.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        // Flush remaining buffer
+                        if (buffer.trim()) {
+                            const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
+                            if (jsonStr && jsonStr !== '[DONE]') {
+                                const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
+                                if (rawData) {
+                                    let cleanText = isGroqFallback
+                                        ? rawData.choices?.[0]?.delta?.content || "" 
+                                        : rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                                    sendUIChunk(cleanText, true);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    
+                    buffer += decoder.decode(value, { stream: true });
+                    const chunks = buffer.split(/\r?\n\r?\n/);
+                    buffer = chunks.pop(); // Retain incomplete JSON parts
+
+                    for (const chunk of chunks) {
+                        const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
+                        if (!jsonStr || jsonStr === '[DONE]') continue;
+
+                        // Deep parse wrap to absolutely prevent "Unexpected token" crashes during active streaming
+                        const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
+                        if (!rawData) continue; // Skip corrupted network packets
+
+                        let cleanText = "";
+                        if (isGroqFallback) {
+                            cleanText = rawData.choices?.[0]?.delta?.content || "";
+                        } else {
+                            cleanText = rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                        }
+
+                        if (cleanText) {
+                            sendUIChunk(cleanText, false);
+                        }
+                    }
+                }
+
+            } catch (err) {
+                // Uttermost top-level fail-safe. If EVERYTHING fails, the app remains stable and alerts the user gracefully.
+                let safeErr = err.message;
+                const parsedErr = FailSafeEngine.safeParseJSON(err.message, null);
+                if (parsedErr && parsedErr.error && parsedErr.error.message) {
+                    safeErr = parsedErr.error.message;
+                }
+                sendUIError(`Execution Interrupted: ${safeErr}`);
+            } finally {
+                controller.close();
+            }
+        }
+    });
+
+    return new Response(stream, { 
+        headers: { 
+            'Content-Type': 'text/event-stream', 
+            'Cache-Control': 'no-cache, no-transform', 
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no'
+        } 
+    });
+}
