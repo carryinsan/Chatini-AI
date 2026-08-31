@@ -551,8 +551,8 @@ export default async function handler(req) {
                     throw new Error(`Gemini API connection failed or payload was blocked. Error details: ${lastErr}`);
                 }
 
-                // ================================================================
-                // SECURE STREAM PARSING FOR GEMINI (PREVENTS UI CRASHES & INCOMPLETE REPLIES)
+    // ================================================================
+                // SECURE STREAM PARSING FOR GEMINI (CLEAN SINGLE PASS)
                 // ================================================================
                 const reader = llmRes.body.getReader();
                 const decoder = new TextDecoder("utf-8");
@@ -562,46 +562,39 @@ export default async function handler(req) {
                     const { done, value } = await reader.read();
                     
                     if (done) {
-                        // Flush remaining buffer securely
                         if (buffer.trim()) {
                             const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
                             if (jsonStr && jsonStr !== '[DONE]') {
                                 const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
-                                if (rawData && rawData.candidates && rawData.candidates.length > 0) {
-                                    const part = rawData.candidates[0]?.content?.parts?.[0]?.text || "";
-                                    if (part) sendUIChunk(part, false);
-                                }
+                                const part = rawData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                                if (part) sendUIChunk(part, false);
                             }
                         }
-                        sendUIChunk("", true); // Hard signal end-of-stream to client UI
+                        sendUIChunk("", true);
                         break;
                     }
                     
                     buffer += decoder.decode(value, { stream: true });
                     const chunks = buffer.split(/\r?\n\r?\n/);
-                    buffer = chunks.pop(); // Retain incomplete chunk in buffer for next pass
+                    buffer = chunks.pop();
 
                     for (const chunk of chunks) {
                         const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
                         if (!jsonStr || jsonStr === '[DONE]') continue;
 
                         const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
-                        if (!rawData) continue; // Skip broken frames
+                        if (!rawData) continue;
 
-                        // Handle native safety blocks or abrupt stop reasons seamlessly
-                        if (rawData.promptFeedback && rawData.promptFeedback.blockReason) {
-                            throw new Error(`Gemini actively blocked the prompt. Reason: ${rawData.promptFeedback.blockReason}`);
+                        if (rawData.promptFeedback?.blockReason) {
+                            throw new Error(`Gemini actively blocked the prompt: ${rawData.promptFeedback.blockReason}`);
                         }
                         
-                        if (rawData.candidates && rawData.candidates.length > 0) {
+                        if (rawData.candidates?.[0]) {
                             const candidate = rawData.candidates[0];
-                            
-                            // Prevent empty replies if Gemini triggers early STOP without token generation
                             if (candidate.finishReason && candidate.finishReason !== 'STOP' && !candidate.content) {
-                                sendUIChunk(`\n\n*[Notice: Response artificially halted by Gemini due to: ${candidate.finishReason}]*`, false);
+                                sendUIChunk(`\n\n*[Notice: Response halted by safety filter: ${candidate.finishReason}]*`, false);
                                 continue;
                             }
-                            
                             const cleanText = candidate.content?.parts?.[0]?.text || "";
                             if (cleanText) {
                                 sendUIChunk(cleanText, false);
@@ -609,62 +602,6 @@ export default async function handler(req) {
                         }
                     }
                 }
-                if (!llmRes || !llmRes.ok) {
-                    throw new Error(`All upstream cognitive endpoints exhausted or payload blocked. Last state: ${lastErr}`);
-                }
-
-                // ================================================================
-                // SECURE STREAM PARSING & DETOKENIZATION (PREVENTS UI CRASHES)
-                // ================================================================
-                const reader = llmRes.body.getReader();
-                const decoder = new TextDecoder();
-                let buffer = "";
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    
-                    if (done) {
-                        // Flush remaining buffer
-                        if (buffer.trim()) {
-                            const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
-                            if (jsonStr && jsonStr !== '[DONE]') {
-                                const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
-                                if (rawData) {
-                                    let cleanText = isGroqFallback
-                                        ? rawData.choices?.[0]?.delta?.content || "" 
-                                        : rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                                    sendUIChunk(cleanText, true);
-                                }
-                            }
-                        }
-                        break;
-                    }
-                    
-                    buffer += decoder.decode(value, { stream: true });
-                    const chunks = buffer.split(/\r?\n\r?\n/);
-                    buffer = chunks.pop(); // Retain incomplete JSON parts
-
-                    for (const chunk of chunks) {
-                        const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
-                        if (!jsonStr || jsonStr === '[DONE]') continue;
-
-                        // Deep parse wrap to absolutely prevent "Unexpected token" crashes during active streaming
-                        const rawData = FailSafeEngine.safeParseJSON(jsonStr, null);
-                        if (!rawData) continue; // Skip corrupted network packets
-
-                        let cleanText = "";
-                        if (isGroqFallback) {
-                            cleanText = rawData.choices?.[0]?.delta?.content || "";
-                        } else {
-                            cleanText = rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                        }
-
-                        if (cleanText) {
-                            sendUIChunk(cleanText, false);
-                        }
-                    }
-                }
-
             } catch (err) {
                 // Uttermost top-level fail-safe. If EVERYTHING fails, the app remains stable and alerts the user gracefully.
                 let safeErr = err.message;
