@@ -227,14 +227,27 @@ const TOOL_PROTOCOLS = {
     `,
     // ID 8
     "HSNTaxFinder": `
-        [TOOL: HSN TAX FINDER (TEXT-TO-HSN) - ISOLATED ENVIRONMENT]
-        OBJECTIVE: Classify a user's plain-text product description into the correct GST HSN/SAC code.
+        [TOOL: HSN TAX FINDER & VERIFICATION ENGINE - ISOLATED ENVIRONMENT]
+        OBJECTIVE: Classify product/service descriptions into the exact GST HSN/SAC code and cross-verify using real-time search evidence.
+        
         STRICT RULES:
-        1. Analyze the natural language description of the product or service.
-        2. Retrieve the most accurate 4-digit, 6-digit, or 8-digit HSN code based on official tax definitions.
-        3. State the standard GST slab associated with this classification.
-        4. Output format: Provide the Code, the Official Description, the inferred GST rate, and a "Confidence Score (1-100)".
-        5. If the product is highly ambiguous, provide the top 3 closest matches with a warning.
+        1. EVIDENCE CROSS-EXAMINATION: Inspect the provided [VERIFIED LIVE WEB RESULTS (TAVILY)] in CONTEXT DATA. Cross-check:
+           - Exact 4, 6, or 8-digit HSN/SAC code
+           - Official Tariff / Schedule description
+           - Applicable GST rate (CGST + SGST or IGST) and compensation cess (if any)
+           - Official Notification No. & Schedule Entry (e.g., Notification No. 1/2017-Central Tax (Rate) as amended)
+           - Effective Date and relevant trade circulars
+           - Conditional exemptions, packaging/branding rules, or threshold criteria
+        2. ZERO HALLUCINATION DIRECTIVE: Never guess or extrapolate rates or notifications. If official web results show conflicting rates or lack a specific notification, explicitly state the discrepancy.
+        3. MANDATORY CITATIONS: Include clickable Markdown citations linking directly to the authoritative URLs retrieved in the search results.
+        4. STRUCTURED OUTPUT:
+           - **Classification & Code**: Recommended HSN/SAC code (4-digit heading and 6/8-digit sub-heading).
+           - **Official Description**: Verbatim or official tariff schedule description.
+           - **Applicable GST Rate**: Slabs (CGST, SGST, IGST) with any applicable cess.
+           - **Notification & Entry**: Exact notification number, entry schedule, and effective date.
+           - **Conditions & Exclusions**: Technical triggers (e.g., pre-packaged, value thresholds, material composition).
+           - **Confidence Score**: (1-100) based strictly on authoritative document backing.
+           - **Authoritative Sources**: Itemized list of source links consulted.
     `,
     // ID 10
     "ExcelFormulaAI": `
@@ -471,6 +484,85 @@ export default async function handler(req) {
                 // Construct Deep Context 
                 const toolSystemPrompt = TOOL_PROTOCOLS[selectedTool];
                 let massiveKnowledgeBase = "";
+
+                // --- DYNAMIC TAVILY VERIFICATION ENGINE (ID 8: HSNTaxFinder) ---
+                if (selectedTool === "HSNTaxFinder") {
+                    sendUIChunk("> [TAX FINDER] Formulating targeted classification query...\n");
+
+                    // 1. Generate an optimal, high-signal search query using a fast Gemini call
+                    let searchTargetQuery = `${query} HSN SAC GST rate CBIC notification official`;
+                    try {
+                        const queryCraftPrompt = `
+You are an Indian GST & Customs HSN/SAC classifier.
+Analyze the user item: "${query}"
+Formulate ONE comprehensive search query optimized for search engines to find:
+- The exact 6 or 8-digit HSN/SAC code
+- The official CBIC schedule tariff entry
+- The applicable GST rate and central tax rate notification
+
+Rules:
+- Synthesize the item with likely chapter keywords, "HSN", "SAC", "GST rate", "CBIC", and "notification".
+- Return ONLY the search query string. No quotes, formatting, or commentary.`;
+
+                        const queryGenRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_KEYS[0]}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [{ role: 'user', parts: [{ text: queryCraftPrompt }] }],
+                                generationConfig: { temperature: 0.1 }
+                            })
+                        });
+
+                        if (queryGenRes.ok) {
+                            const qData = await queryGenRes.json();
+                            const generatedQuery = qData.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+                            if (generatedQuery) {
+                                searchTargetQuery = generatedQuery.replace(/^"|"$/g, '');
+                            }
+                        }
+                    } catch (craftErr) {
+                        // Fallback to synthesized query string on network hiccup
+                    }
+
+                    sendUIChunk(`> [TAX FINDER] Query: "${searchTargetQuery}"\n> [TAX FINDER] Querying CBIC & GST records via Tavily (20 records)...\n\n`);
+
+                    // 2. Execute 1 single Tavily API call with 20 results and basic search depth
+                    const TAVILY_KEY = process.env.TAVILY_API_KEY;
+                    if (TAVILY_KEY) {
+                        try {
+                            const tavilyResponse = await fetch("https://api.tavily.com/search", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    api_key: TAVILY_KEY,
+                                    query: searchTargetQuery,
+                                    search_depth: "basic",
+                                    max_results: 20,
+                                    include_answer: false
+                                })
+                            });
+
+                            if (tavilyResponse.ok) {
+                                const tavilyData = await tavilyResponse.json();
+                                if (tavilyData.results && tavilyData.results.length > 0) {
+                                    const formattedEvidence = tavilyData.results.map((r, idx) => 
+                                        `[Source ${idx + 1}]\nTitle: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`
+                                    ).join("\n\n");
+
+                                    massiveKnowledgeBase += `\n--- VERIFIED LIVE WEB RESULTS (TAVILY) ---\n${formattedEvidence}\n`;
+                                } else {
+                                    sendUIChunk("> [TAX FINDER] No external web matches returned. Checking baseline tariff schedules...\n\n");
+                                }
+                            } else {
+                                sendUIChunk("> [TAX FINDER] Search service busy. Proceeding with internal knowledge base...\n\n");
+                            }
+                        } catch (tavilyErr) {
+                            sendUIChunk(`> [TAX FINDER] Search pass bypassed: ${tavilyErr.message}\n\n`);
+                        }
+                    } else {
+                        sendUIChunk("> [TAX FINDER] Notice: TAVILY_API_KEY missing. Proceeding with baseline offline knowledge...\n\n");
+                    }
+                }
 
                 // Attachments parsing
                 const geminiInlineParts = [];
