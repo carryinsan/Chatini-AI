@@ -3680,7 +3680,7 @@ const accessTools = [
     { id: "32", name: "Medical Terms", icon: "ph-heartbeat", desc: "Translate clinical jargon.", color: "sky", themeBg: "bg-sky-50", themeText: "text-sky-600", themeBorder: "border-sky-200" },
     { id: "35", name: "Telecom Cost", icon: "ph-phone", desc: "Expose true annual fees.", color: "amber", themeBg: "bg-amber-50", themeText: "text-amber-600", themeBorder: "border-amber-200" },
     { id: "41", name: "Price Scrape", icon: "ph-currency-dollar", desc: "Extract competitor matrices.", color: "blue", themeBg: "bg-blue-50", themeText: "text-blue-600", themeBorder: "border-blue-200" },
-    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "Swap CSV/JSON/XML formats.", color: "slate", themeBg: "bg-slate-50", themeText: "text-slate-700", themeBorder: "border-slate-300" }
+    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "convert file formats.", color: "slate", themeBg: "bg-slate-50", themeText: "text-slate-700", themeBorder: "border-slate-300" }
 ];
 
 let activeAccessTool = localStorage.getItem('arix_active_access_tool') || "57";
@@ -4125,7 +4125,7 @@ function renderAccessChat() {
                     <i class="ph-bold ${currentTool.icon}"></i>
                 </div>
                 <h3 class="text-base font-bold text-gray-900">${currentTool.name} Dedicated Engine</h3>
-                <p class="text-xs text-gray-500 max-w-sm text-center leading-relaxed font-medium">${currentTool.desc} Enter your parameters or attach a document below to execute.</p>
+                <p class="text-xs text-gray-500 max-w-sm text-center leading-relaxed font-medium">${currentTool.desc} Enter your parameters or attach a document below to execute, or convert files with <a href="https://code-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">CodePacker Pro</a> and <a href="https://file-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">FilePacker Pro</a>.</p>
             </div>`;
         return;
     }
