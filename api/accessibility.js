@@ -524,7 +524,7 @@ Rules:
                         // Fallback to synthesized query string on network hiccup
                     }
 
-                    sendUIChunk(`> [TAX FINDER] Query: "${searchTargetQuery}"\n> [TAX FINDER] Querying CBIC & GST records via Tavily (20 records)...\n\n`);
+                    sendUIChunk(`> [TAX FINDER] Query: "${searchTargetQuery}"\n> [TAX FINDER] Querying CBIC & GST records via Real Time Web Search...\n\n`);
 
                     // 2. Execute 1 single Tavily API call with 20 results and basic search depth
                     const TAVILY_KEY = process.env.TAVILY_API_KEY;
