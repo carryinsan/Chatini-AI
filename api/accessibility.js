@@ -357,11 +357,6 @@ export default async function handler(req) {
             };
 
             const sendUIError = (errorMessage) => {
-                const payload = { ui_error: `${errorMessage}` };
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
-            };
-
-            const sendUIError = (errorMessage) => {
                 const payload = { ui_error: `[SYSTEM PROTECTIVE HALT]: ${errorMessage}` };
                 controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
             };
