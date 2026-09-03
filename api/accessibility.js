@@ -50,14 +50,16 @@ class FailSafeEngine {
     }
 
     /**
-     * Safely decodes base64 files, preventing buffer allocation crashes.
+     * Safely decodes base64 files, stripping Data URLs and whitespace to prevent decoding crashes.
      */
     static safeDecodeBase64(base64Str) {
+        if (!base64Str || typeof base64Str !== 'string') return "";
+        const cleanBase64 = base64Str.replace(/^data:.*?;base64,/, '').replace(/\s/g, '');
         try {
-            return decodeURIComponent(escape(atob(base64Str)));
+            return decodeURIComponent(escape(atob(cleanBase64)));
         } catch (e1) {
             try {
-                return atob(base64Str);
+                return atob(cleanBase64);
             } catch (e2) {
                 return "[ENCODING_ERROR: Binary data or corrupted text format. Cannot parse purely as text.]";
             }
@@ -418,63 +420,7 @@ export default async function handler(req) {
                 if (GEMINI_KEYS.length === 0) {
                     throw new Error("No Gemini API keys found. Please set GEMINI_API_KEY in your environment variables.");
                 }
-                // ====================================================================
-                // EXECUTION FOR ID 57: OMNI DATA-STRUCTURE TRANSFORMER (SPECIAL CASE)
-                // ====================================================================
-                if (selectedTool === "OmniDataTransformer" && files && files.length > 0) {
-                    sendUIChunk("> [OMNI-TRANSFORMER] Initiating zero-crash file conversion protocol...\n\n");
-                    
-                    const file = files[0];
-                    const decodedText = FailSafeEngine.safeDecodeBase64(file.base64);
-                    
-                    if (decodedText.startsWith("[ENCODING_ERROR")) {
-                        throw new Error(decodedText);
-                    }
-
-                    // Natural Language Intent parsing logic via lightweight Groq/Gemini call
-                    // We extract Source Format and Target Format safely
-                    const intentPrompt = `
-                        Analyze this user request: "${query}"
-                        Identify the target file format they want to convert TO. 
-                        Valid targets: json, csv, xml, yaml.
-                        Return ONLY a raw JSON object: {"targetFormat": "csv"}
-                    `;
-                    
-                    let targetFormat = "json"; // Default
-                    try {
-                        const intentRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${GEMINI_KEYS[0]}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                contents: [{ role: 'user', parts: [{ text: intentPrompt }] }],
-                                generationConfig: { responseMimeType: "application/json", temperature: 0.1 }
-                            })
-                        });
-                        if (intentRes.ok) {
-                            const data = await intentRes.json();
-                            const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{"targetFormat": "json"}';
-                            const intentJSON = FailSafeEngine.safeParseJSON(responseText, { targetFormat: 'json' });
-                            targetFormat = (intentJSON.targetFormat || 'json').toLowerCase();
-                        }
-                    } catch (e) {
-                        // Suppress intent extraction failure and default to JSON to maintain stability
-                    }
-
-                    // Guess source format based on content
-                    let sourceFormat = "txt";
-                    if (decodedText.trim().startsWith('{') || decodedText.trim().startsWith('[')) sourceFormat = "json";
-                    else if (decodedText.trim().startsWith('<')) sourceFormat = "xml";
-                    else if (decodedText.includes(',')) sourceFormat = "csv";
-
-                    sendUIChunk(`> [OMNI-TRANSFORMER] Detected Source: ${sourceFormat.toUpperCase()} | Target: ${targetFormat.toUpperCase()}\n> Compiling matrix...\n\n`);
-
-                    // Execute Local High-Speed Transformation (Zero LLM token hallucination)
-                    const transformedData = await OmniDataTransformer.transform(decodedText, sourceFormat, targetFormat, query);
-                    
-                    // Wrap the final output cleanly
-                    sendUIChunk(`\`\`\`${targetFormat}\n${transformedData}\n\`\`\``, true);
-                    return; // Early exit, operation complete without primary LLM streaming
-                }
+                
 
 
                 // ====================================================================
@@ -570,7 +516,9 @@ Rules:
                     sendUIChunk(`> [FAIL-SAFE INGESTION] Processing ${files.length} document(s) securely...\n\n`);
                     for (const att of files) {
                         const mime = att.type ? att.type.toLowerCase() : 'text/plain';
-                        const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv');
+                        const ext = (att.name || '').split('.').pop().toLowerCase();
+                        const isText = mime.startsWith('text/') || 
+                                       ['json', 'xml', 'csv', 'yaml', 'yml', 'tsv', 'txt'].some(t => mime.includes(t) || ext === t);
                         
                         if (isText) {
                             massiveKnowledgeBase += `\n--- ATTACHED DATA: ${att.name} ---\n${FailSafeEngine.safeDecodeBase64(att.base64)}\n`;
