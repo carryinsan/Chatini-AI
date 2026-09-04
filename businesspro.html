@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArixAI - Business Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .typing-cursor::after {
+            content: '|';
+            animation: blink 1s step-end infinite;
+            color: #2563eb;
+            margin-left: 2px;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.35s ease-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .pulse-dot {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .4; }
+        }
+
+        .nav-item.active {
+            background-color: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+        }
+        
+        /* Layout adjustments for modular UI */
+        #app-shell { display: none; }
+        #app-shell.active { display: flex; }
+        .module-view { display: none; }
+        .module-view.active { display: block; animation: fadeIn 0.3s ease-out forwards; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col selection:bg-blue-100 selection:text-blue-900 overflow-x-hidden">
+
+    <!-- Top Navigation Bar -->
+    <nav class="glass-panel sticky top-0 z-50 px-5 sm:px-8 py-3.5 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-sm shadow-blue-500/30">A</div>
+            <span class="font-bold text-xl tracking-tight text-slate-900">ArixAI</span>
+            <span class="hidden sm:inline text-xs font-semibold uppercase tracking-wider text-slate-400 ml-2 border-l border-slate-200 pl-3">Enterprise OS</span>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <div id="nav-status" class="text-xs font-medium hidden items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200/60">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>Live Memory</span>
+            </div>
+            <button id="btn-reset" onclick="resetToSetup()" class="hidden text-xs text-slate-500 hover:text-slate-800 font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                New Business
+            </button>
+        </div>
+    </nav>
+
+    <main class="flex-grow w-full mx-auto relative flex flex-col h-full">
+        
+        <!-- VIEW 1: BUILD MY BUSINESS (LANDING SETUP) -->
+        <div id="view-setup" class="fade-in max-w-2xl mx-auto mt-6 sm:mt-12 p-4 w-full">
+            <div class="text-center mb-8 sm:mb-10">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-semibold mb-4">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> AI-Powered Business Memory
+                </div>
+                <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-3">Initialize Your Business</h1>
+                <p class="text-slate-500 text-base sm:text-lg">Tell ArixAI the basics. It will intelligently construct your personalized command center.</p>
+            </div>
+
+            <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
+                <form id="build-form" class="space-y-5">
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-800 mb-2">What is your business idea or current business?</label>
+                        <textarea id="input-idea" rows="3" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-slate-800 text-sm sm:text-base placeholder:text-slate-400" placeholder="e.g. A farm-to-table organic breakfast delivery brand in Pune..." required></textarea>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-800 mb-2">Location</label>
+                            <input type="text" id="input-location" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm" placeholder="e.g. Pune, India" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-800 mb-2">Starting Budget / Capital</label>
+                            <input type="text" id="input-budget" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm" placeholder="e.g. ₹3 Lakhs" required>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-800 mb-2">Target Customer</label>
+                            <input type="text" id="input-customer" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm" placeholder="e.g. Working professionals">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-800 mb-2">Your Experience</label>
+                            <select id="input-experience" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all bg-white text-slate-800 text-sm">
+                                <option value="First-time founder">First-time founder</option>
+                                <option value="Experienced in small business">Experienced in small business</option>
+                                <option value="Experienced entrepreneur">Experienced entrepreneur</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btn-build" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 sm:py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm text-base shadow-blue-500/20 active:scale-[0.99]">
+                        <i data-lucide="rocket" class="w-5 h-5"></i>
+                        <span>Initialize Business OS</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- VIEW 2: LOADING / GENERATING -->
+        <div id="view-loading" class="hidden max-w-xl mx-auto mt-12 sm:mt-16 text-center fade-in p-4 w-full">
+            <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5 border border-blue-100">
+                <i data-lucide="cpu" class="w-8 h-8 text-blue-600 pulse-dot"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-900 mb-2">Booting Business Memory...</h2>
+            <p class="text-slate-500 mb-8 text-sm max-w-md mx-auto">Running specialized AI agents to construct your dashboard, analytics, and strategy.</p>
+            
+            <div class="space-y-3 text-left">
+                <div class="flex items-center gap-3.5 p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm" id="step-market">
+                    <div class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center step-icon shrink-0"><i data-lucide="loader" class="w-3.5 h-3.5 text-blue-600 animate-spin"></i></div>
+                    <div><p class="font-semibold text-slate-800 text-sm">Market & Competitor Matrix</p></div>
+                </div>
+                <div class="flex items-center gap-3.5 p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm opacity-50" id="step-finance">
+                    <div class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center step-icon shrink-0"></div>
+                    <div><p class="font-semibold text-slate-800 text-sm">Financial Engine & Forecasting</p></div>
+                </div>
+                <div class="flex items-center gap-3.5 p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm opacity-50" id="step-dna">
+                    <div class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center step-icon shrink-0"></div>
+                    <div><p class="font-semibold text-slate-800 text-sm">Synthesizing Business DNA</p></div>
+                </div>
+                <div class="flex items-center gap-3.5 p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm opacity-50" id="step-action">
+                    <div class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center step-icon shrink-0"></div>
+                    <div><p class="font-semibold text-slate-800 text-sm">Preparing Decision Center</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: MODULAR APP SHELL -->
+        <div id="app-shell" class="flex-grow w-full h-[calc(100vh-65px)] overflow-hidden bg-slate-50 relative">
+            
+            <!-- Left Sidebar Navigation -->
+            <aside class="w-64 bg-white border-r border-slate-200 flex-shrink-0 hidden md:flex flex-col h-full overflow-y-auto">
+                <div class="p-4 border-b border-slate-100">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Modules</p>
+                    <nav class="space-y-1">
+                        <button onclick="switchModule('dashboard')" id="nav-dashboard" class="nav-item active w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+                        </button>
+                        <button onclick="switchModule('dna')" id="nav-dna" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                            <i data-lucide="dna" class="w-4 h-4"></i> Business DNA
+                        </button>
+                        <button onclick="switchModule('products')" id="nav-products" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                            <i data-lucide="package" class="w-4 h-4"></i> Products
+                        </button>
+                        <button onclick="switchModule('decisions')" id="nav-decisions" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                            <i data-lucide="git-merge" class="w-4 h-4"></i> Decision Center
+                        </button>
+                        <button onclick="switchModule('data')" id="nav-data" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                            <i data-lucide="database" class="w-4 h-4"></i> Data Import
+                        </button>
+                        <button onclick="switchModule('compliance')" id="nav-compliance" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-50 transition-colors text-left">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i> Compliance (India)
+                        </button>
+                    </nav>
+                </div>
+                
+                <div class="mt-auto p-4">
+                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+                        <p class="text-xs font-semibold text-slate-800 mb-1">Personalization</p>
+                        <div class="flex items-center justify-between text-xs text-slate-500 mb-1.5">
+                            <span id="sidebar-personalization-text">0%</span>
+                            <span>Profile</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-1.5">
+                            <div id="sidebar-personalization-bar" class="bg-blue-600 h-1.5 rounded-full transition-all" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <section class="flex-grow h-full overflow-y-auto relative custom-scrollbar p-4 md:p-8">
+                
+                <!-- MODULE: DASHBOARD -->
+                <div id="module-dashboard" class="module-view active space-y-6 max-w-5xl mx-auto pb-24 lg:pb-0">
+                    
+                    <!-- Daily Briefing -->
+                    <div class="bg-white p-6 md:p-8 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600"><i data-lucide="sun" class="w-5 h-5"></i></div>
+                            <h2 class="text-2xl font-bold text-slate-900" id="briefing-greeting">Good morning.</h2>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                            <div class="md:col-span-1 border-r border-slate-100 pr-4">
+                                <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Your Business Today</p>
+                                <ul class="space-y-3" id="briefing-metrics">
+                                    <li class="flex items-center gap-2"><i data-lucide="loader" class="w-4 h-4 animate-spin text-slate-400"></i> Loading metrics...</li>
+                                </ul>
+                            </div>
+                            <div class="md:col-span-2 pl-0 md:pl-2">
+                                <div class="bg-amber-50 rounded-xl p-5 border border-amber-100 h-full">
+                                    <p class="text-sm font-bold text-amber-800 uppercase tracking-wider mb-2 flex items-center gap-2">
+                                        <i data-lucide="alert-circle" class="w-4 h-4"></i> Your #1 Priority Today
+                                    </p>
+                                    <h3 class="text-lg font-bold text-slate-900 mb-2" id="briefing-task-title">Loading priority...</h3>
+                                    <p class="text-amber-900/80 text-sm" id="briefing-task-reason">Analyzing memory parameters to determine highest leverage action.</p>
+                                    <button onclick="completePriorityAction()" class="mt-4 bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors shadow-sm">Mark Complete</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Health Score Details -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <div class="flex justify-between items-end mb-6">
+                                <div>
+                                    <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2">
+                                        <i data-lucide="activity" class="w-5 h-5 text-blue-600"></i> Business Health
+                                    </h3>
+                                    <p class="text-sm text-slate-500 mt-1" id="health-explanation">Analyzing vectors...</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-3xl font-extrabold text-blue-600" id="health-overall">--</span>
+                                    <span class="text-sm text-slate-500 font-medium">/100</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-x-6 gap-y-4" id="health-breakdown">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- Missing Info & Gamification -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                            <h3 class="font-bold text-lg text-slate-800 flex items-center gap-2 mb-4">
+                                <i data-lucide="target" class="w-5 h-5 text-emerald-600"></i> ArixAI Intelligence Gap
+                            </h3>
+                            <p class="text-sm text-slate-600 mb-4">To provide accurate strategic decisions, ArixAI needs more context about your business DNA.</p>
+                            
+                            <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 flex-grow">
+                                <p class="text-xs font-bold text-red-500 uppercase tracking-wider mb-3">Currently Missing:</p>
+                                <ul class="space-y-2.5 text-sm text-slate-700 font-medium" id="missing-info-list">
+                                    <li><i data-lucide="circle-dashed" class="w-4 h-4 inline mr-2 text-slate-400"></i> Loading profile...</li>
+                                </ul>
+                            </div>
+                            <button onclick="switchModule('dna')" class="mt-4 w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2.5 rounded-xl text-sm transition-colors shadow-sm">
+                                Complete Business Profile
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MODULE: BUSINESS DNA -->
+                <div id="module-dna" class="module-view max-w-4xl mx-auto space-y-6 pb-24 lg:pb-0">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600"><i data-lucide="dna" class="w-5 h-5"></i></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">Your Business DNA</h2>
+                            <p class="text-sm text-slate-500">Edit this profile to dramatically improve AI personalization.</p>
+                        </div>
+                    </div>
+
+                    <form id="dna-form" class="space-y-6">
+                        <!-- Goals Engine -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2 text-slate-800"><i data-lucide="flag" class="w-5 h-5 text-red-500"></i> Primary Goal</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">What are you trying to achieve?</label>
+                                    <select id="dna-goal" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 outline-none">
+                                        <option value="Find Product-Market Fit">Find Product-Market Fit</option>
+                                        <option value="Reach ₹10L monthly revenue">Reach ₹10L monthly revenue</option>
+                                        <option value="Get first 100 customers">Get first 100 customers</option>
+                                        <option value="Increase profit margin">Increase profit margin</option>
+                                        <option value="Automate operations">Automate operations</option>
+                                        <option value="Get funding">Get funding</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Target Date</label>
+                                    <input type="date" id="dna-goal-date" class="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 bg-slate-50 outline-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Financial Profile -->
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold text-lg mb-4 flex items-center gap-2 text-slate-800"><i data-lucide="wallet" class="w-5 h-5 text-emerald-600"></i> Financial Profile</h3>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Monthly Revenue (₹)</label>
+                                    <input type="number" id="dna-rev" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Monthly Expenses (₹)</label>
+                                    <input type="number" id="dna-exp" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Available Cash (₹)</label>
+                                    <input type="number" id="dna-cash" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Avg Order Value (₹)</label>
+                                    <input type="number" id="dna-aov" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Marketing Spend (₹)</label>
+                                    <input type="number" id="dna-marketing" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50" placeholder="0">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1">Supplier Payment Terms</label>
+                                    <input type="text" id="dna-terms" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50" placeholder="e.g. Net 30">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Constraints -->
+                            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                <h3 class="font-bold text-lg mb-4 flex items-center gap-2 text-slate-800"><i data-lucide="lock" class="w-5 h-5 text-amber-500"></i> Constraints</h3>
+                                <p class="text-xs text-slate-500 mb-3">Check all that apply so ArixAI stops giving unrealistic advice.</p>
+                                <div class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2" id="dna-constraints-list">
+                                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" value="Limited capital" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> Limited capital</label>
+                                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" value="Founder handles everything" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> Founder handles everything</label>
+                                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" value="Can't hire currently" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> Can't hire currently</label>
+                                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" value="Cash-flow problems" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> Cash-flow problems</label>
+                                    <label class="flex items-center gap-2 text-sm"><input type="checkbox" value="Low customer awareness" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> Low customer awareness</label>
+                                </div>
+                            </div>
+
+                            <!-- Preferences -->
+                            <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                <h3 class="font-bold text-lg mb-4 flex items-center gap-2 text-slate-800"><i data-lucide="sliders-horizontal" class="w-5 h-5 text-blue-500"></i> Founder Preferences</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Risk Tolerance</label>
+                                        <select id="dna-pref-risk" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50">
+                                            <option>Conservative</option><option selected>Balanced</option><option>Aggressive</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Growth Preference</label>
+                                        <select id="dna-pref-growth" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50">
+                                            <option selected>Profit first</option><option>Revenue first</option><option>Market share first</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1">Work Style</label>
+                                        <select id="dna-pref-work" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm bg-slate-50">
+                                            <option selected>Automation-heavy</option><option>People-heavy</option><option>Hybrid</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" id="btn-save-dna" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
+                            <i data-lucide="save" class="w-5 h-5"></i> Save & Recalculate AI Memory
+                        </button>
+                    </form>
+                </div>
+
+                <!-- MODULE: PRODUCTS -->
+                <div id="module-products" class="module-view max-w-5xl mx-auto pb-24 lg:pb-0">
+                    <div class="flex justify-between items-end mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900 flex items-center gap-2"><i data-lucide="package" class="w-6 h-6 text-blue-600"></i> Products / Services</h2>
+                            <p class="text-sm text-slate-500 mt-1">Structured product catalog for precise margin analysis.</p>
+                        </div>
+                        <button onclick="document.getElementById('product-form-container').classList.toggle('hidden')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors shadow-sm">+ Add Product</button>
+                    </div>
+
+                    <div id="product-form-container" class="hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+                        <form id="add-product-form" class="space-y-4">
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Product Name</label><input type="text" id="prod-name" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" required></div>
+                                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Selling Price (₹)</label><input type="number" id="prod-price" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" required></div>
+                                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Cost (₹)</label><input type="number" id="prod-cost" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" required></div>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div><label class="block text-xs font-semibold text-slate-500 mb-1">Monthly Units Sold</label><input type="number" id="prod-units" class="w-full px-3 py-2 rounded-lg border border-slate-200 text-sm" required></div>
+                                <div class="flex items-end"><button type="submit" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 rounded-lg text-sm transition-colors">Save Product</button></div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-slate-50 border-b border-slate-200">
+                                <tr>
+                                    <th class="px-6 py-3 font-semibold text-slate-600">Product Name</th>
+                                    <th class="px-6 py-3 font-semibold text-slate-600">Price</th>
+                                    <th class="px-6 py-3 font-semibold text-slate-600">Cost</th>
+                                    <th class="px-6 py-3 font-semibold text-slate-600">Margin</th>
+                                    <th class="px-6 py-3 font-semibold text-slate-600">Units/Mo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="products-table-body" class="divide-y divide-slate-100">
+                                <tr><td colspan="5" class="px-6 py-8 text-center text-slate-400">No products added yet. Add products to generate AI margin insights.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- MODULE: DECISION CENTER -->
+                <div id="module-decisions" class="module-view max-w-4xl mx-auto pb-24 lg:pb-0">
+                    <div class="text-center mb-8">
+                        <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4 border border-blue-200"><i data-lucide="git-merge" class="w-6 h-6"></i></div>
+                        <h2 class="text-3xl font-bold text-slate-900 mb-2">Decision Center</h2>
+                        <p class="text-slate-500 max-w-lg mx-auto">Ask ArixAI to weigh complex options. It will analyze your constraints, cash flow, and goals to provide a matrix recommendation.</p>
+                    </div>
+
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mb-6">
+                        <form id="decision-form" class="relative">
+                            <textarea id="decision-query" rows="3" class="w-full px-4 py-3 pb-12 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all resize-none text-slate-800 text-sm" placeholder="e.g. I have ₹2 lakh remaining. Should I hire a part-time salesperson, run Facebook ads, or launch a secondary product?"></textarea>
+                            <button type="submit" id="btn-decision" class="absolute bottom-3 right-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-1.5 px-4 rounded-lg text-sm transition-colors flex items-center gap-2">
+                                <i data-lucide="zap" class="w-4 h-4"></i> Analyze Options
+                            </button>
+                        </form>
+                    </div>
+
+                    <div id="decision-result" class="hidden">
+                        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-5 mb-6 shadow-sm">
+                            <h3 class="text-sm font-bold text-emerald-800 uppercase tracking-wider mb-2 flex items-center gap-2"><i data-lucide="check-circle" class="w-5 h-5"></i> ArixAI Recommendation</h3>
+                            <p class="text-lg font-bold text-emerald-900 mb-1" id="decision-rec-title"></p>
+                            <p class="text-sm text-emerald-800/80" id="decision-rec-exp"></p>
+                        </div>
+
+                        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-5 py-3 font-semibold text-slate-600">Option</th>
+                                        <th class="px-5 py-3 font-semibold text-slate-600">Cost</th>
+                                        <th class="px-5 py-3 font-semibold text-slate-600">Impact</th>
+                                        <th class="px-5 py-3 font-semibold text-slate-600">Risk</th>
+                                        <th class="px-5 py-3 font-semibold text-slate-600 text-center">⭐</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="decision-table-body" class="divide-y divide-slate-100">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- MODULE: DATA IMPORT -->
+                <div id="module-data" class="module-view max-w-4xl mx-auto pb-24 lg:pb-0">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600"><i data-lucide="upload-cloud" class="w-5 h-5"></i></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">Upload Business Data</h2>
+                            <p class="text-sm text-slate-500">Import CSVs to automatically generate AI insights.</p>
+                        </div>
+                    </div>
+                    <div class="border-2 border-dashed border-slate-300 rounded-2xl p-10 text-center bg-white hover:bg-slate-50 transition-colors cursor-pointer" onclick="simulateUpload()">
+                        <i data-lucide="file-spreadsheet" class="w-10 h-10 mx-auto text-slate-400 mb-3"></i>
+                        <p class="text-sm font-semibold text-slate-700">Click to upload sales_data.csv</p>
+                        <p class="text-xs text-slate-500 mt-1">Mock endpoint simulation</p>
+                    </div>
+                    <div id="upload-insights" class="hidden mt-6 space-y-4"></div>
+                </div>
+
+                <!-- MODULE: COMPLIANCE -->
+                <div id="module-compliance" class="module-view max-w-4xl mx-auto pb-24 lg:pb-0">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-slate-900">India Compliance & Grants</h2>
+                            <p class="text-sm text-slate-500">Legal setup and matched government schemes.</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm" id="compliance-content">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Omni-present Chat Widget (Right Side / Bottom on Mobile) -->
+            <aside class="w-full lg:w-80 bg-white border-l border-slate-200 flex-shrink-0 flex flex-col fixed lg:relative bottom-0 lg:bottom-auto z-40 h-[60vh] lg:h-full transition-transform duration-300 transform translate-y-full lg:translate-y-0" id="omni-chat">
+                <!-- Mobile Drag Handle / Header -->
+                <div class="p-3 border-b border-slate-100 bg-slate-50 flex items-center justify-between cursor-pointer lg:cursor-auto" onclick="toggleMobileChat()">
+                    <div class="flex items-center gap-2">
+                        <div class="w-7 h-7 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-xs shadow-sm">A</div>
+                        <div>
+                            <p class="font-bold text-sm text-slate-900 leading-none">Ask ArixAI</p>
+                            <p class="text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-semibold" id="chat-context-badge">Context: Dashboard</p>
+                        </div>
+                    </div>
+                    <i data-lucide="chevron-up" class="w-5 h-5 text-slate-400 lg:hidden" id="chat-chevron"></i>
+                </div>
+                
+                <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-3 custom-scrollbar text-sm">
+                    <div class="bg-slate-100 text-slate-800 p-3 rounded-2xl rounded-tl-sm max-w-[90%] inline-block">
+                        I am analyzing your business memory in real-time. Ask me anything about strategy, finance, or your next step.
+                    </div>
+                </div>
+
+                <div class="p-3 border-t border-slate-100 bg-white">
+                    <form id="chat-form" class="relative">
+                        <input type="text" id="chat-input" class="w-full pl-3.5 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:border-blue-500 focus:bg-white transition-colors text-sm text-slate-800 placeholder:text-slate-400" placeholder="Type a message...">
+                        <button type="submit" class="absolute right-1.5 top-1.5 w-8 h-8 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center justify-center transition-colors shadow-sm">
+                            <i data-lucide="send" class="w-4 h-4 -ml-0.5"></i>
+                        </button>
+                    </form>
+                </div>
+            </aside>
+            
+            <!-- Mobile Floating Button to open chat -->
+            <button onclick="toggleMobileChat()" id="btn-mobile-chat" class="lg:hidden fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl flex items-center justify-center z-30">
+                <i data-lucide="message-square" class="w-6 h-6"></i>
+            </button>
+            
+            <!-- Mobile Sidebar Toggle -->
+            <button onclick="toggleMobileNav()" class="md:hidden fixed bottom-6 left-6 w-12 h-12 bg-slate-800 text-white rounded-full shadow-xl flex items-center justify-center z-30">
+                <i data-lucide="menu" class="w-5 h-5"></i>
+            </button>
+
+        </div>
+
+    </main>
+
+    <!-- Notice / Error Modal -->
+    <div id="modal-error" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-in">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100">
+            <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3 border border-blue-100">
+                <i data-lucide="info" class="w-5 h-5"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 mb-1">Notice</h3>
+            <p id="error-message" class="text-slate-600 mb-5 text-sm leading-relaxed">System status update.</p>
+            <button onclick="closeModal('modal-error')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-semibold transition-colors text-sm shadow-sm">Got it</button>
+        </div>
+    </div>
+
+    <script>
+        const EDGE_BACKEND_URL = ''; 
+        function getApiBase() {
+            if (EDGE_BACKEND_URL) return EDGE_BACKEND_URL.replace(/\/+$/, '');
+            if (window.location.protocol === 'file:') return 'http://localhost:3000';
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (window.location.port && window.location.port !== '3000') return 'http://localhost:3000';
+            }
+            return '';
+        }
+        const API_BASE = getApiBase();
+
+        // Application State
+        let currentBusinessId = null;
+        let activeModule = 'Dashboard';
+        let isChatOpenMobile = false;
+
+        // Utilities
+        const delay = (ms) => new Promise(res => setTimeout(res, ms));
+        function showError(msg) { document.getElementById('error-message').innerText = msg; document.getElementById('modal-error').classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+        
+        async function typeText(element, text, speed = 12) {
+            if (!element || !text) return;
+            element.innerHTML = '';
+            element.classList.add('typing-cursor');
+            for (let i = 0; i < text.length; i++) {
+                element.innerHTML += text.charAt(i);
+                await delay(speed);
+            }
+            element.classList.remove('typing-cursor');
+        }
+
+        // View Navigation
+        function switchView(viewId) {
+            ['view-setup', 'view-loading', 'app-shell'].forEach(id => {
+                document.getElementById(id).classList.remove('active');
+                if(id !== 'app-shell') document.getElementById(id).classList.add('hidden');
+            });
+            if (viewId === 'app-shell') {
+                document.getElementById(viewId).classList.add('active');
+            } else {
+                document.getElementById(viewId).classList.remove('hidden');
+            }
+        }
+
+        function switchModule(moduleId) {
+            // Update UI tabs
+            document.querySelectorAll('.module-view').forEach(el => el.classList.remove('active'));
+            document.getElementById(`module-${moduleId}`).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${moduleId}`).classList.add('active');
+            
+            // Context injection for AI Chat (Feature 12)
+            activeModule = moduleId.charAt(0).toUpperCase() + moduleId.slice(1);
+            document.getElementById('chat-context-badge').innerText = `Context: ${activeModule}`;
+        }
+
+        function resetToSetup() {
+            currentBusinessId = null;
+            document.getElementById('nav-status').classList.add('hidden');
+            document.getElementById('nav-status').classList.remove('flex');
+            document.getElementById('btn-reset').classList.add('hidden');
+            switchView('view-setup');
+        }
+
+        // Mobile Handlers
+        function toggleMobileChat() {
+            const chat = document.getElementById('omni-chat');
+            const chev = document.getElementById('chat-chevron');
+            isChatOpenMobile = !isChatOpenMobile;
+            if (isChatOpenMobile) {
+                chat.classList.remove('translate-y-full');
+                if(chev) chev.classList.replace('lucide-chevron-up', 'lucide-chevron-down');
+            } else {
+                chat.classList.add('translate-y-full');
+                if(chev) chev.classList.replace('lucide-chevron-down', 'lucide-chevron-up');
+            }
+            lucide.createIcons();
+        }
+        function toggleMobileNav() {
+            const nav = document.querySelector('aside.w-64');
+            nav.classList.toggle('hidden');
+            nav.classList.toggle('absolute');
+            nav.classList.toggle('z-50');
+            nav.classList.toggle('h-full');
+        }
+
+        document.getElementById('build-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            switchView('view-loading');
+
+            const payload = {
+                idea: document.getElementById('input-idea').value.trim(),
+                location: document.getElementById('input-location').value.trim(),
+                budget: document.getElementById('input-budget').value.trim(),
+                targetCustomer: document.getElementById('input-customer').value.trim(),
+                experience: document.getElementById('input-experience').value
+            };
+
+            const anim = (async () => {
+                await delay(800); updateStep('step-finance');
+                await delay(1200); updateStep('step-dna');
+                await delay(1000); updateStep('step-action');
+            })();
+
+            try {
+                const res = await fetch(`${API_BASE}/api/business/build`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                if (!res.ok) throw new Error("Server error.");
+                const data = await res.json();
+                currentBusinessId = data.businessId;
+
+                await anim;
+                await initAppEngine();
+                
+                document.getElementById('nav-status').classList.replace('hidden', 'flex');
+                document.getElementById('btn-reset').classList.remove('hidden');
+                switchView('app-shell');
+                switchModule('dashboard');
+
+            } catch (err) {
+                console.error(err);
+                showError("Could not connect to Edge engine. Check server.");
+                switchView('view-setup');
+            }
+        });
+
+        function updateStep(id) {
+            const el = document.getElementById(id);
+            if(!el) return;
+            el.classList.remove('opacity-50');
+            el.querySelector('.step-icon').innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>';
+            el.querySelector('.step-icon').classList.replace('border-slate-200', 'bg-blue-600');
+            el.querySelector('.step-icon').classList.add('border-blue-600');
+            lucide.createIcons();
+        }
+
+        async function initAppEngine() {
+            try {
+                const [dashRes, dnaRes, briefRes, indiaRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/business/${currentBusinessId}/dashboard`),
+                    fetch(`${API_BASE}/api/business/${currentBusinessId}/dna`),
+                    fetch(`${API_BASE}/api/business/${currentBusinessId}/briefing`),
+                    fetch(`${API_BASE}/api/business/${currentBusinessId}/india`)
+                ]);
+
+                const dash = await dashRes.json();
+                const dnaData = await dnaRes.json();
+                const brief = await briefRes.json();
+                const india = await indiaRes.json();
+
+                renderDashboardUI(dash, brief);
+                populateDNAForm(dnaData.businessDNA);
+                renderCompliance(india);
+            } catch (e) {
+                console.error("Engine Sync Failed:", e);
+            }
+        }
+
+        // Feature 10, 11, 14, 15, 16 UI Rendering
+        function renderDashboardUI(dash, brief) {
+            // Personalization Gamification
+            const perc = dash.personalization?.score || '45% personalized';
+            const numPerc = parseInt(perc);
+            document.getElementById('sidebar-personalization-text').innerText = perc;
+            document.getElementById('sidebar-personalization-bar').style.width = `${numPerc}%`;
+
+            const missingList = document.getElementById('missing-info-list');
+            missingList.innerHTML = '';
+            (dash.personalization?.missingInformation || ['Supplier details', 'Product costs']).forEach(item => {
+                missingList.innerHTML += `<li><i data-lucide="circle-dashed" class="w-4 h-4 inline mr-2 text-red-400"></i> ${item}</li>`;
+            });
+
+            // Overall Health Score Breakdown
+            const h = dash.health;
+            if (h) {
+                document.getElementById('health-overall').innerText = h.overall || '--';
+                document.getElementById('health-explanation').innerText = h.explanation || 'Score based on profile completeness and metrics.';
+                
+                const breakDiv = document.getElementById('health-breakdown');
+                breakDiv.innerHTML = '';
+                if(h.breakdown) {
+                    Object.entries(h.breakdown).forEach(([k, v]) => {
+                        if(k === 'overall') return;
+                        const label = k.charAt(0).toUpperCase() + k.slice(1);
+                        const isWeak = label === h.weakestArea;
+                        const color = isWeak ? 'bg-red-500' : 'bg-emerald-500';
+                        breakDiv.innerHTML += `
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="${isWeak ? 'text-red-600' : 'text-slate-600'}">${label} ${isWeak ? '⚠️' : ''}</span>
+                                    <span class="text-slate-900">${v}</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-1.5"><div class="${color} h-1.5 rounded-full" style="width: ${v}%"></div></div>
+                            </div>
+                        `;
+                    });
+                }
+            }
+
+            // Daily CEO Briefing & Next Action
+            if (brief && brief.dailyBriefing) {
+                document.getElementById('briefing-greeting').innerText = brief.dailyBriefing.greeting;
+                const m = brief.dailyBriefing.metrics;
+                document.getElementById('briefing-metrics').innerHTML = `
+                    <li class="flex items-center gap-2.5 text-sm font-medium text-slate-700"><i data-lucide="trending-up" class="w-4 h-4 text-emerald-500"></i> ${m.revenueGrowth || 'Revenue analyzing...'}</li>
+                    <li class="flex items-center gap-2.5 text-sm font-medium text-slate-700"><i data-lucide="users" class="w-4 h-4 text-blue-500"></i> ${m.newCustomers || 'Tallying customers...'}</li>
+                    <li class="flex items-center gap-2.5 text-sm font-medium text-slate-700"><i data-lucide="target" class="w-4 h-4 text-purple-500"></i> ${m.goalProgress || 'Goal tracking active'}</li>
+                `;
+            }
+            if (dash.nextBestAction) {
+                document.getElementById('briefing-task-title').innerText = dash.nextBestAction.actionTitle;
+                document.getElementById('briefing-task-reason').innerText = dash.nextBestAction.whyDoThis;
+            }
+            lucide.createIcons();
+        }
+
+        function populateDNAForm(dna) {
+            if(!dna) return;
+            document.getElementById('dna-goal').value = dna.goals?.target || "Find Product-Market Fit";
+            document.getElementById('dna-rev').value = dna.financials?.monthlyRevenue || '';
+            document.getElementById('dna-exp').value = dna.financials?.monthlyExpenses || '';
+            document.getElementById('dna-cash').value = dna.financials?.availableCapital || '';
+            document.getElementById('dna-aov').value = dna.financials?.averageOrderValue || '';
+            
+            // Render existing products
+            const tbody = document.getElementById('products-table-body');
+            if(dna.products && dna.products.length > 0) {
+                tbody.innerHTML = '';
+                dna.products.forEach(p => appendProductRow(p, tbody));
+            }
+        }
+
+        // Feature 8: Business Memory Update
+        document.getElementById('dna-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-dna');
+            btn.innerHTML = '<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> Saving...';
+            
+            const constraints = Array.from(document.querySelectorAll('#dna-constraints-list input:checked')).map(cb => cb.value);
+            
+            const payload = {
+                financials: {
+                    monthlyRevenue: Number(document.getElementById('dna-rev').value),
+                    monthlyExpenses: Number(document.getElementById('dna-exp').value),
+                    availableCapital: Number(document.getElementById('dna-cash').value),
+                    averageOrderValue: Number(document.getElementById('dna-aov').value),
+                    paymentTerms: document.getElementById('dna-terms').value
+                },
+                constraints: constraints,
+                founderPreferences: {
+                    riskTolerance: document.getElementById('dna-pref-risk').value,
+                    growthPreference: document.getElementById('dna-pref-growth').value,
+                    workPreference: document.getElementById('dna-pref-work').value
+                }
+            };
+
+            try {
+                await fetch(`${API_BASE}/api/business/${currentBusinessId}/profile`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                
+                // Also update Goals
+                await fetch(`${API_BASE}/api/business/${currentBusinessId}/goals`, {
+                    method: 'PUT', headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ target: document.getElementById('dna-goal').value, targetDate: document.getElementById('dna-goal-date').value })
+                });
+
+                btn.innerHTML = '<i data-lucide="check" class="w-5 h-5 text-emerald-300"></i> Saved & Synced';
+                setTimeout(() => btn.innerHTML = '<i data-lucide="save" class="w-5 h-5"></i> Save & Recalculate AI Memory', 2000);
+                
+                // Refresh dashboard to show new health score
+                initAppEngine(); 
+            } catch (err) {
+                console.error(err);
+                btn.innerHTML = 'Error. Try Again.';
+            }
+        });
+
+        // Feature 4: Structured Products
+        document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('prod-name').value,
+                sellingPrice: Number(document.getElementById('prod-price').value),
+                cost: Number(document.getElementById('prod-cost').value),
+                monthlyUnitsSold: Number(document.getElementById('prod-units').value)
+            };
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/business/${currentBusinessId}/products`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                
+                const tbody = document.getElementById('products-table-body');
+                if(tbody.innerText.includes('No products')) tbody.innerHTML = '';
+                appendProductRow(payload, tbody);
+                
+                document.getElementById('add-product-form').reset();
+                document.getElementById('product-form-container').classList.add('hidden');
+                
+                // Refresh to recalculate completeness
+                initAppEngine();
+            } catch (e) { console.error(e); }
+        });
+
+        function appendProductRow(p, tbody) {
+            const margin = p.sellingPrice ? Math.round(((p.sellingPrice - p.cost)/p.sellingPrice)*100) : 0;
+            const mColor = margin > 40 ? 'text-emerald-600' : (margin < 20 ? 'text-red-500' : 'text-amber-500');
+            tbody.innerHTML += `
+                <tr>
+                    <td class="px-6 py-4 font-medium text-slate-900">${p.name}</td>
+                    <td class="px-6 py-4 text-slate-600">₹${p.sellingPrice}</td>
+                    <td class="px-6 py-4 text-slate-600">₹${p.cost}</td>
+                    <td class="px-6 py-4 font-bold ${mColor}">${margin}%</td>
+                    <td class="px-6 py-4 text-slate-600">${p.monthlyUnitsSold}</td>
+                </tr>
+            `;
+        }
+
+        // Feature 13: Decision Center
+        document.getElementById('decision-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const q = document.getElementById('decision-query').value;
+            const btn = document.getElementById('btn-decision');
+            btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Crunching...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/business/${currentBusinessId}/decision-center`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q })
+                });
+                const data = await res.json();
+                const d = data.decision;
+                
+                document.getElementById('decision-result').classList.remove('hidden');
+                document.getElementById('decision-rec-title').innerText = d.recommendation;
+                document.getElementById('decision-rec-exp').innerText = d.explanation;
+                
+                const tbody = document.getElementById('decision-table-body');
+                tbody.innerHTML = '';
+                (d.optionsAnalysis || []).forEach(opt => {
+                    const star = opt.recommendationStar ? '<i data-lucide="star" class="w-5 h-5 text-amber-400 fill-amber-400 mx-auto"></i>' : '';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td class="px-5 py-4 font-medium text-slate-900">${opt.option}</td>
+                            <td class="px-5 py-4 text-slate-600">${opt.cost}</td>
+                            <td class="px-5 py-4 text-slate-600">${opt.expectedImpact}</td>
+                            <td class="px-5 py-4 text-slate-600">${opt.risk}</td>
+                            <td class="px-5 py-4">${star}</td>
+                        </tr>
+                    `;
+                });
+                lucide.createIcons();
+            } catch(e) { console.error(e); }
+            btn.innerHTML = '<i data-lucide="zap" class="w-4 h-4"></i> Analyze Options';
+        });
+
+        // Feature 12: Ask ArixAI Contextual Chat
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+        const chatBox = document.getElementById('chat-messages');
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = chatInput.value.trim();
+            if (!msg) return;
+
+            chatInput.value = '';
+            
+            // UI Update - User
+            const userDiv = document.createElement('div');
+            userDiv.className = "bg-blue-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[88%] self-end ml-auto float-right clear-both mb-3 text-sm shadow-sm";
+            userDiv.innerText = msg;
+            chatBox.appendChild(userDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // UI Update - AI Loading
+            const aiDiv = document.createElement('div');
+            aiDiv.className = "bg-slate-100 text-slate-800 p-3 rounded-2xl rounded-tl-sm max-w-[88%] float-left clear-both mb-3 text-sm shadow-sm";
+            aiDiv.innerHTML = '<span class="pulse-dot text-slate-500">Evaluating context...</span>';
+            chatBox.appendChild(aiDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/business/${currentBusinessId}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg, module: activeModule }) // Feature 12: Inject module context
+                });
+                
+                const data = await response.json();
+                await typeText(aiDiv, data.answer, 8);
+                
+                if (data.generatedTask && data.generatedTask.title) {
+                    aiDiv.innerHTML += `<div class="mt-2.5 p-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-2"><i data-lucide="plus-circle" class="w-3.5 h-3.5 text-blue-600"></i> ${data.generatedTask.title}</div>`;
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                aiDiv.innerText = "System busy. Please try again.";
+            }
+            chatBox.scrollTop = chatBox.scrollHeight;
+        });
+
+        // Other Features & Utilities
+        async function completePriorityAction() {
+            try {
+                await fetch(`${API_BASE}/api/business/${currentBusinessId}/action/complete`, { method: 'POST' });
+                initAppEngine(); // Re-fetch to get new action and health score
+            } catch(e) { console.error(e); }
+        }
+
+        async function simulateUpload() {
+            const upDiv = document.getElementById('upload-insights');
+            upDiv.classList.remove('hidden');
+            upDiv.innerHTML = '<div class="p-4 bg-slate-100 rounded-xl text-center text-sm text-slate-500 animate-pulse">Simulating file parsing & BI processing...</div>';
+            
+            try {
+                const res = await fetch(`${API_BASE}/api/business/${currentBusinessId}/upload`, { method: 'POST' });
+                const data = await res.json();
+                const bi = data.generatedBI;
+                
+                upDiv.innerHTML = `
+                    <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl mb-3">
+                        <p class="text-sm font-bold text-emerald-800 flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> ${data.message}</p>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="p-3 bg-white border border-slate-200 rounded-xl"><p class="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Top Segment</p><p class="text-sm font-semibold text-slate-800">${bi.bestCustomerSegment}</p></div>
+                        <div class="p-3 bg-white border border-slate-200 rounded-xl"><p class="text-[10px] text-slate-400 font-bold uppercase mb-0.5">AOV</p><p class="text-sm font-semibold text-slate-800">${bi.averageOrderValue}</p></div>
+                        <div class="p-3 bg-white border border-slate-200 rounded-xl"><p class="text-[10px] text-slate-400 font-bold uppercase mb-0.5">Trend</p><p class="text-sm font-semibold text-emerald-600">${bi.revenueTrend}</p></div>
+                        <div class="p-3 bg-white border border-red-200 rounded-xl sm:col-span-3 bg-red-50/30"><p class="text-[10px] text-red-500 font-bold uppercase mb-0.5">Cost Leakage Detected</p><p class="text-sm font-semibold text-slate-800">${bi.potentialCostLeakage}</p></div>
+                    </div>
+                `;
+                lucide.createIcons();
+            } catch(e) {}
+        }
+
+        function renderCompliance(indiaData) {
+            const c = indiaData.compliance;
+            const html = `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">GST Rules</h4>
+                            <p class="text-sm text-slate-700 font-medium">${c?.gstConsiderations || 'Standard limits'}</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                            <h4 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Udyam Registration</h4>
+                            <p class="text-sm text-slate-700 font-medium">${c?.udyamEligibility || 'Eligible'}</p>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2"><i data-lucide="award" class="w-4 h-4 text-amber-500"></i> Scheme Matches</h4>
+                        <div class="space-y-3 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                            ${(indiaData.schemes || []).map(s => `
+                                <div class="p-3 bg-white border border-slate-200 rounded-lg">
+                                    <p class="font-bold text-sm text-slate-800">${s.schemeName}</p>
+                                    <p class="text-xs text-slate-500 mt-1">${s.potentialSupportAmount}</p>
+                                </div>
+                            `).join('') || '<p class="text-sm text-slate-500">No schemes matched.</p>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('compliance-content').innerHTML = html;
+            lucide.createIcons();
+        }
+
+        lucide.createIcons();
+    </script>
+</body>
+</html>
