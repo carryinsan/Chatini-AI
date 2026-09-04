@@ -15,18 +15,22 @@
  * ==========================================================================================
  */
 
-export const config = {
-    runtime: 'edge',
-    regions: ['bom1', 'sin1', 'iad1'], // Optimize for India/Asia & US-East fallbacks
-};
+// Gimmick: Request maximum serverless duration from Vercel (60s on Hobby, up to 300s on Pro)
+export const maxDuration = 300; 
+
+// Removed strict 'edge' runtime to bypass the hard 10s limit
+// export const config = {
+//     runtime: 'edge',
+//     regions: ['bom1', 'sin1', 'iad1'], 
+// };
 
 const CONFIG = {
     // STRICTLY ENFORCED MODEL
     GEMINI_MODELS: ["gemini-3.5-flash"],
     API_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/models",
-    // Timeouts tuned specifically for Vercel's 10s Edge limit
-    GEMINI_TIMEOUT_MS: 8500, 
-    MASTER_ROUTE_TIMEOUT_MS: 9200,
+    // Timeouts massively expanded to allow the AI full time to respond
+    GEMINI_TIMEOUT_MS: 55000, 
+    MASTER_ROUTE_TIMEOUT_MS: 59000,
     MAX_RETRIES: 2
 };
 
@@ -790,12 +794,12 @@ async function handleEdgeRequest(request, env = {}, ctx = null) {
             const buildPromise = EnterpriseBusinessService.generateFullBlueprint(businessId, keys, core);
             
             const timeoutPromise = delay(CONFIG.MASTER_ROUTE_TIMEOUT_MS).then(() => {
-                Logger.warn(`[${businessId}] Master 9.2s Timeout Triggered! Vercel 500 averted. Serving computed RealWorldDataEngine results.`);
+                Logger.warn(`[${businessId}] Master 59s Timeout Triggered! Serving computed RealWorldDataEngine results.`);
                 // Get the partially built business or initialize it with computed fallbacks
                 return EdgeDatabase.getBusiness(businessId, core);
             });
 
-            // Whichever finishes first (the AI or the 9.2s timeout) is returned
+            // Whichever finishes first (the AI or the timeout) is returned
             await Promise.race([buildPromise, timeoutPromise]);
 
             return jsonResponse({
