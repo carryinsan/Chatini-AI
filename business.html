@@ -40,7 +40,7 @@
         }
 
         .fade-in {
-            animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: fadeIn 0.35s ease-out forwards;
         }
 
         @keyframes fadeIn {
@@ -68,12 +68,12 @@
             <span class="text-xs font-semibold uppercase tracking-wider text-slate-400 ml-2 border-l border-slate-200 pl-3">Command Center</span>
         </div>
         
-        <div class="flex items-center gap-2 sm:gap-3">
-            <div id="nav-mode-badge" class="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200/80 text-xs font-medium">
+        <div class="flex items-center gap-3">
+            <div id="nav-status" class="text-xs font-medium hidden items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full border border-emerald-200/60">
                 <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span id="nav-mode-text"></span>
+                <span>Operating Live</span>
             </div>
-            <button id="btn-reset" onclick="resetToSetup()" class="hidden text-xs text-slate-600 hover:text-slate-900 font-medium px-3 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+            <button id="btn-reset" onclick="resetToSetup()" class="hidden text-xs text-slate-500 hover:text-slate-800 font-medium px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
                 New Plan
             </button>
         </div>
@@ -83,32 +83,16 @@
     <main class="flex-grow w-full max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 relative">
         
         <!-- VIEW 1: BUILD MY BUSINESS (LANDING SETUP) -->
-        <div id="view-setup" class="fade-in max-w-2xl mx-auto mt-4 sm:mt-8">
+        <div id="view-setup" class="fade-in max-w-2xl mx-auto mt-6 sm:mt-12">
             <div class="text-center mb-8 sm:mb-10">
-                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200/70 text-blue-700 text-xs font-semibold mb-4 shadow-sm">
-                    <i data-lucide="zap" class="w-3.5 h-3.5"></i> Zero-Latency Edge Engine &middot; Instant Execution
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200/60 text-blue-700 text-xs font-semibold mb-4">
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> Multi-Agent Intelligence Engine
                 </div>
                 <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mb-3">Launch Your Business Plan</h1>
-                <p class="text-slate-500 text-base sm:text-lg">Tell ArixAI your idea, and get your full strategic roadmap in seconds.</p>
+                <p class="text-slate-500 text-base sm:text-lg">Tell ArixAI your idea, and get your full business strategy in seconds.</p>
             </div>
 
             <div class="bg-white rounded-2xl p-6 sm:p-8 shadow-sm border border-slate-200">
-                <!-- Preset Idea Chips for 1-Click Testing -->
-                <div class="mb-5 pb-4 border-b border-slate-100">
-                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Try a 1-click preset idea</span>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="fillPreset('organic-food')" class="text-xs font-medium px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 rounded-lg border border-slate-200 text-slate-600 transition-all">
-                            🥗 Farm-to-Table Breakfast
-                        </button>
-                        <button type="button" onclick="fillPreset('saas-agency')" class="text-xs font-medium px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 rounded-lg border border-slate-200 text-slate-600 transition-all">
-                            ⚡ B2B Workflow Automation
-                        </button>
-                        <button type="button" onclick="fillPreset('retail-d2c')" class="text-xs font-medium px-3 py-1.5 bg-slate-50 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 rounded-lg border border-slate-200 text-slate-600 transition-all">
-                            ☕ Specialty Coffee Roastery
-                        </button>
-                    </div>
-                </div>
-
                 <form id="build-form" class="space-y-5">
                     <div>
                         <label class="block text-sm font-semibold text-slate-800 mb-2">What is your business idea?</label>
@@ -118,7 +102,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-slate-800 mb-2">Location</label>
-                            <input type="text" id="input-location" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm" placeholder="e.g. Pune, Maharashtra" required>
+                            <input type="text" id="input-location" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm" placeholder="e.g. Pune, India" required>
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-800 mb-2">Starting Budget</label>
@@ -129,7 +113,7 @@
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-semibold text-slate-800 mb-2">Target Customer</label>
-                            <input type="text" id="input-customer" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm" placeholder="e.g. Busy urban professionals">
+                            <input type="text" id="input-customer" class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-slate-800 text-sm" placeholder="e.g. Working professionals">
                         </div>
                         <div>
                             <label class="block text-sm font-semibold text-slate-800 mb-2">Your Experience</label>
@@ -141,7 +125,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" id="btn-build" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 sm:py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 text-base active:scale-[0.99]">
+                    <button type="submit" id="btn-build" class="w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 sm:py-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-sm text-base shadow-blue-500/20 active:scale-[0.99]">
                         <i data-lucide="rocket" class="w-5 h-5"></i>
                         <span>Build My Business</span>
                     </button>
@@ -158,9 +142,9 @@
             <p class="text-slate-500 mb-8 text-sm max-w-md mx-auto">Analyzing local market demand, finances, Indian regulations, and priority steps.</p>
             
             <div class="space-y-3 text-left">
-                <div class="flex items-center gap-3.5 p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm transition-all" id="step-market">
+                <div class="flex items-center gap-3.5 p-3.5 bg-white rounded-xl border border-slate-200 shadow-sm" id="step-market">
                     <div class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center step-icon shrink-0">
-                        <i data-lucide="loader" class="w-3.5 h-3.5 text-blue-600 animate-spin"></i>
+                        <i data-lucide="loader" class="w-3.5 h-3.5 text-slate-400 animate-spin"></i>
                     </div>
                     <div>
                         <p class="font-semibold text-slate-800 text-sm">Market & Customer Profiling</p>
@@ -225,7 +209,7 @@
                     </div>
                     <div class="min-w-0">
                         <p class="text-xs text-slate-500 font-medium">Revenue Model</p>
-                        <p class="text-base sm:text-lg font-bold text-slate-900 truncate" id="dash-rev">Direct</p>
+                        <p class="text-lg sm:text-xl font-bold text-slate-900 truncate" id="dash-rev">Direct</p>
                     </div>
                 </div>
 
@@ -289,7 +273,7 @@
                                 <i data-lucide="compass" class="w-5 h-5 text-blue-600"></i> Strategic Overview
                             </h3>
                             <button onclick="showFullBlueprint()" class="text-xs sm:text-sm text-blue-600 hover:text-blue-700 font-semibold flex items-center gap-1">
-                                <span>View Full Blueprint</span>
+                                <span>View Details</span>
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -298,7 +282,7 @@
                             <div>
                                 <div class="flex justify-between text-xs sm:text-sm font-medium mb-1.5">
                                     <span class="text-slate-700">Market & Customer Profile</span>
-                                    <span class="text-emerald-600 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3.5 h-3.5"></i> Verified</span>
+                                    <span class="text-emerald-600 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3.5 h-3.5"></i> Ready</span>
                                 </div>
                                 <div class="w-full bg-slate-100 rounded-full h-2">
                                     <div class="bg-blue-600 h-2 rounded-full w-full"></div>
@@ -307,7 +291,7 @@
                             <div>
                                 <div class="flex justify-between text-xs sm:text-sm font-medium mb-1.5">
                                     <span class="text-slate-700">First Product & Offering</span>
-                                    <span class="text-emerald-600 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3.5 h-3.5"></i> Verified</span>
+                                    <span class="text-emerald-600 font-semibold flex items-center gap-1"><i data-lucide="check" class="w-3.5 h-3.5"></i> Ready</span>
                                 </div>
                                 <div class="w-full bg-slate-100 rounded-full h-2">
                                     <div class="bg-emerald-500 h-2 rounded-full w-full"></div>
@@ -341,7 +325,7 @@
                                 </div>
                                 <div>
                                     <span class="font-semibold text-slate-800">Udyam MSME</span>
-                                    <p class="text-slate-500 text-xs mt-0.5" id="udyam-summary">Get priority lending & subsidy perks</p>
+                                    <p class="text-slate-500 text-xs mt-0.5" id="udyam-summary">Get subsidies & lower loan rates</p>
                                 </div>
                             </li>
                             <li class="flex items-start gap-3">
@@ -350,7 +334,7 @@
                                 </div>
                                 <div>
                                     <span class="font-semibold text-slate-800">GST Registration</span>
-                                    <p class="text-slate-500 text-xs mt-0.5" id="gst-summary">₹40L/₹20L threshold limit rules</p>
+                                    <p class="text-slate-500 text-xs mt-0.5" id="gst-summary">Threshold limits & tax basics</p>
                                 </div>
                             </li>
                             <li class="flex items-start gap-3">
@@ -358,8 +342,8 @@
                                     <i data-lucide="award" class="w-4 h-4"></i>
                                 </div>
                                 <div>
-                                    <span class="font-semibold text-slate-800" id="schemes-count">3 Schemes Matched</span>
-                                    <p class="text-slate-500 text-xs mt-0.5">Customized for your sector</p>
+                                    <span class="font-semibold text-slate-800" id="schemes-count">0 Schemes Found</span>
+                                    <p class="text-slate-500 text-xs mt-0.5">Matched for your category</p>
                                 </div>
                             </li>
                         </ul>
@@ -374,7 +358,7 @@
                                 </div>
                                 <div>
                                     <p class="font-bold text-sm text-slate-900 leading-none">ArixAI Advisor</p>
-                                    <p class="text-[11px] text-slate-400 mt-1">Real-time answers, zero fluff</p>
+                                    <p class="text-[11px] text-slate-400 mt-1">Direct answers, no fluff</p>
                                 </div>
                             </div>
                             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
@@ -382,7 +366,7 @@
                         
                         <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-3 text-sm">
                             <div class="bg-slate-100 text-slate-800 p-3 rounded-2xl rounded-tl-sm max-w-[90%] inline-block">
-                                Hey founder! I've loaded your business parameters. What question or roadblock do you want to tackle first?
+                                Hey! I'm ready. What question or roadblock do you have right now?
                             </div>
                         </div>
 
@@ -400,12 +384,24 @@
             </div>
         </div>
 
-        <!-- Strategy Blueprint Modal -->
+        <!-- Notice / Error Modal -->
+        <div id="modal-error" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm fade-in">
+            <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-100">
+                <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-3 border border-blue-100">
+                    <i data-lucide="info" class="w-5 h-5"></i>
+                </div>
+                <h3 class="text-base font-bold text-slate-900 mb-1">Notice</h3>
+                <p id="error-message" class="text-slate-600 mb-5 text-sm leading-relaxed">System status update.</p>
+                <button onclick="closeModal('modal-error')" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-semibold transition-colors text-sm shadow-sm">Got it</button>
+            </div>
+        </div>
+
+        <!-- Full Strategy Blueprint Modal -->
         <div id="modal-blueprint" class="hidden fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm fade-in flex items-start justify-center p-4 sm:p-6 overflow-y-auto">
             <div class="bg-white rounded-2xl w-full max-w-3xl shadow-2xl my-6 flex flex-col max-h-[90vh]">
                 <div class="p-5 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white/95 backdrop-blur rounded-t-2xl z-10">
                     <div>
-                        <h2 class="text-xl font-bold text-slate-900">Complete Business Plan Blueprint</h2>
+                        <h2 class="text-xl font-bold text-slate-900">Complete Business Plan</h2>
                         <p class="text-slate-500 text-xs">Generated specially for your idea, geography, and budget</p>
                     </div>
                     <button onclick="closeModal('modal-blueprint')" class="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors">
@@ -414,7 +410,7 @@
                 </div>
                 
                 <div class="p-5 sm:p-6 overflow-y-auto space-y-6" id="blueprint-content">
-                    <!-- Populated dynamically -->
+                    <!-- Injected dynamically from backend data -->
                 </div>
             </div>
         </div>
@@ -422,307 +418,81 @@
     </main>
 
     <script>
-        lucide.createIcons();
+        // ============================================================================
+        // 1. BACKEND ROUTING CONFIGURATION
+        // ============================================================================
 
-        // Memory Store for Business Data
+        /**
+         * Automatically resolves the Express backend host:
+         * - If accessed via file://, defaults to http://localhost:3000
+         * - If served via live-server / dev port, defaults to http://localhost:3000
+         * - If served directly from Express on port 3000, routes relatively
+         */
+        function getApiBase() {
+            if (window.location.protocol === 'file:') {
+                return 'http://localhost:3000';
+            }
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                if (window.location.port && window.location.port !== '3000') {
+                    return 'http://localhost:3000';
+                }
+            }
+            return '';
+        }
+
+        const API_BASE = getApiBase();
+
+        // Memory Store
+        let currentBusinessId = null;
+
         const BusinessBrain = {
-            core: {
-                idea: "",
-                location: "",
-                budget: "",
-                customer: "",
-                experience: ""
-            },
+            core: {},
             healthScore: 35,
             marketOpportunity: "",
             targetCustomerDemographic: "",
             painPoints: [],
             competitors: [],
             suggestedPriceRanges: "",
-            revenueModel: "",
+            revenueModel: "Direct Margins",
             minimumProduct: "",
             thirtyDayLaunchPlan: [],
             indiaCopilot: null,
             nextAction: null
         };
 
-        const delay = (ms) => new Promise(res => setTimeout(res, ms));
+        // ============================================================================
+        // 2. HELPER UTILITIES
+        // ============================================================================
+
+        function showError(msg) {
+            document.getElementById('error-message').innerText = msg;
+            document.getElementById('modal-error').classList.remove('hidden');
+        }
 
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
         }
 
-        function showFullBlueprint() {
-            document.getElementById('modal-blueprint').classList.remove('hidden');
-        }
-
-        function resetToSetup() {
-            switchView('view-setup');
-            document.getElementById('btn-reset').classList.add('hidden');
-        }
+        const delay = (ms) => new Promise(res => setTimeout(res, ms));
 
         function switchView(viewId) {
             ['view-setup', 'view-loading', 'view-dashboard'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
             });
             document.getElementById(viewId).classList.remove('hidden');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            window.scrollTo(0, 0);
         }
 
-        function fillPreset(type) {
-            if (type === 'organic-food') {
-                document.getElementById('input-idea').value = "Farm-to-table organic breakfast and cold-pressed juice subscription";
-                document.getElementById('input-location').value = "Pune, Maharashtra";
-                document.getElementById('input-budget').value = "₹3 Lakhs";
-                document.getElementById('input-customer').value = "Health-conscious IT professionals & families in Baner & Hinjawadi";
-            } else if (type === 'saas-agency') {
-                document.getElementById('input-idea').value = "AI-powered WhatsApp customer lead automation tool for local clinics and coaching centers";
-                document.getElementById('input-location').value = "Bangalore, Karnataka";
-                document.getElementById('input-budget').value = "₹2 Lakhs";
-                document.getElementById('input-customer').value = "Small clinic doctors and test prep center owners";
-            } else if (type === 'retail-d2c') {
-                document.getElementById('input-idea').value = "Specialty single-origin micro-lot artisanal coffee roastery with weekly subscription boxes";
-                document.getElementById('input-location').value = "Delhi NCR";
-                document.getElementById('input-budget').value = "₹4.5 Lakhs";
-                document.getElementById('input-customer').value = "Coffee enthusiasts, remote workers & specialty cafes";
-            }
-        }
-
-        /**
-         * EDGE BUSINESS INTELLIGENCE ENGINE
-         * 100% Client-Side, Zero-Failure, Instant High-Signal Strategic Planning
-         */
-        class EdgeBusinessEngine {
-            static generate(core) {
-                const idea = core.idea || "";
-                const loc = core.location || "India";
-                const budget = core.budget || "₹2 Lakhs";
-                const cust = core.customer || "Discerning urban customers";
-                const ideaLower = idea.toLowerCase();
-
-                const isFood = /food|breakfast|meal|cafe|bakery|restaurant|tea|coffee|organic|snack|kitchen|tiffin/i.test(ideaLower);
-                const isTech = /saas|app|software|platform|ai|digital|web|tool|automation|b2b|crm|cloud/i.test(ideaLower);
-                const isRetail = /cloth|apparel|d2c|ecommerce|store|fashion|craft|handmade|shop|roastery|coffee/i.test(ideaLower);
-
-                let marketOpportunity = "";
-                let competitors = [];
-                let revenueModel = "";
-                let pricing = "";
-                let mvp = "";
-                let launchPlan = [];
-                let actionTitle = "";
-                let actionWhy = "";
-                let actionSteps = [];
-
-                if (isFood) {
-                    marketOpportunity = `Surging consumer shift towards certified organic, preservative-free morning nutrition in ${loc}. Urban professionals actively look for reliable scheduled morning delivery without subscription lock-in fatigue.`;
-                    competitors = ["Swiggy Instamart / Zomato Everyday", "Local cloud kitchens & tiffin services", "Traditional neighbourhood cafes"];
-                    revenueModel = "Weekly & Monthly Prepaid Subscriptions (65-72% Gross Margin)";
-                    pricing = `Lite Box: ₹2,499/mo | Executive Combo: ₹3,999/mo | Corporate Tier: ₹8,500/mo. Calibrated for ${budget} startup runway.`;
-                    mvp = `A 15-customer concierge pilot operating from a certified local kitchen with direct WhatsApp order management and morning 7:30 AM drop-offs.`;
-                    launchPlan = [
-                        "Day 1-7: Finalize 3 signature healthy breakfast recipes and source eco-friendly biodegradable meal packaging.",
-                        "Day 8-15: Run WhatsApp tasting sessions across 3 nearby housing societies or co-working hubs.",
-                        "Day 16-23: Onboard first 15 prepaid customers with a 15-day inaugural discount.",
-                        "Day 24-30: Streamline batch prep times and establish referral incentives for office colleagues."
-                    ];
-                    actionTitle = `Secure 10 Prepaid Pilot Subscribers via Direct Outreach in ${loc}`;
-                    actionWhy = "Food businesses require early repeat ordering data and accurate packaging unit cost testing before committing to commercial leases or equipment.";
-                    actionSteps = [
-                        "Create a clean 1-page PDF menu featuring 3 fixed high-margin morning packages.",
-                        "Approach 20 managers or residents in targeted gated communities or tech hubs.",
-                        "Collect upfront payment via UPI QR with a 100% taste satisfaction guarantee."
-                    ];
-                } else if (isTech) {
-                    marketOpportunity = `High demand for frictionless workflow automation among regional businesses in ${loc} seeking to cut manual lead tracking hours and increase conversion rates.`;
-                    competitors = ["Complex overseas enterprise CRMs", "Disorganized Google Sheets & WhatsApp manual messaging", "Local IT freelance contractors"];
-                    revenueModel = "B2B Monthly Retainer + Setup Fee (80%+ Gross Margin)";
-                    pricing = `Starter: ₹1,999/mo | Professional: ₹4,999/mo | Custom Setup: ₹12,000 one-off. Aligned with ${budget} capital.`;
-                    mvp = `A working prototype or concierge service using WhatsApp Business API / no-code automations to deliver proven lead alerts to 3 pilot clients.`;
-                    launchPlan = [
-                        "Day 1-7: Conduct 10 founder problem interviews with local business managers to uncover key daily bottlenecks.",
-                        "Day 8-15: Build interactive demo workflow showing automated WhatsApp appointment and lead booking.",
-                        "Day 16-23: Deploy live 14-day free pilot for 3 high-volume business owners.",
-                        "Day 24-30: Convert 2 pilot users into paying annual retainers and capture video case studies."
-                    ];
-                    actionTitle = "Schedule 5 Problem-Discovery Interviews with Ideal Business Owners";
-                    actionWhy = "Writing code before verifying exact operational friction leads to building features no SME manager will pay for.";
-                    actionSteps = [
-                        "Write a 4-question script asking about their biggest lost-lead headache this month.",
-                        "Direct message 15 business owners in your target niche on LinkedIn and WhatsApp.",
-                        "Pitch the concierge fix at the end: 'If I automate this for you by Friday, can we run a trial?'"
-                    ];
-                } else if (isRetail) {
-                    marketOpportunity = `Rising demand for authentic, design-led artisanal products in ${loc}. Discerning buyers prefer transparent sourcing and distinct craft over generic mass marketplace items.`;
-                    competitors = ["Generic Amazon / Flipkart sellers", "Established legacy retail chains", "Premium specialty boutique brands"];
-                    revenueModel = "Direct Margin Sales + Tiered Gift & Sampler Bundles (58-64% Gross Margin)";
-                    pricing = `Starter Pack: ₹799 | Signature Bundle: ₹1,899 | Collector Subscription: ₹3,499. Fits ${budget} inventory batch.`;
-                    mvp = `A limited inaugural micro-batch of 30 units with premium custom labeling, offered directly to early community patrons.`;
-                    launchPlan = [
-                        "Day 1-7: Source sample materials, finalize packaging aesthetics and photography assets.",
-                        "Day 8-15: Create a streamlined catalog page with direct UPI payment processing.",
-                        "Day 16-23: Launch limited-edition pre-order campaign to community and micro-influencers.",
-                        "Day 24-30: Fulfill pre-orders, gather video testimonials, and initiate targeted local search presence."
-                    ];
-                    actionTitle = "Validate Product Demand with 5 Advance Paid Pre-Orders";
-                    actionWhy = "Securing pre-orders proves commercial viability and funds your initial batch production without personal debt.";
-                    actionSteps = [
-                        "Photograph high-quality samples and assemble a visual digital lookbook.",
-                        "Share with 25 targeted enthusiasts in your direct network and local communities.",
-                        "Offer a 20% Founder's Circle discount for deposits placed within 48 hours."
-                    ];
-                } else {
-                    marketOpportunity = `Distinct niche potential for ${idea} leveraging personalized touch, localized customer care, and agile cost structures in ${loc}.`;
-                    competitors = ["Unorganized local vendors", "National multi-category aggregators", "Specialized regional service firms"];
-                    revenueModel = "Direct Value Pricing + Retainer Support";
-                    pricing = `Core Package: ₹1,500 - ₹5,000 with 60%+ target gross margins against ${budget} startup allocation.`;
-                    mvp = `A lean concierge pilot delivering the core solution manually to initial clients to prove willing-to-pay economics.`;
-                    launchPlan = [
-                        "Day 1-7: Define the core value proposition, transparent pricing matrix, and brand identity.",
-                        "Day 8-15: Direct outreach to 30 prospective clients across your primary territory.",
-                        "Day 16-23: Deliver first 5 successful engagements and document customer feedback.",
-                        "Day 24-30: Refine delivery checklist and initiate structured referral loops."
-                    ];
-                    actionTitle = "Conduct 5 Direct Customer Validation Conversations";
-                    actionWhy = "Direct customer commitments validate real demand before committing significant capital or signing long-term contracts.";
-                    actionSteps = [
-                        "Prepare a 1-page solution summary detailing what you solve and the pricing.",
-                        "Reach out to 15 relevant potential buyers in your personal or professional network.",
-                        "Secure at least 2 commitments or advance token deposits."
-                    ];
-                }
-
-                return {
-                    healthScore: 40,
-                    marketOpportunity,
-                    targetCustomerDemographic: cust,
-                    painPoints: [
-                        "Incumbent alternatives are overpriced or provide inconsistent service quality",
-                        "Lack of transparent, direct communication and responsive support",
-                        "Existing solutions fail to cater specifically to regional and local requirements"
-                    ],
-                    competitors,
-                    suggestedPriceRanges: pricing,
-                    revenueModel,
-                    minimumProduct: mvp,
-                    thirtyDayLaunchPlan: launchPlan,
-                    indiaCopilot: {
-                        gstConsiderations: "GST registration is mandatory only once turnover exceeds ₹40 Lakhs (for goods) or ₹20 Lakhs (for services). Interstate online e-commerce requires GST immediately.",
-                        udyamEligibility: "Eligible for free Udyam MSME (Micro Enterprise). Unlocks collateral-free credit, 1% interest rate concession, and government tender exemptions.",
-                        schemes: [
-                            {
-                                schemeName: "PM Mudra Yojana (PMMY)",
-                                potentialSupportAmount: "Up to ₹10 Lakhs (Shishu / Kishor / Tarun tiers)",
-                                eligibilityStatus: "High Match &middot; Collateral-Free"
-                            },
-                            {
-                                schemeName: "Startup India Seed Fund Scheme (SISFS)",
-                                potentialSupportAmount: "Up to ₹20 Lakhs (Grant for Proof of Concept)",
-                                eligibilityStatus: "Applicable via Incubators"
-                            },
-                            {
-                                schemeName: "Credit Guarantee Scheme (CGTMSE)",
-                                potentialSupportAmount: "Credit facility up to ₹2 Crores",
-                                eligibilityStatus: "Scheduled Bank Linked"
-                            }
-                        ]
-                    },
-                    nextAction: {
-                        actionTitle,
-                        whyDoThis: actionWhy,
-                        steps: actionSteps
-                    }
-                };
-            }
-
-            static getNextMilestone(completedTitle, currentScore) {
-                const milestones = [
-                    {
-                        actionTitle: "Set Up Dedicated Business UPI QR & Digital Invoicing",
-                        whyDoThis: "Clean separation of personal and business collections prevents tax confusion and builds bank loan eligibility records.",
-                        steps: [
-                            "Register a Current Bank Account or an active Google Pay / Paytm Business QR code.",
-                            "Create an account on Razorpay or Instamojo to collect card and net-banking payments.",
-                            "Keep a clean digital spreadsheet recording incoming payments and daily raw material expenses."
-                        ]
-                    },
-                    {
-                        actionTitle: "Acquire 3 Written Customer Reviews & Case Notes",
-                        whyDoThis: "Authentic founder-led testimonials convert prospective buyers 3x faster than any paid social media ad.",
-                        steps: [
-                            "Send a short 3-question WhatsApp questionnaire to your initial pilot users.",
-                            "Ask specifically: 'What was the single most helpful outcome you experienced?'",
-                            "Obtain permission to showcase their quotes on your presentation, catalog, or flyer."
-                        ]
-                    },
-                    {
-                        actionTitle: "Complete Free Udyam MSME Registration Online",
-                        whyDoThis: "Gives official government recognition, priority bank credit, and protection against delayed buyer payments under MSMED Act.",
-                        steps: [
-                            "Visit the official udyamregistration.gov.in portal with Aadhaar and PAN card.",
-                            "Fill out the 10-minute digital self-declaration (100% free, no agent required).",
-                            "Download your official MSME certificate and file it with your bank branch."
-                        ]
-                    },
-                    {
-                        actionTitle: "Launch a 2-Tier Customer Referral Incentive",
-                        whyDoThis: "Organic word-of-mouth is your lowest-cost acquisition channel during the first 6 months of operation.",
-                        steps: [
-                            "Offer existing loyal clients a 15% discount or free add-on for referring a friend.",
-                            "Give the newly referred buyer a welcome 10% discount on their first transaction.",
-                            "Track all referrals manually on your ledger to reward champions promptly."
-                        ]
-                    }
-                ];
-
-                const filtered = milestones.filter(m => m.actionTitle !== completedTitle);
-                return filtered[Math.floor(Math.random() * filtered.length)];
-            }
-
-            static answerChat(question, core) {
-                const q = (question || "").toLowerCase();
-                const loc = core.location || "India";
-                const idea = core.idea || "your business";
-
-                if (q.includes('gst') || q.includes('tax') || q.includes('registration')) {
-                    return {
-                        answer: `For ${idea} in ${loc}, GST is not legally required until your annual turnover crosses ₹40 Lakhs (for physical goods) or ₹20 Lakhs (for services), unless you are shipping goods across state lines or selling via Amazon/Flipkart. Start with Udyam MSME first—it is 100% free, requires only Aadhaar and PAN, and takes 10 minutes.`,
-                        task: "Complete free Udyam MSME registration at udyamregistration.gov.in"
-                    };
-                }
-                if (q.includes('price') || q.includes('pricing') || q.includes('charge') || q.includes('cost')) {
-                    return {
-                        answer: `Price for value, not simple cost-plus. For ${idea}, target at least a 60% gross margin on variable unit costs. This leaves sufficient margin for packaging, shipping, payment gateway fees, and founder profit without cash flow anxiety.`,
-                        task: "Benchmark 3 competitor price sheets and lock your minimum 60% gross margin"
-                    };
-                }
-                if (q.includes('customer') || q.includes('client') || q.includes('lead') || q.includes('first 10') || q.includes('marketing')) {
-                    return {
-                        answer: `Do not burn your budget on broad Instagram or Facebook ads right now. Use founder-led direct outreach in ${loc}: reach out personally to 20 target people in your immediate circle, gated communities, or relevant LinkedIn contacts with an exclusive inaugural offer.`,
-                        task: "Message 20 targeted prospective buyers with your 1-page offer"
-                    };
-                }
-                if (q.includes('mudra') || q.includes('loan') || q.includes('funding') || q.includes('scheme') || q.includes('grant')) {
-                    return {
-                        answer: `You can apply for the PM Mudra Yojana (Shishu loan up to ₹50,000 or Kishor up to ₹5 Lakhs) at your local bank branch without collateral. Bring your Udyam MSME certificate, quotation for equipment, and business plan summary.`,
-                        task: "Gather PAN, Aadhaar, and 6-month bank statement for Mudra submission"
-                    };
-                }
-                if (q.includes('competitor') || q.includes('competition') || q.includes('different')) {
-                    return {
-                        answer: `Large incumbent competitors are slow, bureaucratic, and have generic customer support. Your superpower is speed, personalized attention, and agility. Emphasize direct founder care and speed of delivery.`,
-                        task: "Write down 2 clear reasons why a buyer should choose you over incumbent options"
-                    };
-                }
-
-                return {
-                    answer: `For ${idea} in ${loc}, keep your execution focused on the single immediate bottleneck: validating demand and getting cash collections before heavy inventory or tech spending. What exact milestone are you working on today?`,
-                    task: "Define this week's highest-leverage founder execution step"
-                };
-            }
+        function resetToSetup() {
+            currentBusinessId = null;
+            document.getElementById('nav-status').classList.add('hidden');
+            document.getElementById('nav-status').classList.remove('flex');
+            document.getElementById('btn-reset').classList.add('hidden');
+            switchView('view-setup');
         }
 
         async function typeText(element, text, speed = 12) {
+            if (!element || !text) return;
             element.innerHTML = '';
             element.classList.add('typing-cursor');
             for (let i = 0; i < text.length; i++) {
@@ -732,18 +502,26 @@
             element.classList.remove('typing-cursor');
         }
 
-        function updateStepStatus(stepId) {
+        function updateStepStatus(stepId, isDone = true) {
             const el = document.getElementById(stepId);
             if (!el) return;
             el.classList.remove('opacity-50');
             const icon = el.querySelector('.step-icon');
             if (icon) {
-                icon.classList.remove('border-slate-200');
-                icon.classList.add('border-emerald-500', 'bg-emerald-500');
-                icon.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>';
+                if (isDone) {
+                    icon.classList.remove('border-slate-200');
+                    icon.classList.add('border-blue-600', 'bg-blue-600');
+                    icon.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>';
+                } else {
+                    icon.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 text-blue-600 animate-spin"></i>';
+                }
                 lucide.createIcons();
             }
         }
+
+        // ============================================================================
+        // 3. FORM SUBMISSION -> CONNECTED TO business.js (/api/business/build)
+        // ============================================================================
 
         document.getElementById('build-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -752,46 +530,128 @@
                 idea: document.getElementById('input-idea').value.trim(),
                 location: document.getElementById('input-location').value.trim(),
                 budget: document.getElementById('input-budget').value.trim(),
-                customer: document.getElementById('input-customer').value.trim(),
+                targetCustomer: document.getElementById('input-customer').value.trim(),
                 experience: document.getElementById('input-experience').value
             };
 
             switchView('view-loading');
 
-            // Sequential visual progress indicators
-            await delay(450);
-            updateStepStatus('step-market');
+            // Timeline visual progression matching backend pipeline stages
+            const visualProgress = (async () => {
+                await delay(600);
+                updateStepStatus('step-market', true);
+                updateStepStatus('step-finance', false);
+                await delay(900);
+                updateStepStatus('step-finance', true);
+                updateStepStatus('step-india', false);
+                await delay(900);
+                updateStepStatus('step-india', true);
+                updateStepStatus('step-action', false);
+            })();
 
-            await delay(400);
-            updateStepStatus('step-finance');
+            try {
+                // 1. Send Build Request to Node.js backend
+                const buildRes = await fetch(`${API_BASE}/api/business/build`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        idea: BusinessBrain.core.idea,
+                        location: BusinessBrain.core.location,
+                        budget: BusinessBrain.core.budget,
+                        targetCustomer: BusinessBrain.core.targetCustomer,
+                        experience: BusinessBrain.core.experience,
+                        businessType: 'Startup'
+                    })
+                });
 
-            await delay(400);
-            updateStepStatus('step-india');
+                if (!buildRes.ok) {
+                    throw new Error(`Server returned status: ${buildRes.status}`);
+                }
 
-            await delay(350);
-            // Execute Edge Intelligence Synthesis
-            const generatedData = EdgeBusinessEngine.generate(BusinessBrain.core);
-            Object.assign(BusinessBrain, generatedData);
-            
-            updateStepStatus('step-action');
-            await delay(300);
+                const buildData = await buildRes.json();
+                currentBusinessId = buildData.businessId;
 
-            renderDashboard();
-            switchView('view-dashboard');
-            document.getElementById('btn-reset').classList.remove('hidden');
+                // 2. Fetch structured results across all endpoints from business.js
+                const [dashRes, bpRes, indRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/business/${currentBusinessId}/dashboard`),
+                    fetch(`${API_BASE}/api/business/${currentBusinessId}/blueprint`),
+                    fetch(`${API_BASE}/api/business/${currentBusinessId}/india`)
+                ]);
+
+                const dashData = await dashRes.json();
+                const bpData = await bpRes.json();
+                const indData = await indRes.json();
+
+                await visualProgress;
+                updateStepStatus('step-action', true);
+
+                // 3. Populate memory store
+                BusinessBrain.healthScore = dashData.health?.score || 45;
+                BusinessBrain.nextAction = dashData.nextBestAction || null;
+
+                BusinessBrain.marketOpportunity = bpData.market?.marketOpportunity || "";
+                BusinessBrain.targetCustomerDemographic = bpData.customer?.primaryCustomer || BusinessBrain.core.targetCustomer || "";
+                BusinessBrain.painPoints = bpData.customer?.painPoints || [];
+                
+                if (bpData.competitors && Array.isArray(bpData.competitors.directCompetitors)) {
+                    BusinessBrain.competitors = bpData.competitors.directCompetitors;
+                } else if (Array.isArray(bpData.competitors)) {
+                    BusinessBrain.competitors = bpData.competitors;
+                } else {
+                    BusinessBrain.competitors = [];
+                }
+
+                BusinessBrain.suggestedPriceRanges = bpData.pricing?.suggestedPriceRanges || "";
+                BusinessBrain.revenueModel = bpData.businessModel || bpData.pricing?.revenueModel || "Direct Margins";
+                BusinessBrain.minimumProduct = bpData.mvp?.minimumProduct || "";
+                BusinessBrain.thirtyDayLaunchPlan = bpData.mvp?.thirtyDayLaunchPlan || [];
+
+                BusinessBrain.indiaCopilot = {
+                    gstConsiderations: indData.compliance?.gstConsiderations || "Standard GST thresholds apply.",
+                    udyamEligibility: indData.compliance?.udyamEligibility || "Eligible for priority MSME registration.",
+                    schemes: indData.schemes || []
+                };
+
+                await delay(250);
+                renderDashboard();
+                switchView('view-dashboard');
+                
+                // Show operating status badge and reset button
+                const navStatus = document.getElementById('nav-status');
+                navStatus.classList.remove('hidden');
+                navStatus.classList.add('flex');
+                document.getElementById('btn-reset').classList.remove('hidden');
+
+            } catch (err) {
+                console.error("Backend communication error:", err);
+                switchView('view-setup');
+                showError("Could not connect to the ArixAI backend service at " + (API_BASE || 'current host') + ". Please ensure 'node business.js' is running.");
+            }
         });
+
+        // ============================================================================
+        // 4. DASHBOARD & NEXT ACTION RENDERING
+        // ============================================================================
 
         function renderDashboard() {
             document.getElementById('dash-health').innerText = `${BusinessBrain.healthScore}/100`;
             document.getElementById('dash-cash').innerText = BusinessBrain.core.budget || "₹0";
-            document.getElementById('dash-rev').innerText = BusinessBrain.revenueModel?.split(' ')[0] || "Direct";
+            document.getElementById('dash-rev').innerText = BusinessBrain.revenueModel?.split(' ')[0] || "Active";
             
-            const schemesCount = BusinessBrain.indiaCopilot?.schemes?.length || 3;
+            const schemesCount = BusinessBrain.indiaCopilot?.schemes?.length || 0;
             document.getElementById('dash-opps').innerText = schemesCount;
-            document.getElementById('schemes-count').innerText = `${schemesCount} Schemes Matched`;
+            document.getElementById('schemes-count').innerText = `${schemesCount} Schemes Found`;
+
+            if (BusinessBrain.indiaCopilot?.udyamEligibility) {
+                document.getElementById('udyam-summary').innerText = BusinessBrain.indiaCopilot.udyamEligibility.substring(0, 60) + '...';
+            }
+            if (BusinessBrain.indiaCopilot?.gstConsiderations) {
+                document.getElementById('gst-summary').innerText = BusinessBrain.indiaCopilot.gstConsiderations.substring(0, 60) + '...';
+            }
 
             renderNextAction();
             buildFullBlueprintModal();
+            lucide.createIcons();
         }
 
         async function renderNextAction() {
@@ -806,42 +666,60 @@
             whyEl.innerText = "";
             stepsList.innerHTML = "";
 
-            await typeText(titleEl, action.actionTitle, 14);
-            await typeText(whyEl, action.whyDoThis, 8);
+            await typeText(titleEl, action.actionTitle || "Validate core offer", 12);
+            await typeText(whyEl, action.whyDoThis || "Establish direct traction and early revenue.", 8);
             
             stepsList.innerHTML = '';
             (action.steps || []).forEach(step => {
                 stepsList.innerHTML += `
                     <li class="flex items-start gap-2.5">
                         <i data-lucide="check" class="w-4 h-4 mt-0.5 text-blue-300 shrink-0"></i>
-                        <span>${step}</span>
+                        <span class="leading-snug">${step}</span>
                     </li>
                 `;
             });
             lucide.createIcons();
         }
 
+        // ============================================================================
+        // 5. ACTION COMPLETION -> CONNECTED TO business.js (/api/business/:id/action/complete)
+        // ============================================================================
+
         async function completeNextAction() {
+            if (!currentBusinessId) return;
+
             const btn = document.getElementById('btn-complete-action');
-            btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> <span>Updating...</span>`;
+            btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Updating...`;
             lucide.createIcons();
 
-            await delay(400);
+            try {
+                const res = await fetch(`${API_BASE}/api/business/${currentBusinessId}/action/complete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ actionResultData: "Step executed by founder" })
+                });
 
-            BusinessBrain.healthScore = Math.min(100, BusinessBrain.healthScore + 15);
-            document.getElementById('dash-health').innerText = `${BusinessBrain.healthScore}/100`;
+                if (!res.ok) throw new Error("Could not update action.");
+                const data = await res.json();
 
-            const completedTitle = BusinessBrain.nextAction.actionTitle;
-            const newMilestone = EdgeBusinessEngine.getNextMilestone(completedTitle, BusinessBrain.healthScore);
-            
-            BusinessBrain.nextAction = newMilestone;
-            await renderNextAction();
+                BusinessBrain.healthScore = data.newHealthScore || Math.min(100, BusinessBrain.healthScore + 10);
+                BusinessBrain.nextAction = data.nextBestAction;
 
-            addChatMessage("AI", `Awesome momentum! You marked "${completedTitle}" as done. Readiness increased to ${BusinessBrain.healthScore}/100. Here is your next highest-leverage focus.`);
+                document.getElementById('dash-health').innerText = `${BusinessBrain.healthScore}/100`;
+                await renderNextAction();
+                addChatMessage("AI", `Great job completing that milestone! Your readiness score is now ${BusinessBrain.healthScore}/100. Here is your next recommended focus.`);
+            } catch (e) {
+                console.error("Action completion error:", e);
+                showError("Unable to refresh the next action. Please ensure the backend server is running.");
+            }
 
             btn.innerHTML = `<i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i> <span>Mark Done</span>`;
             lucide.createIcons();
         }
+
+        // ============================================================================
+        // 6. ADVISOR CHAT -> CONNECTED TO business.js (/api/business/:id/chat)
+        // ============================================================================
 
         const chatForm = document.getElementById('chat-form');
         const chatInput = document.getElementById('chat-input');
@@ -850,11 +728,10 @@
         function addChatMessage(sender, text) {
             const div = document.createElement('div');
             if (sender === "User") {
-                div.className = "bg-blue-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[85%] self-end ml-auto float-right clear-both mb-3 shadow-sm text-sm";
+                div.className = "bg-blue-600 text-white p-3 rounded-2xl rounded-tr-sm max-w-[88%] self-end ml-auto float-right clear-both mb-3 shadow-sm text-sm";
                 div.innerText = text;
             } else {
                 div.className = "bg-slate-100 text-slate-800 p-3 rounded-2xl rounded-tl-sm max-w-[88%] float-left clear-both mb-3 shadow-sm text-sm";
-                div.innerText = text;
             }
             chatBox.appendChild(div);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -870,63 +747,87 @@
             addChatMessage("User", msg);
 
             const aiBubble = addChatMessage("AI", "");
-            aiBubble.innerHTML = '<span class="pulse-dot text-slate-400">ArixAI is answering...</span>';
+            aiBubble.innerHTML = '<span class="pulse-dot text-slate-400">ArixAI is reviewing your blueprint...</span>';
 
-            await delay(350);
-            const response = EdgeBusinessEngine.answerChat(msg, BusinessBrain.core);
-            
-            await typeText(aiBubble, response.answer, 10);
-            
-            if (response.task) {
-                const taskDiv = document.createElement('div');
-                taskDiv.className = "mt-2.5 p-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-2 shadow-xs";
-                taskDiv.innerHTML = `<i data-lucide="check-square" class="w-3.5 h-3.5 text-blue-600 shrink-0"></i> <span>Action: ${response.task}</span>`;
-                aiBubble.appendChild(taskDiv);
-                lucide.createIcons();
+            try {
+                const targetId = currentBusinessId || 'active-session';
+                const response = await fetch(`${API_BASE}/api/business/${targetId}/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                });
+
+                if (!response.ok) throw new Error("Chat request failed");
+                const data = await response.json();
+
+                await typeText(aiBubble, data.answer || "Focus on direct customer validation and early revenue.", 10);
+                
+                const taskTitle = typeof data.generatedTask === 'object' ? data.generatedTask?.title : data.generatedTask;
+                if (taskTitle) {
+                    const taskDiv = document.createElement('div');
+                    taskDiv.className = "mt-2 p-2 bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 flex items-center gap-2";
+                    taskDiv.innerHTML = `<i data-lucide="plus" class="w-3.5 h-3.5 text-blue-600"></i> New Goal: ${taskTitle}`;
+                    aiBubble.appendChild(taskDiv);
+                    lucide.createIcons();
+                }
+            } catch (err) {
+                console.error("Chat error:", err);
+                aiBubble.innerText = "Trouble connecting to the Advisor agent. Please verify that 'node business.js' is running.";
             }
-
             chatBox.scrollTop = chatBox.scrollHeight;
         });
 
         function openChatWithAction() {
             if (!BusinessBrain.nextAction) return;
-            chatInput.value = `How do I best execute: ${BusinessBrain.nextAction.actionTitle}?`;
+            chatInput.value = `Help me accomplish: ${BusinessBrain.nextAction.actionTitle}`;
             chatInput.focus();
+        }
+
+        // ============================================================================
+        // 7. FULL STRATEGY BLUEPRINT MODAL
+        // ============================================================================
+
+        function showFullBlueprint() {
+            document.getElementById('modal-blueprint').classList.remove('hidden');
         }
 
         function buildFullBlueprintModal() {
             const bp = BusinessBrain;
             const container = document.getElementById('blueprint-content');
             
-            const schemesHtml = (bp.indiaCopilot?.schemes || []).map(s => `
-                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80">
+            const schemesHtml = bp.indiaCopilot?.schemes?.map(s => `
+                <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200">
                     <p class="font-bold text-slate-800 text-sm">${s.schemeName}</p>
-                    <div class="flex flex-wrap gap-4 mt-1.5 text-xs text-slate-600 font-medium">
+                    <div class="flex flex-wrap gap-x-4 gap-y-1 mt-1.5 text-xs text-slate-600 font-medium">
                         <span>💰 Support: ${s.potentialSupportAmount}</span>
                         <span>🎯 Status: ${s.eligibilityStatus}</span>
                     </div>
                 </div>
-            `).join('');
+            `).join('') || '<p class="text-xs text-slate-500">Government schemes analysis ready upon initialization.</p>';
 
             const compHtml = (bp.competitors || []).map(c => `
                 <li class="flex items-center gap-2 text-slate-600 text-xs sm:text-sm">
                     <span class="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
                     <span>${c}</span>
                 </li>
-            `).join('');
+            `).join('') || '<li class="text-xs text-slate-400">Local and regional competitors cataloged</li>';
 
             const roadmapHtml = (bp.thirtyDayLaunchPlan || []).map(step => `
                 <li class="flex items-start gap-2 text-slate-600 text-xs sm:text-sm">
                     <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-500 mt-1 shrink-0"></i>
                     <span>${step}</span>
                 </li>
-            `).join('');
+            `).join('') || '<li class="text-xs text-slate-400">30-day roadmap steps outlined</li>';
 
             container.innerHTML = `
                 <div class="border-b border-slate-100 pb-4">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Business Concept</h3>
-                    <p class="text-base font-semibold text-slate-800">${bp.core.idea}</p>
-                    <p class="text-xs text-slate-500 mt-1">Location: ${bp.core.location} &middot; Initial Budget: ${bp.core.budget}</p>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Core Pitch & Parameters</h3>
+                    <p class="text-base font-semibold text-slate-800">${bp.core.idea || 'Venture Concept'}</p>
+                    <div class="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
+                        <span>📍 ${bp.core.location || 'India'}</span>
+                        <span>💵 Budget: ${bp.core.budget || 'Bootstrapped'}</span>
+                        <span>👤 Founder: ${bp.core.experience || 'First-time founder'}</span>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -940,11 +841,11 @@
                                 <p class="text-slate-800 text-sm font-semibold">${bp.targetCustomerDemographic || 'General Audience'}</p>
                             </div>
                             <div>
-                                <p class="text-xs text-slate-400 font-medium">Market Opportunity</p>
-                                <p class="text-slate-700 text-xs sm:text-sm mt-0.5 leading-relaxed">${bp.marketOpportunity}</p>
+                                <p class="text-xs text-slate-400 font-medium">Market Opening</p>
+                                <p class="text-slate-700 text-xs sm:text-sm mt-0.5 leading-relaxed">${bp.marketOpportunity || 'High demand in target segment'}</p>
                             </div>
                             <div>
-                                <p class="text-xs text-slate-400 font-medium mb-1">Competitors & Alternatives</p>
+                                <p class="text-xs text-slate-400 font-medium mb-1">Identified Competitors</p>
                                 <ul class="space-y-1.5">${compHtml}</ul>
                             </div>
                         </div>
@@ -952,36 +853,36 @@
 
                     <div>
                         <h3 class="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                            <i data-lucide="package" class="w-4 h-4"></i> Product & Economics
+                            <i data-lucide="package" class="w-4 h-4"></i> Product & Offering
                         </h3>
                         <div class="space-y-3">
                             <div>
-                                <p class="text-xs text-slate-400 font-medium">Lean Minimum Viable Product (MVP)</p>
-                                <p class="text-slate-800 text-xs sm:text-sm font-semibold mt-0.5">${bp.minimumProduct}</p>
+                                <p class="text-xs text-slate-400 font-medium">Minimum Test Product (MVP)</p>
+                                <p class="text-slate-800 text-xs sm:text-sm font-semibold mt-0.5">${bp.minimumProduct || 'Concierge prototype delivery'}</p>
                             </div>
                             <div>
-                                <p class="text-xs text-slate-400 font-medium">Revenue Model</p>
+                                <p class="text-xs text-slate-400 font-medium">Revenue Model & Pricing</p>
                                 <p class="text-slate-800 text-xs sm:text-sm font-semibold mt-0.5">${bp.revenueModel}</p>
-                                <p class="text-slate-500 text-xs mt-0.5">Pricing Tiers: ${bp.suggestedPriceRanges}</p>
+                                <p class="text-slate-500 text-xs mt-0.5">${bp.suggestedPriceRanges}</p>
                             </div>
                             <div>
-                                <p class="text-xs text-slate-400 font-medium mb-1">30-Day Launch Sequence</p>
+                                <p class="text-xs text-slate-400 font-medium mb-1">30-Day Launch Roadmap</p>
                                 <ul class="space-y-1.5">${roadmapHtml}</ul>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="bg-blue-50/60 rounded-xl p-4 sm:p-5 border border-blue-100">
+                <div class="bg-blue-50/70 rounded-xl p-4 sm:p-5 border border-blue-100">
                     <h3 class="text-xs font-bold text-blue-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                         <span>🇮🇳</span> India Startup Guidance & Schemes
                     </h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <p class="text-xs text-slate-500 font-medium">GST Considerations</p>
-                            <p class="text-slate-800 text-xs mt-0.5 leading-relaxed">${bp.indiaCopilot?.gstConsiderations || 'Threshold checking...'}</p>
+                            <p class="text-slate-800 text-xs mt-0.5">${bp.sindiaCopilot?.gstConsiderations || 'Standard limits apply.'}</p>
                             <p class="text-xs text-slate-500 font-medium mt-3">Udyam Registration</p>
-                            <p class="text-slate-800 text-xs mt-0.5 leading-relaxed">${bp.indiaCopilot?.udyamEligibility || 'Eligibility active'}</p>
+                            <p class="text-slate-800 text-xs mt-0.5">${bp.indiaCopilot?.udyamEligibility || 'Eligible for MSME scheme.'}</p>
                         </div>
                         <div>
                             <p class="text-xs text-slate-500 font-medium mb-2">Matched Funding Schemes</p>
@@ -992,6 +893,9 @@
             `;
             lucide.createIcons();
         }
+
+        // Initialize icons on page load
+        lucide.createIcons();
     </script>
 </body>
 </html>
