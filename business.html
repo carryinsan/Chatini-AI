@@ -428,10 +428,17 @@
          * - If served via live-server / dev port, defaults to http://localhost:3000
          * - If served directly from Express on port 3000, routes relatively
          */
+        /**
+         * Set your backend Edge URL here. 
+         * Leave as '' if your frontend and backend run on the same domain.
+         * If your Edge backend runs on a separate worker/domain, replace '' with your full URL:
+         * e.g., 'https://your-edge-worker.workers.dev' or 'http://localhost:8787'
+         */
+        const EDGE_BACKEND_URL = ''; 
+
         function getApiBase() {
-            if (window.location.protocol === 'file:') {
-                return 'http://localhost:3000';
-            }
+            if (EDGE_BACKEND_URL) return EDGE_BACKEND_URL.replace(/\/+$/, '');
+            if (window.location.protocol === 'file:') return 'http://localhost:3000';
             if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
                 if (window.location.port && window.location.port !== '3000') {
                     return 'http://localhost:3000';
@@ -625,7 +632,7 @@
             } catch (err) {
                 console.error("Backend communication error:", err);
                 switchView('view-setup');
-                showError("Could not connect to the ArixAI backend service at " + (API_BASE || 'current host') + ". Please ensure 'node business.js' is running.");
+                showError(`Failed to reach Edge backend at ${API_BASE || window.location.origin}: ${err.message}`);
             }
         });
 
@@ -880,7 +887,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <p class="text-xs text-slate-500 font-medium">GST Considerations</p>
-                            <p class="text-slate-800 text-xs mt-0.5">${bp.sindiaCopilot?.gstConsiderations || 'Standard limits apply.'}</p>
+                            <p class="text-slate-800 text-xs mt-0.5">${bp.indiaCopilot?.gstConsiderations || 'Standard limits apply.'}</p>
                             <p class="text-xs text-slate-500 font-medium mt-3">Udyam Registration</p>
                             <p class="text-slate-800 text-xs mt-0.5">${bp.indiaCopilot?.udyamEligibility || 'Eligible for MSME scheme.'}</p>
                         </div>
