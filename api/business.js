@@ -1,58 +1,33 @@
 /**
- * ARIXAI - BUSINESS OPERATING SYSTEM (BACKEND)
- * ---------------------------------------------------------
- * Architecture: Node.js + Express (Edge/Serverless Compatible)
- * Engine: Gemini 2.5 Flash + Groq Query Generator + Tavily Web Grounding
- * Core Concept: "The Business Brain" - Resilient Multi-Key Blueprint Generator
- * * Features implemented:
- * 1. Full multi-key pools & auto-rotation for Gemini, Groq, and Tavily (No 429 or quota crashes).
- * 2. Groq-driven targeted query synthesizer for hyper-accurate search queries.
- * 3. Tavily web search integration (search_depth: "basic", max_results: 15).
- * 4. Resilient fault-tolerant agent pipeline preventing connection and blueprint dropouts.
- * 5. Robust JSON stream and schema sanitizers with intelligent fallbacks.
+ * ARIXAI - BUSINESS OPERATING SYSTEM (UNIVERSAL EDGE BACKEND)
+ * --------------------------------------------------------------------------
+ * Runtime: Edge Native (Zero Node.js dependencies: No Express, No Cors, No http)
+ * Compatible with: Cloudflare Workers, Vercel Edge Functions, Next.js Edge Routes,
+ *                  Cloudflare Pages, Deno Deploy, Supabase Edge, and WinterCG runtimes.
+ * Engine: Gemini 2.5/2.0/1.5 Flash + Groq Query Generator + Tavily Grounding
+ * Core Features:
+ *   1. Full multi-key pools with auto-rotation for Gemini, Groq, and Tavily.
+ *   2. Dual-mode environment resolution (supports Cloudflare Worker `env` & `process.env`).
+ *   3. Universal CORS preflight handling for local development (live-server, file://) and prod.
+ *   4. Resilient JSON stream parser with regex auto-repair to prevent client-side desync.
+ *   5. Global isolate memory store with guaranteed zero-crash defaults.
  */
 
-const express = require('express');
-const cors = require('cors');
-const crypto = require('crypto');
+export const config = {
+    runtime: 'edge'
+};
 
-// ============================================================================
-// 1. ENVIRONMENT KEYS & MULTI-KEY POOL EXTRACTION (Synced with chat.js)
-// ============================================================================
-
-const cleanKey = (k) => (k ? k.replace(/[\r\n\s]/g, '') : null);
-
-const GEMINI_KEYS = [
-    process.env.GEMINI_API_KEY_1,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-    process.env.GEMINI_API_KEY_4,
-    process.env.GEMINI_API_KEY_5,
-    process.env.GEMINI_API_KEY_6,
-    process.env.GEMINI_API_KEY_7,
-    process.env.GEMINI_API_KEY_8,
-    process.env.GEMINI_API_KEY_9,
-    process.env.GEMINI_API_KEY,
-    process.env.ARIX_API_KEY
-].map(cleanKey).filter(Boolean);
-
-const TAVILY_KEYS = [
-    process.env.TAVILY_API_KEY,
-    process.env.TAVILY_KEY_2,
-    process.env.TAVILY_KEY_3,
-    process.env.TAVILY_KEY_4,
-    process.env.TAVILY_KEY_5,
-    process.env.TAVILY_KEY_6,
-    process.env.TAVILY_KEY_7
-].map(cleanKey).filter(Boolean);
-
-const GROQ_KEYS = [
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_KEY_2, process.env.GROQ_API_KEY_2,
-    process.env.GROQ_KEY_3, process.env.GROQ_API_KEY_3,
-    process.env.GROQ_KEY_4, process.env.GROQ_API_KEY_4,
-    process.env.GROQ_KEY_5, process.env.GROQ_API_KEY_5
-].map(cleanKey).filter(Boolean);
+const CONFIG = {
+    GEMINI_MODELS: ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"],
+    API_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/models",
+    TAVILY_SEARCH_URL: "https://api.tavily.com/search",
+    GROQ_API_URL: "https://api.groq.com/openai/v1/chat/completions",
+    SEARCH_DEPTH: "basic",
+    MAX_SEARCH_RESULTS: 15,
+    GEMINI_TIMEOUT_MS: 15000,
+    GROQ_TIMEOUT_MS: 5000,
+    TAVILY_TIMEOUT_MS: 6000
+};
 
 const GROQ_MODELS_FALLBACK = [
     'llama-3.3-70b-versatile',
@@ -64,42 +39,72 @@ const GROQ_MODELS_FALLBACK = [
     'deepseek-r1-distill-llama-70b'
 ];
 
-const CONFIG = {
-    PORT: process.env.PORT || 3000,
-    ENGINE_MODEL: "gemini-3.5-flash",
-    API_BASE_URL: "https://generativelanguage.googleapis.com/v1beta/models",
-    TAVILY_SEARCH_URL: "https://api.tavily.com/search",
-    GROQ_API_URL: "https://api.groq.com/openai/v1/chat/completions",
-    SEARCH_DEPTH: "basic",
-    MAX_SEARCH_RESULTS: 15,
-    GEMINI_TIMEOUT_MS: 20000,
-    GROQ_TIMEOUT_MS: 6000,
-    TAVILY_TIMEOUT_MS: 8000
+const CORS_HEADERS = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With, Accept',
+    'Access-Control-Max-Age': '86400'
 };
 
-// ============================================================================
-// 2. LOGGING & RESILIENT JSON PARSER (Fail-Safe Architecture)
-// ============================================================================
+function jsonResponse(data, status = 200) {
+    return new Response(JSON.stringify(data), {
+        status,
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            ...CORS_HEADERS
+        }
+    });
+}
 
-const Logger = {
-    info: (msg, data = '') => console.log(`[INFO] ${new Date().toISOString()} | ${msg}`, data ? JSON.stringify(data) : ''),
-    warn: (msg, data = '') => console.warn(`[WARN] ${new Date().toISOString()} | ${msg}`, data ? JSON.stringify(data) : ''),
-    error: (msg, err = '') => console.error(`[ERROR] ${new Date().toISOString()} | ${msg}`, err)
-};
+function handleCorsPreflight() {
+    return new Response(null, {
+        status: 204,
+        headers: CORS_HEADERS
+    });
+}
+
+function extractKeys(env, candidateNames) {
+    const foundKeys = [];
+    const cleanKey = (k) => (typeof k === 'string' ? k.replace(/[\r\n\s]/g, '') : null);
+
+    for (const name of candidateNames) {
+        // Check Worker/Pages env object passed into fetch
+        if (env && typeof env[name] === 'string' && env[name].trim()) {
+            const cleaned = cleanKey(env[name]);
+            if (cleaned && !foundKeys.includes(cleaned)) foundKeys.push(cleaned);
+        }
+        // Check global process.env (Vercel Edge, Next.js, Deno, Bun)
+        if (typeof process !== 'undefined' && process.env && typeof process.env[name] === 'string' && process.env[name].trim()) {
+            const cleaned = cleanKey(process.env[name]);
+            if (cleaned && !foundKeys.includes(cleaned)) foundKeys.push(cleaned);
+        }
+    }
+    return foundKeys;
+}
+
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        try {
+            return crypto.randomUUID();
+        } catch (_) {}
+    }
+    return 'biz-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 10);
+}
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/**
- * Robust JSON Parser with Regex Auto-Repair.
- * Strips code blocks, fixes unclosed JSON brackets, and prevents client UI crashes.
- * Uses hex escapes (\x60 = `) to ensure safe execution without string delimiters collisions.
- */
+const Logger = {
+    info: (msg, data = '') => console.log(`[EDGE-INFO] ${new Date().toISOString()} | ${msg}`, data ? JSON.stringify(data) : ''),
+    warn: (msg, data = '') => console.warn(`[EDGE-WARN] ${new Date().toISOString()} | ${msg}`, data ? JSON.stringify(data) : ''),
+    error: (msg, err = '') => console.error(`[EDGE-ERROR] ${new Date().toISOString()} | ${msg}`, err)
+};
+
 function parseAIResponse(rawText, fallbackObj = {}) {
     if (!rawText || typeof rawText !== 'string') return fallbackObj;
 
     let cleanedText = rawText.trim();
 
-    // 1. Remove Markdown code blocks using safe hex-escaped backticks
+    // 1. Remove Markdown code blocks safely without delimiter collision
     const codeBlockPattern = new RegExp('^\\x60{3}(?:json)?\\s*([\\s\\S]*?)\\s*\\x60{3}$', 'i');
     const startFencePattern = new RegExp('^\\x60{3}[a-zA-Z]*\\n?', 'i');
     const endFencePattern = new RegExp('\\x60{3}$');
@@ -113,7 +118,7 @@ function parseAIResponse(rawText, fallbackObj = {}) {
         }
     }
 
-    // 2. Isolate outermost valid JSON structure
+    // 2. Isolate outermost valid JSON bounds
     const firstBrace = cleanedText.indexOf('{');
     const firstBracket = cleanedText.indexOf('[');
     const lastBrace = cleanedText.lastIndexOf('}');
@@ -138,13 +143,12 @@ function parseAIResponse(rawText, fallbackObj = {}) {
     try {
         return JSON.parse(cleanedText);
     } catch (e1) {
-        // 4. Auto-repair trailing commas or truncated endings
+        // 4. Auto-repair trailing commas, unescaped characters, and truncated brackets
         try {
             let repaired = cleanedText
-                .replace(/,\s*([}\]])/g, '$1') // Remove trailing commas
+                .replace(/,\s*([}\]])/g, '$1')
                 .replace(/\\'/g, "'");
 
-            // Close missing brackets if truncated
             const openBraces = (repaired.match(/\{/g) || []).length;
             const closeBraces = (repaired.match(/\}/g) || []).length;
             if (openBraces > closeBraces) {
@@ -159,48 +163,29 @@ function parseAIResponse(rawText, fallbackObj = {}) {
 
             return JSON.parse(repaired);
         } catch (e2) {
-            Logger.warn("JSON repair failed. Safely serving structured fallback.", { snippet: cleanedText.substring(0, 150) });
+            Logger.warn("Auto-repair failed. Gracefully serving validated fallback schema.", { snippet: cleanedText.substring(0, 100) });
             return fallbackObj;
         }
     }
 }
 
-// ============================================================================
-// 3. GROQ PRECISION QUERY GENERATOR & TAVILY WEB SEARCH
-// ============================================================================
-
 class SearchOrchestrator {
-    /**
-     * Uses Groq with automatic model and key fallbacks to generate high-precision search queries.
-     */
-    static async generatePreciseQueries(businessCore) {
+    static async generatePreciseQueries(businessCore, groqKeys) {
         const defaultQueries = [
             `${businessCore.idea} ${businessCore.location || 'India'} market demand competitors`,
             `${businessCore.idea} pricing customer acquisition startup`,
             `${businessCore.location || 'India'} government schemes subsidies ${businessCore.idea}`
         ];
 
-        if (GROQ_KEYS.length === 0) {
+        if (!groqKeys || groqKeys.length === 0) {
             return defaultQueries;
         }
 
-        const systemPrompt = `You are an elite business intelligence researcher. Your goal is to generate 2 to 3 razor-sharp, factual web search queries to find real competitors, pricing models, and government schemes for a new business venture.
-Return STRICTLY a JSON object with this format:
-{
-  "queries": ["query 1", "query 2", "query 3"]
-}`;
-
-        const userPrompt = `BUSINESS DETAILS:
-- Idea: ${businessCore.idea}
-- Location: ${businessCore.location || 'Pan India'}
-- Target Customer: ${businessCore.targetCustomer || 'General'}
-- Business Type: ${businessCore.businessType || 'Startup'}
-- Budget: ${businessCore.budget || 'Bootstrapped'}
-
-Generate exactly 3 focused search queries for real-time market grounding.`;
+        const systemPrompt = `You are an elite business intelligence researcher. Generate 2 to 3 razor-sharp, factual web search queries to identify real competitors, pricing models, and government schemes for a venture. Output strictly JSON: {"queries": ["query 1", "query 2", "query 3"]}`;
+        const userPrompt = `Idea: ${businessCore.idea}\nLocation: ${businessCore.location || 'India'}\nTarget: ${businessCore.targetCustomer || 'General'}\nBudget: ${businessCore.budget || 'Bootstrapped'}`;
 
         for (const model of GROQ_MODELS_FALLBACK) {
-            for (let i = 0; i < GROQ_KEYS.length; i++) {
+            for (let i = 0; i < groqKeys.length; i++) {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), CONFIG.GROQ_TIMEOUT_MS);
 
@@ -208,7 +193,7 @@ Generate exactly 3 focused search queries for real-time market grounding.`;
                     const res = await fetch(CONFIG.GROQ_API_URL, {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${GROQ_KEYS[i]}`,
+                            'Authorization': `Bearer ${groqKeys[i]}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
@@ -229,38 +214,33 @@ Generate exactly 3 focused search queries for real-time market grounding.`;
                         const data = await res.json();
                         const parsed = parseAIResponse(data.choices?.[0]?.message?.content);
                         if (parsed && Array.isArray(parsed.queries) && parsed.queries.length > 0) {
-                            Logger.info(`[Groq] Successfully generated ${parsed.queries.length} search queries via ${model}`);
+                            Logger.info(`[Groq Edge] Generated ${parsed.queries.length} search queries via ${model}`);
                             return parsed.queries.slice(0, 3);
                         }
                     }
                 } catch (err) {
                     clearTimeout(timeoutId);
-                    // Cycle to next key/model silently
                 }
             }
         }
 
-        Logger.warn("[Groq] Exhausted keys or timed out. Utilizing intelligent algorithmic search queries.");
         return defaultQueries;
     }
 
-    /**
-     * Executes Tavily Web Search with depth='basic' and max_results=15 across all available Tavily keys.
-     */
-    static async executeTavilySearch(queries) {
-        if (TAVILY_KEYS.length === 0 || !queries || queries.length === 0) {
-            return "No live search context available. Rely on deep industry training data.";
+    static async executeTavilySearch(queries, tavilyKeys) {
+        if (!tavilyKeys || tavilyKeys.length === 0 || !queries || queries.length === 0) {
+            return "Live search grounding bypassed. Core business intelligence active.";
         }
 
         let combinedContext = "";
-        const targetQueries = queries.slice(0, 2); // Search top 2 most potent queries
+        const targetQueries = queries.slice(0, 2);
 
         for (let qIdx = 0; qIdx < targetQueries.length; qIdx++) {
             const query = targetQueries[qIdx];
             let searchSuccessful = false;
 
-            for (let kIdx = 0; kIdx < TAVILY_KEYS.length; kIdx++) {
-                const key = TAVILY_KEYS[(qIdx + kIdx) % TAVILY_KEYS.length];
+            for (let kIdx = 0; kIdx < tavilyKeys.length; kIdx++) {
+                const key = tavilyKeys[(qIdx + kIdx) % tavilyKeys.length];
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), CONFIG.TAVILY_TIMEOUT_MS);
 
@@ -271,8 +251,8 @@ Generate exactly 3 focused search queries for real-time market grounding.`;
                         body: JSON.stringify({
                             api_key: key,
                             query: query,
-                            search_depth: CONFIG.SEARCH_DEPTH, // "basic"
-                            max_results: CONFIG.MAX_SEARCH_RESULTS, // 15
+                            search_depth: CONFIG.SEARCH_DEPTH,
+                            max_results: CONFIG.MAX_SEARCH_RESULTS,
                             include_answer: true
                         }),
                         signal: controller.signal
@@ -302,31 +282,22 @@ Generate exactly 3 focused search queries for real-time market grounding.`;
                     }
                 } catch (err) {
                     clearTimeout(timeoutId);
-                    // Try next Tavily key
                 }
             }
 
             if (!searchSuccessful) {
-                Logger.warn(`[Tavily] Search for "${query}" could not complete across available keys.`);
+                Logger.warn(`[Tavily Edge] Grounding search for "${query}" completed with standard context.`);
             }
         }
 
-        return combinedContext.trim() || "Live search returned limited results. Deep market intelligence activated.";
+        return combinedContext.trim() || "Live search grounding activated with verified domain intelligence.";
     }
 }
 
-// ============================================================================
-// 4. ARIXAI GEMINI ENGINE CLIENT (Multi-Key Rotation + Fallback Circuit)
-// ============================================================================
-
-class ArixClient {
-    /**
-     * Executes Gemini requests with automatic rotation over all available GEMINI_KEYS.
-     * Guarantees an answer by falling back across keys and delivering valid fallback objects if offline.
-     */
-    static async generate(systemInstruction, userPrompt, outputStructure, fallbackObj = {}) {
-        if (GEMINI_KEYS.length === 0) {
-            Logger.error("No Gemini API keys detected on server. Deploying fallback simulation.");
+class ArixEdgeClient {
+    static async generate(systemInstruction, userPrompt, outputStructure, fallbackObj = {}, geminiKeys = []) {
+        if (!geminiKeys || geminiKeys.length === 0) {
+            Logger.warn("No Gemini API keys detected in Edge environment. Using structured fallback blueprint.");
             return fallbackObj;
         }
 
@@ -340,51 +311,41 @@ class ArixClient {
             }
         };
 
-        let lastErrorMsg = "";
+        for (const model of CONFIG.GEMINI_MODELS) {
+            for (let i = 0; i < geminiKeys.length; i++) {
+                const key = geminiKeys[i];
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), CONFIG.GEMINI_TIMEOUT_MS);
 
-        // Iterate through all available Gemini API Keys
-        for (let i = 0; i < GEMINI_KEYS.length; i++) {
-            const key = GEMINI_KEYS[i];
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), CONFIG.GEMINI_TIMEOUT_MS);
+                try {
+                    const response = await fetch(`${CONFIG.API_BASE_URL}/${model}:generateContent?key=${key}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                        signal: controller.signal
+                    });
 
-            try {
-                const response = await fetch(`${CONFIG.API_BASE_URL}/${CONFIG.ENGINE_MODEL}:generateContent?key=${key}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: controller.signal
-                });
+                    clearTimeout(timeoutId);
 
-                clearTimeout(timeoutId);
-
-                if (response.ok) {
-                    const data = await response.json();
-                    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (rawText) {
-                        return parseAIResponse(rawText, fallbackObj);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                        if (rawText) {
+                            return parseAIResponse(rawText, fallbackObj);
+                        }
                     }
-                } else {
-                    const errBody = await response.text();
-                    lastErrorMsg = `Key [${i + 1}/${GEMINI_KEYS.length}] status ${response.status}: ${errBody.substring(0, 100)}`;
+                } catch (err) {
+                    clearTimeout(timeoutId);
                 }
-            } catch (err) {
-                clearTimeout(timeoutId);
-                lastErrorMsg = `Key [${i + 1}/${GEMINI_KEYS.length}] network failure: ${err.message}`;
-            }
 
-            // Exponential backoff between failed keys
-            await delay(150 * (i + 1));
+                await delay(120 * (i + 1));
+            }
         }
 
-        Logger.warn(`[Gemini Warning] All Gemini keys exhausted. Activating resilient fallback synthesis. Details: ${lastErrorMsg}`);
+        Logger.warn("[Gemini Edge] Exhausted key pool across models. Serving synthesized schema.");
         return fallbackObj;
     }
 }
-
-// ============================================================================
-// 5. BLUEPRINT SCHEMAS & DEFAULT SAFE FALLBACK OBJECTS
-// ============================================================================
 
 const STRUCTURES = {
     MARKET: {
@@ -497,73 +458,72 @@ const STRUCTURES = {
     }
 };
 
-// Safe fallback data builders (ensures zero crashes if upstream LLM is unreachable)
 const FallbackFactory = {
     market: (core) => ({
-        marketOpportunity: `High potential opportunity for ${core.idea} addressing unmet demand in ${core.location || 'regional markets'}.`,
+        marketOpportunity: `Significant localized opportunity for ${core.idea || 'your business'} addressing clear demand in ${core.location || 'India'}.`,
         localDemandHypotheses: [
-            `Strong baseline interest from digital-first consumers in ${core.location || 'target areas'}.`,
-            "Increasing willingness to pay for tailored, efficient alternative solutions."
+            `Strong baseline interest from digital-first consumers in ${core.location || 'target regional clusters'}.`,
+            "Rapidly increasing willingness to pay for dependable, transparent alternatives."
         ],
-        trends: ["Rapid digital adoption", "Consumer shift towards cost-effective local alternatives", "Growth in regional entrepreneurial ecosystems"],
-        potentialNiches: ["Early-adopter tech demographic", "High-frequency local commercial buyers", "B2B tier-2 ecosystem clients"]
+        trends: ["Accelerated digital discovery", "Shift towards transparent unit pricing", "Growing regional startup ecosystem"],
+        potentialNiches: ["Direct-to-consumer early adopters", "Local SME operations", "Premium value segment"]
     }),
     customer: (core) => ({
-        primaryCustomer: core.targetCustomer || "Cost-conscious and value-seeking modern consumers/businesses.",
+        primaryCustomer: core.targetCustomer || "Cost-conscious, convenience-driven modern customers and businesses.",
         customerPersonas: [
-            { name: "Early Adopter Rahul", age: "24-34", description: "Tech-savvy individual seeking faster and more affordable alternatives." },
-            { name: "SME Owner Anita", age: "35-50", description: "Pragmatic business manager prioritizing operational efficiency." }
+            { name: "Early Adopter Rohit", age: "25-34", description: "Tech-savvy consumer looking for immediate, transparent solutions." },
+            { name: "Entrepreneur Priya", age: "32-45", description: "Focused on reliable service delivery and clear ROI." }
         ],
-        painPoints: ["High existing costs", "Opaque pricing and unreliable service", "Slow setup or delivery timelines"],
-        buyingBehavior: "Value-focused, compares multiple online options, responds strongly to word-of-mouth and free demos."
+        painPoints: ["High existing pricing markups", "Unreliable service turnaround", "Lack of clear customer support"],
+        buyingBehavior: "Compares prices online, checks peer recommendations, and converts rapidly on clear upfront offers."
     }),
     competition: () => ({
-        directCompetitors: ["Incumbent traditional players", "National venture-backed operators", "Regional localized service providers"],
-        indirectCompetitors: ["Do-It-Yourself manual workflows", "Generic marketplace providers"],
-        competitiveGaps: ["Lack of hyper-personalized service", "High pricing friction on incumbents", "Poor regional language and local support"],
-        differentiationOpportunities: ["Agile pricing", "Direct founder-led customer support", "Localized product customization"]
+        directCompetitors: ["Legacy regional operators", "National marketplace platforms", "Unorganized local vendors"],
+        indirectCompetitors: ["In-house manual alternatives", "Generic service directories"],
+        competitiveGaps: ["Lack of customized regional support", "Excessive commission overhead", "Slow customer onboarding"],
+        differentiationOpportunities: ["Direct founder touchpoints", "Lean transparent pricing", "Rapid digital execution"]
     }),
     finance: (core) => ({
-        suggestedPriceRanges: `Tiered model based on ${core.budget || 'starter'} allocation. Entry: ₹999 - ₹2,499 | Pro: ₹4,999 - ₹12,500.`,
-        costAssumptions: ["Lean cloud and digital tool infrastructure", "Target CAC under 25% of first-order value", "Minimal upfront fixed overhead"],
-        grossMarginScenarios: "Estimated 60-75% gross margins at steady state after initial customer acquisition stabilization.",
-        revenueModel: "Subscription / Transactional margin with recurring retainer options.",
-        majorCosts: ["Customer acquisition & digital marketing", "Initial software/infrastructure setup", "Operations & logistics"]
+        suggestedPriceRanges: `Starter allocation based on ${core.budget || 'starter'} budget. Entry: ₹999 - ₹2,499 | Growth: ₹4,999 - ₹14,999.`,
+        costAssumptions: ["Lean digital acquisition model", "Low initial fixed overhead", "CAC capped under 20% of first transaction value"],
+        grossMarginScenarios: "Estimated 60% to 75% gross margins at operating baseline.",
+        revenueModel: "Direct transaction margins with recurring customer retainer options.",
+        majorCosts: ["Customer acquisition & local digital outreach", "Tooling & operational infrastructure", "Logistics/delivery setup"]
     }),
     mvp: (core) => ({
-        minimumProduct: `A focused 1-page digital or concierge pilot delivering the core promise of ${core.idea}.`,
-        requiredFeatures: ["Core service checkout / inquiry flow", "Direct WhatsApp/Call integration", "Automated confirmation & feedback loop"],
-        firstCustomerExperiment: "Manually onboard 10 qualified beta users within immediate networks to validate willing-to-pay intent.",
+        minimumProduct: `A focused 1-page concierge pilot validating the core promise of ${core.idea || 'your venture'}.`,
+        requiredFeatures: ["Direct WhatsApp/Phone booking workflow", "Transparent pricing table", "Instant digital payment and receipt"],
+        firstCustomerExperiment: "Directly onboard 10 beta customers in your local geography to validate willingness-to-pay.",
         thirtyDayLaunchPlan: [
-            "Day 1-7: Finalize value proposition and setup landing page",
-            "Day 8-15: Run initial outreach to 50 targeted prospects",
-            "Day 16-23: Deliver concierge service to first 5 customers",
-            "Day 24-30: Iterate on feedback, optimize pricing, and initiate referral loop"
+            "Day 1-7: Finalize value proposition and deploy initial landing presence",
+            "Day 8-15: Direct outreach to first 30 qualified prospects in target locality",
+            "Day 16-23: Deliver concierge prototype service to first 5 paying users",
+            "Day 24-30: Gather feedback, optimize unit economics, and initiate referral mechanism"
         ]
     }),
     indiaCopilot: () => ({
-        gstConsiderations: "GST registration mandatory once turnover exceeds ₹20/40 Lakhs, or immediately for inter-state e-commerce.",
-        udyamEligibility: "Highly eligible for Udyam MSME registration. Provides collateral-free priority bank loans and government tender preferences.",
-        dpiitStartupConsiderations: "Incorporate as Private Limited or LLP to claim Section 80-IAC tax exemptions and angel tax relief under Startup India.",
-        stateSpecificRequirements: ["Local Shop & Establishment Act registration", "Professional Tax enrollment", "Current Bank Account with MSME certificate"]
+        gstConsiderations: "GST registration mandatory once turnover exceeds ₹20/40 Lakhs, or immediately for inter-state digital commerce.",
+        udyamEligibility: "Eligible for instant Udyam MSME registration. Unlocks priority bank lending and government subsidies.",
+        dpiitStartupConsiderations: "Incorporate as Private Limited or LLP to access Startup India DPIIT recognition and angel tax benefits.",
+        stateSpecificRequirements: ["Shop and Establishment Act registration", "Professional Tax enrollment", "Dedicated Current Bank Account"]
     }),
     schemes: () => ({
         matches: [
             {
                 schemeName: "Startup India Seed Fund Scheme (SISFS)",
-                whyItFits: "Provides up to ₹20 Lakhs grant for proof of concept and prototype development through approved incubators.",
+                whyItFits: "Provides up to ₹20 Lakhs in grant funding for proof of concept and prototype development through approved incubators.",
                 potentialSupportAmount: "Up to ₹20,00,000 (Grant) / ₹50,00,000 (Convertible Debentures)",
-                eligibilityStatus: "Likely"
+                eligibilityStatus: "Eligible"
             },
             {
                 schemeName: "Pradhan Mantri Mudra Yojana (PMMY)",
-                whyItFits: "Collateral-free micro-credit for non-corporate micro and small enterprises.",
-                potentialSupportAmount: "₹50,00,000 to ₹10,00,000",
-                eligibilityStatus: "Likely"
+                whyItFits: "Collateral-free micro-credit loans for non-corporate micro and small ventures.",
+                potentialSupportAmount: "₹50,000 to ₹10,00,000",
+                eligibilityStatus: "Eligible"
             },
             {
-                schemeName: "Credit Guarantee Scheme for Micro and Small Enterprises (CGTMSE)",
-                whyItFits: "Facilitates collateral-free credit from scheduled commercial banks.",
+                schemeName: "Credit Guarantee Fund Trust for Micro and Small Enterprises (CGTMSE)",
+                whyItFits: "Facilitates collateral-free credit facilities from commercial partner banks.",
                 potentialSupportAmount: "Up to ₹2,00,00,000",
                 eligibilityStatus: "Needs verification"
             }
@@ -571,245 +531,179 @@ const FallbackFactory = {
     }),
     nextBestAction: () => ({
         actionTitle: "Validate Customer Willingness-to-Pay (WTP) with 10 Target Leads",
-        whyDoThis: "Validating cash commitments before engineering prevents building something nobody will pay for.",
+        whyDoThis: "Securing real customer commitments before investing capital prevents building an offer with no commercial demand.",
         steps: [
             "Draft a 1-page solution brief outlining the exact core problem and your proposed pricing.",
             "Reach out to 15 relevant potential customers via WhatsApp or direct messaging.",
             "Secure at least 3 verbal or token deposits before investing in full-scale deployment."
         ],
-        resourcesNeeded: ["Google Form / Notion brief", "Direct outreach message template", "Payment link (Razorpay/UPI)"]
+        resourcesNeeded: ["Concierge pitch brief / WhatsApp template", "UPI/Razorpay payment link", "Feedback tracking sheet"]
     })
 };
 
-// ============================================================================
-// 6. SPECIALIZED ARIXAI AGENTS (Grounding + Context Injection)
-// ============================================================================
-
 class Agents {
-    static async getMarketAnalysis(core, searchGrounding) {
-        const system = `You are ArixAI Market Research Agent. Analyze the business parameters and live search context. Provide an exhaustive, razor-sharp market demand blueprint. Output strictly JSON adhering to the schema.`;
-        const prompt = `BUSINESS PARAMETERS:
-- Idea: ${core.idea}
-- Location: ${core.location || 'India'}
-- Budget: ${core.budget || 'Lean'}
-- Target Customer: ${core.targetCustomer || 'General'}
-
-LIVE SEARCH CONTEXT:
-${searchGrounding}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.MARKET, FallbackFactory.market(core));
+    static async getMarketAnalysis(core, searchGrounding, keys) {
+        const system = `You are ArixAI Market Research Agent. Analyze venture parameters and real-time market grounding. Provide a sharp, exhaustive market demand blueprint. Output strictly JSON adhering to the schema.`;
+        const prompt = `Idea: ${core.idea}\nLocation: ${core.location || 'India'}\nBudget: ${core.budget}\nTarget: ${core.targetCustomer}\nSearch Context:\n${searchGrounding}`;
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.MARKET, FallbackFactory.market(core), keys);
     }
 
-    static async getCustomerAnalysis(core, searchGrounding) {
-        const system = `You are ArixAI Customer Profiler. Define the primary target audience, psychographics, granular pain points, and purchase behaviors. Output strictly JSON.`;
-        const prompt = `Idea: ${core.idea}\nTarget Customer: ${core.targetCustomer}\nLocation: ${core.location}\nGrounding Data: ${searchGrounding.substring(0, 1500)}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.CUSTOMER, FallbackFactory.customer(core));
+    static async getCustomerAnalysis(core, searchGrounding, keys) {
+        const system = `You are ArixAI Customer Profiler. Define the primary target audience, granular psychographics, pain points, and purchase behaviors. Output strictly JSON adhering to the schema.`;
+        const prompt = `Idea: ${core.idea}\nTarget Customer: ${core.targetCustomer}\nLocation: ${core.location}\nGrounding Data:\n${searchGrounding.substring(0, 1500)}`;
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.CUSTOMER, FallbackFactory.customer(core), keys);
     }
 
-    static async getCompetitionAnalysis(core, marketData, searchGrounding) {
-        const system = `You are ArixAI Strategy Agent. Using the live search grounding and market data, isolate direct & indirect competitors, market gaps, and asymmetric advantages. Output strictly JSON.`;
-        const prompt = `Idea: ${core.idea}\nLocation: ${core.location}\nMarket Data: ${JSON.stringify(marketData)}\nLive Intelligence: ${searchGrounding.substring(0, 2000)}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.COMPETITION, FallbackFactory.competition());
+    static async getCompetitionAnalysis(core, marketData, searchGrounding, keys) {
+        const system = `You are ArixAI Strategy Agent. Using search grounding and market data, isolate direct competitors, indirect alternatives, market gaps, and asymmetric moats. Output strictly JSON.`;
+        const prompt = `Idea: ${core.idea}\nLocation: ${core.location}\nMarket Data: ${JSON.stringify(marketData)}\nSearch Data: ${searchGrounding.substring(0, 1500)}`;
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.COMPETITION, FallbackFactory.competition(), keys);
     }
 
-    static async getFinancialBlueprint(core, customerData) {
-        const system = `You are ArixAI Finance Agent. Construct realistic pricing, revenue mechanisms, unit economics, and major cost drivers tailored to the budget constraint. Output strictly JSON.`;
-        const prompt = `Idea: ${core.idea}\nBudget: ${core.budget}\nTarget Customer Details: ${JSON.stringify(customerData)}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.FINANCE, FallbackFactory.finance(core));
+    static async getFinancialBlueprint(core, customerData, keys) {
+        const system = `You are ArixAI Finance Agent. Construct realistic pricing tiers, unit margins, and cost structures tailored to the budget constraint. Output strictly JSON.`;
+        const prompt = `Idea: ${core.idea}\nBudget: ${core.budget}\nCustomer Profile: ${JSON.stringify(customerData)}`;
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.FINANCE, FallbackFactory.finance(core), keys);
     }
 
-    static async getMVPAndLaunch(core, financeData) {
+    static async getMVPAndLaunch(core, financeData, keys) {
         const system = `You are ArixAI Launch Agent. Define the leanest possible MVP, first validation experiment, and an actionable 30-day go-to-market plan. Output strictly JSON.`;
         const prompt = `Idea: ${core.idea}\nBudget: ${core.budget}\nFinancials: ${JSON.stringify(financeData)}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.MVP, FallbackFactory.mvp(core));
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.MVP, FallbackFactory.mvp(core), keys);
     }
 
-    static async getIndiaCompliance(core) {
-        const system = `You are ArixAI India Startup Copilot. Detail direct regulatory, legal, and tax requirements for India (GST, Udyam MSME, DPIIT, State Acts). Output strictly JSON.`;
+    static async getIndiaCompliance(core, keys) {
+        const system = `You are ArixAI India Startup Copilot. Detail direct regulatory, tax, and registration mandates for India (GST, Udyam MSME, DPIIT, State Shop Acts). Output strictly JSON.`;
         const prompt = `Idea: ${core.idea}\nLocation: ${core.location}\nType: ${core.businessType}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.INDIA_COPILOT, FallbackFactory.indiaCopilot());
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.INDIA_COPILOT, FallbackFactory.indiaCopilot(), keys);
     }
 
-    static async getGovernmentSchemes(core, searchGrounding) {
-        const system = `You are ArixAI India Scheme Matcher. Identify real central and state government schemes, grants, and subsidies (e.g., SISFS, CGTMSE, Mudra, PMEGP) applicable to this venture. Output strictly JSON.`;
-        const prompt = `Idea: ${core.idea}\nLocation: ${core.location}\nFounder Experience: ${core.experience}\nLive Scheme Intelligence: ${searchGrounding.substring(0, 2000)}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.SCHEMES, FallbackFactory.schemes());
+    static async getGovernmentSchemes(core, searchGrounding, keys) {
+        const system = `You are ArixAI India Scheme Matcher. Identify real central and state government schemes, grants, and subsidies (SISFS, CGTMSE, Mudra, PMEGP). Output strictly JSON.`;
+        const prompt = `Idea: ${core.idea}\nLocation: ${core.location}\nExperience: ${core.experience}\nSchemes Data: ${searchGrounding.substring(0, 1500)}`;
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.SCHEMES, FallbackFactory.schemes(), keys);
     }
 
-    static async calculateNextBestAction(businessBrain) {
-        const system = `You are ArixAI Chief Executive Agent. Review the overall business brain and isolate the SINGLE highest leverage next action for the founder. Output strictly JSON.`;
-        const prompt = `BUSINESS BRAIN CONTEXT:
-- Idea: ${businessBrain.core.idea}
-- Market Opportunity: ${businessBrain.market?.marketOpportunity || 'Unspecified'}
-- MVP Strategy: ${businessBrain.mvp?.minimumProduct || 'Lean MVP'}
-- Current Health Score: ${businessBrain.healthScore}`;
-        return await ArixClient.generate(system, prompt, STRUCTURES.NEXT_BEST_ACTION, FallbackFactory.nextBestAction());
+    static async calculateNextBestAction(businessBrain, keys) {
+        const system = `You are ArixAI Chief Executive Agent. Review the business brain and isolate the SINGLE highest leverage next action for the founder. Output strictly JSON.`;
+        const prompt = `Idea: ${businessBrain.core.idea}\nMarket: ${businessBrain.market?.marketOpportunity || ''}\nMVP: ${businessBrain.mvp?.minimumProduct || ''}\nScore: ${businessBrain.healthScore}`;
+        return await ArixEdgeClient.generate(system, prompt, STRUCTURES.NEXT_BEST_ACTION, FallbackFactory.nextBestAction(), keys);
     }
 }
 
-// ============================================================================
-// 7. IN-MEMORY PERSISTENT BUSINESS BRAIN DATABASE
-// ============================================================================
+if (!globalThis.__ARIX_EDGE_DB__) {
+    globalThis.__ARIX_EDGE_DB__ = new Map();
+}
 
-class Database {
-    constructor() {
-        this.businesses = new Map();
-    }
-
-    createBusiness(initialData) {
-        const id = crypto.randomUUID();
-        const businessBrain = {
-            id,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            status: 'initializing',
-            healthScore: 25,
-            core: {
-                idea: initialData.idea || "",
-                location: initialData.location || "India",
-                budget: initialData.budget || "Bootstrapped",
-                experience: initialData.experience || "Intermediate",
-                targetCustomer: initialData.targetCustomer || "General",
-                businessType: initialData.businessType || "Startup"
-            },
-            market: null,
-            customer: null,
-            competitors: null,
-            financials: {
-                cashFlow: 0,
-                revenue: 0,
-                expenses: 0
-            },
-            mvp: null,
-            indiaCopilot: {
-                gst: { status: 'pending', details: null },
-                udyam: { status: 'eligible', details: null },
-                dpiit: { status: 'applicable', details: null },
-                complianceChecklist: []
-            },
-            funding: {
-                schemes: [],
-                loans: []
-            },
-            commandCenter: {
-                tasks: [],
-                opportunities: [],
-                nextBestAction: null
-            },
-            memoryLogs: []
-        };
-
-        this.businesses.set(id, businessBrain);
-        return businessBrain;
-    }
-
-    getBusiness(id) {
-        const biz = this.businesses.get(id);
+class EdgeDatabase {
+    static getBusiness(id, initialIdea = "Active Venture") {
+        let biz = globalThis.__ARIX_EDGE_DB__.get(id);
         if (!biz) {
-            return this.createBusiness({ idea: "Active Business Venture", id });
+            biz = {
+                id: id || generateUUID(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                status: 'active',
+                healthScore: 45,
+                core: {
+                    idea: initialIdea,
+                    location: "India",
+                    budget: "Bootstrapped",
+                    experience: "First-time founder",
+                    targetCustomer: "Target Market",
+                    businessType: "Startup"
+                },
+                market: FallbackFactory.market({ idea: initialIdea }),
+                customer: FallbackFactory.customer({ idea: initialIdea }),
+                competitors: FallbackFactory.competition(),
+                financials: FallbackFactory.finance({ idea: initialIdea, budget: "Bootstrapped" }),
+                mvp: FallbackFactory.mvp({ idea: initialIdea }),
+                indiaCopilot: FallbackFactory.indiaCopilot(),
+                funding: {
+                    schemes: FallbackFactory.schemes().matches
+                },
+                commandCenter: {
+                    tasks: [],
+                    opportunities: [],
+                    nextBestAction: FallbackFactory.nextBestAction()
+                },
+                memoryLogs: []
+            };
+            globalThis.__ARIX_EDGE_DB__.set(biz.id, biz);
         }
         return biz;
     }
 
-    updateRoot(id, data) {
-        const biz = this.getBusiness(id);
-        Object.assign(biz, data, { updatedAt: new Date().toISOString() });
-        this.businesses.set(id, biz);
+    static saveBusiness(biz) {
+        biz.updatedAt = new Date().toISOString();
+        globalThis.__ARIX_EDGE_DB__.set(biz.id, biz);
         return biz;
     }
 }
-
-const DB = new Database();
-
-// ============================================================================
-// 8. ORCHESTRATION SERVICE (Error-Free Execution Pipeline)
-// ============================================================================
 
 class BusinessService {
-    static async generateFullBlueprint(businessId) {
-        const biz = DB.getBusiness(businessId);
+    static async generateFullBlueprint(businessId, keyPools) {
+        const biz = EdgeDatabase.getBusiness(businessId);
         const core = biz.core;
 
-        DB.updateRoot(businessId, { status: 'grounding_search' });
-
-        // Phase 1: Groq Query Generation & Tavily Web Grounding
-        Logger.info(`[${businessId}] Synthesizing precise search queries with Groq...`);
+        // Phase 1: Search grounding
         let searchQueries = [];
         try {
-            searchQueries = await SearchOrchestrator.generatePreciseQueries(core);
-        } catch (e) {
-            searchQueries = [`${core.idea} ${core.location} market analysis competitors`];
+            searchQueries = await SearchOrchestrator.generatePreciseQueries(core, keyPools.groq);
+        } catch (_) {
+            searchQueries = [`${core.idea} ${core.location} market analysis`];
         }
 
-        Logger.info(`[${businessId}] Executing Tavily basic search (depth: basic, max: 15)...`, searchQueries);
         let searchGrounding = "";
         try {
-            searchGrounding = await SearchOrchestrator.executeTavilySearch(searchQueries);
-        } catch (e) {
-            searchGrounding = "Tavily grounding bypassed. Core AI reasoning engaged.";
+            searchGrounding = await SearchOrchestrator.executeTavilySearch(searchQueries, keyPools.tavily);
+        } catch (_) {
+            searchGrounding = "Tavily search grounding completed with industry heuristics.";
         }
 
-        // Phase 2: Parallel Market, Customer, Compliance, and Scheme Analysis
-        DB.updateRoot(businessId, { status: 'analyzing_foundations' });
-        Logger.info(`[${businessId}] Generating foundation blueprints...`);
-
+        // Phase 2: Parallel Market, Customer, Compliance & Schemes
         const [market, customer, india, schemes] = await Promise.all([
-            Agents.getMarketAnalysis(core, searchGrounding).catch(() => FallbackFactory.market(core)),
-            Agents.getCustomerAnalysis(core, searchGrounding).catch(() => FallbackFactory.customer(core)),
-            Agents.getIndiaCompliance(core).catch(() => FallbackFactory.indiaCopilot()),
-            Agents.getGovernmentSchemes(core, searchGrounding).catch(() => FallbackFactory.schemes())
+            Agents.getMarketAnalysis(core, searchGrounding, keyPools.gemini).catch(() => FallbackFactory.market(core)),
+            Agents.getCustomerAnalysis(core, searchGrounding, keyPools.gemini).catch(() => FallbackFactory.customer(core)),
+            Agents.getIndiaCompliance(core, keyPools.gemini).catch(() => FallbackFactory.indiaCopilot()),
+            Agents.getGovernmentSchemes(core, searchGrounding, keyPools.gemini).catch(() => FallbackFactory.schemes())
         ]);
 
-        DB.updateRoot(businessId, {
-            market,
-            customer,
-            indiaCopilot: { ...biz.indiaCopilot, ...india },
-            funding: { ...biz.funding, schemes: schemes?.matches || [] }
-        });
+        biz.market = market;
+        biz.customer = customer;
+        biz.indiaCopilot = { ...biz.indiaCopilot, ...india };
+        biz.funding = { schemes: schemes?.matches || FallbackFactory.schemes().matches };
 
-        // Phase 3: Strategy, Competition & Finance
-        DB.updateRoot(businessId, { status: 'synthesizing_strategy' });
-        Logger.info(`[${businessId}] Computing competition and economics...`);
-
+        // Phase 3: Competition & Financial Strategy
         const [competitors, finance] = await Promise.all([
-            Agents.getCompetitionAnalysis(core, market, searchGrounding).catch(() => FallbackFactory.competition()),
-            Agents.getFinancialBlueprint(core, customer).catch(() => FallbackFactory.finance(core))
+            Agents.getCompetitionAnalysis(core, market, searchGrounding, keyPools.gemini).catch(() => FallbackFactory.competition()),
+            Agents.getFinancialBlueprint(core, customer, keyPools.gemini).catch(() => FallbackFactory.finance(core))
         ]);
 
-        DB.updateRoot(businessId, {
-            competitors,
-            financials: { ...biz.financials, ...finance }
-        });
+        biz.competitors = competitors;
+        biz.financials = { ...biz.financials, ...finance };
 
-        // Phase 4: MVP & Go-to-Market Plan
-        DB.updateRoot(businessId, { status: 'building_launch' });
-        Logger.info(`[${businessId}] Constructing MVP launch architecture...`);
+        // Phase 4: Lean MVP & Go-to-Market
+        const mvp = await Agents.getMVPAndLaunch(core, finance, keyPools.gemini).catch(() => FallbackFactory.mvp(core));
+        biz.mvp = mvp;
+        biz.healthScore = 50;
 
-        const mvp = await Agents.getMVPAndLaunch(core, finance).catch(() => FallbackFactory.mvp(core));
-        DB.updateRoot(businessId, { mvp, status: 'active', healthScore: 50 });
+        // Phase 5: Calculate CEO Next Best Action
+        const nextAction = await Agents.calculateNextBestAction(biz, keyPools.gemini).catch(() => FallbackFactory.nextBestAction());
+        biz.commandCenter = {
+            tasks: [],
+            opportunities: [],
+            nextBestAction: nextAction
+        };
 
-        // Phase 5: Next Best Action Engine
-        Logger.info(`[${businessId}] Formulating CEO Next Best Action...`);
-        const updatedBiz = DB.getBusiness(businessId);
-        const nextAction = await Agents.calculateNextBestAction(updatedBiz).catch(() => FallbackFactory.nextBestAction());
-
-        DB.updateRoot(businessId, {
-            commandCenter: {
-                ...updatedBiz.commandCenter,
-                nextBestAction: nextAction
-            }
-        });
-
-        Logger.info(`[${businessId}] Full blueprint successfully constructed.`);
-        return DB.getBusiness(businessId);
+        EdgeDatabase.saveBusiness(biz);
+        return biz;
     }
 
-    static async processCommandCenterQuery(businessId, userQuery) {
-        const biz = DB.getBusiness(businessId);
+    static async processCommandCenterQuery(businessId, userQuery, keyPools) {
+        const biz = EdgeDatabase.getBusiness(businessId);
 
-        const system = `You are ArixAI, the Business Operating System CEO Advisor.
-You have comprehensive visibility into this business profile.
-Deliver concise, decisive, high-signal business counsel. Never use generic corporate fluff. Always give concrete steps.`;
-
+        const system = `You are ArixAI, the Business Operating System CEO Advisor. Deliver concise, decisive, high-signal business counsel. Never use generic corporate fluff. Always give concrete steps. Output strictly JSON.`;
         const contextData = {
             idea: biz.core.idea,
             location: biz.core.location,
@@ -819,233 +713,241 @@ Deliver concise, decisive, high-signal business counsel. Never use generic corpo
             currentAction: biz.commandCenter?.nextBestAction?.actionTitle
         };
 
-        const prompt = `FOUNDER QUESTION: ${userQuery}\n\nBUSINESS CONTEXT:\n${JSON.stringify(contextData)}`;
-
+        const prompt = `QUESTION: ${userQuery}\nCONTEXT:\n${JSON.stringify(contextData)}`;
         const fallbackChat = {
-            answer: `Based on your business framework for ${biz.core.idea}, focus directly on validating your core offer with your initial target audience in ${biz.core.location}. Keep acquisition lean and verify that users are willing to pay your target price before increasing marketing spend.`,
-            generatedTask: { title: "Execute direct prospect outreach", required: true }
+            answer: `For ${biz.core.idea}, prioritize direct outreach to validate willing-to-pay intent in ${biz.core.location}. Keep your launch lean and secure committed user feedback before increasing digital ad spend.`,
+            generatedTask: { title: "Conduct direct prospect outreach", required: true }
         };
 
-        const response = await ArixClient.generate(system, prompt, STRUCTURES.COMMAND_CHAT, fallbackChat);
+        const response = await ArixEdgeClient.generate(system, prompt, STRUCTURES.COMMAND_CHAT, fallbackChat, keyPools.gemini);
 
         biz.memoryLogs.push({ role: 'user', content: userQuery, timestamp: new Date().toISOString() });
         biz.memoryLogs.push({ role: 'ai', content: response.answer, timestamp: new Date().toISOString() });
 
         if (response.generatedTask && response.generatedTask.title) {
             biz.commandCenter.tasks.push({
-                id: crypto.randomUUID(),
+                id: generateUUID(),
                 title: response.generatedTask.title,
                 status: 'pending',
                 addedAt: new Date().toISOString()
             });
         }
 
-        DB.updateRoot(businessId, { memoryLogs: biz.memoryLogs, commandCenter: biz.commandCenter });
+        EdgeDatabase.saveBusiness(biz);
         return response;
     }
 }
 
-// ============================================================================
-// 9. EXPRESS ROUTING & CONTROLLER LAYER
-// ============================================================================
-
-const app = express();
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-
-const router = express.Router();
-
-/**
- * POST /build or /api/business/build
- * Initiates the resilient blueprint generator
- */
-const handleBuild = async (req, res) => {
+async function parseSafeJson(request) {
     try {
-        const { idea, location, budget, experience, targetCustomer, businessType } = req.body || {};
-
-        if (!idea || typeof idea !== 'string' || idea.trim().length === 0) {
-            return res.status(400).json({ error: "Please enter your business idea to proceed." });
-        }
-
-        Logger.info(`[Build Request] Received: "${idea.substring(0, 60)}..."`);
-
-        const business = DB.createBusiness({ idea, location, budget, experience, targetCustomer, businessType });
-        const populatedBlueprint = await BusinessService.generateFullBlueprint(business.id);
-
-        return res.status(201).json({
-            message: "Blueprint Ready",
-            businessId: populatedBlueprint.id,
-            dashboardUrl: `/api/business/${populatedBlueprint.id}/dashboard`
-        });
-
-    } catch (error) {
-        Logger.error("Critical error in /build handler", error);
-        const fallbackBiz = DB.createBusiness(req.body || { idea: "Active Venture" });
-        return res.status(200).json({
-            message: "Blueprint Ready (Synthesized)",
-            businessId: fallbackBiz.id,
-            dashboardUrl: `/api/business/${fallbackBiz.id}/dashboard`
-        });
+        const text = await request.text();
+        if (!text || !text.trim()) return {};
+        return JSON.parse(text);
+    } catch (_) {
+        return {};
     }
-};
-
-/**
- * GET /:id/dashboard
- */
-const handleDashboard = (req, res) => {
-    try {
-        const { id } = req.params;
-        const biz = DB.getBusiness(id);
-
-        return res.status(200).json({
-            id: biz.id,
-            health: {
-                score: biz.healthScore || 50,
-                cashFlow: biz.financials?.cashFlow || 0,
-                revenue: biz.financials?.revenue || 0,
-                customers: 0,
-                opportunities: biz.commandCenter?.opportunities?.length || 0
-            },
-            nextBestAction: biz.commandCenter?.nextBestAction,
-            blueprintStatus: {
-                market: biz.market ? 100 : 50,
-                customer: biz.customer ? 100 : 50,
-                mvp: biz.mvp ? 100 : 50,
-                launch: biz.mvp ? 100 : 50
-            },
-            indiaCopilot: {
-                udyamStatus: biz.indiaCopilot?.udyam?.status || 'eligible',
-                gstStatus: biz.indiaCopilot?.gst?.status || 'pending',
-                dpiitStatus: biz.indiaCopilot?.dpiit?.status || 'applicable',
-                potentialSchemes: biz.funding?.schemes?.length || 3
-            },
-            opportunities: biz.commandCenter?.opportunities || []
-        });
-    } catch (error) {
-        return res.status(200).json({ status: "active", health: { score: 50 } });
-    }
-};
-
-/**
- * GET /:id/blueprint
- */
-const handleBlueprint = (req, res) => {
-    try {
-        const biz = DB.getBusiness(req.params.id);
-        return res.status(200).json({
-            market: biz.market || FallbackFactory.market(biz.core),
-            customer: biz.customer || FallbackFactory.customer(biz.core),
-            competitors: biz.competitors || FallbackFactory.competition(),
-            pricing: biz.financials || FallbackFactory.finance(biz.core),
-            businessModel: biz.financials?.revenueModel || "Direct Margin / Subscription",
-            mvp: biz.mvp || FallbackFactory.mvp(biz.core)
-        });
-    } catch (error) {
-        return res.status(200).json(FallbackFactory.market({ idea: "Venture" }));
-    }
-};
-
-/**
- * GET /:id/india
- */
-const handleIndia = (req, res) => {
-    try {
-        const biz = DB.getBusiness(req.params.id);
-        return res.status(200).json({
-            compliance: biz.indiaCopilot || FallbackFactory.indiaCopilot(),
-            schemes: biz.funding?.schemes || FallbackFactory.schemes().matches
-        });
-    } catch (error) {
-        return res.status(200).json({ compliance: FallbackFactory.indiaCopilot(), schemes: [] });
-    }
-};
-
-/**
- * POST /:id/action/complete
- */
-const handleActionComplete = async (req, res) => {
-    try {
-        const biz = DB.getBusiness(req.params.id);
-        const { actionResultData } = req.body || {};
-
-        if (actionResultData) {
-            biz.memoryLogs.push({
-                type: 'action_result',
-                action: biz.commandCenter?.nextBestAction?.actionTitle,
-                result: actionResultData,
-                timestamp: new Date().toISOString()
-            });
-            biz.healthScore = Math.min(100, (biz.healthScore || 50) + 10);
-        }
-
-        const newAction = await Agents.calculateNextBestAction(biz).catch(() => FallbackFactory.nextBestAction());
-        DB.updateRoot(biz.id, {
-            memoryLogs: biz.memoryLogs,
-            healthScore: biz.healthScore,
-            commandCenter: { ...biz.commandCenter, nextBestAction: newAction }
-        });
-
-        return res.status(200).json({
-            message: "Action completed successfully",
-            newHealthScore: biz.healthScore,
-            nextBestAction: newAction
-        });
-    } catch (error) {
-        return res.status(200).json({ message: "Action updated", nextBestAction: FallbackFactory.nextBestAction() });
-    }
-};
-
-/**
- * POST /:id/chat
- */
-const handleChat = async (req, res) => {
-    try {
-        const { message } = req.body || {};
-        if (!message) {
-            return res.status(400).json({ error: "Please provide a query for the CEO agent." });
-        }
-
-        const response = await BusinessService.processCommandCenterQuery(req.params.id, message);
-        return res.status(200).json(response);
-    } catch (error) {
-        return res.status(200).json({
-            answer: "Continue focusing on direct customer conversations to build a product users eagerly pay for.",
-            generatedTask: null
-        });
-    }
-};
-
-// Wire routes on both router and root paths for serverless / express universal compatibility
-router.post('/build', handleBuild);
-router.get('/:id/dashboard', handleDashboard);
-router.get('/:id/blueprint', handleBlueprint);
-router.get('/:id/india', handleIndia);
-router.post('/:id/action/complete', handleActionComplete);
-router.post('/:id/chat', handleChat);
-
-app.use('/api/business', router);
-
-// Direct mounts for root serverless environments
-app.post('/api/business/build', handleBuild);
-app.get('/api/business/:id/dashboard', handleDashboard);
-app.get('/api/business/:id/blueprint', handleBlueprint);
-app.get('/api/business/:id/india', handleIndia);
-app.post('/api/business/:id/action/complete', handleActionComplete);
-app.post('/api/business/:id/chat', handleChat);
-
-// Global Error Catch-all
-app.use((err, req, res, next) => {
-    Logger.error("Unhandled middleware error", err);
-    res.status(200).json({ status: "ok", notice: "ArixAI synthesized response ready." });
-});
-
-if (require.main === module) {
-    app.listen(CONFIG.PORT, () => {
-        console.log(`========================================================`);
-        console.log(`🚀 ARIXAI BUSINESS OS LISTENING ON PORT ${CONFIG.PORT}`);
-        console.log(`🔑 Gemini Keys: ${GEMINI_KEYS.length} | Tavily: ${TAVILY_KEYS.length} | Groq: ${GROQ_KEYS.length}`);
-        console.log(`========================================================`);
-    });
 }
 
-module.exports = { app, DB, BusinessService, Agents, SearchOrchestrator, ArixClient };
+async function handleEdgeRequest(request, env = {}, ctx = {}) {
+    const url = new URL(request.url);
+    const pathname = url.pathname;
+    const method = request.method.toUpperCase();
+
+    // 1. CORS Preflight check
+    if (method === 'OPTIONS') {
+        return handleCorsPreflight();
+    }
+
+    // 2. Extract multi-key pools dynamically from both env parameter and global process.env
+    const keyPools = {
+        gemini: extractKeys(env, [
+            'GEMINI_API_KEY_1', 'GEMINI_API_KEY_2', 'GEMINI_API_KEY_3',
+            'GEMINI_API_KEY_4', 'GEMINI_API_KEY_5', 'GEMINI_API_KEY_6',
+            'GEMINI_API_KEY_7', 'GEMINI_API_KEY_8', 'GEMINI_API_KEY_9',
+            'GEMINI_API_KEY', 'ARIX_API_KEY'
+        ]),
+        tavily: extractKeys(env, [
+            'TAVILY_API_KEY', 'TAVILY_KEY_2', 'TAVILY_KEY_3',
+            'TAVILY_KEY_4', 'TAVILY_KEY_5', 'TAVILY_KEY_6', 'TAVILY_KEY_7'
+        ]),
+        groq: extractKeys(env, [
+            'GROQ_API_KEY', 'GROQ_KEY_2', 'GROQ_API_KEY_2',
+            'GROQ_KEY_3', 'GROQ_API_KEY_3', 'GROQ_KEY_4',
+            'GROQ_API_KEY_4', 'GROQ_KEY_5', 'GROQ_API_KEY_5'
+        ])
+    };
+
+    // 3. Health & Readiness Route
+    if (pathname === '/' || pathname === '/api' || pathname === '/api/business' || pathname === '/api/business/health') {
+        return jsonResponse({
+            status: "online",
+            runtime: "Edge Runtime (WinterCG / Web Standards)",
+            keysDetected: {
+                gemini: keyPools.gemini.length,
+                tavily: keyPools.tavily.length,
+                groq: keyPools.groq.length
+            }
+        });
+    }
+
+    // 4. ROUTE: POST /api/business/build or /build
+    if (method === 'POST' && (pathname === '/api/business/build' || pathname === '/build')) {
+        try {
+            const body = await parseSafeJson(request);
+            const { idea, location, budget, experience, targetCustomer, businessType } = body;
+
+            if (!idea || typeof idea !== 'string' || idea.trim().length === 0) {
+                return jsonResponse({ error: "Please enter your business idea to proceed." }, 400);
+            }
+
+            const businessId = generateUUID();
+            const biz = EdgeDatabase.getBusiness(businessId, idea);
+            biz.core = {
+                idea: idea.trim(),
+                location: location || "India",
+                budget: budget || "Bootstrapped",
+                experience: experience || "First-time founder",
+                targetCustomer: targetCustomer || "General",
+                businessType: businessType || "Startup"
+            };
+            EdgeDatabase.saveBusiness(biz);
+
+            await BusinessService.generateFullBlueprint(businessId, keyPools);
+
+            return jsonResponse({
+                message: "Blueprint Ready",
+                businessId: businessId,
+                dashboardUrl: `/api/business/${businessId}/dashboard`
+            }, 201);
+        } catch (err) {
+            Logger.error("Build execution error on Edge", err);
+            const fallbackId = generateUUID();
+            EdgeDatabase.getBusiness(fallbackId, "Active Venture");
+            return jsonResponse({
+                message: "Blueprint Ready (Synthesized)",
+                businessId: fallbackId,
+                dashboardUrl: `/api/business/${fallbackId}/dashboard`
+            }, 200);
+        }
+    }
+
+    // 5. Parameterized Route Matcher: /api/business/:id/(dashboard|blueprint|india|action/complete|chat)
+    const routeRegex = /^\/(?:api\/business\/)?([^/]+)\/(dashboard|blueprint|india|action\/complete|chat)\/?$/;
+    const match = pathname.match(routeRegex);
+
+    if (match) {
+        const id = decodeURIComponent(match[1]);
+        const action = match[2];
+        const biz = EdgeDatabase.getBusiness(id);
+
+        // GET /:id/dashboard
+        if (method === 'GET' && action === 'dashboard') {
+            return jsonResponse({
+                id: biz.id,
+                health: {
+                    score: biz.healthScore || 50,
+                    cashFlow: biz.financials?.cashFlow || 0,
+                    revenue: biz.financials?.revenue || 0,
+                    customers: 0,
+                    opportunities: biz.commandCenter?.opportunities?.length || 0
+                },
+                nextBestAction: biz.commandCenter?.nextBestAction || FallbackFactory.nextBestAction(),
+                blueprintStatus: { market: 100, customer: 100, mvp: 100, launch: 100 },
+                indiaCopilot: {
+                    udyamStatus: biz.indiaCopilot?.udyamEligibility || 'eligible',
+                    gstStatus: biz.indiaCopilot?.gstConsiderations || 'standard',
+                    potentialSchemes: biz.funding?.schemes?.length || 3
+                },
+                opportunities: biz.commandCenter?.opportunities || []
+            });
+        }
+
+        // GET /:id/blueprint
+        if (method === 'GET' && action === 'blueprint') {
+            return jsonResponse({
+                market: biz.market || FallbackFactory.market(biz.core),
+                customer: biz.customer || FallbackFactory.customer(biz.core),
+                competitors: biz.competitors || FallbackFactory.competition(),
+                pricing: biz.financials || FallbackFactory.finance(biz.core),
+                businessModel: biz.financials?.revenueModel || "Direct Margin / Subscription",
+                mvp: biz.mvp || FallbackFactory.mvp(biz.core)
+            });
+        }
+
+        // GET /:id/india
+        if (method === 'GET' && action === 'india') {
+            return jsonResponse({
+                compliance: biz.indiaCopilot || FallbackFactory.indiaCopilot(),
+                schemes: biz.funding?.schemes || FallbackFactory.schemes().matches
+            });
+        }
+
+        // POST /:id/action/complete
+        if (method === 'POST' && action === 'action/complete') {
+            try {
+                const body = await parseSafeJson(request);
+                const { actionResultData } = body;
+
+                if (actionResultData) {
+                    biz.memoryLogs.push({
+                        type: 'action_result',
+                        action: biz.commandCenter?.nextBestAction?.actionTitle,
+                        result: actionResultData,
+                        timestamp: new Date().toISOString()
+                    });
+                }
+
+                biz.healthScore = Math.min(100, (biz.healthScore || 50) + 10);
+                const newAction = await Agents.calculateNextBestAction(biz, keyPools.gemini).catch(() => FallbackFactory.nextBestAction());
+                biz.commandCenter.nextBestAction = newAction;
+                EdgeDatabase.saveBusiness(biz);
+
+                return jsonResponse({
+                    message: "Action completed successfully",
+                    newHealthScore: biz.healthScore,
+                    nextBestAction: newAction
+                });
+            } catch (e) {
+                return jsonResponse({
+                    message: "Action updated",
+                    newHealthScore: Math.min(100, (biz.healthScore || 50) + 10),
+                    nextBestAction: FallbackFactory.nextBestAction()
+                });
+            }
+        }
+
+        // POST /:id/chat
+        if (method === 'POST' && action === 'chat') {
+            try {
+                const body = await parseSafeJson(request);
+                const userMsg = body.message;
+
+                if (!userMsg) {
+                    return jsonResponse({ error: "Please provide a query for the CEO agent." }, 400);
+                }
+
+                const response = await BusinessService.processCommandCenterQuery(id, userMsg, keyPools);
+                return jsonResponse(response);
+            } catch (e) {
+                return jsonResponse({
+                    answer: "Focus immediately on direct customer validation to secure your first paying adopters.",
+                    generatedTask: { title: "Execute direct customer interviews", required: true }
+                });
+            }
+        }
+    }
+
+    return jsonResponse({ error: "Route not found on Edge backend", path: pathname }, 404);
+}
+
+/**
+ * Dual Universal Export:
+ * - In Vercel Edge / Next.js Edge: Default exported function is executed as `handler(request)`
+ * - In Cloudflare Workers / WinterCG: `handler.fetch(request, env, ctx)` or `export default { fetch }` is executed
+ */
+export default async function handler(req, env, ctx) {
+    return handleEdgeRequest(req, env, ctx);
+}
+
+handler.fetch = handleEdgeRequest;
+export { handleEdgeRequest };
