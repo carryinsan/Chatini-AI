@@ -484,59 +484,74 @@ body {
 </div>
 <!-- Accessibility Full Screen Suite -->
 <div id="access-screen" class="fixed inset-0 bg-gray-50 z-[200] hidden flex-col transition-opacity duration-300">
+    <style>
+        #access-output > div { min-width: var(--access-w, 100%); transition: min-width 0.2s ease; }
+    </style>
     <!-- Header -->
-    <div class="bg-white border-b border-gray-100 p-4 px-6 flex items-center justify-between shadow-sm shrink-0">
-        <div class="flex items-center gap-3">
-            <div id="access-header-icon" class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xl shadow-sm transition-colors">
+    <div class="bg-white border-b border-gray-100 p-3 sm:p-4 px-3 sm:px-6 flex items-center justify-between shadow-sm shrink-0 overflow-x-auto no-scrollbar gap-2">
+        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+            <button onclick="document.getElementById('access-tool-list').classList.toggle('-translate-x-full'); document.getElementById('access-sidebar-overlay').classList.toggle('hidden');" class="md:hidden text-gray-500 hover:text-gray-900 p-1.5 sm:p-2 bg-gray-50 hover:bg-gray-200 rounded-xl transition-colors shrink-0">
+                <i class="ph-bold ph-list text-lg"></i>
+            </button>
+            <div id="access-header-icon" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xl shadow-sm transition-colors shrink-0">
                 <i class="ph-fill ph-wheelchair"></i>
             </div>
-            <div>
-                <h2 class="text-base sm:text-lg font-bold text-gray-900 leading-tight flex items-center gap-2">
-                    Accessibility Workspace
-                    <span class="text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Dedicated Mode</span>
+            <div class="shrink-0 mr-2 sm:mr-4">
+                <h2 class="text-sm sm:text-lg font-bold text-gray-900 leading-tight flex items-center gap-1 sm:gap-2">
+                    Access Suite
+                    <span class="text-[9px] sm:text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-1.5 sm:px-2 py-0.5 rounded-full font-bold uppercase tracking-wider hidden sm:inline-block">Dedicated</span>
                 </h2>
-                <p id="access-active-tool-title" class="text-xs text-teal-600 font-semibold">Select Tool</p>
+                <p id="access-active-tool-title" class="text-[10px] sm:text-xs text-teal-600 font-semibold truncate max-w-[120px] sm:max-w-none">Select Tool</p>
             </div>
         </div>
-        <div class="flex items-center gap-2">
-            <button onclick="exportCurrentToolFullPdf()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm" title="Export conversation to PDF">
-                <i class="ph-bold ph-file-pdf"></i> Export Chat PDF
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <button onclick="exportCurrentToolFullPdf()" class="text-[10px] sm:text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm whitespace-nowrap" title="Export conversation to PDF">
+                <i class="ph-bold ph-file-pdf"></i> <span class="hidden sm:inline">Export PDF</span><span class="sm:hidden">PDF</span>
             </button>
-            <button onclick="resetCurrentToolChat()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm">
-                <i class="ph-bold ph-plus"></i> New Chat
+            <button onclick="resetCurrentToolChat()" class="text-[10px] sm:text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm whitespace-nowrap">
+                <i class="ph-bold ph-plus"></i> <span class="hidden sm:inline">New Chat</span><span class="sm:hidden">New</span>
             </button>
-            <button onclick="closeAccessScreen()" class="text-gray-400 hover:text-gray-900 transition-colors p-2 bg-gray-50 hover:bg-gray-200 rounded-xl">
-                <i class="ph-bold ph-x text-lg"></i>
+            <button onclick="closeAccessScreen()" class="text-gray-400 hover:text-gray-900 transition-colors p-1.5 sm:p-2 bg-gray-50 hover:bg-gray-200 rounded-xl shrink-0">
+                <i class="ph-bold ph-x text-base sm:text-lg"></i>
             </button>
         </div>
     </div>
     
     <!-- Split Layout -->
-    <div class="flex-1 flex overflow-hidden">
+    <div class="flex-1 flex overflow-hidden relative">
+        <!-- Tools Sidebar Overlay (Mobile) -->
+        <div id="access-sidebar-overlay" class="fixed inset-0 bg-gray-900/40 z-40 hidden md:hidden backdrop-blur-sm" onclick="document.getElementById('access-tool-list').classList.add('-translate-x-full'); this.classList.add('hidden');"></div>
+        
         <!-- Tools Sidebar -->
-        <div class="w-full md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-3.5 flex flex-col gap-2 custom-scrollbar shrink-0" id="access-tool-list"></div>
+        <div class="absolute md:relative z-50 h-full w-[260px] md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-3 flex flex-col gap-2 custom-scrollbar shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300" id="access-tool-list"></div>
         
         <!-- Action & Output Area -->
-        <div class="flex-1 flex flex-col relative bg-[#F8FAFC]">
+        <div class="flex-1 flex flex-col relative bg-[#F8FAFC] min-w-0">
+            <!-- Width Slider for Responsive Formulas/Tables -->
+            <div class="flex items-center justify-between px-3 sm:px-4 py-2 bg-white border-b border-gray-100 shrink-0 shadow-sm z-10 w-full overflow-x-auto no-scrollbar gap-4">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap shrink-0"><i class="ph-bold ph-arrows-out-line-horizontal text-teal-500"></i> AI Width <span class="text-[9px] font-medium text-gray-400 normal-case ml-1 hidden sm:inline">(Slide to fit formula/table)</span></span>
+                <input type="range" min="100" max="300" value="100" oninput="document.getElementById('access-output').style.setProperty('--access-w', this.value + '%')" class="w-24 sm:w-48 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-600 shrink-0">
+            </div>
+
             <!-- Results / Chat Canvas -->
-            <div id="access-output" class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 custom-scrollbar"></div>
+            <div id="access-output" class="flex-1 overflow-auto p-3 sm:p-8 space-y-6 custom-scrollbar" style="--access-w: 100%;"></div>
             
             <!-- Input Console -->
-            <div class="p-4 sm:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.03)] shrink-0">
-                <div class="max-w-4xl mx-auto flex flex-col gap-3 relative">
+            <div class="p-3 sm:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.03)] shrink-0 w-full">
+                <div class="max-w-4xl mx-auto flex flex-col gap-2 sm:gap-3 relative">
                     <!-- Staging Badge -->
-                    <div id="access-file-badge" class="hidden absolute -top-10 left-0 bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm flex items-center gap-2"></div>
+                    <div id="access-file-badge" class="hidden absolute -top-10 left-0 bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm flex items-center gap-2 max-w-full overflow-hidden whitespace-nowrap text-ellipsis"></div>
                     
-                    <textarea id="access-input" placeholder="Type prompt or query for this tool..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-800 outline-none focus:border-teal-400 focus:bg-white resize-none h-24 custom-scrollbar transition-all leading-relaxed"></textarea>
+                    <textarea id="access-input" placeholder="Type prompt or query for this tool..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 sm:p-4 text-[13px] sm:text-sm text-gray-800 outline-none focus:border-teal-400 focus:bg-white resize-none h-20 sm:h-24 custom-scrollbar transition-all leading-relaxed"></textarea>
                     
-                    <div class="flex justify-between items-center">
+                    <div class="flex justify-between items-center gap-2">
                         <input type="file" id="access-file" class="hidden">
-                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2 border border-gray-200 hover:border-teal-200 text-xs sm:text-sm">
-                            <i class="ph-bold ph-paperclip text-lg"></i> Attach Data
+                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-3 sm:px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-1.5 sm:gap-2 border border-gray-200 hover:border-teal-200 text-[11px] sm:text-sm whitespace-nowrap">
+                            <i class="ph-bold ph-paperclip text-base sm:text-lg"></i> <span class="hidden sm:inline">Attach Data</span><span class="sm:hidden">Attach</span>
                         </button>
                         
-                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
-                            <i class="ph-bold ph-paper-plane-right"></i> Send Message
+                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 sm:px-8 py-2 sm:py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-sm cursor-pointer whitespace-nowrap">
+                            <i class="ph-bold ph-paper-plane-right text-base sm:text-lg"></i> <span class="hidden sm:inline">Send Message</span><span class="sm:hidden">Send</span>
                         </button>
                     </div>
                 </div>
@@ -3713,6 +3728,11 @@ function selectAccessTool(id) {
     localStorage.setItem('arix_active_access_tool', id);
     renderAccessTools();
     renderAccessChat();
+    // Auto-close sidebar on mobile after tool selection
+    if (window.innerWidth < 768) {
+        document.getElementById('access-tool-list')?.classList.add('-translate-x-full');
+        document.getElementById('access-sidebar-overlay')?.classList.add('hidden');
+    }
 }
 
 function resetCurrentToolChat() {
@@ -3769,19 +3789,19 @@ function renderDedicatedToolOutput(toolId, content, msgId) {
     
     // Top Bar with Copy & PDF Export actions
     const toolbar = `
-    <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4 no-pdf">
+    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-4 no-pdf">
         <div class="flex items-center gap-2">
-            <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${tool.themeBg} ${tool.themeText} border ${tool.themeBorder} flex items-center gap-1.5">
+            <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-1 rounded-lg ${tool.themeBg} ${tool.themeText} border ${tool.themeBorder} flex items-center gap-1.5 whitespace-nowrap">
                 <i class="ph-bold ${tool.icon}"></i> ${tool.name}
             </span>
             <span class="text-[11px] text-gray-400 font-medium hidden sm:inline">• Output Model</span>
         </div>
         <div class="flex items-center gap-1.5">
-            <button onclick="copyAccessOutput('${msgId}')" class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200 transition-colors shadow-sm cursor-pointer" title="Copy raw text">
-                <i class="ph-bold ph-copy text-sm text-gray-500"></i> <span>Copy</span>
+            <button onclick="copyAccessOutput('${msgId}')" class="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-2 sm:px-3 py-1.5 rounded-xl border border-gray-200 transition-colors shadow-sm cursor-pointer whitespace-nowrap" title="Copy raw text">
+                <i class="ph-bold ph-copy text-xs sm:text-sm text-gray-500"></i> <span class="hidden sm:inline">Copy</span>
             </button>
-            <button onclick="downloadAccessPdf('${msgId}')" class="flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl border border-red-200 transition-colors shadow-sm cursor-pointer" title="Export this report to PDF">
-                <i class="ph-bold ph-file-pdf text-sm text-red-500"></i> <span>Download PDF</span>
+            <button onclick="downloadAccessPdf('${msgId}')" class="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 sm:px-3 py-1.5 rounded-xl border border-red-200 transition-colors shadow-sm cursor-pointer whitespace-nowrap" title="Export this report to PDF">
+                <i class="ph-bold ph-file-pdf text-xs sm:text-sm text-red-500"></i> <span class="hidden sm:inline">Download PDF</span><span class="sm:hidden">PDF</span>
             </button>
         </div>
     </div>`;
