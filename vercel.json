@@ -2,6 +2,10 @@
   "version": 2,
   "rewrites": [
     {
+      "source": "/api/business/:match*",
+      "destination": "/api/business"
+    },
+    {
       "source": "/api/(.*)",
       "destination": "/api/server.js"
     }
