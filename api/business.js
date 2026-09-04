@@ -749,8 +749,21 @@ async function parseSafeJson(request) {
 }
 
 async function handleEdgeRequest(request, env = {}, ctx = {}) {
-    const url = new URL(request.url);
-    const pathname = url.pathname;
+    const url = new URL(req.url);
+        // Normalize path so /api/business/build and /build both resolve reliably
+        const rawPath = url.pathname.replace(/\/+$/, '');
+        const path = rawPath.replace(/^\/api\/business/, '') || rawPath;
+
+        // Global CORS headers on every response
+        const corsHeaders = {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
+        };
+
+        if (req.method === 'OPTIONS') {
+            return new Response(null, { status: 204, headers: corsHeaders });
+        }
     const method = request.method.toUpperCase();
 
     // 1. CORS Preflight check
