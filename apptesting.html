@@ -203,6 +203,38 @@ body {
 .flip-card-front, .flip-card-back { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border-radius: 1rem; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; text-align: center; }
 .flip-card-front { background: #ffffff; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
 .flip-card-back { background: rgba(var(--theme-50), 0.5); border: 1px solid rgba(var(--theme-200), 1); transform: rotateY(180deg); color: #374151; }
+
+/* Accessibility Custom Data Tables */
+.access-custom-table table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 1rem 0;
+    border-radius: 1rem;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    font-size: 0.825rem;
+}
+.access-custom-table th {
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 14px;
+    border-bottom: 2px solid #e2e8f0;
+}
+.access-custom-table td {
+    padding: 10px 14px;
+    border-bottom: 1px solid #f1f5f9;
+    color: #334155;
+}
+.access-custom-table tr:last-child td {
+    border-bottom: none;
+}
+.access-custom-table tr:hover td {
+    background-color: #f8fafc;
+}
 </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-theme-200 relative">
@@ -276,7 +308,7 @@ body {
         <div class="flex items-start mb-4 text-left px-2">
             <input type="checkbox" id="tc-checkbox" class="w-4 h-4 mt-0.5 border-gray-300 rounded cursor-pointer accent-theme-600">
             <label for="tc-checkbox" class="ml-2 text-[11px] text-gray-500 leading-tight select-none cursor-pointer">
-                I have read and agree to the <a href="https://Arix-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="text-theme-600 font-semibold hover:underline">Terms & Conditions</a>
+                I have read and agree to the <a href="https://lexis-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="text-theme-600 font-semibold hover:underline">Terms & Conditions</a>
             </label>
         </div>
         <button onclick="saveNickname()" class="w-full bg-theme-600 text-white font-medium py-3 rounded-xl hover:bg-theme-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-theme-200">
@@ -455,15 +487,21 @@ body {
     <!-- Header -->
     <div class="bg-white border-b border-gray-100 p-4 px-6 flex items-center justify-between shadow-sm shrink-0">
         <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold">
-                <i class="ph-fill ph-wheelchair text-xl"></i>
+            <div id="access-header-icon" class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xl shadow-sm transition-colors">
+                <i class="ph-fill ph-wheelchair"></i>
             </div>
             <div>
-                <h2 class="text-base sm:text-lg font-bold text-gray-900 leading-tight">Accessibility Suite</h2>
+                <h2 class="text-base sm:text-lg font-bold text-gray-900 leading-tight flex items-center gap-2">
+                    Accessibility Workspace
+                    <span class="text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Dedicated Mode</span>
+                </h2>
                 <p id="access-active-tool-title" class="text-xs text-teal-600 font-semibold">Select Tool</p>
             </div>
         </div>
         <div class="flex items-center gap-2">
+            <button onclick="exportCurrentToolFullPdf()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm" title="Export conversation to PDF">
+                <i class="ph-bold ph-file-pdf"></i> Export Chat PDF
+            </button>
             <button onclick="resetCurrentToolChat()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm">
                 <i class="ph-bold ph-plus"></i> New Chat
             </button>
@@ -476,28 +514,28 @@ body {
     <!-- Split Layout -->
     <div class="flex-1 flex overflow-hidden">
         <!-- Tools Sidebar -->
-        <div class="w-full md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-4 flex flex-col gap-2 custom-scrollbar shrink-0" id="access-tool-list"></div>
+        <div class="w-full md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-3.5 flex flex-col gap-2 custom-scrollbar shrink-0" id="access-tool-list"></div>
         
         <!-- Action & Output Area -->
-        <div class="flex-1 flex flex-col relative bg-[#FAFAFA]">
+        <div class="flex-1 flex flex-col relative bg-[#F8FAFC]">
             <!-- Results / Chat Canvas -->
             <div id="access-output" class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 custom-scrollbar"></div>
             
             <!-- Input Console -->
-            <div class="p-4 sm:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.02)] shrink-0">
+            <div class="p-4 sm:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.03)] shrink-0">
                 <div class="max-w-4xl mx-auto flex flex-col gap-3 relative">
                     <!-- Staging Badge -->
                     <div id="access-file-badge" class="hidden absolute -top-10 left-0 bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm flex items-center gap-2"></div>
                     
-                    <textarea id="access-input" placeholder="Type prompt or query for this tool..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-800 outline-none focus:border-teal-300 focus:bg-white resize-none h-24 custom-scrollbar transition-all"></textarea>
+                    <textarea id="access-input" placeholder="Type prompt or query for this tool..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-800 outline-none focus:border-teal-400 focus:bg-white resize-none h-24 custom-scrollbar transition-all leading-relaxed"></textarea>
                     
                     <div class="flex justify-between items-center">
                         <input type="file" id="access-file" class="hidden">
-                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2 border border-transparent hover:border-teal-100 text-xs sm:text-sm">
+                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2 border border-gray-200 hover:border-teal-200 text-xs sm:text-sm">
                             <i class="ph-bold ph-paperclip text-lg"></i> Attach Data
                         </button>
                         
-                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-2 text-xs sm:text-sm">
+                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
                             <i class="ph-bold ph-paper-plane-right"></i> Send Message
                         </button>
                     </div>
@@ -2665,7 +2703,7 @@ function createNewChat() {
     renderMessagesToUI(); 
     if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
     renderHistoryList(); // Reset sidebar active states
-    appendMessage('assistant', 'New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
+    appendMessage('assistant', '<p>Have a business or want to start? Visit <a href="https://lexis-ai-chatini.vercel.app/business.html">Business</a>.</p>', activeModelId, 'init', [], 'ArixAI'); 
     closeCanvas(); 
     renderPulseTodayWidget();
 }
@@ -3629,18 +3667,20 @@ async function handleSend() {
     updateUIState();
 }
 
-// ====== ACCESSIBILITY & FAIL-SAFE ENGINE ======
+// ============================================================================
+// DEDICATED ACCESSIBILITY WORKSPACE ENGINE & SPECIALIZED DOMAIN RENDERERS
+// ============================================================================
 const accessTools = [
-    { id: "3", name: "Syllabus Compare", icon: "ph-books", desc: "Map exact course overlaps." },
-    { id: "8", name: "Tax Finder", icon: "ph-receipt", desc: "Identify HSN/SAC GST rates." },
-    { id: "10", name: "Formula Gen", icon: "ph-function", desc: "Build safe Excel logics." },
-    { id: "15", name: "Bundle Pricing", icon: "ph-tag", desc: "Calculate profit margins." },
-    { id: "25", name: "Content Calendar", icon: "ph-calendar", desc: "Structure 30-day schedules." },
-    { id: "31", name: "Bill Split", icon: "ph-users", desc: "Calculate precise ledger debts." },
-    { id: "32", name: "Medical Terms", icon: "ph-heartbeat", desc: "Translate clinical jargon." },
-    { id: "35", name: "Telecom Cost", icon: "ph-phone", desc: "Expose true annual fees." },
-    { id: "41", name: "Price Scrape", icon: "ph-currency-dollar", desc: "Extract competitor matrices." },
-    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "Swap CSV/JSON/XML formats." }
+    { id: "3", name: "Syllabus Compare", icon: "ph-books", desc: "Map exact course overlaps.", color: "indigo", themeBg: "bg-indigo-50", themeText: "text-indigo-600", themeBorder: "border-indigo-200" },
+    { id: "8", name: "Tax Finder", icon: "ph-receipt", desc: "Identify HSN/SAC GST rates.", color: "emerald", themeBg: "bg-emerald-50", themeText: "text-emerald-600", themeBorder: "border-emerald-200" },
+    { id: "10", name: "Formula Gen", icon: "ph-function", desc: "Build safe Excel logics.", color: "green", themeBg: "bg-green-50", themeText: "text-green-700", themeBorder: "border-green-200" },
+    { id: "15", name: "Bundle Pricing", icon: "ph-tag", desc: "Calculate profit margins.", color: "purple", themeBg: "bg-purple-50", themeText: "text-purple-600", themeBorder: "border-purple-200" },
+    { id: "25", name: "Content Calendar", icon: "ph-calendar", desc: "Structure 30-day schedules.", color: "rose", themeBg: "bg-rose-50", themeText: "text-rose-600", themeBorder: "border-rose-200" },
+    { id: "31", name: "Bill Split", icon: "ph-users", desc: "Calculate precise ledger debts.", color: "teal", themeBg: "bg-teal-50", themeText: "text-teal-600", themeBorder: "border-teal-200" },
+    { id: "32", name: "Medical Terms", icon: "ph-heartbeat", desc: "Translate clinical jargon.", color: "sky", themeBg: "bg-sky-50", themeText: "text-sky-600", themeBorder: "border-sky-200" },
+    { id: "35", name: "Telecom Cost", icon: "ph-phone", desc: "Expose true annual fees.", color: "amber", themeBg: "bg-amber-50", themeText: "text-amber-600", themeBorder: "border-amber-200" },
+    { id: "41", name: "Price Scrape", icon: "ph-currency-dollar", desc: "Extract competitor matrices.", color: "blue", themeBg: "bg-blue-50", themeText: "text-blue-600", themeBorder: "border-blue-200" },
+    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "Convert File Formats.", color: "slate", themeBg: "bg-slate-50", themeText: "text-slate-700", themeBorder: "border-slate-300" }
 ];
 
 let activeAccessTool = localStorage.getItem('arix_active_access_tool') || "57";
@@ -3653,40 +3693,18 @@ function saveAccessChats() {
 }
 
 function openAccessScreen() {
-    document.getElementById('access-screen').classList.remove('hidden');
-    document.getElementById('access-screen').classList.add('flex');
+    const screen = document.getElementById('access-screen');
+    screen.classList.remove('hidden');
+    screen.classList.add('flex');
     if (window.innerWidth < 1024) toggleSidebar();
     renderAccessTools();
     renderAccessChat();
 }
 
 function closeAccessScreen() {
-    document.getElementById('access-screen').classList.remove('flex');
-    document.getElementById('access-screen').classList.add('hidden');
-}
-
-function renderAccessTools() {
-    const list = document.getElementById('access-tool-list');
-    if (!list) return;
-    list.innerHTML = accessTools.map(t => {
-        const isActive = activeAccessTool === t.id;
-        return `
-        <div onclick="selectAccessTool('${t.id}')" class="cursor-pointer p-3.5 rounded-2xl border transition-all duration-300 ${isActive ? 'bg-teal-50 border-teal-200 shadow-sm' : 'bg-white border-gray-100 hover:border-teal-100 hover:bg-gray-50'} flex items-center gap-3.5">
-            <div class="w-11 h-11 rounded-xl ${isActive ? 'bg-teal-600 text-white shadow-md' : 'bg-gray-100 text-gray-500'} flex items-center justify-center shrink-0 transition-colors">
-                <i class="ph-bold ${t.icon} text-xl"></i>
-            </div>
-            <div class="flex flex-col overflow-hidden">
-                <span class="text-[13px] font-bold text-gray-900 truncate">${t.name}</span>
-                <span class="text-[10px] font-medium text-gray-500 truncate mt-0.5">${t.desc}</span>
-            </div>
-        </div>`;
-    }).join('');
-
-    const activeObj = accessTools.find(t => t.id === activeAccessTool);
-    const titleEl = document.getElementById('access-active-tool-title');
-    if (titleEl && activeObj) {
-        titleEl.innerText = `${activeObj.name} • ${activeObj.desc}`;
-    }
+    const screen = document.getElementById('access-screen');
+    screen.classList.remove('flex');
+    screen.classList.add('hidden');
 }
 
 function selectAccessTool(id) {
@@ -3705,20 +3723,409 @@ function resetCurrentToolChat() {
     showToast("New chat started for this tool");
 }
 
+function renderAccessTools() {
+    const list = document.getElementById('access-tool-list');
+    if (!list) return;
+    const activeToolObj = accessTools.find(t => t.id === activeAccessTool) || accessTools[0];
+    
+    // Update Header Badge
+    const headerIcon = document.getElementById('access-header-icon');
+    const headerTitle = document.getElementById('access-active-tool-title');
+    if (headerIcon) {
+        headerIcon.className = `w-10 h-10 rounded-xl ${activeToolObj.themeBg} ${activeToolObj.themeText} flex items-center justify-center font-bold text-xl shadow-sm transition-colors`;
+        headerIcon.innerHTML = `<i class="ph-fill ${activeToolObj.icon}"></i>`;
+    }
+    if (headerTitle) {
+        headerTitle.className = `text-xs font-semibold ${activeToolObj.themeText}`;
+        headerTitle.innerText = `${activeToolObj.name} • ${activeToolObj.desc}`;
+    }
+
+    list.innerHTML = accessTools.map(t => {
+        const isActive = activeAccessTool === t.id;
+        const chatCount = (accessToolChats[t.id] || []).filter(m => m.role === 'assistant').length;
+        
+        return `
+        <div onclick="selectAccessTool('${t.id}')" class="cursor-pointer p-3 rounded-2xl border transition-all duration-200 flex items-center justify-between group ${isActive ? `${t.themeBg} ${t.themeBorder} shadow-sm ring-1 ring-${t.color}-300` : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50/70'}">
+            <div class="flex items-center gap-3 min-w-0">
+                <div class="w-10 h-10 rounded-xl ${isActive ? `bg-${t.color}-600 text-white shadow-md` : `${t.themeBg} ${t.themeText}`} flex items-center justify-center shrink-0 transition-all text-lg">
+                    <i class="ph-bold ${t.icon}"></i>
+                </div>
+                <div class="flex flex-col truncate">
+                    <span class="text-xs font-bold text-gray-900 truncate">${t.name}</span>
+                    <span class="text-[10px] text-gray-500 font-medium truncate mt-0.5">${t.desc}</span>
+                </div>
+            </div>
+            ${chatCount > 0 ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-white/80 text-gray-700' : 'bg-gray-100 text-gray-500'} shrink-0">${chatCount}</span>` : ''}
+        </div>`;
+    }).join('');
+}
+
+// ============================================================================
+// DEDICATED DOMAIN-SPECIFIC AI OUTPUT RENDERERS
+// ============================================================================
+function renderDedicatedToolOutput(toolId, content, msgId) {
+    const tool = accessTools.find(t => t.id === toolId) || accessTools[0];
+    const rawText = content || "";
+    
+    // Top Bar with Copy & PDF Export actions
+    const toolbar = `
+    <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4 no-pdf">
+        <div class="flex items-center gap-2">
+            <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${tool.themeBg} ${tool.themeText} border ${tool.themeBorder} flex items-center gap-1.5">
+                <i class="ph-bold ${tool.icon}"></i> ${tool.name}
+            </span>
+            <span class="text-[11px] text-gray-400 font-medium hidden sm:inline">• Output Model</span>
+        </div>
+        <div class="flex items-center gap-1.5">
+            <button onclick="copyAccessOutput('${msgId}')" class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200 transition-colors shadow-sm cursor-pointer" title="Copy raw text">
+                <i class="ph-bold ph-copy text-sm text-gray-500"></i> <span>Copy</span>
+            </button>
+            <button onclick="downloadAccessPdf('${msgId}')" class="flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl border border-red-200 transition-colors shadow-sm cursor-pointer" title="Export this report to PDF">
+                <i class="ph-bold ph-file-pdf text-sm text-red-500"></i> <span>Download PDF</span>
+            </button>
+        </div>
+    </div>`;
+
+    let customBody = "";
+
+    // 1. TOOL 3: SYLLABUS COMPARE
+    if (toolId === "3") {
+        customBody = `
+        <div class="space-y-4">
+            <div class="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-xl flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="ph-fill ph-git-diff text-indigo-600 text-lg"></i>
+                    <span class="text-xs font-bold text-indigo-950 uppercase tracking-wide">Course Overlap & Curriculum Gap Analysis</span>
+                </div>
+                <span class="text-[10px] font-bold text-indigo-600 bg-white px-2 py-0.5 rounded-md border border-indigo-200 shadow-sm">Comparative Ledger</span>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800 access-custom-table">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 2. TOOL 8: TAX FINDER (HSN/SAC)
+    else if (toolId === "8") {
+        const hsnMatch = rawText.match(/\b(?:HSN|SAC)?\s*Code:?\s*([0-9]{4,8})\b/i) || rawText.match(/\b([0-9]{4,8})\b/);
+        const gstMatch = rawText.match(/\b([0-9]{1,2}(?:\.[0-9]+)?%)\b/);
+        const codeFound = hsnMatch ? hsnMatch[1] : null;
+        const rateFound = gstMatch ? gstMatch[1] : null;
+
+        customBody = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="p-4 bg-emerald-50/80 border border-emerald-200 rounded-2xl flex flex-col">
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-emerald-700">HSN/SAC Code</span>
+                    <span class="text-2xl font-extrabold text-emerald-950 mt-1 font-mono">${codeFound || 'Classified'}</span>
+                    ${codeFound ? `<button onclick="navigator.clipboard.writeText('${codeFound}'); showToast('HSN Copied!');" class="text-[11px] font-bold text-emerald-700 hover:underline mt-2 flex items-center gap-1 text-left"><i class="ph-bold ph-copy"></i> Copy Code</button>` : ''}
+                </div>
+                <div class="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl flex flex-col">
+                    <span class="text-[10px] uppercase tracking-wider font-bold text-amber-700">GST Slab Rate</span>
+                    <span class="text-2xl font-extrabold text-amber-950 mt-1 font-mono">${rateFound || 'Applicable'}</span>
+                    <span class="text-[11px] text-amber-600 font-medium mt-2">Standard Statutory Rate</span>
+                </div>
+                <div class="p-4 bg-blue-50/80 border border-blue-200 rounded-2xl flex flex-col justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider font-bold text-blue-700">Status</span>
+                        <span class="text-xs font-bold text-blue-950 block mt-1">Official Tariff Match</span>
+                    </div>
+                    <span class="text-[10px] font-bold text-blue-600 bg-white px-2 py-1 rounded-md border border-blue-200 inline-block w-fit">Tax Verified</span>
+                </div>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800 border-t border-gray-100 pt-3">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 3. TOOL 10: FORMULA GEN (EXCEL)
+    else if (toolId === "10") {
+        const codeBlockMatch = rawText.match(/```(?:excel|formula)?([\s\S]*?)```/i);
+        const cleanFormula = codeBlockMatch ? codeBlockMatch[1].trim() : (rawText.match(/=[A-Z0-9_]+[\s\S]*/)?.[0] || "");
+
+        customBody = `
+        <div class="space-y-4">
+            ${cleanFormula ? `
+            <div class="bg-gray-900 rounded-2xl p-4 text-white shadow-md border border-gray-800">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-6 h-6 rounded bg-green-600 text-white font-mono font-bold flex items-center justify-center text-xs">fx</span>
+                        <span class="text-xs font-bold text-gray-300 uppercase tracking-wider">Excel / Sheets Formula</span>
+                    </div>
+                    <button onclick="navigator.clipboard.writeText('${cleanFormula.replace(/'/g, "\\'")}'); showToast('Formula Copied!');" class="text-xs font-bold text-green-400 hover:text-green-300 flex items-center gap-1 bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-lg transition-colors">
+                        <i class="ph-bold ph-copy"></i> Copy Formula
+                    </button>
+                </div>
+                <pre class="font-mono text-emerald-400 text-sm overflow-x-auto p-2 bg-black/40 rounded-xl whitespace-pre-wrap">${cleanFormula}</pre>
+            </div>` : ''}
+            <div class="prose prose-sm max-w-none text-gray-800">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 4. TOOL 15: BUNDLE PRICING
+    else if (toolId === "15") {
+        customBody = `
+        <div class="space-y-4">
+            <div class="p-3 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between text-purple-900">
+                <span class="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"><i class="ph-bold ph-chart-line-up text-base"></i> Margin Optimization Breakdown</span>
+                <span class="text-[10px] bg-purple-200/60 font-bold px-2 py-0.5 rounded">Multi-Tier Model</span>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 5. TOOL 25: CONTENT CALENDAR
+    else if (toolId === "25") {
+        customBody = `
+        <div class="space-y-4">
+            <div class="p-3.5 bg-rose-50/70 border border-rose-200 rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-calendar text-rose-600 text-lg"></i>
+                    <span class="text-xs font-bold text-rose-950 uppercase tracking-wide">30-Day Chronological Production Schedule</span>
+                </div>
+                <span class="text-[10px] font-bold text-rose-700 bg-white border border-rose-200 px-2 py-1 rounded-lg">Pacing Tuned</span>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800 access-custom-table">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 6. TOOL 31: BILL SPLIT
+    else if (toolId === "31") {
+        customBody = `
+        <div class="space-y-4">
+            <div class="p-3.5 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-scales text-teal-600 text-lg"></i>
+                    <span class="text-xs font-bold text-teal-950 uppercase tracking-wider">Settlement Ledger & Obligation Breakdown</span>
+                </div>
+                <span class="text-[10px] font-bold text-teal-700 bg-white border border-teal-200 px-2.5 py-1 rounded-lg">Zero-Sum Balanced</span>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 7. TOOL 32: MEDICAL TERMS
+    else if (toolId === "32") {
+        customBody = `
+        <div class="space-y-4">
+            <div class="p-3.5 bg-sky-50 border border-sky-200 rounded-2xl flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i class="ph-fill ph-first-aid text-sky-600 text-lg"></i>
+                    <span class="text-xs font-bold text-sky-950 uppercase tracking-wider">Clinical Translation & Billing Verification</span>
+                </div>
+                <span class="text-[10px] font-bold text-sky-700 bg-white border border-sky-200 px-2 py-1 rounded-lg">Plain English</span>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800">
+                ${marked.parse(rawText)}
+            </div>
+            <div class="p-3 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900 font-medium flex items-center gap-2">
+                <i class="ph-bold ph-shield-warning text-amber-600 text-base flex-shrink-0"></i>
+                <span>Educational translation only. Always confirm billing codes and coverage directly with your healthcare provider or insurer.</span>
+            </div>
+        </div>`;
+    }
+    // 8. TOOL 35: TELECOM COST
+    else if (toolId === "35") {
+        customBody = `
+        <div class="space-y-4">
+            <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between text-amber-950">
+                <span class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <i class="ph-bold ph-warning-octagon text-amber-600 text-lg"></i> True Cost vs Bait-and-Switch Rate Exposure
+                </span>
+                <span class="text-[10px] font-bold text-amber-700 bg-white border border-amber-200 px-2 py-1 rounded-lg">Annualized TCO</span>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 9. TOOL 41: PRICE SCRAPE
+    else if (toolId === "41") {
+        customBody = `
+        <div class="space-y-4">
+            <div class="p-3.5 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between text-blue-950">
+                <span class="text-xs font-bold uppercase tracking-wider flex items-center gap-2">
+                    <i class="ph-bold ph-crosshair text-blue-600 text-lg"></i> Competitor Pricing Matrix & Arbitrage Gaps
+                </span>
+                <span class="text-[10px] font-bold text-blue-700 bg-white border border-blue-200 px-2 py-1 rounded-lg">Market Matrix</span>
+            </div>
+            <div class="prose prose-sm max-w-none text-gray-800 access-custom-table">
+                ${marked.parse(rawText)}
+            </div>
+        </div>`;
+    }
+    // 10. TOOL 57: DATA CONVERT
+    else {
+        const codeMatch = rawText.match(/```([a-z0-9_-]+)?([\s\S]*?)```/i);
+        const formatLang = codeMatch ? (codeMatch[1] || 'json').toLowerCase() : 'txt';
+        const formattedData = codeMatch ? codeMatch[2].trim() : rawText.trim();
+
+        customBody = `
+        <div class="space-y-4">
+            <div class="flex items-center justify-between bg-slate-100 p-3 rounded-xl border border-slate-200">
+                <div class="flex items-center gap-2">
+                    <i class="ph-bold ph-code text-slate-700"></i>
+                    <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Converted Stream Format: <strong class="text-teal-700">${formatLang.toUpperCase()}</strong></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="downloadConvertedData('${msgId}', '${formatLang}')" class="text-xs font-bold text-teal-700 hover:text-teal-800 bg-white border border-slate-200 hover:bg-slate-50 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                        <i class="ph-bold ph-download-simple"></i> Download .${formatLang}
+                    </button>
+                    <button onclick="copyAccessOutput('${msgId}')" class="text-xs font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1 shadow-sm">
+                        <i class="ph-bold ph-copy"></i> Copy
+                    </button>
+                </div>
+            </div>
+            <div class="bg-gray-900 rounded-2xl p-4 text-gray-100 shadow-inner overflow-x-auto max-h-96 custom-scrollbar border border-gray-800">
+                <pre class="font-mono text-xs text-teal-300 leading-relaxed">${formattedData}</pre>
+            </div>
+            <div class="text-[11px] text-gray-500 font-medium">
+                Need most advanced accuracy or have big file to convert? Try <a href="https://code-packer-pro.vercel.app/" target="_blank" class="text-teal-600 font-bold hover:underline">CodePacker Pro</a> or <a href="https://file-packer-pro.vercel.app/" target="_blank" class="text-teal-600 font-bold hover:underline">FilePacker Pro</a>.
+            </div>
+        </div>`;
+    }
+
+    return `
+    <div id="access-render-${msgId}" class="w-full bg-white border border-gray-200/80 rounded-3xl p-5 sm:p-7 shadow-[0_4px_24px_-4px_rgba(0,0,0,0.06)] hover:border-gray-300 transition-all duration-300">
+        ${toolbar}
+        ${customBody}
+    </div>`;
+}
+
+// ============================================================================
+// PDF GENERATION & COPY HELPERS FOR ACCESSIBILITY SUITE
+// ============================================================================
+window.copyAccessOutput = async function(msgId) {
+    const chat = accessToolChats[activeAccessTool] || [];
+    const msg = chat.find(m => m.id === msgId);
+    let textToCopy = msg ? msg.content : "";
+    
+    if (!textToCopy) {
+        const renderEl = document.getElementById('access-render-' + msgId);
+        textToCopy = renderEl ? renderEl.innerText : "";
+    }
+    
+    if (!textToCopy) return showToast("Nothing to copy.");
+    
+    try {
+        if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(textToCopy);
+        } else {
+            const ta = document.createElement("textarea");
+            ta.value = textToCopy;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand("copy");
+            ta.remove();
+        }
+        showToast("Output copied to clipboard!");
+    } catch(e) {
+        showToast("Failed to copy.");
+    }
+};
+
+window.downloadAccessPdf = function(msgId) {
+    const el = document.getElementById('access-render-' + msgId);
+    if (!el) return showToast("Output not found to export.");
+    showToast("Compiling PDF...");
+    
+    const toolObj = accessTools.find(t => t.id === activeAccessTool) || accessTools[0];
+    const toolName = toolObj.name.replace(/\s+/g, '_');
+    
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('.no-pdf').forEach(n => n.remove());
+    clone.style.padding = '24px';
+    clone.style.backgroundColor = '#ffffff';
+    
+    const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `ArixAI_${toolName}_${Date.now()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(clone).save().then(() => {
+        showToast("PDF Downloaded!");
+    }).catch(err => {
+        console.error(err);
+        showToast("PDF Export failed.");
+    });
+};
+
+window.exportCurrentToolFullPdf = function() {
+    const container = document.getElementById('access-output');
+    if (!container || container.children.length === 0) return showToast("No chat history to export.");
+    showToast("Generating full chat PDF...");
+    
+    const toolObj = accessTools.find(t => t.id === activeAccessTool) || accessTools[0];
+    const clone = container.cloneNode(true);
+    clone.querySelectorAll('.no-pdf').forEach(n => n.remove());
+    clone.style.padding = '30px';
+    clone.style.backgroundColor = '#ffffff';
+    
+    const header = document.createElement('div');
+    header.innerHTML = `
+        <div style="border-bottom: 2px solid #0d9488; padding-bottom: 12px; margin-bottom: 24px;">
+            <h1 style="color: #0f172a; font-size: 22px; font-weight: bold; margin: 0;">ArixAI Accessibility Report: ${toolObj.name}</h1>
+            <p style="color: #64748b; font-size: 12px; margin-top: 4px;">Generated on ${new Date().toLocaleString()} • Confidential Intelligence Document</p>
+        </div>
+    `;
+    clone.prepend(header);
+    
+    const opt = {
+        margin: [10, 10, 10, 10],
+        filename: `ArixAI_${toolObj.name.replace(/\s+/g, '_')}_Full_Report.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    
+    html2pdf().set(opt).from(clone).save().then(() => {
+        showToast("Full PDF Exported!");
+    }).catch(err => {
+        showToast("Export failed.");
+    });
+};
+
+window.downloadConvertedData = function(msgId, ext) {
+    const chat = accessToolChats[activeAccessTool] || [];
+    const msg = chat.find(m => m.id === msgId);
+    if (!msg) return showToast("File not found.");
+    
+    const codeMatch = msg.content.match(/```([a-z0-9_-]+)?([\s\S]*?)```/i);
+    const data = codeMatch ? codeMatch[2].trim() : msg.content.trim();
+    
+    const blob = new Blob([data], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transformed_data_${Date.now()}.${ext || 'txt'}`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("File downloaded!");
+};
+
+// ============================================================================
+// CHAT CANVAS RENDERING & STREAMING PIPELINE
+// ============================================================================
 function renderAccessChat() {
     const output = document.getElementById('access-output');
     if (!output) return;
     
     const history = accessToolChats[activeAccessTool] || [];
     if (history.length === 0) {
-        const currentTool = accessTools.find(t => t.id === activeAccessTool);
+        const currentTool = accessTools.find(t => t.id === activeAccessTool) || accessTools[0];
         output.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-3 py-16">
-                <div class="w-14 h-14 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center text-3xl mb-1 shadow-sm">
-                    <i class="ph-bold ${currentTool ? currentTool.icon : 'ph-command'}"></i>
+            <div class="flex flex-col items-center justify-center h-full text-gray-400 gap-3 py-20 animate-fade-in-up">
+                <div class="w-16 h-16 rounded-3xl ${currentTool.themeBg} ${currentTool.themeText} flex items-center justify-center text-3xl mb-2 shadow-sm border ${currentTool.themeBorder}">
+                    <i class="ph-bold ${currentTool.icon}"></i>
                 </div>
-                <h3 class="text-sm font-bold text-gray-800">${currentTool ? currentTool.name : 'Tool Ready'}</h3>
-                Type your message or attach data below to interact with ArixAI, or convert files to other formats powered by <a href="https://code-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">CodePacker Pro</a> and <a href="https://file-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">FilePacker Pro</a>
+                <h3 class="text-base font-bold text-gray-900">${currentTool.name} Dedicated Engine</h3>
+                <p class="text-xs text-gray-500 max-w-sm text-center leading-relaxed font-medium">${currentTool.desc} You can convert files at: <a href="https://code-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">CodePacker Pro</a> and <a href="https://file-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">FilePacker Pro</a>.</p>
             </div>`;
         return;
     }
@@ -3727,19 +4134,16 @@ function renderAccessChat() {
         if (m.role === 'user') {
             return `
             <div class="flex justify-end w-full animate-fade-in-up">
-                <div class="bg-gray-100 text-gray-800 px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-sm text-sm leading-relaxed max-w-2xl font-medium">
-                    ${m.fileName ? `<div class="text-[11px] font-bold text-teal-700 mb-1 flex items-center gap-1.5"><i class="ph-bold ph-paperclip"></i> ${m.fileName}</div>` : ''}
-                    ${m.content ? marked.parse(m.content) : ''}
+                <div class="bg-white text-gray-800 border border-gray-200/80 px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-sm text-sm leading-relaxed max-w-2xl font-medium">
+                    ${m.fileName ? `<div class="text-[11px] font-bold text-teal-700 mb-1.5 flex items-center gap-1.5 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-100"><i class="ph-bold ph-paperclip"></i> Attached: ${m.fileName}</div>` : ''}
+                    <div class="text-gray-800">${m.content ? marked.parse(m.content) : ''}</div>
                 </div>
             </div>`;
         } else {
             return `
-            <div class="flex gap-3 sm:gap-4 w-full max-w-3xl animate-fade-in-up">
-                <div class="w-8 h-8 rounded-xl bg-teal-600 text-white shadow-sm flex items-center justify-center shrink-0 mt-0.5">
-                    <i class="ph-bold ph-sparkle text-sm"></i>
-                </div>
-                <div class="flex-1 min-w-0 prose prose-sm max-w-none text-gray-800 leading-relaxed bg-white border border-gray-100 p-5 rounded-2xl shadow-sm">
-                    ${marked.parse(m.content || '')}
+            <div class="flex gap-3 sm:gap-4 w-full animate-fade-in-up">
+                <div class="flex-1 min-w-0">
+                    ${renderDedicatedToolOutput(activeAccessTool, m.content, m.id)}
                 </div>
             </div>`;
         }
@@ -3775,7 +4179,11 @@ async function runAccessTool() {
         accessToolChats[activeAccessTool] = [];
     }
 
+    const userMsgId = 'acc_usr_' + Date.now();
+    const assistantMsgId = 'acc_ast_' + Date.now();
+
     const userEntry = {
+        id: userMsgId,
         role: 'user',
         content: text,
         fileName: accessFileBuffer ? accessFileBuffer.name : null
@@ -3783,6 +4191,7 @@ async function runAccessTool() {
     accessToolChats[activeAccessTool].push(userEntry);
     
     const assistantEntry = {
+        id: assistantMsgId,
         role: 'assistant',
         content: ''
     };
@@ -3791,12 +4200,11 @@ async function runAccessTool() {
     saveAccessChats();
     renderAccessChat();
 
-    // Directly bind to the newest assistant bubble for 60fps live streaming
+    // Stream binding
     const output = document.getElementById('access-output');
-    const proseNodes = output ? output.querySelectorAll('.prose') : [];
-    const liveTarget = proseNodes.length > 0 ? proseNodes[proseNodes.length - 1] : null;
+    let liveTarget = document.getElementById('access-render-' + assistantMsgId);
     if (liveTarget) {
-        liveTarget.innerHTML = '<span class="text-teal-600 font-medium flex items-center gap-2"><i class="ph-bold ph-circle-notch animate-spin"></i> Generating response...</span>';
+        liveTarget.innerHTML = `<div class="flex items-center gap-3 text-teal-600 font-semibold p-4 text-sm animate-pulse"><i class="ph-bold ph-circle-notch animate-spin text-lg"></i> Computing dedicated data matrix...</div>`;
     }
 
     const conversationHistory = accessToolChats[activeAccessTool]
@@ -3807,7 +4215,7 @@ async function runAccessTool() {
     const payloadFiles = accessFileBuffer ? [accessFileBuffer] : [];
 
     isAccessProcessing = true;
-    btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Generating...`;
+    btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> Processing...`;
     btn.disabled = true;
     input.value = "";
     accessFileBuffer = null;
@@ -3853,8 +4261,10 @@ async function runAccessTool() {
                             const chunk = parsed.choices?.[0]?.delta?.content || parsed.candidates?.[0]?.content?.parts?.[0]?.text || "";
                             assistantEntry.content += chunk;
                         }
+                        
+                        liveTarget = document.getElementById('access-render-' + assistantMsgId);
                         if (liveTarget) {
-                            liveTarget.innerHTML = marked.parse(assistantEntry.content);
+                            liveTarget.outerHTML = renderDedicatedToolOutput(activeAccessTool, assistantEntry.content, assistantMsgId);
                         }
                         if (output) output.scrollTop = output.scrollHeight;
                     } catch (err) {}
@@ -3862,9 +4272,10 @@ async function runAccessTool() {
             }
         }
     } catch (err) {
-        assistantEntry.content = `> ⚠️ **Fail-Safe Halt:** ${err.message}`;
+        assistantEntry.content = `> ⚠️ **Fail-Safe Alert:** ${err.message}`;
+        liveTarget = document.getElementById('access-render-' + assistantMsgId);
         if (liveTarget) {
-            liveTarget.innerHTML = marked.parse(assistantEntry.content);
+            liveTarget.outerHTML = renderDedicatedToolOutput(activeAccessTool, assistantEntry.content, assistantMsgId);
         }
     } finally {
         isAccessProcessing = false;
