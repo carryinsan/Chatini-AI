@@ -2703,7 +2703,7 @@ function createNewChat() {
     renderMessagesToUI(); 
     if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
     renderHistoryList(); // Reset sidebar active states
-    appendMessage('assistant', 'New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
+    appendMessage('assistant', '<p>Have a business or want to start? Visit <a href="https://lexis-ai-chatini.vercel.app/business.html">Business</a>.</p>', activeModelId, 'init', [], 'ArixAI'); 
     closeCanvas(); 
     renderPulseTodayWidget();
 }
