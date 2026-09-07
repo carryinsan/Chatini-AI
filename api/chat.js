@@ -175,6 +175,8 @@ export default async function handler(req) {
                 // ====================================================================
                 const auth = await verifyAndLimit(req, modelId, 'none');
                 if (!auth.authorized && !auth.isCreator) {
+                    telemetry.success = false;
+                    telemetry.errorReason = auth.error || 'Authorization failed';
                     sendError(auth.error);
                     return; 
                 }
@@ -815,8 +817,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 const latency = Date.now() - telemetry.startTime;
                 try {
                     const reqUrl = new URL(req.url);
-                    // Non-blocking fire-and-forget fetch to avoid locking the stream close
-                    fetch(`${reqUrl.protocol}//${reqUrl.host}/api/analytics`, {
+                    await fetch(`${reqUrl.protocol}//${reqUrl.host}/api/analytics`, {
                         method: 'POST',
                         headers: { 
                             'Content-Type': 'application/json',
@@ -829,15 +830,17 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                 success: telemetry.success,
                                 errorReason: telemetry.errorReason,
                                 latency: latency,
-                                latencyBreakdown: { model: latency },
+                                latencyBreakdown: { queue: 0, model: latency, search: 0, post: 0 },
                                 inputTokens: telemetry.inputTokens,
                                 outputTokens: telemetry.outputTokens,
                                 isFirstAttempt: true,
                                 cost: (telemetry.inputTokens * 0.0000001) + (telemetry.outputTokens * 0.0000005) 
                             }
                         })
-                    }).catch(() => {});
-                } catch (e) {}
+                    });
+                } catch (e) {
+                    console.error('Analytics submission failed:', e);
+                }
                 
                 controller.close();
             }
