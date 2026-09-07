@@ -349,8 +349,12 @@
                 if (data.metrics) {
                     populateDashboard(data.metrics);
                 } else if (data.message) {
-                    // Handle empty state gracefully
-                    console.log("API returned empty state: ", data.message);
+                    document.getElementById('val-total-calls').textContent = '0';
+                    document.getElementById('val-success-rate').textContent = '—';
+                    document.getElementById('model-table-body').innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">${data.message}</td></tr>`;
+                    console.warn("Analytics:", data.message);
+                } else {
+                    throw new Error(data.error || 'Invalid analytics response');
                 }
             } catch (error) {
                 console.error("Failed to fetch analytics:", error);
