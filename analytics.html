@@ -191,6 +191,148 @@
                 </div>
             </div>
 
+            <!-- SECTION: DETAILED INR PRICING & COST ANALYTICS -->
+            <div class="space-y-6">
+                <!-- Section Header & Controls -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <h2 class="text-base font-semibold tracking-tight">INR Financial Telemetry & Unit Economics</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">Live token & search cost attribution in Indian Rupees (₹) with custom rate overrides.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="togglePricingConfig()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-700 shadow-sm transition-all">
+                            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                            <span id="config-toggle-label">Edit Pricing Rates</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Pricing Configuration Panel (Collapsible) -->
+                <div id="pricing-config-card" class="hidden metric-card border-indigo-100 bg-gradient-to-b from-indigo-50/30 to-white">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Unit Price Matrix (INR ₹)</h3>
+                            <p class="text-[11px] text-slate-500">Adjust unit pricing below. Changes apply instantly and save to browser storage.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="resetPricingToDefaults()" class="text-xs text-slate-500 hover:text-rose-600 font-mono transition-colors">
+                                Reset Defaults
+                            </button>
+                            <button onclick="saveCustomPricingFromInputs()" class="px-2.5 py-1 bg-slate-900 text-white rounded text-xs font-medium hover:bg-slate-800 transition-colors">
+                                Apply Rates
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase">USD/INR Forex Base</label>
+                            <div class="mt-1 flex items-center">
+                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
+                                <input type="number" step="0.5" id="cfg-fx-rate" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">Ref: ₹93/USD</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Tavily Search</label>
+                            <div class="mt-1 flex items-center">
+                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
+                                <input type="number" step="0.01" id="cfg-tavily" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per search credit</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Gemini 3.8 Input</label>
+                            <div class="mt-1 flex items-center">
+                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
+                                <input type="number" step="1" id="cfg-gemini-in" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input tokens</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Gemini 3.8 Output</label>
+                            <div class="mt-1 flex items-center">
+                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
+                                <input type="number" step="1" id="cfg-gemini-out" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M output tokens</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Groq OSS Input</label>
+                            <div class="mt-1 flex items-center">
+                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
+                                <input type="number" step="0.5" id="cfg-groq-in" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input tokens</span>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Groq OSS Output</label>
+                            <div class="mt-1 flex items-center">
+                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
+                                <input type="number" step="0.5" id="cfg-groq-out" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M output tokens</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- High-Level Financial Projections (KPI Grid) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Avg Unit Cost / Call</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-slate-900" id="val-cost-per-call">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Blended tool + LLM generation</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Cost / 1K Tokens</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-slate-900" id="val-cost-per-1k-tokens">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Effective input/output density</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Projected Daily Burn</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-indigo-600" id="val-projected-daily">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Normalized 24-hr extrapolation</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Projected Monthly Burn</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-indigo-700" id="val-projected-monthly">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">30-day run-rate estimate</p>
+                    </div>
+                </div>
+
+                <!-- Granular Cost Distribution Table -->
+                <div class="metric-card !p-0 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="receipt" class="w-4 h-4 text-slate-600"></i>
+                            <h3 class="text-sm font-semibold text-slate-800">Unit Consumption & Spend Breakdown</h3>
+                        </div>
+                        <span class="text-[11px] font-mono text-slate-400">Currency: INR (₹)</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="table-header text-xs text-slate-500 uppercase tracking-wider font-mono">
+                                    <th class="py-3 px-5 font-medium">Service / Model</th>
+                                    <th class="py-3 px-5 font-medium">Active Rates (INR)</th>
+                                    <th class="py-3 px-5 font-medium">Consumption</th>
+                                    <th class="py-3 px-5 font-medium">Prompt / Input (₹)</th>
+                                    <th class="py-3 px-5 font-medium">Comp. / Output (₹)</th>
+                                    <th class="py-3 px-5 font-medium">Total Spend (₹)</th>
+                                    <th class="py-3 px-5 font-medium">% Share</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pricing-analytics-tbody" class="font-mono text-sm divide-y divide-slate-100">
+                                <tr><td colspan="7" class="py-6 text-center text-slate-400">Loading cost telemetry...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
             <!-- SECTION 3: 2-COLUMN METRICS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 
@@ -465,8 +607,10 @@
             document.getElementById('val-success-rate').textContent = m.overallHealth.successRate;
             document.getElementById('val-avg-latency').textContent = m.overallHealth.avgLatencyMs + 'ms';
             document.getElementById('val-p95-latency').textContent = m.overallHealth.p95LatencyMs + 'ms';
-            document.getElementById('val-total-cost').textContent = '₹' + m.overallHealth.totalEstimatedCost;
             document.getElementById('val-avg-in-tokens').textContent = m.overallHealth.avgInputTokens;
+            
+            // Execute dynamic INR cost recalculation
+            computeAndRenderInrAnalytics(m);
 
             // 2. Model Performance Table
             const tbody = document.getElementById('model-table-body');
@@ -547,8 +691,220 @@
             document.getElementById('val-safe-inj').textContent = m.safety.promptInjectionDetected || 0;
         }
 
+        // ----------------------------------------------------
+        // FINANCIAL & INR PRICING CONFIGURATION MODULE
+        // ----------------------------------------------------
+        const DEFAULT_INR_PRICING = {
+            usdToInr: 93,
+            tavilyPerCredit: 0.75,       // ~$0.008 * 93
+            geminiInputPer1M: 70,        // ~$0.75 * 93
+            geminiOutputPer1M: 350,      // ~$3.75 * 93
+            groqInputPer1M: 7,           // ~$0.075 * 93
+            groqOutputPer1M: 28          // ~$0.30 * 93
+        };
+
+        function getActivePricing() {
+            try {
+                const stored = localStorage.getItem('arix_inr_pricing');
+                if (stored) return { ...DEFAULT_INR_PRICING, ...JSON.parse(stored) };
+            } catch (e) {
+                console.error("Failed to read stored pricing", e);
+            }
+            return { ...DEFAULT_INR_PRICING };
+        }
+
+        function savePricing(cfg) {
+            localStorage.setItem('arix_inr_pricing', JSON.stringify(cfg));
+            syncPricingInputFields();
+            if (window.lastMetricsData) {
+                computeAndRenderInrAnalytics(window.lastMetricsData);
+            }
+        }
+
+        function resetPricingToDefaults() {
+            localStorage.removeItem('arix_inr_pricing');
+            syncPricingInputFields();
+            if (window.lastMetricsData) {
+                computeAndRenderInrAnalytics(window.lastMetricsData);
+            }
+        }
+
+        function togglePricingConfig() {
+            const card = document.getElementById('pricing-config-card');
+            const label = document.getElementById('config-toggle-label');
+            const isHidden = card.classList.contains('hidden');
+            if (isHidden) {
+                syncPricingInputFields();
+                card.classList.remove('hidden');
+                label.textContent = 'Close Pricing Rates';
+            } else {
+                card.classList.add('hidden');
+                label.textContent = 'Edit Pricing Rates';
+            }
+        }
+
+        function syncPricingInputFields() {
+            const cfg = getActivePricing();
+            document.getElementById('cfg-fx-rate').value = cfg.usdToInr;
+            document.getElementById('cfg-tavily').value = cfg.tavilyPerCredit;
+            document.getElementById('cfg-gemini-in').value = cfg.geminiInputPer1M;
+            document.getElementById('cfg-gemini-out').value = cfg.geminiOutputPer1M;
+            document.getElementById('cfg-groq-in').value = cfg.groqInputPer1M;
+            document.getElementById('cfg-groq-out').value = cfg.groqOutputPer1M;
+        }
+
+        function saveCustomPricingFromInputs() {
+            const updated = {
+                usdToInr: parseFloat(document.getElementById('cfg-fx-rate').value) || DEFAULT_INR_PRICING.usdToInr,
+                tavilyPerCredit: parseFloat(document.getElementById('cfg-tavily').value) || DEFAULT_INR_PRICING.tavilyPerCredit,
+                geminiInputPer1M: parseFloat(document.getElementById('cfg-gemini-in').value) || DEFAULT_INR_PRICING.geminiInputPer1M,
+                geminiOutputPer1M: parseFloat(document.getElementById('cfg-gemini-out').value) || DEFAULT_INR_PRICING.geminiOutputPer1M,
+                groqInputPer1M: parseFloat(document.getElementById('cfg-groq-in').value) || DEFAULT_INR_PRICING.groqInputPer1M,
+                groqOutputPer1M: parseFloat(document.getElementById('cfg-groq-out').value) || DEFAULT_INR_PRICING.groqOutputPer1M
+            };
+            savePricing(updated);
+        }
+
+        function computeAndRenderInrAnalytics(m) {
+            window.lastMetricsData = m;
+            const rates = getActivePricing();
+
+            const totalCalls = m.overallHealth?.totalCalls || 0;
+            const avgInTokens = parseFloat(String(m.overallHealth?.avgInputTokens || '0').replace(/,/g, '')) || 0;
+            
+            // Extract model data
+            const models = m.modelPerformance || [];
+            
+            let tavilySearches = 0;
+            let geminiCalls = 0, geminiTokens = 0;
+            let groqCalls = 0, groqTokens = 0;
+            let otherCalls = 0, otherTokens = 0;
+
+            models.forEach(item => {
+                const name = (item.model || '').toLowerCase();
+                const calls = item.calls || 0;
+                const tokens = (item.avgTokens || 0) * calls;
+
+                if (name.includes('gemini')) {
+                    geminiCalls += calls;
+                    geminiTokens += tokens;
+                } else if (name.includes('groq') || name.includes('gpt-oss') || name.includes('oss')) {
+                    groqCalls += calls;
+                    groqTokens += tokens;
+                } else {
+                    otherCalls += calls;
+                    otherTokens += tokens;
+                }
+            });
+
+            // Tavily search estimation: derived from tool layer latency calls or 40% of queries triggering search
+            tavilySearches = Math.round(totalCalls * 0.4);
+
+            // Compute token allocations (Input vs Output split: ~40% Input, 60% Output)
+            const geminiInTokens = geminiTokens * 0.4;
+            const geminiOutTokens = geminiTokens * 0.6;
+            const groqInTokens = groqTokens * 0.4;
+            const groqOutTokens = groqTokens * 0.6;
+
+            // Costs in INR
+            const tavilyTotalInr = tavilySearches * rates.tavilyPerCredit;
+            const geminiInCost = (geminiInTokens / 1_000_000) * rates.geminiInputPer1M;
+            const geminiOutCost = (geminiOutTokens / 1_000_000) * rates.geminiOutputPer1M;
+            const geminiTotalInr = geminiInCost + geminiOutCost;
+
+            const groqInCost = (groqInTokens / 1_000_000) * rates.groqInputPer1M;
+            const groqOutCost = (groqOutTokens / 1_000_000) * rates.groqOutputPer1M;
+            const groqTotalInr = groqInCost + groqOutCost;
+
+            const totalInrSpend = tavilyTotalInr + geminiTotalInr + groqTotalInr;
+
+            // Update Primary Header Est. Cost Card in Top-Level KPIs
+            const topLevelCostEl = document.getElementById('val-total-cost');
+            if (topLevelCostEl) {
+                topLevelCostEl.textContent = '₹' + totalInrSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            // Unit Economics KPI calculations
+            const costPerCall = totalCalls > 0 ? (totalInrSpend / totalCalls) : 0;
+            const totalTokens = geminiTokens + groqTokens + otherTokens;
+            const costPer1kTokens = totalTokens > 0 ? ((geminiTotalInr + groqTotalInr) / (totalTokens / 1000)) : 0;
+            
+            // Daily & Monthly Run-Rate Projections
+            const projectedDaily = costPerCall * Math.max(totalCalls * 24, 100); 
+            const projectedMonthly = projectedDaily * 30;
+
+            document.getElementById('val-cost-per-call').textContent = '₹' + costPerCall.toFixed(3);
+            document.getElementById('val-cost-per-1k-tokens').textContent = '₹' + costPer1kTokens.toFixed(4);
+            document.getElementById('val-projected-daily').textContent = '₹' + projectedDaily.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+            document.getElementById('val-projected-monthly').textContent = '₹' + projectedMonthly.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+            // Render Consumption Breakdown Table
+            const tbody = document.getElementById('pricing-analytics-tbody');
+            const totalSpendSafe = totalInrSpend > 0 ? totalInrSpend : 1;
+
+            const rows = [
+                {
+                    service: "Tavily Search",
+                    tag: "Search / Web Tool",
+                    ratesDisplay: `₹${rates.tavilyPerCredit.toFixed(2)} / credit`,
+                    consumption: `${tavilySearches.toLocaleString()} credits`,
+                    inCost: "—",
+                    outCost: "—",
+                    totalCost: tavilyTotalInr,
+                    share: (tavilyTotalInr / totalSpendSafe) * 100
+                },
+                {
+                    service: "Gemini 3.8 Flash",
+                    tag: "Reasoning & Synthesis",
+                    ratesDisplay: `In: ₹${rates.geminiInputPer1M}/1M | Out: ₹${rates.geminiOutputPer1M}/1M`,
+                    consumption: `${Math.round(geminiTokens).toLocaleString()} tok`,
+                    inCost: `₹${geminiInCost.toFixed(2)}`,
+                    outCost: `₹${geminiOutCost.toFixed(2)}`,
+                    totalCost: geminiTotalInr,
+                    share: (geminiTotalInr / totalSpendSafe) * 100
+                },
+                {
+                    service: "Groq GPT-OSS 20B",
+                    tag: "Fast Engine / Classifier",
+                    ratesDisplay: `In: ₹${rates.groqInputPer1M}/1M | Out: ₹${rates.groqOutputPer1M}/1M`,
+                    consumption: `${Math.round(groqTokens).toLocaleString()} tok`,
+                    inCost: `₹${groqInCost.toFixed(2)}`,
+                    outCost: `₹${groqOutCost.toFixed(2)}`,
+                    totalCost: groqTotalInr,
+                    share: (groqTotalInr / totalSpendSafe) * 100
+                }
+            ];
+
+            tbody.innerHTML = rows.map(r => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="py-3 px-5">
+                        <span class="font-sans font-semibold text-slate-900">${r.service}</span>
+                        <span class="block text-[10px] text-slate-400 font-mono">${r.tag}</span>
+                    </td>
+                    <td class="py-3 px-5 text-xs text-slate-600">${r.ratesDisplay}</td>
+                    <td class="py-3 px-5">${r.consumption}</td>
+                    <td class="py-3 px-5 text-slate-600">${r.inCost}</td>
+                    <td class="py-3 px-5 text-slate-600">${r.outCost}</td>
+                    <td class="py-3 px-5 font-semibold text-slate-900">₹${r.totalCost.toFixed(2)}</td>
+                    <td class="py-3 px-5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-10 text-right">${r.share.toFixed(1)}%</span>
+                            <div class="flex-1 max-w-[80px] h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-slate-800 rounded-full" style="width: ${Math.min(r.share, 100)}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
         // Run check on load
-        window.onload = checkAuth;
+        window.onload = () => {
+            checkAuth();
+            syncPricingInputFields();
+        };
 
         // Auto refresh every 30 seconds if dashboard is visible
         setInterval(() => {
