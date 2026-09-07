@@ -144,8 +144,9 @@ export default async function handler(req) {
     const encoder = new TextEncoder();
     
     const stream = new ReadableStream({
-        async start(controller) {
-            const sendUIChunk = (htmlString) => {
+            async start(controller) {
+                const telemetry = { startTime: Date.now(), success: true, errorReason: null, model: 'unknown', inputTokens: 0, outputTokens: 0 };
+                const sendUIChunk = (htmlString) => {
                 const chunk = JSON.stringify({ candidates: [{ content: { parts: [{ text: htmlString + '\n\n' }] } }] });
                 controller.enqueue(encoder.encode(`data: ${chunk}\n\n`));
             };
@@ -157,8 +158,10 @@ export default async function handler(req) {
 
             try {
                 // PARSE REQUEST BODY & EXECUTE PRIVACY ANONYMIZATION
+                // PARSE REQUEST BODY & EXECUTE PRIVACY ANONYMIZATION
                 const body = await req.json();
                 const { modelId, researchContext, userProfile, useGlobalMemory, contributeToMemory } = body;
+                telemetry.model = modelId || 'unknown';
                 
                 // Anonymize user inputs and extract volatile token map in RAM
                 const { sanitizedMessages, tokenMap: ephemeralTokenMap } = PrivacyEngine.anonymizeMessages(body.messages || []);
@@ -610,7 +613,9 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                 systemPrompt += `\n\n[CRITICAL: Base your answer strictly on the provided context and reasoning matrix. Maximize depth. Do not hallucinate.]`;
 
                 // APPEND ZERO-TRAINING & ZERO-KNOWLEDGE PRIVACY DIRECTIVE
+                // APPEND ZERO-TRAINING & ZERO-KNOWLEDGE PRIVACY DIRECTIVE
                 systemPrompt = PrivacyEngine.injectAntiTrainingDirectives(systemPrompt);
+                telemetry.inputTokens = Math.ceil((systemPrompt.length + userQuery.length) / 4);
 
                 // INJECT TIMESTAMP TO THE ACTUAL FINAL USER COMMAND
                 processedMessages[processedMessages.length - 1].content = `[USER COMMAND - INITIATED AT: ${currentDateTimeLocal} - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}`;
@@ -752,6 +757,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                                     
                                     if (cleanText) {
                                         cleanText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
+                                        telemetry.outputTokens += Math.ceil(cleanText.length / 4);
                                         streamTextBuffer += cleanText;
                                         flushStreamBuffer(true);
                                     }
@@ -785,6 +791,7 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
 
                             if (cleanText) {
                                 const restoredText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
+                                telemetry.outputTokens += Math.ceil(restoredText.length / 4);
                                 streamTextBuffer += restoredText;
                                 flushStreamBuffer(false); // Only flushes if optimized conditions and KaTeX boundaries are met
                             }
@@ -801,8 +808,37 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
                     if (parsed.error && parsed.error.message) safeErr = parsed.error.message;
                 } catch(e){}
                 
+                telemetry.success = false;
+                telemetry.errorReason = safeErr;
                 sendError(`[Execution Interrupted] ${safeErr}`);
             } finally {
+                const latency = Date.now() - telemetry.startTime;
+                try {
+                    const reqUrl = new URL(req.url);
+                    // Non-blocking fire-and-forget fetch to avoid locking the stream close
+                    fetch(`${reqUrl.protocol}//${reqUrl.host}/api/analytics`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'x-vercel-ip-country': req.headers.get('x-vercel-ip-country') || 'Unknown'
+                        },
+                        body: JSON.stringify({
+                            type: 'ai_request',
+                            metadata: {
+                                model: telemetry.model,
+                                success: telemetry.success,
+                                errorReason: telemetry.errorReason,
+                                latency: latency,
+                                latencyBreakdown: { model: latency },
+                                inputTokens: telemetry.inputTokens,
+                                outputTokens: telemetry.outputTokens,
+                                isFirstAttempt: true,
+                                cost: (telemetry.inputTokens * 0.0000001) + (telemetry.outputTokens * 0.0000005) 
+                            }
+                        })
+                    }).catch(() => {});
+                } catch (e) {}
+                
                 controller.close();
             }
         }
