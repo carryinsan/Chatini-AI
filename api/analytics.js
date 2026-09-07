@@ -1,11 +1,51 @@
-import { Redis } from '@upstash/redis';
+// ZERO-DEPENDENCY NATIVE REDIS CLIENT
+// Bypasses the @upstash/redis package entirely to prevent "MODULE_NOT_FOUND" 
+// and "FUNCTION_INVOCATION_FAILED" crashes in Vercel.
+class NativeRedis {
+    constructor(cfg) { this.url = cfg.url; this.token = cfg.token; }
+    
+    pipeline() {
+        const cmds = [];
+        return {
+            lpush: (...args) => cmds.push(['lpush', ...args]),
+            ltrim: (...args) => cmds.push(['ltrim', ...args]),
+            hincrby: (...args) => cmds.push(['hincrby', ...args]),
+            exec: () => fetch(`${this.url}/pipeline`, { 
+                method: 'POST', 
+                headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(cmds) 
+            })
+        };
+    }
+    
+    async hgetall(key) {
+        const res = await fetch(`${this.url}/`, { 
+            method: 'POST', 
+            headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(['hgetall', key]) 
+        });
+        const json = await res.json();
+        const arr = json.result || [];
+        const obj = {};
+        for (let i = 0; i < arr.length; i += 2) obj[arr[i]] = arr[i+1];
+        return obj;
+    }
+    
+    async lrange(...args) {
+        const res = await fetch(`${this.url}/`, { 
+            method: 'POST', 
+            headers: { Authorization: `Bearer ${this.token}`, 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(['lrange', ...args]) 
+        });
+        const json = await res.json();
+        return json.result || [];
+    }
+}
 
-// Initialize Upstash Redis with hardcoded credentials
-const redis = new Redis({
+const redis = new NativeRedis({
   url: 'https://immortal-eagle-36171.upstash.io',
   token: 'AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw',
 });
-
 // The absolute maximum number of recent telemetry events to keep for real-time calculations.
 const MAX_EVENTS_WINDOW = 10000;
 
