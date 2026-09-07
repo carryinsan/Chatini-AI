@@ -1,9 +1,9 @@
 import { Redis } from '@upstash/redis';
 
-// Initialize Upstash Redis using environment variables extracted from your Vercel/environment setup
+// Initialize Upstash Redis with hardcoded credentials
 const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  url: 'https://immortal-eagle-36171.upstash.io',
+  token: 'AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw',
 });
 
 // The absolute maximum number of recent telemetry events to keep for real-time calculations.
@@ -92,7 +92,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ status: 'Telemetry recorded securely.' });
     } catch (error) {
       console.error('Analytics Error:', error);
-      return res.status(500).json({ error: 'Internal telemetry error' });
+      return res.status(500).json({ error: error.message || String(error) });
     }
   }
 
@@ -248,7 +248,7 @@ export default async function handler(req, res) {
 
     } catch (error) {
       console.error('Aggregation Error:', error);
-      return res.status(500).json({ error: 'Failed to compute analytics' });
+      return res.status(500).json({ error: error.message || String(error) });
     }
   }
 
