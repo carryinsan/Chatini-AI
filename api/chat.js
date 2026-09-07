@@ -816,30 +816,39 @@ CRITICAL: NEVER mention your internal mechanics. Speak directly. Ensure exhausti
             } finally {
                 const latency = Date.now() - telemetry.startTime;
                 try {
-                    const reqUrl = new URL(req.url);
-                    await fetch(`${reqUrl.protocol}//${reqUrl.host}/api/analytics`, {
+                    const sanitizedEvent = {
+                        timestamp: Date.now(),
+                        type: 'ai_request',
+                        country: req.headers.get('x-vercel-ip-country') || 'Unknown',
+                        model: telemetry.model || 'unknown',
+                        taskCategory: 'general_chat',
+                        version: 'v1.0',
+                        success: telemetry.success,
+                        isFirstAttempt: true,
+                        errorReason: telemetry.errorReason || null,
+                        latency: latency,
+                        latencyBreakdown: { queue: 0, model: latency, search: 0, post: 0 },
+                        inputTokens: telemetry.inputTokens || 0,
+                        outputTokens: telemetry.outputTokens || 0,
+                        cost: ((telemetry.inputTokens || 0) * 0.0000001) + ((telemetry.outputTokens || 0) * 0.0000005)
+                    };
+
+                    // Execute a lightning-fast pipeline transaction directly to Upstash Redis
+                    await fetch('https://immortal-eagle-36171.upstash.io/pipeline', {
                         method: 'POST',
                         headers: { 
-                            'Content-Type': 'application/json',
-                            'x-vercel-ip-country': req.headers.get('x-vercel-ip-country') || 'Unknown'
+                            Authorization: 'Bearer AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw', 
+                            'Content-Type': 'application/json' 
                         },
-                        body: JSON.stringify({
-                            type: 'ai_request',
-                            metadata: {
-                                model: telemetry.model,
-                                success: telemetry.success,
-                                errorReason: telemetry.errorReason,
-                                latency: latency,
-                                latencyBreakdown: { queue: 0, model: latency, search: 0, post: 0 },
-                                inputTokens: telemetry.inputTokens,
-                                outputTokens: telemetry.outputTokens,
-                                isFirstAttempt: true,
-                                cost: (telemetry.inputTokens * 0.0000001) + (telemetry.outputTokens * 0.0000005) 
-                            }
-                        })
+                        body: JSON.stringify([
+                            ['lpush', 'arix:telemetry:events', JSON.stringify(sanitizedEvent)],
+                            ['ltrim', 'arix:telemetry:events', 0, 9999],
+                            ['hincrby', 'arix:telemetry:totals', 'calls', 1],
+                            ['hincrby', 'arix:telemetry:totals', telemetry.success ? 'success' : 'failed', 1]
+                        ])
                     });
                 } catch (e) {
-                    console.error('Analytics submission failed:', e);
+                    console.error('Direct Redis telemetry write failed:', e);
                 }
                 
                 controller.close();
