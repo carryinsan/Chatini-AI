@@ -107,14 +107,14 @@ export default async function handler(req, res) {
         redis.lrange('arix:telemetry:events', 0, MAX_EVENTS_WINDOW)
       ]);
 
-      const parsedEvents = (eventsLog || []).map(e => {
-        if (typeof e === 'string') {
-          try { return JSON.parse(e); } catch (_) { return null; }
-        }
-        return e;
-      }).filter(Boolean);
-
-      const events = parsedEvents.filter(e => e.type === 'ai_request');
+      const events = (eventsLog || [])
+        .map(e => {
+          if (typeof e === 'string') {
+            try { return JSON.parse(e); } catch { return null; }
+          }
+          return e;
+        })
+        .filter(e => e && e.type === 'ai_request');
       const totalCalls = events.length;
 
       // If no data exists yet, return empty but architecturally sound schema
@@ -137,11 +137,14 @@ export default async function handler(req, res) {
       const successfulEvents = events.filter(e => e.success);
       const failedEvents = events.filter(e => !e.success);
       
+      const overallTotalCalls = Number(totalsObj?.calls || totalCalls);
+      const overallSuccessfulCalls = Number(totalsObj?.success || successfulEvents.length);
+      
       const overallHealth = {
-        totalCalls: Number(totalsObj?.calls || totalCalls),
-        successfulCalls: Number(totalsObj?.success || successfulEvents.length),
+        totalCalls: overallTotalCalls,
+        successfulCalls: overallSuccessfulCalls,
         failedCalls: Number(totalsObj?.failed || failedEvents.length),
-        successRate: ((successfulEvents.length / totalCalls) * 100).toFixed(2) + '%',
+        successRate: overallTotalCalls > 0 ? ((overallSuccessfulCalls / overallTotalCalls) * 100).toFixed(2) + '%' : '0.00%',
         avgLatencyMs: avg(latencies).toFixed(0),
         p95LatencyMs: getPercentile(latencies, 95).toFixed(0),
         avgInputTokens: avg(events.map(e => e.inputTokens)).toFixed(0),
