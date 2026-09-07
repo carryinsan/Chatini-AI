@@ -74,7 +74,7 @@ export default async function handler(req, res) {
 
       // Push real event into Upstash Redis List
       const pipeline = redis.pipeline();
-      pipeline.lpush('arix:telemetry:events', JSON.stringify(sanitizedEvent));
+      pipeline.lpush('arix:telemetry:events', sanitizedEvent);
       // Keep only the sliding window of recent events to avoid memory bloat while providing fresh data
       pipeline.ltrim('arix:telemetry:events', 0, MAX_EVENTS_WINDOW - 1);
       
@@ -107,7 +107,14 @@ export default async function handler(req, res) {
         redis.lrange('arix:telemetry:events', 0, MAX_EVENTS_WINDOW)
       ]);
 
-      const events = (eventsLog || []).filter(e => e.type === 'ai_request');
+      const parsedEvents = (eventsLog || []).map(e => {
+        if (typeof e === 'string') {
+          try { return JSON.parse(e); } catch (_) { return null; }
+        }
+        return e;
+      }).filter(Boolean);
+
+      const events = parsedEvents.filter(e => e.type === 'ai_request');
       const totalCalls = events.length;
 
       // If no data exists yet, return empty but architecturally sound schema
