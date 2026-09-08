@@ -1,3 +1,4 @@
+import { VerificationOrchestrator, HardFailEvaluator } from './algorithm.js';
 /**
  * api/repair.js (Part 1)
  * Autonomous Deterministic Repair Engine
@@ -1286,39 +1287,69 @@ export class MasterRepairPipeline {
         return true;
     }
 
-    /* Stub: Integrates with DirectReplacer, CalculationRepairer, UnitRepairer, etc. */
+    /* Integrates with DirectReplacer, CalculationRepairer, UnitRepairer, etc. */
     static applyDeterministicRepairs(text, errors) {
         let repaired = text;
         errors.forEach(err => {
             if (this.isSafeToRepair(err)) {
-                // Execute string replacement logic (Implementation links to Part 1-3 modules)
+                switch (err.type) {
+                    case REPAIR_TYPES.NUMERIC_ERROR:
+                    case REPAIR_TYPES.USER_DATA_MISMATCH:
+                        repaired = DirectReplacer.attemptRepair(repaired, err).text;
+                        break;
+                    case REPAIR_TYPES.CALCULATION_ERROR:
+                        repaired = CalculationRepairer.repairCalculation(repaired, err).text;
+                        break;
+                    case REPAIR_TYPES.DATE_ERROR:
+                        repaired = DateRepairer.repairWeekday(repaired, err).text;
+                        break;
+                    case REPAIR_TYPES.UNIT_ERROR:
+                        repaired = UnitRepairer.repairUnitConversion(repaired, err).text;
+                        break;
+                    case REPAIR_TYPES.INVALID_JSON:
+                        const jsonFix = StructuredDataRepairer.repairJSON(repaired, null);
+                        if (jsonFix.success) repaired = jsonFix.repairedString;
+                        break;
+                }
             }
         });
         return repaired;
     }
 
-    /* Stub: Integrates with CitationRepairer, QuoteRepairer, UrlRepairer, etc. */
+    /* Integrates with CitationRepairer, QuoteRepairer, UrlRepairer, etc. */
     static async applyEvidenceRepairs(text, errors) {
         let repaired = text;
         for (const err of errors) {
-            if (this.isSafeToRepair(err) && ACTION_MATRIX[err.type].externalSource) {
-                // Execute async evidence retrieval and replacement
-            } else if (err.type === 'UNSUPPORTED_CLAIM') {
-                // Execute safe removal
+            if (err.type === REPAIR_TYPES.UNSUPPORTED_CLAIM) {
+                repaired = UnsupportedClaimRepairer.handleUnsupported(repaired, err).text;
+            } else if (this.isSafeToRepair(err) && ACTION_MATRIX[err.type] && ACTION_MATRIX[err.type].externalSource) {
+                if (err.type === REPAIR_TYPES.BROKEN_CITATION || err.type === REPAIR_TYPES.WRONG_CITATION) {
+                    repaired = CitationRepairer.repairCitation(repaired, err).text;
+                } else if (err.type === REPAIR_TYPES.FABRICATED_QUOTE) {
+                    repaired = QuoteRepairer.repairQuote(repaired, err).text;
+                } else if (err.type === REPAIR_TYPES.URL_ERROR) {
+                    const urlFix = await UrlRepairer.repairBrokenUrl(repaired, err);
+                    repaired = urlFix.text;
+                }
             }
         }
         return repaired;
     }
 
-    /* Stub: Interface to algorithm.js verification output */
+    /* Interface to algorithm.js verification output */
     static runVerificationStub(text, payload) {
+        const orchestrator = new VerificationOrchestrator(payload?.domain || 'general');
+        const report = orchestrator.runVerificationPipeline(text);
+        
+        const hardFailState = HardFailEvaluator.check(report);
+
         return {
-            qualityScore: 92,
-            hardFail: false,
-            repairableErrors: 0,
-            needsFreshEvidence: false,
-            semanticErrors: 0,
-            errors: []
+            qualityScore: report.aggregatedScore || 0,
+            hardFail: hardFailState.hardFail,
+            repairableErrors: (report.errors || []).filter(e => ACTION_MATRIX[e.type]?.autoRepair).length,
+            needsFreshEvidence: report.missingEvidence || false,
+            semanticErrors: (report.warnings || []).length,
+            errors: report.errors || []
         };
     }
 }
