@@ -922,7 +922,7 @@ export class FormattingRepairer {
                 // Attempt to parse and stringify with proper formatting
                 const parsed = JSON.parse(jsonContent);
                 const formatted = JSON.stringify(parsed, null, 2);
-                return ````json\n${formatted}\n````;
+                return '```json\n' + formatted + '\n```';
             } catch (e) {
                 // If it fails to parse, return the original string to avoid data loss
                 return match;
