@@ -149,15 +149,18 @@ export class FactExtractor {
         const assemble = (tokenList, valueType, defaultUnit) => {
             if (tokenList && tokenList.length > 0) {
                 tokenList.forEach(val => {
+                    const isUserSource = claim.source === "user";
+                    const isCalculation = claim.type === "derived_calculation" || valueType.includes("calculation");
+
                     facts.push({
                         entity: resolvedEntity,
                         attribute: resolveAttribute(valueType),
                         value: val,
                         unit: defaultUnit || null,
-                        role: "subject", // Defaulted, would require dependency parsing for complex roles
+                        role: isUserSource ? "user_fact" : (isCalculation ? "derived" : "subject"),
                         quantity: 1,
-                        scope: "document",
-                        source: "deterministic_parser",
+                        scope: claim.scope || "current", // Enable dynamic tracking
+                        source: isUserSource ? "user" : (isCalculation ? "calculation" : "deterministic_parser"),
                         time: claim.timestamp_local || new Date().toISOString(),
                         context: claim.rawText
                     });
@@ -187,8 +190,8 @@ export class IntegrityVerifier {
     static generateIdentityKey(fact) {
         const safe = (val) => (val || "UNRESOLVED").toString().toUpperCase().trim();
         
-        // Key architecture: ENTITY|ATTRIBUTE|ROLE|SCOPE|TIME|UNIT
-        return `${safe(fact.entity)}|${safe(fact.attribute)}|${safe(fact.role)}|${safe(fact.scope)}|${safe(fact.time)}|${safe(fact.unit)}`;
+        // Key architecture: ENTITY|ATTRIBUTE|SCOPE|TIME|UNIT (Strict Match)
+        return `${safe(fact.entity)}|${safe(fact.attribute)}|${safe(fact.scope)}|${safe(fact.time)}|${safe(fact.unit)}`;
     }
 
     /*
@@ -718,26 +721,59 @@ export class DateVerifier {
      * Parses standard date strings, prioritizing DD/MM/YYYY logic if ambiguity exists.
      */
     static parseStandardDate(input) {
-        // Check for DD/MM/YYYY or DD-MM-YYYY
+        // 1. Strict textual check to prevent JS Date from rolling over (e.g., Feb 30 -> Mar 2)
+        const textDateMatch = input.match(/^(?:january|february|march|april|may|june|july|august|september|october|november|december|[a-z]{3})\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})$/i) || 
+                              input.match(/^(\d{1,2})(?:st|nd|rd|th)?\s+(?:january|february|march|april|may|june|july|august|september|october|november|december|[a-z]{3})\s+(\d{4})$/i);
+                              
+        if (textDateMatch) {
+            const parsedDate = new Date(input);
+            const inputMonthStr = input.match(/[a-z]+/i)[0].substring(0, 3).toLowerCase();
+            const parsedMonthStr = parsedDate.toLocaleString('default', { month: 'short' }).toLowerCase();
+            
+            if (inputMonthStr !== parsedMonthStr) {
+                return {
+                    type: "IMPOSSIBLE_DATE",
+                    repairable: false,
+                    requiresUserClarification: true,
+                    reason: `${input} is invalid. I can't determine the correct date without knowing the intended date.`
+                };
+            }
+        }
+
+        // 2. Strict DD/MM/YYYY
         const euroMatch = input.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
         if (euroMatch) {
             const d = parseInt(euroMatch[1], 10);
             const m = parseInt(euroMatch[2], 10);
             const y = parseInt(euroMatch[3], 10);
             
-            // If it's physically impossible to be DD/MM (e.g., 09/25/2026), fall through to generic parsing
-            if (m <= 12 && this.isValidCalendarDate(y, m, d)) {
+            if (m <= 12) {
+                if (!this.isValidCalendarDate(y, m, d)) {
+                    return { type: "IMPOSSIBLE_DATE", repairable: false, requiresUserClarification: true };
+                }
                 return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             }
         }
 
-        // JS Date parsing as fallback (handles "September 7, 2026", "2026-09-07")
+        // 3. Strict YYYY-MM-DD
+        const isoMatch = input.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+        if (isoMatch) {
+            const y = parseInt(isoMatch[1], 10);
+            const m = parseInt(isoMatch[2], 10);
+            const d = parseInt(isoMatch[3], 10);
+            
+            if (m <= 12 && !this.isValidCalendarDate(y, m, d)) {
+                return { type: "IMPOSSIBLE_DATE", repairable: false, requiresUserClarification: true };
+            }
+        }
+
+        // JS Date fallback
         const parsedDate = new Date(input);
         if (!isNaN(parsedDate)) {
             return this.formatISO(parsedDate);
         }
 
-        return null; // Unparsable
+        return null;
     }
 
     /*
@@ -2223,12 +2259,35 @@ export class VerificationOrchestrator {
         const equations = llmOutput.match(/(?:[a-zA-Z0-9_₹\$€£\s]+\s*=\s*)?[\d\.\(\)\+\-\*\/\^]+(?:\s*[\+\-\*\/\^=]\s*[\d\.\(\)]+)+/g) || [];
         equations.forEach(eq => {
             const parts = eq.split('=');
-            if (parts.length === 2) {
-                const expectedResult = parseFloat(parts[1].replace(/[^\d.]/g, ''));
-                const calcReport = CalculationVerifier.verifyCalculation(parts[0], expectedResult);
-                if (calcReport.status === 'CALCULATION_MISMATCH') {
-                    errors.push({ type: 'CALCULATION_ERROR', claimContext: eq, expected: calcReport.deterministic_result, received: expectedResult });
-                    scorePenalty += 25;
+            if (parts.length >= 1) {
+                const expression = parts[0].trim();
+                const result = SafeMathParser.evaluate(expression);
+                
+                if (result !== null && !isNaN(result)) {
+                    allFacts.push({
+                        expression: expression,
+                        result: result,
+                        unit: "extracted_unit",
+                        type: "derived_calculation",
+                        source: "calculation"
+                    });
+
+                    if (parts.length === 2) {
+                        const expectedResult = parseFloat(parts[1].replace(/[^\d.]/g, ''));
+                        const calcReport = CalculationVerifier.verifyCalculation(expression, expectedResult);
+                        if (calcReport.status === 'CALCULATION_MISMATCH') {
+                            errors.push({ 
+                                type: 'CALCULATION_ERROR', 
+                                claimContext: eq, 
+                                expected: calcReport.deterministic_result, 
+                                received: expectedResult,
+                                attribute: "calculation",
+                                entity: "system",
+                                scope: "derived"
+                            });
+                            scorePenalty += 25;
+                        }
+                    }
                 }
             }
         });
