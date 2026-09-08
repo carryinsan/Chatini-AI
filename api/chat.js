@@ -771,7 +771,7 @@ PrivacyEngine.anonymizeMessages(body.messages || []);
       // 7. Format Simple and Concise Verification Dropdown
       const changesSummary = editItems.length > 0
         ? editItems.map(item => `* ${item}`).join('\n')
-        : "* **No corrections needed:** The output passed mathematical, date, unit, and user-fact verification with 0 discrepancies.";
+        : " **No corrections needed:** The output passed mathematical, date, unit, and user-fact verification with 0 discrepancies.";
 
       const verificationDropdown = `\n\n---\n\n<details class="verification-tab text-xs bg-slate-900/50 border border-slate-700/60 rounded-xl p-3 my-2 text-slate-300">\n<summary class="cursor-pointer font-semibold text-sky-400 select-none flex items-center justify-between">\n  <span>🛡️ Verification & Fact-Check Details (${verificationStatus} • Score: ${verificationScore})</span>\n  <span class="text-[10px] text-slate-400">▼ View Edits</span>\n</summary>\n\n<div class="mt-3 pt-2 border-t border-slate-700/50 space-y-2 text-slate-300 leading-relaxed">\n  <p class="font-medium text-slate-200">Summary of Algorithmic Checks & Edits:</p>\n${changesSummary}\n</div>\n</details>`;
 
