@@ -74,13 +74,13 @@ export class DirectReplacer {
     static attemptRepair(rawAiText, errorContext) {
         if (!rawAiText || !errorContext) return { success: false, text: rawAiText };
 
-        // 1. Strict Identity Check: Do not guess. Do not repair without exact knowledge.
-        if (!errorContext.attribute || !errorContext.entity || !errorContext.scope || errorContext.expected === undefined) {
+        // 1. Strict Identity Check: Do not guess. Require canonical attributes before repairing.
+        const expected = errorContext.expected !== undefined ? errorContext.expected : errorContext.expectedValue;
+        if (!errorContext.attribute || !errorContext.entity || expected === undefined) {
             return { success: false, text: rawAiText, reason: 'Missing canonical identity or expected value' };
         }
 
-        const { expected, received, claimContext } = errorContext;
-
+        const received = errorContext.received !== undefined ? errorContext.received : errorContext.claim;
         if (received === undefined) {
             return { success: false, text: rawAiText, reason: 'Missing received value' };
         }
@@ -91,11 +91,12 @@ export class DirectReplacer {
 
         // Escape received string for safe RegEx compilation
         const escapeRegEx = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const contextStr = errorContext.claimContext || errorContext.claim;
         
-        // 2. Strict Contextual Replacement ONLY. Disable global numeric replacement.
-        if (claimContext && rawAiText.includes(claimContext)) {
-            const repairedClaim = claimContext.replace(new RegExp(escapeRegEx(receivedStr), 'g'), expectedStr);
-            const repairedText = rawAiText.replace(claimContext, repairedClaim);
+        // 2. Strict Contextual Replacement ONLY. Global numeric replacement is disabled.
+        if (contextStr && rawAiText.includes(contextStr)) {
+            const repairedClaim = contextStr.replace(new RegExp(escapeRegEx(receivedStr), 'g'), expectedStr);
+            const repairedText = rawAiText.replace(contextStr, repairedClaim);
             
             return {
                 success: repairedText !== rawAiText,
@@ -104,23 +105,11 @@ export class DirectReplacer {
             };
         }
 
-        // If exact context isn't found, DO NOT fall back to global replacement.
+        // If exact context is not present, do not perform replacement
         return {
             success: false,
             text: rawAiText,
             reason: 'Claim context not found; global replacement disabled for safety'
-        };
-    }
-
-        // Fallback: Global exact match replacement
-        // Note: Uses word boundaries to prevent replacing '50000' inside '1500000'
-        const globalRegex = new RegExp(`\\b${escapeRegEx(receivedStr)}\\b`, 'g');
-        const repairedText = rawAiText.replace(globalRegex, expectedStr);
-
-        return {
-            success: repairedText !== rawAiText,
-            text: repairedText,
-            method: 'GLOBAL_REPLACEMENT'
         };
     }
 
