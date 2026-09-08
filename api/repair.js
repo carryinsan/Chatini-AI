@@ -71,15 +71,18 @@ export class DirectReplacer {
      * Executes the highest-quality local repair: direct string/value replacement.
      * Bypasses AI regeneration by swapping the hallucinated value with the authoritative one.
      */
-    static attemptRepair(rawAiText, errorReport) {
-        if (!rawAiText || !errorReport) return { success: false, text: rawAiText };
+    static attemptRepair(rawAiText, errorContext) {
+        if (!rawAiText || !errorContext) return { success: false, text: rawAiText };
 
-        const { expected, received, claim } = errorReport;
+        // 1. Strict Identity Check: Do not guess. Do not repair without exact knowledge.
+        if (!errorContext.attribute || !errorContext.entity || !errorContext.scope || errorContext.expected === undefined) {
+            return { success: false, text: rawAiText, reason: 'Missing canonical identity or expected value' };
+        }
 
-        // Direct replacement is only possible if we have an exact 'expected' value
-        // and we know the 'received' value that needs to be overwritten.
-        if (expected === undefined || received === undefined) {
-            return { success: false, text: rawAiText, reason: 'Missing authoritative values' };
+        const { expected, received, claimContext } = errorContext;
+
+        if (received === undefined) {
+            return { success: false, text: rawAiText, reason: 'Missing received value' };
         }
 
         // Convert values to strings for regex operations
@@ -89,11 +92,10 @@ export class DirectReplacer {
         // Escape received string for safe RegEx compilation
         const escapeRegEx = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
         
-        // Target the specific received value, preferably within the context of the claim
-        // If 'claim' context is provided, narrow the replacement scope to avoid false positives
-        if (claim && rawAiText.includes(claim)) {
-            const repairedClaim = claim.replace(new RegExp(escapeRegEx(receivedStr), 'g'), expectedStr);
-            const repairedText = rawAiText.replace(claim, repairedClaim);
+        // 2. Strict Contextual Replacement ONLY. Disable global numeric replacement.
+        if (claimContext && rawAiText.includes(claimContext)) {
+            const repairedClaim = claimContext.replace(new RegExp(escapeRegEx(receivedStr), 'g'), expectedStr);
+            const repairedText = rawAiText.replace(claimContext, repairedClaim);
             
             return {
                 success: repairedText !== rawAiText,
@@ -101,6 +103,14 @@ export class DirectReplacer {
                 method: 'CONTEXTUAL_REPLACEMENT'
             };
         }
+
+        // If exact context isn't found, DO NOT fall back to global replacement.
+        return {
+            success: false,
+            text: rawAiText,
+            reason: 'Claim context not found; global replacement disabled for safety'
+        };
+    }
 
         // Fallback: Global exact match replacement
         // Note: Uses word boundaries to prevent replacing '50000' inside '1500000'
@@ -1278,11 +1288,16 @@ export class MasterRepairPipeline {
      * Evaluates if a repair is 100% deterministic and authoritative before applying it.
      */
     static isSafeToRepair(errorContext) {
+        // Hard protection: Never mutate canonical user facts
+        if (errorContext.source === "user") {
+            return false; 
+        }
+
         const matrixDef = ACTION_MATRIX[errorContext.type];
         if (!matrixDef || !matrixDef.autoRepair) return false;
         
         // Ensure authoritative replacement value is present
-        if (errorContext.expectedValue === undefined || errorContext.expectedValue === null) return false;
+        if (errorContext.expected === undefined && errorContext.expectedValue === undefined) return false;
         
         return true;
     }
