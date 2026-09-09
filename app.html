@@ -562,8 +562,8 @@ body {
                 <p class="text-[11px] text-gray-400 font-medium" id="sidebar-username-display">Anonymous</p>
             </div>
         </div>
-        <button onclick="toggleSidebar()" class="text-gray-400 hover:text-gray-600 transition-colors lg:hidden">
-            <i class="ph-bold ph-x text-xl"></i>
+        <button onclick="toggleSidebar(); document.getElementById('sidebar').classList.toggle('lg:hidden');" class="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Collapse">
+            <i class="ph-bold ph-sidebar-simple text-xl"></i>
         </button>
     </div>
 
