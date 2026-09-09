@@ -677,7 +677,7 @@
             })();
 
             try {
-                const res = await fetch(`${API_BASE}/api/business/build`, {
+                const res = await fetch(`${API_BASE}/api/businesspro/build`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
                 if (!res.ok) throw new Error("Server error.");
@@ -712,10 +712,10 @@
         async function initAppEngine() {
             try {
                 const [dashRes, dnaRes, briefRes, indiaRes] = await Promise.all([
-                    fetch(`${API_BASE}/api/business/${currentBusinessId}/dashboard`),
-                    fetch(`${API_BASE}/api/business/${currentBusinessId}/dna`),
-                    fetch(`${API_BASE}/api/business/${currentBusinessId}/briefing`),
-                    fetch(`${API_BASE}/api/business/${currentBusinessId}/india`)
+                    fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/dashboard`),
+                    fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/dna`),
+                    fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/briefing`),
+                    fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/india`)
                 ]);
 
                 const dash = await dashRes.json();
@@ -835,7 +835,7 @@
                 });
                 
                 // Also update Goals
-                await fetch(`${API_BASE}/api/business/${currentBusinessId}/goals`, {
+                await fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/goals`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify({ target: document.getElementById('dna-goal').value, targetDate: document.getElementById('dna-goal-date').value })
                 });
@@ -862,7 +862,7 @@
             };
             
             try {
-                const res = await fetch(`${API_BASE}/api/business/${currentBusinessId}/products`, {
+                const res = await fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/products`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
                 const data = await res.json();
@@ -901,7 +901,7 @@
             btn.innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Crunching...';
             
             try {
-                const res = await fetch(`${API_BASE}/api/business/${currentBusinessId}/decision-center`, {
+                const res = await fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/decision-center`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query: q })
                 });
                 const data = await res.json();
@@ -957,7 +957,7 @@
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                const response = await fetch(`${API_BASE}/api/business/${currentBusinessId}/chat`, {
+                const response = await fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/chat`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: msg, module: activeModule }) // Feature 12: Inject module context
@@ -979,7 +979,7 @@
         // Other Features & Utilities
         async function completePriorityAction() {
             try {
-                await fetch(`${API_BASE}/api/business/${currentBusinessId}/action/complete`, { method: 'POST' });
+                await fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/action/complete`, { method: 'POST' });
                 initAppEngine(); // Re-fetch to get new action and health score
             } catch(e) { console.error(e); }
         }
@@ -990,7 +990,7 @@
             upDiv.innerHTML = '<div class="p-4 bg-slate-100 rounded-xl text-center text-sm text-slate-500 animate-pulse">Simulating file parsing & BI processing...</div>';
             
             try {
-                const res = await fetch(`${API_BASE}/api/business/${currentBusinessId}/upload`, { method: 'POST' });
+                const res = await fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/upload`, { method: 'POST' });
                 const data = await res.json();
                 const bi = data.generatedBI;
                 
