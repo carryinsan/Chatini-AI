@@ -147,6 +147,11 @@ export default async function handler(req) {
     
     const stream = new ReadableStream({
             async start(controller) {
+                // Keep connection alive during long Oracle generations and repair pipeline
+                const heartbeat = setInterval(() => {
+                    try { controller.enqueue(encoder.encode(`: ping\n\n`)); } catch (e) {}
+                }, 1500);
+
                 const telemetry = { startTime: Date.now(), success: true, errorReason: null, model: 'unknown', inputTokens: 0, outputTokens: 0 };
                 const sendUIChunk = (htmlString) => {
                 const chunk = JSON.stringify({ candidates: [{ content: { parts: [{ text: htmlString + '\n\n' }] } }] });
@@ -824,13 +829,14 @@ PrivacyEngine.anonymizeMessages(body.messages || []);
                         ])
                     });
                 } catch (e) {
-                    console.error('Direct Redis telemetry write failed:', e);
+                            console.error('Direct Redis telemetry write failed:', e);
+                        }
+                        
+                        clearInterval(heartbeat);
+                        controller.close();
+                    }
                 }
-                
-                controller.close();
-            }
-        }
-    });
+            });
 
     return new Response(stream, { headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', 'Connection': 'keep-alive' } });
 }
