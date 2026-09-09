@@ -830,7 +830,7 @@
             };
 
             try {
-                await fetch(`${API_BASE}/api/business/${currentBusinessId}/profile`, {
+                await fetch(`${API_BASE}/api/businesspro/${currentBusinessId}/profile`, {
                     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
                 });
                 
