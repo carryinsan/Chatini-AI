@@ -1,6 +1,6 @@
 /**
  * ==========================================================================================
- * ARIXAI - BUSINESS OPERATING SYSTEM (SERVERLESS NODE.JS ENTERPRISE EDITION V2)
+ * ARIX AI - BUSINESS OPERATING SYSTEM (SERVERLESS NODE.JS ENTERPRISE EDITION V2)
  * ==========================================================================================
  * Runtime: Node.js (Standard Serverless / Express)
  * Model Target: gemini-2.5-flash-preview-09-2025 (Strict Environment Compliant)
