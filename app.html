@@ -736,7 +736,7 @@ body {
         
         <!-- Left Section: Mobile Toggle & Search (Visual) -->
         <div class="flex items-center flex-1 max-w-xl gap-3">
-            <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-50">
+            <button onclick="toggleSidebar(); document.getElementById('sidebar').classList.toggle('lg:hidden');" class="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-50" title="Toggle Sidebar">
                 <i class="ph-bold ph-list text-2xl"></i>
             </button>
             <div class="relative w-full hidden sm:block">
