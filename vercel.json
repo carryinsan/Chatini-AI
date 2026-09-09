@@ -24,6 +24,10 @@
     {
       "source": "/api/business/:match*",
       "destination": "/api/business"
+    },
+    {
+      "source": "/api/businesspro/:match*",
+      "destination": "/api/businesspro"
     }
   ]
 }
