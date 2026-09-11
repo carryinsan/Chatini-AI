@@ -1,5 +1,5 @@
 /**
- * ArixAI Oracle Research Engine
+ * ArixAI Oracle Research Engine.
  * -----------------------------
  * Evidence-first, adaptive, multi-pass web research for ArixAI.
  *
