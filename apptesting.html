@@ -468,6 +468,43 @@ body {
     </div>
 </div>
 
+<!-- Autonomous Task Engine Modal -->
+<style>
+    /* Dark-to-Light overrides for Backend-Rendered Task CSS */
+    #task-engine-modal .bg-slate-900\/40 { background-color: #f8fafc !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
+    #task-engine-modal .text-slate-200 { color: #334155 !important; }
+    #task-engine-modal .border-slate-700\/60 { border-color: #e2e8f0 !important; }
+    #task-engine-modal .bg-slate-800 { background-color: #ffffff !important; border-color: #cbd5e1 !important; color: #0f172a !important; }
+    #task-engine-modal .hover\:bg-slate-700:hover { background-color: #f1f5f9 !important; }
+</style>
+<div id="task-engine-modal" class="fixed inset-0 bg-gray-900/40 z-[90] hidden flex items-center justify-center backdrop-blur-sm px-4">
+    <div class="bg-white p-6 sm:p-8 max-w-3xl w-full rounded-3xl border border-blue-100 shadow-[0_8px_40px_rgba(59,130,246,0.15)] flex flex-col h-[85vh]">
+        <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4 shrink-0">
+            <h2 class="text-xl font-bold flex items-center gap-2 text-gray-900 tracking-tight">
+                <i class="ph-fill ph-robot text-blue-600"></i> Autonomous Task Engine
+            </h2>
+            <button onclick="closeTaskEngineModal()" class="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 p-2 rounded-xl"><i class="ph-bold ph-x text-xl"></i></button>
+        </div>
+        
+        <div id="task-engine-chat" class="flex-1 overflow-y-auto space-y-4 mb-4 custom-scrollbar pr-3 relative bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50">
+            <div class="text-center text-gray-500 text-sm py-20 animate-fade-in-up">
+                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm border border-blue-100">
+                    <i class="ph-fill ph-robot"></i>
+                </div>
+                <p class="font-bold text-gray-800 text-lg">ArixAI Autonomous Agent</p>
+                <p class="text-xs mt-2 max-w-sm mx-auto leading-relaxed">I can research, plan, and natively create complex files (PDFs, PPTXs, CSVs) autonomously based on a single prompt.</p>
+            </div>
+        </div>
+
+        <div class="relative flex items-center shrink-0">
+            <input type="text" id="task-engine-input" placeholder="e.g., Research quantum computing and make a 5-page PDF report..." class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-14 py-4 text-[15px] text-gray-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm" onkeypress="if(event.key === 'Enter') runArixTask()">
+            <button onclick="runArixTask()" id="task-engine-send-btn" class="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-lg flex items-center justify-center transition-all shadow-md shadow-blue-200">
+                <i class="ph-bold ph-paper-plane-right"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Arix Pulse Task Manager Modal -->
 <div id="pulse-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
     <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-cyan-100 shadow-[0_8px_40px_rgba(6,182,212,0.1)] flex flex-col max-h-[85vh]">
@@ -639,7 +676,8 @@ body {
                 Advanced Integrations
                 <i id="adv-int-icon" class="ph-bold ph-caret-down transition-transform"></i>
             </div>
-            <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
+        <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
+                <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openTaskEngineModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-robot text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Autonomous Agent</button>
                 <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
                 <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
                 <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
@@ -2550,6 +2588,143 @@ function renderProjectsList() {
         </div>
     `}).join('');
 }
+// ====== AUTONOMOUS TASK ENGINE HANDLERS ======
+let taskEngineState = {};
+let taskEngineAnswers = {};
+let taskEngineGoal = "";
+
+function openTaskEngineModal() {
+    document.getElementById('task-engine-modal').classList.remove('hidden');
+    document.getElementById('task-engine-modal').classList.add('flex');
+}
+
+function closeTaskEngineModal() {
+    document.getElementById('task-engine-modal').classList.add('hidden');
+    document.getElementById('task-engine-modal').classList.remove('flex');
+}
+
+function appendTaskModalMsg(role, content) {
+    const chat = document.getElementById('task-engine-chat');
+    const placeholder = chat.querySelector('.text-center.text-gray-500');
+    if (placeholder) placeholder.remove();
+
+    const isUser = role === 'user';
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `w-full flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in-up`;
+
+    if (isUser) {
+        msgDiv.innerHTML = `
+            <div class="bg-blue-600 text-white px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-md text-[14px] leading-relaxed max-w-[85%] font-medium border border-blue-700">
+                ${content.replace(/\n/g, '<br>')}
+            </div>
+        `;
+    } else {
+        msgDiv.innerHTML = `
+            <div class="flex gap-3 w-full max-w-[95%]">
+                <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl flex-shrink-0 shadow-sm border border-blue-100 mt-1">
+                    <i class="ph-fill ph-robot"></i>
+                </div>
+                <div class="bg-white border border-gray-200 text-gray-800 px-5 py-4 rounded-2xl rounded-tl-sm shadow-sm text-[14px] leading-relaxed w-full task-msg-content font-medium min-w-0">
+                    ${content}
+                </div>
+            </div>
+        `;
+    }
+    chat.appendChild(msgDiv);
+    chat.scrollTop = chat.scrollHeight;
+    return isUser ? null : msgDiv.querySelector('.task-msg-content');
+}
+
+async function runArixTask() {
+    const inputEl = document.getElementById('task-engine-input');
+    const btn = document.getElementById('task-engine-send-btn');
+    const query = inputEl.value.trim();
+    if (!query) return;
+
+    if (taskEngineState.status === 'needs_input') {
+        const key = taskEngineState.questionKey;
+        if (key) taskEngineAnswers[key] = query;
+        appendTaskModalMsg('user', query);
+    } else {
+        taskEngineState = {};
+        taskEngineAnswers = {};
+        taskEngineGoal = query;
+        document.getElementById('task-engine-chat').innerHTML = ""; 
+        appendTaskModalMsg('user', query);
+    }
+
+    inputEl.value = '';
+    inputEl.placeholder = "Agent is working...";
+    inputEl.disabled = true;
+    btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i>';
+    btn.disabled = true;
+
+    const contentContainer = appendTaskModalMsg('assistant', '<div class="flex items-center gap-2 text-blue-600 animate-pulse"><i class="ph-bold ph-circle-notch animate-spin text-lg"></i> Initializing Autonomous Protocol...</div>');
+
+    try {
+        const res = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: [{ role: 'user', content: taskEngineGoal }],
+                modelId: 'oracle',
+                taskMode: true,
+                taskState: taskEngineState,
+                taskAnswers: taskEngineAnswers
+            })
+        });
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let htmlBuffer = "";
+        contentContainer.innerHTML = ""; 
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    const dataStr = line.slice(6).trim();
+                    if (!dataStr || dataStr === '[DONE]') continue;
+
+                    try {
+                        const data = JSON.parse(dataStr);
+                        if (data.task_result) {
+                            taskEngineState = data.task_result;
+                            if (data.task_result.status === 'needs_input') {
+                                inputEl.placeholder = "Type your answer to clarify...";
+                            } else if (data.task_result.status === 'completed') {
+                                inputEl.placeholder = "Start a new autonomous task...";
+                            }
+                        } else if (data.ui_error) {
+                            contentContainer.innerHTML += `<div class="text-red-500 font-semibold flex items-center gap-2"><i class="ph-bold ph-warning-circle text-lg"></i> ${data.ui_error}</div>`;
+                        } else if (data.candidates && data.candidates[0].content.parts[0].text) {
+                            htmlBuffer += data.candidates[0].content.parts[0].text;
+                            contentContainer.innerHTML = htmlBuffer;
+                            const chatDiv = document.getElementById('task-engine-chat');
+                            chatDiv.scrollTop = chatDiv.scrollHeight;
+                        }
+                    } catch (e) {}
+                }
+            }
+        }
+    } catch (err) {
+        contentContainer.innerHTML = `<div class="text-red-500 font-semibold flex items-center gap-2"><i class="ph-bold ph-warning-circle text-lg"></i> Network Error: ${err.message}</div>`;
+        inputEl.placeholder = "Start a new autonomous task...";
+    }
+
+    btn.innerHTML = '<i class="ph-bold ph-paper-plane-right"></i>';
+    btn.disabled = false;
+    inputEl.disabled = false;
+    inputEl.focus();
+}
+
 function openPulseModal() { 
     document.getElementById('pulse-modal').classList.remove('hidden');
     if (typeof renderPulseVault === 'function') renderPulseVault();
