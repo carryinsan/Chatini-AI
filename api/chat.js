@@ -2,6 +2,7 @@ import { verifyAndLimit } from './auth.js';
 import { PrivacyEngine } from '../lib/privacyEngine.js';
 import { FactExtractor, IntegrityVerifier, HardFailEvaluator, DecisionEngine, VerificationScorer } from './algorithm.js';
 import { MasterRepairPipeline } from './repair.js';
+import { processTask } from '../features/tasks.js';
 
 export const config = {
   runtime: 'edge',
@@ -166,8 +167,21 @@ export default async function handler(req) {
       try {
         // PARSE REQUEST BODY & EXECUTE PRIVACY ANONYMIZATION
         const body = await req.json();
-        const { modelId, researchContext, userProfile, useGlobalMemory, contributeToMemory } = body;
-        telemetry.model = modelId || 'unknown';
+        const {
+  modelId,
+  researchContext,
+  userProfile,
+  useGlobalMemory,
+  contributeToMemory,
+
+  // ArixAI Task Execution Engine
+  taskMode = false,
+  taskState = {},
+  taskAnswers = {},
+  desiredArtifactId = null
+} = body;
+
+telemetry.model = modelId || 'unknown';
 
         // Store raw prompt directly (bypassing privacy engine for algorithm & verification)
         const rawUserMessages = (body.messages || []).map(m => ({ role: m.role, content: m.content }));
@@ -227,7 +241,209 @@ export default async function handler(req) {
 
         if (GEMINI_KEYS.length === 0) throw new Error("CRITICAL: No Gemini Keys Configured on Server.");
 
-        // CORE FIX: Disable thinking steps completely if document/file uploaded or if not Oracle
+// ====================================================================
+// ARIXAI TASK EXECUTION ENGINE
+// Activated only when frontend sends taskMode: true.
+// Normal chat remains completely unchanged.
+// ====================================================================
+
+if (taskMode === true) {
+
+  try {
+    const taskResult = await processTask({
+      goal: rawUserQuery,
+      taskState: taskState || {},
+      answers: taskAnswers || {},
+      messages: body.messages || [],
+      profile: userProfile || {},
+      desiredArtifactId: desiredArtifactId || null,
+
+      // Existing chat.js provider adapters.
+      runModel: runTaskModel,
+      runResearch: runTaskResearch,
+
+      // Lightweight URL verification.
+      verifyUrl: async (url) => {
+        try {
+          const response = await fetch(url, {
+            method: 'HEAD',
+            redirect: 'follow',
+            signal: AbortSignal.timeout(7000)
+          });
+
+          return {
+            ok: response.ok,
+            status: response.status
+          };
+        } catch {
+          return {
+            ok: false,
+            status: null
+          };
+        }
+      }
+    });
+
+    // ---------------------------------------------------------------
+    // Task needs more information.
+    // ---------------------------------------------------------------
+    if (taskResult.status === 'needs_input') {
+
+      const question = taskResult.question || 'What information do you need to continue?';
+      const questionKey = taskResult.questionKey || '';
+
+      const taskPayload = {
+        task_result: taskResult
+      };
+
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify(taskPayload)}\n\n`
+        )
+      );
+
+      sendUIChunk(`
+        <div class="arix-task-question border border-slate-700/60 rounded-xl p-4 my-3 bg-slate-900/40">
+          <div class="text-xs uppercase tracking-wider text-sky-400 mb-2">
+            ArixAI needs one detail
+          </div>
+          <div class="text-sm text-slate-200 leading-relaxed">
+            ${question.replace(/[<>&"]/g, ch => ({
+              '<': '&lt;',
+              '>': '&gt;',
+              '&': '&amp;',
+              '"': '&quot;'
+            }[ch]))}
+          </div>
+          ${
+            questionKey
+              ? `<div class="text-[10px] text-slate-500 mt-2">Required information: ${questionKey}</div>`
+              : ''
+          }
+        </div>
+      `);
+
+      return;
+    }
+
+    // ---------------------------------------------------------------
+    // Task completed.
+    // ---------------------------------------------------------------
+    if (taskResult.status === 'completed') {
+
+      const taskAnswer = String(taskResult.answer || '');
+
+      // Send structured data to frontend.
+      controller.enqueue(
+        encoder.encode(
+          `data: ${JSON.stringify({
+            task_result: taskResult
+          })}\n\n`
+        )
+      );
+
+      // Render answer through the same SSE channel used by normal chat.
+      const safeAnswerHtml = taskAnswer
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+
+      sendUIChunk(`
+        <div class="arix-task-result">
+          <div class="whitespace-pre-wrap">${safeAnswerHtml}</div>
+        </div>
+      `);
+
+      // -------------------------------------------------------------
+      // Render download buttons from actual generated artifacts.
+      // The binary is returned by tasks.js as base64.
+      // -------------------------------------------------------------
+      if (Array.isArray(taskResult.downloads)) {
+
+        for (const download of taskResult.downloads) {
+
+          if (!download?.downloadable?.data) continue;
+
+          const encoded = JSON.stringify(download.downloadable.data);
+          const filename = String(
+            download.downloadable.filename || 'arixai-download'
+          ).replace(/[^a-zA-Z0-9._-]/g, '_');
+
+          const mimeType = String(
+            download.downloadable.mimeType || 'application/pdf'
+          ).replace(/["']/g, '');
+
+          sendUIChunk(`
+            <div
+              class="arix-download-action my-2"
+              data-arix-download="${encoded.replace(/</g, '\\u003c')}"
+              data-arix-filename="${filename}"
+              data-arix-mime="${mimeType}"
+            >
+              <button
+                type="button"
+                class="arix-task-download px-3 py-2 rounded-lg border border-slate-600 bg-slate-800 hover:bg-slate-700 text-sm text-slate-200 transition"
+                onclick="
+                  (() => {
+                    try {
+                      const encoded = this.parentElement.dataset.arixDownload;
+                      const filename = this.parentElement.dataset.arixFilename;
+                      const mime = this.parentElement.dataset.arixMime;
+                      const binary = atob(encoded);
+                      const bytes = new Uint8Array(binary.length);
+                      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                      const blob = new Blob([bytes], { type: mime });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = filename;
+                      document.body.appendChild(a);
+                      a.click();
+                      a.remove();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    } catch (e) {
+                      console.error('ArixAI download failed:', e);
+                    }
+                  })();
+                "
+              >
+                ${String(download.label || 'Download')
+                  .replace(/[<>&"]/g, ch => ({
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '&': '&amp;',
+                    '"': '&quot;'
+                  }[ch]))}
+              </button>
+            </div>
+          `);
+        }
+      }
+
+      return;
+    }
+
+    throw new Error(
+      taskResult?.error?.message ||
+      'Task engine returned an unexpected status.'
+    );
+
+  } catch (taskError) {
+
+    console.error('[ArixAI Task Engine]', taskError);
+
+    sendError(
+      `[Task Engine Error] ${
+        taskError?.message || 'The task could not be completed safely.'
+      }`
+    );
+
+    return;
+  }
+}
+
+// CORE FIX: Disable thinking steps completely if document/file uploaded or if not Oracle
         const isThinkingEnabled = modelId === 'oracle' && !researchContext && !hasAttachments;
 
         // ====================================================================
@@ -269,32 +485,138 @@ export default async function handler(req) {
           'deepseek-r1-distill-llama-70b'
         ];
 
-        const callGroqAPI = async (systemPrompt, userPrompt) => {
-          if (GROQ_KEYS.length === 0 || hasAttachments) return null;
-          for (const groqModel of GROQ_MODELS_FALLBACK) {
-            for (let i = 0; i < GROQ_KEYS.length; i++) {
-              try {
-                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          return null;
+        };
+
+        // ====================================================================
+        // ARIXAI TASK ENGINE PROVIDER ADAPTER
+        // Reuses the existing API keys owned by chat.js.
+        // features/tasks.js never sees or reads API keys.
+        // ====================================================================
+
+        const runTaskModel = async ({
+          messages = [],
+          temperature = 0.2,
+          maxTokens = 8000,
+          responseFormat = null
+        } = {}) => {
+
+          const safeMessages = Array.isArray(messages)
+            ? messages
+                .filter(m => m && typeof m === 'object')
+                .map(m => ({
+                  role: m.role === 'assistant' ? 'assistant' : 'user',
+                  content: typeof m.content === 'string' ? m.content : String(m.content ?? '')
+                }))
+                .slice(-40)
+            : [];
+
+          // ---------------------------------------------------------------
+          // TASK PLANNER / JSON MODE
+          // Use the same Groq JSON pathway already present in chat.js.
+          // ---------------------------------------------------------------
+          if (responseFormat?.type === 'json_object') {
+            const systemMessage = safeMessages.find(m => m.role === 'system')?.content || '';
+            const userMessage = safeMessages
+              .filter(m => m.role !== 'system')
+              .map(m => m.content)
+              .join('\n\n');
+
+            const result = await callGroqAPI(systemMessage, userMessage);
+
+            if (!result) {
+              throw new Error('Task planning model unavailable.');
+            }
+
+            return {
+              content: JSON.stringify(result),
+              text: JSON.stringify(result)
+            };
+          }
+
+          // ---------------------------------------------------------------
+          // TASK SYNTHESIS
+          // Non-streaming Gemini call so tasks.js receives one complete answer.
+          // ---------------------------------------------------------------
+          const systemMessage = safeMessages.find(m => m.role === 'system')?.content || '';
+          const conversationMessages = safeMessages
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+              role: m.role === 'assistant' ? 'model' : 'user',
+              parts: [{ text: m.content }]
+            }));
+
+          const payload = {
+            systemInstruction: {
+              parts: [{ text: systemMessage }]
+            },
+            contents: conversationMessages,
+            generationConfig: {
+              maxOutputTokens: Math.min(
+                Number(maxTokens) || 8000,
+                16000
+              ),
+              temperature: Number.isFinite(Number(temperature))
+                ? Number(temperature)
+                : 0.2
+            }
+          };
+
+          let lastError = '';
+
+          for (let i = 0; i < GEMINI_KEYS.length; i++) {
+            try {
+              const response = await fetch(
+                `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEYS[i]}`,
+                {
                   method: 'POST',
-                  headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    model: groqModel,
-                    response_format: { type: "json_object" },
-                    temperature: 0.2,
-                    messages: [
-                      { role: 'system', content: systemPrompt },
-                      { role: 'user', content: userPrompt }
-                    ]
-                  })
-                });
-                if (res.ok) {
-                  const data = await res.json();
-                  return JSON.parse(data.choices[0].message.content);
+                  headers: {
+                    'Content-Type': 'application/json'
+                  },
+                  body: JSON.stringify(payload)
                 }
-              } catch (e) {}
+              );
+
+              if (response.ok) {
+                const data = await response.json();
+
+                const text =
+                  data?.candidates?.[0]?.content?.parts
+                    ?.map(p => p?.text || '')
+                    .join('') || '';
+
+                if (!text.trim()) {
+                  throw new Error('Gemini task response was empty.');
+                }
+
+                return {
+                  content: text,
+                  text
+                };
+              }
+
+              lastError = await response.text();
+
+              // Continue rotation on rate limit / transient errors.
+              if (
+                response.status >= 500 ||
+                response.status === 429
+              ) {
+                continue;
+              }
+
+              // For permanent 4xx errors, continue to the next configured key
+              // rather than killing the entire task.
+              continue;
+
+            } catch (err) {
+              lastError = err?.message || 'Gemini task request failed.';
             }
           }
-          return null;
+
+          throw new Error(
+            `Task synthesis provider unavailable. ${lastError || ''}`.trim()
+          );
         };
 
         // HIGH-DENSITY FAIL-SAFE MEMORY ALGORITHM
