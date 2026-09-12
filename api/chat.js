@@ -485,9 +485,33 @@ if (taskMode === true) {
           'deepseek-r1-distill-llama-70b'
         ];
 
+        const callGroqAPI = async (systemPrompt, userPrompt) => {
+          if (GROQ_KEYS.length === 0 || hasAttachments) return null;
+          for (const groqModel of GROQ_MODELS_FALLBACK) {
+            for (let i = 0; i < GROQ_KEYS.length; i++) {
+              try {
+                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    model: groqModel,
+                    response_format: { type: "json_object" },
+                    temperature: 0.2,
+                    messages: [
+                      { role: 'system', content: systemPrompt },
+                      { role: 'user', content: userPrompt }
+                    ]
+                  })
+                });
+                if (res.ok) {
+                  const data = await res.json();
+                  return JSON.parse(data.choices[0].message.content);
+                }
+              } catch (e) {}
+            }
+          }
           return null;
         };
-
         // ====================================================================
         // ARIXAI TASK ENGINE PROVIDER ADAPTER
         // Reuses the existing API keys owned by chat.js.
