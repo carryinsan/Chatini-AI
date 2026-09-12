@@ -485,7 +485,7 @@ if (taskMode === true) {
           'deepseek-r1-distill-llama-70b'
         ];
 
-        const callGroqAPI = async (systemPrompt, userPrompt) => {
+        async function callGroqAPI(systemPrompt, userPrompt) {
           if (GROQ_KEYS.length === 0 || hasAttachments) return null;
           for (const groqModel of GROQ_MODELS_FALLBACK) {
             for (let i = 0; i < GROQ_KEYS.length; i++) {
@@ -518,12 +518,12 @@ if (taskMode === true) {
         // features/tasks.js never sees or reads API keys.
         // ====================================================================
 
-        const runTaskModel = async ({
+        async function runTaskModel({
           messages = [],
           temperature = 0.2,
           maxTokens = 8000,
           responseFormat = null
-        } = {}) => {
+        } = {}) {
 
           const safeMessages = Array.isArray(messages)
             ? messages
