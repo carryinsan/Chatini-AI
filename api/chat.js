@@ -641,7 +641,97 @@ if (taskMode === true) {
           throw new Error(
             `Task synthesis provider unavailable. ${lastError || ''}`.trim()
           );
-        };
+        }
+
+        async function runTaskResearch({
+          query = '',
+          queries = [],
+          maxSearches = 6
+        } = {}) {
+
+          if (!TAVILY_KEYS || !TAVILY_KEYS.length) {
+            throw new Error('Live research is unavailable because no Tavily key is configured.');
+          }
+
+          const requestedQueries = Array.isArray(queries)
+            ? queries.filter(Boolean)
+            : [];
+
+          const finalQueries = [
+            ...requestedQueries,
+            ...(query ? [query] : [])
+          ]
+            .map(q => String(q).trim())
+            .filter(Boolean)
+            .filter((q, index, arr) => arr.indexOf(q) === index)
+            .slice(0, Math.max(1, Math.min(Number(maxSearches) || 6, 10)));
+
+          if (!finalQueries.length) {
+            throw new Error('No valid live-research query was generated.');
+          }
+
+          const combinedResults = [];
+          const sourceMap = new Map();
+
+          for (let qIndex = 0; qIndex < finalQueries.length; qIndex++) {
+            const searchQuery = finalQueries[qIndex];
+            let success = false;
+
+            for (let keyOffset = 0; keyOffset < TAVILY_KEYS.length; keyOffset++) {
+              const key = TAVILY_KEYS[(qIndex + keyOffset) % TAVILY_KEYS.length];
+
+              try {
+                const response = await fetch('https://api.tavily.com/search', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    api_key: key,
+                    query: searchQuery,
+                    search_depth: 'advanced',
+                    max_results: 10,
+                    include_answer: true,
+                    include_raw_content: false
+                  })
+                });
+
+                if (!response.ok) continue;
+
+                const data = await response.json();
+                const answer = typeof data?.answer === 'string' ? data.answer.trim() : '';
+
+                if (answer) {
+                  combinedResults.push(`SEARCH QUERY: ${searchQuery}\nSEARCH ANSWER:\n${answer}`);
+                }
+
+                const results = Array.isArray(data?.results) ? data.results : [];
+
+                for (const result of results) {
+                  const url = typeof result?.url === 'string' ? result.url.trim() : '';
+                  if (!url || sourceMap.has(url)) continue;
+                  sourceMap.set(url, true);
+                  combinedResults.push(`TITLE: ${result?.title || url}\nURL: ${url}\nCONTENT: ${result?.content || ''}`);
+                }
+
+                success = true;
+                break;
+              } catch (err) {}
+            }
+
+            if (!success && qIndex === 0) continue;
+          }
+
+          if (!combinedResults.length) {
+            throw new Error('Live research returned no usable results.');
+          }
+
+          const sources = Array.from(sourceMap.keys()).map(url => ({ title: url, url }));
+
+          return {
+            text: combinedResults.join('\n\n---\n\n'),
+            sources,
+            results: sources
+          };
+        }
 
         // HIGH-DENSITY FAIL-SAFE MEMORY ALGORITHM
         let memoryString = "";
