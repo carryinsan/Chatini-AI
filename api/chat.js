@@ -1,4 +1,5 @@
 import { verifyAndLimit } from './auth.js';
+import { inspectSecurity, securityControl } from './security.js';
 import { PrivacyEngine } from '../lib/privacyEngine.js';
 import { FactExtractor, IntegrityVerifier, HardFailEvaluator, DecisionEngine, VerificationScorer } from './algorithm.js';
 import { MasterRepairPipeline } from './repair.js';
@@ -142,6 +143,12 @@ function advancedHDBypass(text, query, maxChars) {
 }
 
 export default async function handler(req) {
+  const securityRoute = new URL(req.url).searchParams.get('security');
+
+  if (securityRoute === '1') {
+    return securityControl(req);
+  }
+
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
   const encoder = new TextEncoder();
@@ -186,6 +193,11 @@ telemetry.model = modelId || 'unknown';
         // Store raw prompt directly (bypassing privacy engine for algorithm & verification)
         const rawUserMessages = (body.messages || []).map(m => ({ role: m.role, content: m.content }));
         const rawUserQuery = rawUserMessages.length > 0 ? rawUserMessages[rawUserMessages.length - 1].content : "";
+        const securityPromise = inspectSecurity(req, {
+          query: rawUserQuery,
+          messages: rawUserMessages,
+          modelId
+        });
 
         // Anonymize user inputs and extract volatile token map in RAM
         const { sanitizedMessages, tokenMap: ephemeralTokenMap } = PrivacyEngine.anonymizeMessages(body.messages || []);
@@ -198,6 +210,16 @@ telemetry.model = modelId || 'unknown';
         // 0. FIREWALL & RATE LIMITING
         // ====================================================================
         const auth = await verifyAndLimit(req, modelId, 'none');
+
+        const security = await securityPromise;
+
+        if (security.blocked) {
+          telemetry.success = false;
+          telemetry.errorReason = 'Security Sentinel blocked request';
+          sendError(security.message || 'Security Sentinel blocked this request.');
+          return;
+        }
+
         if (!auth.authorized && !auth.isCreator) {
           telemetry.success = false;
           telemetry.errorReason = auth.error || 'Authorization failed';
