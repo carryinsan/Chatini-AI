@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -79,7 +80,7 @@ main{padding:24px 0 60px}
 .status.bad{color:#f87171;background:#450a0a;border-color:#dc2626}
 .status.info{color:#60a5fa;background:#172554;border-color:#2563eb}
 .status.na{color:#94a3b8;background:#0f172a;border-color:#334155}
-.finding{border:1px solid var(--line);border-left:4px solid var(--info);border-radius:8px;padding:16px;margin:12px 0;background:#0f172a;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.finding{border:1px solid var(--line);max-width:100%;overflow:hidden;border-left:4px solid var(--info);border-radius:8px;padding:16px;margin:12px 0;background:#0f172a;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
 .finding.high{border-left-color:var(--bad);background:linear-gradient(90deg,rgba(69,10,10,0.4),transparent)}
 .finding.medium{border-left-color:var(--warn);background:linear-gradient(90deg,rgba(69,26,3,0.4),transparent)}
 .finding.low{border-left-color:var(--info)}
@@ -90,12 +91,12 @@ main{padding:24px 0 60px}
 .medium .sev{color:var(--warn);border-color:var(--warn)}
 pre,.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 pre{white-space:pre-wrap;word-break:break-word;background:#030712;padding:12px;border-radius:6px;border:1px solid var(--line);font-size:11px;color:#a5b4fc;overflow-x:auto}
-.log{height:350px;overflow:auto;background:#030712;border:1px solid var(--line);border-radius:8px;padding:12px;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;color:#94a3b8}
+.log{height:350px;overflow:auto;overflow-wrap:anywhere;background:#030712;border:1px solid var(--line);border-radius:8px;padding:12px;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;color:#94a3b8}
 .log .INFO{color:#60a5fa}
 .log .WARN{color:#fbbf24}
 .log .ERROR{color:#f87171}
 .log .SUCCESS{color:#34d399}
-table{width:100%;border-collapse:collapse;font-size:12px}
+table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px}td,th{overflow-wrap:anywhere}
 th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{color:var(--muted);font-weight:700;background:#0f172a}
 td code{color:#a5b4fc;background:#1e293b;padding:2px 6px;border-radius:4px}
@@ -420,20 +421,6 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
   const $ = id => document.getElementById(id);
   const $$ = sel => document.querySelectorAll(sel);
   const esc = str => String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  
-  // Base Data Lists
-  const DEFAULT_DISCOVERY = [
-    '/.env', '/.git/config', '/security.txt', '/.well-known/security.txt', 
-    '/robots.txt', '/sitemap.xml', '/phpinfo.php', '/server-status', 
-    '/api/v1/users', '/api/graphql', '/admin', '/backup.sql', '/config.json'
-  ];
-  
-  const DEFAULT_PAYLOADS = [
-    "'", "\"", "1' OR '1'='1", "'; WAITFOR DELAY '0:0:5'--",
-    "\"><script>alert('arix')</script>", "<img src=x onerror=alert('arix')>",
-    "../../../../../../../../etc/passwd", "....//....//....//etc/passwd",
-    "{{7*7}}", "${7*7}"
-  ];
 
   const SIGNATURES = {
     sqli: [/SQL syntax/i, /mysql_fetch/i, /ORA-\d{5}/i, /PostgreSQL/i, /SQLite3::/i, /SequelizeDatabaseError/i, /PrismaClient/i],
@@ -444,9 +431,36 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
   };
 
   // Initialization
-  $('origin').value = location.origin;
-  $('customWordlist').value = DEFAULT_DISCOVERY.join('\n');
-  $('customPayloads').value = DEFAULT_PAYLOADS.join('\n');
+  $('origin').value = /^https?:$/.test(location.protocol) ? location.origin : '';
+  if (!location.origin || location.origin === 'null') { $('scopeDisplay').textContent = 'Open this file from the GitHub deployment (HTTPS) to enable live network checks.'; }
+  loadSavedConfig();
+
+  function loadSavedConfig() {
+    try {
+      const savedPaths = localStorage.getItem('trytohack.customWordlist');
+      const savedPayloads = localStorage.getItem('trytohack.customPayloads');
+      if (savedPaths !== null) $('customWordlist').value = savedPaths;
+      if (savedPayloads !== null) $('customPayloads').value = savedPayloads;
+    } catch {}
+  }
+
+  function normalizeOrigin(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return location.origin;
+    const u = new URL(raw, location.href);
+    if (!/^https?:$/.test(u.protocol)) throw new Error('Target must use http:// or https://');
+    return u.origin;
+  }
+
+  function normalizePath(value) {
+    const v = String(value || '').trim();
+    if (!v) return '/';
+    try {
+      return new URL(v, location.origin).pathname + (new URL(v, location.origin).search || '');
+    } catch {
+      return v.startsWith('/') ? v : `/${v}`;
+    }
+  }
 
   // UI Functions
   function log(msg, type='INFO') {
@@ -514,7 +528,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
       <tr>
         <td><code>${esc(e.method)}</code></td>
         <td><code>${esc(e.path)}</code></td>
-        <td><span class="status ${e.status<300?'ok':e.status<400?'info':e.status<500?'warn':'bad'}">${e.status}</span></td>
+        <td><span class="status ${e.status===0?'na':e.status<300?'ok':e.status<400?'info':e.status<500?'warn':'bad'}">${e.status || 'LIVE LINK'}</span></td>
         <td>${esc(e.type)}</td>
         <td>${esc(e.obs)}</td>
       </tr>
@@ -550,7 +564,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
   }
 
   // Helper to parse lists
-  const getLines = id => [ ...new Set($($id).value.split('\n').map(s=>s.trim()).filter(Boolean)) ];
+  const getLines = id => { const el=$(id); return el ? [...new Set(el.value.split('\n').map(s=>s.trim()).filter(Boolean))] : []; };
   const getMods = () => new Set([...$$('.mod:checked')].map(e=>e.value));
 
   // --- ATTACK MODULES ---
@@ -590,12 +604,22 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
         if (!p.startsWith('/')) continue;
         
         const url = origin + p;
-        const { res, ok } = await safeFetch(url, { method: 'HEAD' });
-        
-        if (ok && res.status !== 404) {
-          state.endpoints.push({ method: 'HEAD', path: p, status: res.status, type: res.headers.get('content-type')||'-', obs: 'Discovered' });
-          if(res.status === 200 && (p.includes('.env') || p.includes('.git') || p.includes('credentials'))) {
-            addFinding('HIGH', `Sensitive File Exposed: ${p}`, `The file returned HTTP 200.`, { path: p });
+        let result = await safeFetch(url, { method: 'HEAD' });
+        if (!result.ok || (result.res && result.res.status === 405)) result = await safeFetch(url, { method: 'GET' });
+        const { res, text, ok } = result;
+        if (ok) {
+          state.endpoints.push({ method: res.requestedMethod || 'GET', path: p, status: res.status, type: res.headers.get('content-type')||'-', obs: p === '/' ? 'Live baseline' : 'User-specified discovery' });
+          if(res.status === 200 && /(?:^|\/)(?:credentials|secrets|private|backup|config)(?:\.|$)/i.test(p)) {
+            addFinding('HIGH', `Potentially sensitive resource exposed: ${p}`, `The live target returned HTTP 200 for a user-specified sensitive-looking path.`, { path: p });
+          }
+          if (p === '/' && text) {
+            const discovered = [...text.matchAll(/(?:href|action)\s*=\s*[\"']([^\"'#?][^\"']*)/gi)]
+              .map(m => m[1]).filter(Boolean).map(v => { try { return new URL(v, origin).pathname; } catch { return null; } })
+              .filter(v => v && v.startsWith('/'));
+            for (const link of new Set(discovered)) {
+              if (!state.stop && !state.endpoints.some(e => e.path === link)) state.endpoints.push({ method: 'DISCOVER', path: link, status: 0, type: 'link', obs: 'Extracted from live root HTML' });
+            }
+            renderEndpoints();
           }
         }
         
@@ -627,7 +651,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
     });
 
     log(`Total fuzzing tasks generated: ${tasks.length}`);
-    
+    if (!tasks.length) { $('progressBar').style.width='100%'; $('progressText').textContent='No fuzzing tasks selected'; return; }
     let i = 0;
     const worker = async () => {
       while(i < tasks.length && !state.stop) {
@@ -704,11 +728,14 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
   async function startEngine() {
     if (state.running) return;
     
-    const origin = $('origin').value.trim();
-    if (!origin.startsWith('http')) {
-      alert("Invalid base origin. Must start with http:// or https://");
+    let origin;
+    try { origin = normalizeOrigin($('origin').value); } catch (e) { alert(e.message); return; }
+    if (/^https?:$/.test(location.protocol) && new URL(origin).origin !== location.origin) {
+      alert("For browser safety this workbench only scans the page's own deployment origin.");
       return;
     }
+    $('origin').value = origin;
+    $('scopeDisplay').textContent = `Live target: ${origin}`;
 
     // Reset State
     state.running = true; state.stop = false; state.reqCount = 0;
@@ -720,7 +747,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
     $('logView').innerHTML = '';
     $('checksView').innerHTML = '';
     $('findingsView').innerHTML = '';
-    $('endpointTbody').innerHTML = '';
+    $('endpointTbody').innerHTML = '<tr><td colspan="5" style="text-align:center">Scanning...</td></tr>';
     $('progressBar').style.width = '0%';
     
     setStatus('RUNNING HYPER SCAN', 'info', 'run');
@@ -740,12 +767,12 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
       await checkRootAndHeaders(origin);
 
       if (!state.stop && mods.has('discovery')) {
-        const fullPaths = [...new Set([...pathsList, ...customWordlist])];
+        const fullPaths = [...new Set(['/', ...pathsList, ...customWordlist].map(normalizePath))];
         await runDiscovery(origin, fullPaths, concurrency);
       }
 
-      if (!state.stop && intensity.value !== 'light') {
-        const basePaths = pathsList.length ? pathsList : ['/'];
+      if (!state.stop && $('intensity').value !== 'light') {
+        const basePaths = pathsList.length ? pathsList.map(normalizePath) : ['/'];
         await runFuzzing(origin, basePaths, payloads, mods, concurrency);
       }
 
@@ -800,10 +827,10 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
   function download(filename, text, type) {
     const blob = new Blob([text], {type});
     const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    const url = URL.createObjectURL(blob);
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 0);
   }
 
   // --- LOCAL FILE SCANNER ---
@@ -853,37 +880,67 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
   // Main Actions
   $('startBtn').addEventListener('click', startEngine);
   $('stopBtn').addEventListener('click', () => { state.stop = true; log('Stop signal sent...', 'WARN'); });
-  $('clearBtn').addEventListener('click', () => { location.reload(); });
+  $('clearBtn').addEventListener('click', () => { if (state.running) return; location.reload(); });
 
   // Custom Requests
   $('addReqBtn').addEventListener('click', () => {
     if (!$('reqManual').checked) return alert('You must confirm the request is safe.');
-    const req = {
-      name: $('reqName').value || 'Unnamed',
-      method: $('reqMethod').value,
-      path: $('reqPath').value,
-      headers: $('reqHeaders').value ? JSON.parse($('reqHeaders').value) : {},
-      body: $('reqMethod').value !== 'GET' ? $('reqBody').value : null
-    };
-    state.customReqs.push(req);
-    $('customList').innerHTML += `<div class="notice">Added: [${req.method}] ${esc(req.path)}</div>`;
-    $('reqManual').checked = false;
+    try {
+      const method = $('reqMethod').value.toUpperCase();
+      const req = {
+        name: $('reqName').value.trim() || 'Unnamed',
+        method,
+        path: normalizePath($('reqPath').value),
+        headers: $('reqHeaders').value.trim() ? JSON.parse($('reqHeaders').value) : {},
+        body: !['GET','HEAD'].includes(method) ? $('reqBody').value : null
+      };
+      if (!req.path.startsWith('/')) throw new Error('Path must stay on the same origin and start with /.');
+      state.customReqs.push(req);
+      $('customList').innerHTML += `<div class="notice">Added: [${req.method}] ${esc(req.path)}</div>`;
+      $('reqManual').checked = false;
+    } catch (e) { alert(`Could not add request: ${e.message}`); }
   });
   $('clearReqsBtn').addEventListener('click', () => { state.customReqs = []; $('customList').innerHTML = ''; });
-  $('runReqsBtn').addEventListener('click', () => {
-    if(!state.running && state.customReqs.length) {
-       // Quick run outside of main engine
-       startEngine(); // Best to run it through the engine for proper logging
-    } else {
-      alert("Add requests and click Start Engine, or wait if already running.");
-    }
+  $('runReqsBtn').addEventListener('click', async () => {
+    if (state.running) return alert('A scan is already running.');
+    if (!state.customReqs.length) return alert('Add at least one request first.');
+    try {
+      const origin = normalizeOrigin($('origin').value);
+      state.running = true; state.stop = false; state.startTime = Date.now();
+      $('startBtn').disabled = true; $('stopBtn').disabled = false;
+      setStatus('RUNNING CUSTOM REQUESTS', 'info', 'run');
+      for (const r of state.customReqs) {
+        if (state.stop) break;
+        const result = await safeFetch(origin + r.path, { method:r.method, headers:r.headers, body:r.body });
+        if (result.ok) {
+          const {res} = result;
+          state.endpoints.push({method:r.method,path:r.path,status:res.status,type:res.headers.get('content-type')||'-',obs:'Custom request'});
+          addCheck(`Custom: ${r.name}`, res.status < 400 ? 'PASS' : 'WARN', `Returned ${res.status}`);
+        } else {
+          addCheck(`Custom: ${r.name}`, 'WARN', `Request failed: ${result.error || 'Unknown error'}`);
+        }
+        renderEndpoints();
+      }
+      setStatus(state.stop ? 'STOPPED BY USER' : 'CUSTOM REQUESTS COMPLETE', state.stop ? 'warn' : 'ok', state.stop ? 'warn' : 'ok');
+    } catch (e) { log(`Custom request runner error: ${e.message}`, 'ERROR'); }
+    finally { state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; generateReport(); }
   });
 
   // Payloads Config
-  $('savePayloadsBtn').addEventListener('click', () => alert('Custom payloads loaded into engine memory.'));
+  $('savePayloadsBtn').addEventListener('click', () => {
+    try {
+      localStorage.setItem('trytohack.customWordlist', $('customWordlist').value);
+      localStorage.setItem('trytohack.customPayloads', $('customPayloads').value);
+      log('Custom dictionaries saved locally and ready for the next scan.', 'SUCCESS');
+    } catch (e) {
+      log(`Could not save custom dictionaries: ${e.message}`, 'ERROR');
+    }
+  });
   $('resetPayloadsBtn').addEventListener('click', () => {
-    $('customWordlist').value = DEFAULT_DISCOVERY.join('\n');
-    $('customPayloads').value = DEFAULT_PAYLOADS.join('\n');
+    $('customWordlist').value = '';
+    $('customPayloads').value = '';
+    try { localStorage.removeItem('trytohack.customWordlist'); localStorage.removeItem('trytohack.customPayloads'); } catch {}
+    log('Custom dictionaries cleared.', 'SUCCESS');
   });
 
   // File Scanner
@@ -891,36 +948,34 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
   $('clearFilesBtn').addEventListener('click', () => { $('fileResults').innerHTML = '<div class="notice">Cleared.</div>'; $('fileInput').value = ''; });
 
   // Network Tools
-  $('probeNetBtn').addEventListener('click', () => {
-    const p = $('netPaths').value;
-    if(p) { $('paths').value = p; $('intensity').value = 'light'; startEngine(); }
+  $('probeNetBtn').addEventListener('click', async () => {
+    const paths = getLines('netPaths').map(normalizePath);
+    if (!paths.length) return alert('Enter at least one endpoint.');
+    if (state.running) return alert('A scan is already running.');
+    $('paths').value = [...new Set(paths)].join('\n');
+    $('intensity').value = 'light';
+    await startEngine();
   });
-  $('probeCurrentBtn').addEventListener('click', () => {
-    $('paths').value = '/'; $('intensity').value = 'light'; startEngine();
+  $('probeCurrentBtn').addEventListener('click', async () => {
+    if (state.running) return alert('A scan is already running.');
+    $('paths').value = '/'; $('intensity').value = 'light';
+    await startEngine();
   });
 
   // Downloads
   $('dlJsonBtn').addEventListener('click', () => download('trytohack-report.json', generateReport(), 'application/json'));
   $('dlHtmlBtn').addEventListener('click', () => {
-    const html = `<!DOCTYPE html><html><head><title>Hack Report</title><style>body{background:#0f172a;color:#e2e8f0;font-family:monospace;padding:20px}</style></head><body><h1>Security Report</h1><pre>${esc(generateReport())}</pre></body></html>`;
+    const report = esc(generateReport());
+    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Security Report</title><style>body{background:#0f172a;color:#e2e8f0;font-family:monospace;padding:20px}pre{white-space:pre-wrap}</style></head><body><h1>Security Report</h1><pre>' + report + '</pre></body></html>';
     download('trytohack-report.html', html, 'text/html');
   });
 
   // Prevent accidental close
   window.addEventListener('beforeunload', (e) => {
-    if(state.running) e.returnValue = 'Scan in progress, are you sure?';
+    if(state.running) { e.preventDefault(); e.returnValue = ''; }
   });
 
 })();
 </script>
 </body>
 </html>
-```eof
-
-### Key Enhancements & New Features:
-1. **Hyper-Aggressive Injection Engine:** The tool now actively generates fuzzed variants of paths and parameters, injecting SQLi, XSS, Path Traversal (LFI), and SSTI payloads directly into the Same-Origin URLs. 
-2. **Payloads & Tricks Tab:** A brand new, fully functional tab where you can inject custom fuzzing dictionaries and wordlists. 
-3. **Robust Request Controller:** Upgraded the worker pool concurrency logic (`safeFetch`). It now uses native `AbortController` and `try...catch` loops so that a failed payload (e.g. crashing the backend causing a 500 or timeout) **will not crash the frontend scanner**.
-4. **Header Fuzzing:** The tool actively attempts Host header injection and `X-Forwarded-For` overrides to test for authorization bypass configurations on discovered endpoints.
-5. **Fixed UI & Button Wiring:** The JavaScript relies purely on standard DOM APIs and tightly scoped classes. I have ensured every button (Start, Stop, Clear, Payload resets, File Analysis, Endpoint Probes, Exports) binds successfully upon load.
-6. **Detailed Findings Log:** Findings now capture the exact unencoded payload that was reflected, or the specific DB error regex that was triggered, placing the evidence directly into the UI.
