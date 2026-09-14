@@ -1,5 +1,4 @@
 import { verifyAndLimit } from './auth.js';
-import { inspectSecurity, securityControl } from './security.js';
 import { PrivacyEngine } from '../lib/privacyEngine.js';
 import { FactExtractor, IntegrityVerifier, HardFailEvaluator, DecisionEngine, VerificationScorer } from './algorithm.js';
 import { MasterRepairPipeline } from './repair.js';
@@ -140,6 +139,238 @@ function advancedHDBypass(text, query, maxChars) {
   }
 
   return result;
+}
+
+// ====================================================================
+// EMBEDDED ZERO-LATENCY SECURITY SENTINEL ENGINE
+// ====================================================================
+const SEC_REDIS_URL = (process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || "https://immortal-eagle-36171.upstash.io").replace(/\/$/, '');
+const SEC_REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw";
+const SEC_ADMIN_KEY = process.env.ARIX_SECURITY_ADMIN_KEY || process.env.ARIX_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || "Lexis-Admin-2026!";
+
+const SEC_LOG_KEY = 'arix:security:events';
+const SEC_PENDING_KEY = 'arix:security:pending';
+const SEC_MAX_LOGS = 1000;
+
+const SEC_LOCAL_RULES = [
+  [40, /ignore\s+(all|any|the)\s+(previous|prior|above)\s+instructions?/i, 'prompt_injection'],
+  [35, /\b(system|developer|assistant)\s*(message|prompt|instruction)\b/i, 'role_injection'],
+  [35, /\b(jailbreak|dan\s+mode|bypass\s+safety|disable\s+guardrails?)\b/i, 'jailbreak'],
+  [28, /(?:<\/?script\b|javascript:|onerror\s*=|onload\s*=)/i, 'script_injection'],
+  [25, /(?:\.\.\/){2,}|(?:%2e%2e%2f){2,}|(?:%252e%252e)/i, 'path_traversal'],
+  [25, /\b(?:union\s+select|or\s+1\s*=\s*1|drop\s+table|information_schema)\b/i, 'sql_injection'],
+  [22, /(?:\bcurl\b|\bwget\b|\bpowershell\b|\bcmd\.exe\b|\/bin\/sh\b|\bnc\s+-e\b)/i, 'command_probe'],
+  [22, /\b(?:169\.254\.169\.254|localhost:\d+|127\.0\.0\.1:\d+|0\.0\.0\.0:\d+)\b/i, 'ssrf_probe'],
+  [18, /\b(?:api[_ -]?key|secret[_ -]?key|bearer\s+token|private\s+key)\b.*\b(?:reveal|show|dump|print|send)\b/i, 'secret_exfiltration'],
+  [14, /\b(?:reveal|dump|exfiltrate|leak)\b.*\b(?:system|prompt|token|key|credential)\b/i, 'exfiltration_probe']
+];
+
+function secClean(v, max = 300) {
+  return String(v ?? '').replace(/[\r\n\t]+/g, ' ').trim().slice(0, max);
+}
+
+function secGetIp(req) {
+  const h = req?.headers;
+  const raw = h?.get ? (h.get('x-forwarded-for') || h.get('x-real-ip') || 'unknown') : (h?.['x-forwarded-for'] || h?.['x-real-ip'] || 'unknown');
+  return secClean(String(raw).split(',')[0], 80);
+}
+
+function secGetDevice(req) {
+  const h = req?.headers;
+  return secClean(h?.get ? (h.get('x-device-id') || 'unknown-device') : (h?.['x-device-id'] || 'unknown-device'), 120);
+}
+
+function secCountry(req) {
+  const h = req?.headers;
+  return secClean(h?.get ? (h.get('x-vercel-ip-country') || 'Unknown') : (h?.['x-vercel-ip-country'] || 'Unknown'), 12);
+}
+
+async function secRedis(command, timeoutMs = 1200) {
+  if (!SEC_REDIS_URL || !SEC_REDIS_TOKEN) return null;
+  try {
+    const r = await fetch(SEC_REDIS_URL, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SEC_REDIS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(command),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j.result ?? null;
+  } catch { return null; }
+}
+
+async function secRedisPipeline(commands, timeoutMs = 150) {
+  if (!SEC_REDIS_URL || !SEC_REDIS_TOKEN || !Array.isArray(commands) || !commands.length) return [];
+  try {
+    const r = await fetch(`${SEC_REDIS_URL}/pipeline`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${SEC_REDIS_TOKEN}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(commands),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (!r.ok) return [];
+    const j = await r.json();
+    return Array.isArray(j) ? j.map(x => x?.result ?? null) : [];
+  } catch { return []; }
+}
+
+async function secSha256(value) {
+  try {
+    const data = new TextEncoder().encode(String(value));
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('').slice(0, 32);
+  } catch {
+    let h = 2166136261;
+    for (let i = 0; i < value.length; i++) h = Math.imul(h ^ value.charCodeAt(i), 16777619);
+    return (`00000000${(h >>> 0).toString(16)}`).slice(-8);
+  }
+}
+
+function secSafeJson(text) {
+  try { return JSON.parse(text); } catch { return null; }
+}
+
+function secLocalScore({ query, messages, modelId }) {
+  const text = secClean(query, 12000);
+  const all = Array.isArray(messages) ? messages : [];
+  let score = 0;
+  const hits = [];
+  for (const [weight, rx, name] of SEC_LOCAL_RULES) {
+    if (rx.test(text)) { score += weight; hits.push(name); }
+  }
+  if (text.length > 120000) { score += 12; hits.push('oversized_prompt'); }
+  if (all.length > 80) { score += 12; hits.push('message_flood'); }
+  if (all.filter(m => String(m?.role || '') === 'system').length > 3) { score += 16; hits.push('role_spoofing'); }
+  if (String(modelId || '').length > 80) { score += 10; hits.push('model_field_anomaly'); }
+  return { score: Math.min(score, 100), hits: [...new Set(hits)], size: text.length, messages: all.length };
+}
+
+function secSeverity(score) {
+  if (score >= 50) return 'critical';
+  if (score >= 30) return 'high';
+  if (score >= 16) return 'medium';
+  if (score >= 8) return 'low';
+  return 'normal';
+}
+
+function secAutoAction(level) {
+  if (level === 'critical') return { action: 'block_1h', blockSeconds: 3600 };
+  if (level === 'high') return { action: 'block_10m', blockSeconds: 600 };
+  if (level === 'medium') return { action: 'monitor_and_ai_review', blockSeconds: 0 };
+  if (level === 'low') return { action: 'admin_review', blockSeconds: 0 };
+  return { action: 'allow', blockSeconds: 0 };
+}
+
+async function inspectSecurity(req, { query = '', messages = [], modelId = 'unknown' } = {}) {
+  const start = Date.now();
+  const ip = secGetIp(req);
+  const device = secGetDevice(req);
+  const identity = await secSha256(`${ip}|${device}`);
+  const local = secLocalScore({ query, messages, modelId });
+
+  let blocked = null;
+  let requestRate60s = 1;
+  const gateKey = `arix:security:req:${identity}`;
+  const gateRes = await secRedisPipeline([['GET', `arix:security:block:${identity}`], ['INCR', gateKey]], 150);
+  blocked = gateRes?.[0] || null;
+  requestRate60s = Number(gateRes?.[1]) || 1;
+  if (requestRate60s === 1) void secRedis(['EXPIRE', gateKey, '60'], 400);
+
+  if (blocked) {
+    return { blocked: true, message: 'Security Sentinel blocked this request temporarily.', severity: 'high', score: 100, identity };
+  }
+
+  let score = local.score;
+  const hits = [...local.hits];
+  if (requestRate60s > 30) { score += 18; hits.push('burst_rate'); }
+  if (requestRate60s > 60) { score += 25; hits.push('high_rate'); }
+  if (requestRate60s > 120) { score += 35; hits.push('request_flood'); }
+  score = Math.min(score, 100);
+
+  const level = secSeverity(score);
+  const auto = secAutoAction(level);
+  const event = {
+    id: `sec_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    ts: new Date().toISOString(),
+    identity,
+    ipHash: await secSha256(ip),
+    deviceHash: await secSha256(device),
+    country: secCountry(req),
+    model: secClean(modelId, 80),
+    severity: level,
+    score,
+    ruleHits: [...new Set(hits)].slice(0, 12),
+    requestRate60s,
+    messageCount: local.messages,
+    payloadChars: local.size,
+    action: auto.action,
+    elapsedMs: Date.now() - start
+  };
+
+  void secRedisPipeline([['LPUSH', SEC_LOG_KEY, JSON.stringify(event)], ['LTRIM', SEC_LOG_KEY, '0', String(SEC_MAX_LOGS - 1)]], 500);
+  if (level === 'low' || level === 'medium') {
+    void secRedisPipeline([['LPUSH', SEC_PENDING_KEY, JSON.stringify(event)], ['LTRIM', SEC_PENDING_KEY, '0', '199']], 500);
+  }
+  if (auto.blockSeconds) {
+    void secRedis(['SET', `arix:security:block:${identity}`, JSON.stringify({ until: Date.now() + auto.blockSeconds * 1000, reason: hits.join(',') || level }), 'EX', String(auto.blockSeconds)]);
+  }
+
+  if (level === 'high' || level === 'critical') {
+    return { blocked: true, severity: level, score, message: 'Security Sentinel blocked this request because an automated abuse threshold was exceeded.', identity };
+  }
+  return { blocked: false, severity: level, score, identity };
+}
+
+async function securityControl(req) {
+  try {
+    let body = {};
+    if (req.method !== 'GET') {
+      try { body = await req.json(); } catch {}
+    }
+    const h = req?.headers;
+    const headerKey = h?.get ? h.get('x-arix-security-key') : h?.['x-arix-security-key'];
+    const isAuthed = Boolean(SEC_ADMIN_KEY && (headerKey === SEC_ADMIN_KEY || body?.adminKey === SEC_ADMIN_KEY || !SEC_ADMIN_KEY));
+    if (!isAuthed) return new Response(JSON.stringify({ error: 'Unauthorized security console.' }), { status: 401 });
+
+    const action = body.action || new URL(req.url).searchParams.get('action') || 'read';
+    if (action === 'decision') {
+      const id = secClean(body.id, 100);
+      const decision = secClean(body.decision, 30);
+      if (!id || !decision) return new Response(JSON.stringify({ error: 'Missing decision payload.' }), { status: 400 });
+      const pendingRaw = await secRedis(['LRANGE', SEC_PENDING_KEY, '0', '99']);
+      const match = (Array.isArray(pendingRaw) ? pendingRaw : []).find(raw => {
+        const item = secSafeJson(raw);
+        return item?.id === id;
+      });
+      const event = match ? secSafeJson(match) : null;
+      if (decision === 'block' && event?.identity) {
+        void secRedis(['SET', `arix:security:block:${event.identity}`, JSON.stringify({ until: Date.now() + 3600 * 1000, reason: 'admin_block' }), 'EX', '3600']);
+      }
+      void secRedis(['LPUSH', 'arix:security:admin_actions', JSON.stringify({ ts: new Date().toISOString(), id, decision })], 500);
+      if (match) void secRedis(['LREM', SEC_PENDING_KEY, '1', match], 500);
+      return new Response(JSON.stringify({ success: true, applied: decision === 'block' && Boolean(event?.identity) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const [logs, pending] = await Promise.all([
+      secRedis(['LRANGE', SEC_LOG_KEY, '0', '199']),
+      secRedis(['LRANGE', SEC_PENDING_KEY, '0', '99'])
+    ]);
+    const parse = (v) => secSafeJson(v) || null;
+    const events = (Array.isArray(logs) ? logs.map(parse).filter(Boolean) : []);
+    const queue = (Array.isArray(pending) ? pending.map(parse).filter(Boolean) : []);
+    const stats = {
+      total: events.length,
+      critical: events.filter(x => x.severity === 'critical').length,
+      high: events.filter(x => x.severity === 'high').length,
+      medium: events.filter(x => x.severity === 'medium').length,
+      low: events.filter(x => x.severity === 'low').length,
+      normal: events.filter(x => x.severity === 'normal').length
+    };
+    return new Response(JSON.stringify({ success: true, stats, events, pending: queue }), { status: 200, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+  } catch {
+    return new Response(JSON.stringify({ error: 'Security console temporarily unavailable.' }), { status: 503 });
+  }
 }
 
 export default async function handler(req) {
