@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ArixAI | Security Sentinel</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            sentinel: {
+              bg: '#07080b',
+              panel: '#0e1117',
+              surface: '#131822',
+              border: 'rgba(255, 255, 255, 0.08)',
+              glow: '#3b82f6'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #07080b;
+      color: #f3f4f6;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
+    .radar-grid {
+      background-size: 40px 40px;
+      background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.15); opacity: 0.4; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+    .status-pulse {
+      animation: pulse-ring 2.5s infinite ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen antialiased selection:bg-blue-500 selection:text-white radar-grid relative flex flex-col">
+
+  <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute -top-32 left-1/4 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-[128px]"></div>
+    <div class="absolute top-1/3 -right-32 w-[450px] h-[450px] bg-red-600/5 rounded-full blur-[140px]"></div>
+    <div class="absolute bottom-10 left-10 w-[350px] h-[350px] bg-emerald-600/5 rounded-full blur-[120px]"></div>
+  </div>
+
+  <header class="sticky top-0 z-30 border-b border-white/[0.08] bg-[#07080b]/80 backdrop-blur-xl">
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Status -->
+      <div class="flex items-center gap-3.5">
+        <div class="relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/20 to-indigo-600/20 border border-blue-500/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.25)]">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <span class="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+            <span class="status-pulse absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+          </span>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-extrabold tracking-tight text-white font-mono">ARIX<span class="text-blue-500">.AI</span></span>
+            <span class="rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[10px] font-semibold text-gray-400 border border-white/10 uppercase tracking-widest">Sentinel</span>
+          </div>
+          <p class="text-[11px] text-gray-400">Autonomous anomaly & abuse prevention console</p>
+        </div>
+      </div>
+
+      <!-- Action Controls & Live Status -->
+      <div class="flex items-center gap-2.5 sm:gap-3">
+        <div class="hidden sm:flex items-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-3 py-1.5 text-xs text-gray-400">
+          <span class="h-2 w-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span class="text-[11px] font-mono uppercase tracking-wider text-emerald-400 font-medium">Live Stream</span>
+        </div>
+
+        <button id="refreshBtn" onclick="triggerManualLoad()" class="group flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-xs font-semibold text-gray-200 transition-all duration-150 hover:bg-white/[0.08] hover:border-white/20 active:scale-95 shadow-sm">
+          <svg id="refreshIcon" class="h-3.5 w-3.5 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 p-4 md:p-6 lg:p-8 z-10">
+    <div class="mx-auto max-w-7xl space-y-6">
+
+      <!-- Metrics KPI Overview Cards -->
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        
+        <!-- Total -->
+        <div class="relative overflow-hidden rounded-2xl border border-white/[0.08] bg-zinc-900/60 p-4 backdrop-blur-md shadow-lg transition-all duration-200 hover:border-white/20 hover:bg-zinc-900/80">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold tracking-widest text-gray-400 uppercase font-mono">Total Events</span>
+            <span class="text-xs text-gray-500">📊</span>
+          </div>
+          <div id="s-total" class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-white font-mono">0</div>
+          <div class="mt-1 text-[10px] text-gray-500 flex items-center gap-1">All telemetry</div>
+        </div>
+
+        <!-- Critical -->
+        <div class="relative overflow-hidden rounded-2xl border border-red-500/20 bg-red-950/10 p-4 backdrop-blur-md shadow-lg transition-all duration-200 hover:border-red-500/40 hover:bg-red-950/20">
+          <div class="absolute -right-6 -bottom-6 h-16 w-16 rounded-full bg-red-500/10 blur-xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold tracking-widest text-red-400 uppercase font-mono">Critical</span>
+            <span class="h-2 w-2 rounded-full bg-red-500 ring-4 ring-red-500/20"></span>
+          </div>
+          <div id="s-critical" class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-red-400 font-mono">0</div>
+          <div class="mt-1 text-[10px] text-red-400/70 flex items-center gap-1">Automated block</div>
+        </div>
+
+        <!-- High -->
+        <div class="relative overflow-hidden rounded-2xl border border-orange-500/20 bg-orange-950/10 p-4 backdrop-blur-md shadow-lg transition-all duration-200 hover:border-orange-500/40 hover:bg-orange-950/20">
+          <div class="absolute -right-6 -bottom-6 h-16 w-16 rounded-full bg-orange-500/10 blur-xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold tracking-widest text-orange-400 uppercase font-mono">High</span>
+            <span class="h-2 w-2 rounded-full bg-orange-500 ring-4 ring-orange-500/20"></span>
+          </div>
+          <div id="s-high" class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-orange-400 font-mono">0</div>
+          <div class="mt-1 text-[10px] text-orange-400/70 flex items-center gap-1">Severe risk</div>
+        </div>
+
+        <!-- Medium -->
+        <div class="relative overflow-hidden rounded-2xl border border-yellow-500/20 bg-yellow-950/10 p-4 backdrop-blur-md shadow-lg transition-all duration-200 hover:border-yellow-500/40 hover:bg-yellow-950/20">
+          <div class="absolute -right-6 -bottom-6 h-16 w-16 rounded-full bg-yellow-500/10 blur-xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold tracking-widest text-yellow-400 uppercase font-mono">Medium</span>
+            <span class="h-2 w-2 rounded-full bg-yellow-500 ring-4 ring-yellow-500/20"></span>
+          </div>
+          <div id="s-medium" class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-yellow-400 font-mono">0</div>
+          <div class="mt-1 text-[10px] text-yellow-400/70 flex items-center gap-1">Pending review</div>
+        </div>
+
+        <!-- Low -->
+        <div class="relative overflow-hidden rounded-2xl border border-blue-500/20 bg-blue-950/10 p-4 backdrop-blur-md shadow-lg transition-all duration-200 hover:border-blue-500/40 hover:bg-blue-950/20">
+          <div class="absolute -right-6 -bottom-6 h-16 w-16 rounded-full bg-blue-500/10 blur-xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold tracking-widest text-blue-400 uppercase font-mono">Low</span>
+            <span class="h-2 w-2 rounded-full bg-blue-500 ring-4 ring-blue-500/20"></span>
+          </div>
+          <div id="s-low" class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-blue-400 font-mono">0</div>
+          <div class="mt-1 text-[10px] text-blue-400/70 flex items-center gap-1">Heuristics flag</div>
+        </div>
+
+        <!-- Normal -->
+        <div class="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950/10 p-4 backdrop-blur-md shadow-lg transition-all duration-200 hover:border-emerald-500/40 hover:bg-emerald-950/20">
+          <div class="absolute -right-6 -bottom-6 h-16 w-16 rounded-full bg-emerald-500/10 blur-xl"></div>
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold tracking-widest text-emerald-400 uppercase font-mono">Normal</span>
+            <span class="h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20"></span>
+          </div>
+          <div id="s-normal" class="mt-2 text-2xl md:text-3xl font-black tracking-tight text-emerald-400 font-mono">0</div>
+          <div class="mt-1 text-[10px] text-emerald-400/70 flex items-center gap-1">Passed checks</div>
+        </div>
+
+      </div>
+
+      <section class="rounded-2xl border border-white/[0.08] bg-zinc-900/60 backdrop-blur-md shadow-xl overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] px-5 py-4 bg-white/[0.01]">
+          <div class="flex items-center gap-2.5">
+            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-400">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide">Admin Review Queue</h2>
+              <p class="text-[11px] text-gray-400">Anomalies awaiting manual override decision</p>
+            </div>
+          </div>
+          <span id="queueCount" class="rounded-full bg-white/[0.06] border border-white/10 px-3 py-1 font-mono text-[11px] font-medium text-gray-300">
+            0 pending
+          </span>
+        </div>
+
+        <div class="p-4 sm:p-5">
+          <div id="queue" class="space-y-3"></div>
+        </div>
+      </section>
+
+      <section class="rounded-2xl border border-white/[0.08] bg-zinc-900/60 backdrop-blur-md shadow-xl overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[0.08] px-5 py-4 bg-white/[0.01]">
+          <div class="flex items-center gap-2.5">
+            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold text-white tracking-wide">Live Security Log</h2>
+              <p class="text-[11px] text-gray-400">Real-time inspection stream (payload bodies redacted for compliance)</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center gap-1.5 rounded-lg bg-white/[0.04] px-2.5 py-1 text-[10px] font-mono text-gray-400 border border-white/[0.06]">
+              <span class="h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse"></span>
+              Auto-sync: 5s
+            </span>
+          </div>
+        </div>
+
+        <div class="p-4 sm:p-5">
+          <div id="feed" class="max-h-[60vh] space-y-2.5 overflow-y-auto custom-scroll pr-1"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="border-t border-white/[0.06] bg-[#07080b]/90 py-3 text-center text-[11px] text-gray-500 font-mono">
+    ArixAI Security Shield Engine · Autonomous Defense Layer · Direct Operator Access
+  </footer>
+
+  <!-- Notification Toast Container -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 opacity-0 translate-y-4 pointer-events-none rounded-xl border border-white/10 bg-zinc-900/95 px-4 py-2.5 text-xs text-white shadow-2xl backdrop-blur-md flex items-center gap-2.5">
+    <span id="toastDot" class="h-2 w-2 rounded-full bg-emerald-400"></span>
+    <span id="toastMsg">Action executed</span>
+  </div>
+
+  <script>
+    // Direct operator mode: No password required to enter
+    let adminKey = '';
+
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"]/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;'
+      }[c]));
+    }
+
+    function showToast(msg, isError = false) {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toastMsg');
+      const toastDot = document.getElementById('toastDot');
+      toastMsg.innerText = msg;
+      toastDot.className = `h-2 w-2 rounded-full ${isError ? 'bg-red-400' : 'bg-emerald-400'}`;
+      toast.classList.remove('opacity-0', 'translate-y-4', 'pointer-events-none');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-4', 'pointer-events-none');
+      }, 2500);
+    }
+
+    // Badge styling mapping with enhanced colors and background tints
+    function badge(level) {
+      const lvl = String(level).toLowerCase();
+      const m = {
+        critical: 'text-red-400 bg-red-500/10 border-red-500/30',
+        high: 'text-orange-400 bg-orange-500/10 border-orange-500/30',
+        medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+        low: 'text-blue-400 bg-blue-500/10 border-blue-500/30',
+        normal: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
+      };
+      return m[lvl] || 'text-gray-400 bg-gray-500/10 border-gray-500/20';
+    }
+
+    function badgeTextColor(level) {
+      const lvl = String(level).toLowerCase();
+      const m = {
+        critical: 'text-red-400',
+        high: 'text-orange-400',
+        medium: 'text-yellow-400',
+        low: 'text-blue-400',
+        normal: 'text-emerald-400'
+      };
+      return m[lvl] || 'text-gray-400';
+    }
+
+    async function load(silent = false) {
+      const icon = document.getElementById('refreshIcon');
+      if (!silent && icon) icon.classList.add('rotate-180');
+      try {
+        const headers = { cache: 'no-store' };
+        if (adminKey) headers['x-arix-security-key'] = adminKey;
+        
+        const r = await fetch('/api/chat?security=1', { headers, cache: 'no-store' });
+        if (!r.ok) {
+          if (!silent) showToast('Could not fetch security endpoint', true);
+          return false;
+        }
+        const d = await r.json();
+        render(d);
+        return true;
+      } catch (err) {
+        if (!silent) showToast('Security API unreachable', true);
+        return false;
+      } finally {
+        if (!silent && icon) {
+          setTimeout(() => icon.classList.remove('rotate-180'), 400);
+        }
+      }
+    }
+
+    function triggerManualLoad() {
+      load(false);
+    }
+
+    function render(d) {
+      const s = d.stats || {};
+      ['total', 'critical', 'high', 'medium', 'low', 'normal'].forEach(k => {
+        const el = document.getElementById('s-' + k);
+        if (el) el.innerText = s[k] || 0;
+      });
+
+      // Render Pending Review Queue
+      const q = d.pending || [];
+      const queueCountEl = document.getElementById('queueCount');
+      if (queueCountEl) queueCountEl.innerText = `${q.length} pending`;
+
+      const queueEl = document.getElementById('queue');
+      if (queueEl) {
+        queueEl.innerHTML = q.length ? q.map(e => {
+          const ruleList = (e.ruleHits && e.ruleHits.length)
+            ? e.ruleHits.map(r => `<span class="inline-block rounded-md bg-white/[0.04] px-2 py-0.5 text-[10px] text-gray-300 border border-white/[0.06]">${esc(r)}</span>`).join(' ')
+            : '<span class="text-gray-500 italic text-[10px]">behavioral anomaly</span>';
+
+          return `
+            <div class="group rounded-xl border border-white/[0.07] bg-white/[0.02] p-4 transition-all duration-200 hover:border-white/15 hover:bg-white/[0.035]">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div class="space-y-1.5 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider font-mono ${badge(e.severity)}">
+                      ${esc(e.severity)}
+                    </span>
+                    <span class="text-xs font-mono text-gray-400">
+                      Score: <strong class="text-white">${esc(e.score)}</strong>
+                    </span>
+                    ${e.country ? `<span class="rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-mono text-gray-300">🌍 ${esc(e.country)}</span>` : ''}
+                    ${e.model ? `<span class="rounded bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-mono text-blue-300">🤖 ${esc(e.model)}</span>` : ''}
+                  </div>
+                  <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    ${ruleList}
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 pt-2 md:pt-0">
+                  <button onclick="decide('${esc(e.id)}','allow')" class="flex-1 md:flex-none flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-medium text-emerald-300 transition-all hover:bg-emerald-500/20 active:scale-95 shadow-sm">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Allow
+                  </button>
+                  <button onclick="decide('${esc(e.id)}','block')" class="flex-1 md:flex-none flex items-center justify-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3.5 py-1.5 text-xs font-medium text-red-300 transition-all hover:bg-red-500/20 active:scale-95 shadow-sm">
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                    Block
+                  </button>
+                </div>
+              </div>
+            </div>`;
+        }).join('') : `
+          <div class="py-10 text-center">
+            <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.03] border border-white/[0.06] text-gray-500">
+              <svg class="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <p class="text-xs font-medium text-gray-400">Queue is clear</p>
+            <p class="text-[11px] text-gray-600 mt-0.5">No pending anomalies currently require operator intervention.</p>
+          </div>`;
+      }
+
+      // Render Live Security Log
+      const events = d.events || [];
+      const feedEl = document.getElementById('feed');
+      if (feedEl) {
+        feedEl.innerHTML = events.length ? events.map(e => {
+          const ruleList = (e.ruleHits && e.ruleHits.length)
+            ? e.ruleHits.join(' · ')
+            : 'normal traffic flow';
+
+          const formattedTime = e.ts ? new Date(e.ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }) : '--:--:--';
+          const formattedDate = e.ts ? new Date(e.ts).toLocaleDateString() : '';
+
+          return `
+            <div class="group rounded-xl border border-white/[0.06] bg-white/[0.015] p-3 transition-all duration-150 hover:border-white/10 hover:bg-white/[0.03]">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider font-mono ${badge(e.severity)}">
+                    ${esc(e.severity)}
+                  </span>
+                  <span class="text-xs font-mono text-gray-300">
+                    score <span class="font-semibold text-white">${esc(e.score)}</span>
+                  </span>
+                  <span class="text-[10px] text-gray-500 font-mono">
+                    ${e.requestRate60s != null ? `· ${esc(e.requestRate60s)} req/min` : ''}
+                  </span>
+                </div>
+                <div class="text-[11px] font-mono text-gray-500">
+                  <span class="text-gray-400">${esc(formattedTime)}</span>
+                  <span class="text-gray-600 text-[10px] ml-1">${esc(formattedDate)}</span>
+                </div>
+              </div>
+
+              <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-gray-400">
+                <span class="text-gray-300">${esc(ruleList)}</span>
+                ${e.country ? `<span class="text-gray-500">·</span><span class="text-gray-400 font-mono">📍 ${esc(e.country)}</span>` : ''}
+                ${e.model ? `<span class="text-gray-500">·</span><span class="text-blue-400/90 font-mono">model ${esc(e.model)}</span>` : ''}
+              </div>
+
+              <div class="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-gray-500 font-mono">
+                <span class="rounded bg-white/[0.04] px-1.5 py-0.5 text-gray-300">Action: <strong class="text-white">${esc(e.action)}</strong></span>
+                ${e.ai ? `<span class="rounded bg-indigo-500/10 border border-indigo-500/20 px-1.5 py-0.5 text-indigo-300">AI: ${esc(e.ai.risk)} (${esc(e.ai.confidence)}% conf)</span>` : ''}
+              </div>
+            </div>`;
+        }).join('') : `
+          <div class="py-12 text-center">
+            <div class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.03] border border-white/[0.06] text-gray-500">
+              <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <p class="text-xs font-medium text-gray-400">No security events recorded yet</p>
+            <p class="text-[11px] text-gray-600 mt-0.5">Monitoring live traffic streams in real-time.</p>
+          </div>`;
+      }
+    }
+
+    async function decide(id, decision) {
+      try {
+        const headers = { 'Content-Type': 'application/json' };
+        if (adminKey) headers['x-arix-security-key'] = adminKey;
+
+        const res = await fetch('/api/chat?security=1', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ action: 'decision', id, decision })
+        });
+        showToast(`Event marked as ${decision.toUpperCase()}`);
+        load(true);
+      } catch (err) {
+        showToast('Error recording decision', true);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      // Direct load on page open without requiring password
+      load();
+      // Regular 5s polling
+      setInterval(() => {
+        load(true);
+      }, 5000);
+    });
+  </script>
+</body>
+</html>
