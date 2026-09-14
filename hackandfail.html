@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>hackifyoucan.html — Hyper-Aggressive Safe Security Workbench</title>
+  <meta name="description" content="Manual-start, same-origin, non-destructive web application security workbench with advanced safe probes, custom attack definitions, and local file analysis.">
+  <style>
+    :root{
+      color-scheme:dark;--bg:#080d1b;--panel:#11182f;--panel2:#0d1430;--text:#eef2ff;
+      --muted:#a9b5d1;--line:#29365e;--ok:#3fe09a;--warn:#ffd166;--bad:#ff6b6b;
+      --info:#69b5ff;--accent:#9c8cff;--accent2:#6f60e8;--shadow:rgba(0,0,0,.25)
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#070c18,#0b1122 55%,#070c18);color:var(--text)}
+    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    button,input,select,textarea{font:inherit}
+    button{border:0;border-radius:10px;padding:10px 13px;background:var(--accent2);color:#fff;font-weight:800;cursor:pointer}
+    button:hover{filter:brightness(1.08)}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    button.secondary{background:#1a2548}
+    button.warn{background:#6d5521}
+    button.danger{background:#782f35}
+    button.ghost{background:transparent;border:1px solid var(--line)}
+    input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a1027;color:var(--text);padding:10px;outline:none}
+    input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+    textarea{min-height:100px;resize:vertical;font-family:monospace;font-size:12px;}
+    label{display:block;font-size:12px;color:var(--muted);margin:11px 0 6px}
+    header{position:sticky;top:0;z-index:20;background:rgba(7,12,24,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+    .wrap{max-width:1500px;margin:0 auto;padding:0 18px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:17px 0;flex-wrap:wrap}
+    .brand h1{margin:0;font-size:26px}
+    .brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
+    .state{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 11px;font-size:12px;color:var(--muted);background:#101735}
+    .dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+    .tabs{display:flex;gap:6px;overflow:auto;padding-bottom:12px}
+    .tab{white-space:nowrap;padding:9px 12px;border-radius:10px;background:#121a37;color:var(--muted);border:1px solid var(--line);cursor:pointer;font-size:12px;font-weight:800}
+    .tab.active{background:#241f55;color:#fff;border-color:#5549a8}
+    main{padding:18px 0 45px}
+    .layout{display:grid;grid-template-columns:360px 1fr;gap:18px}
+    @media(max-width:1000px){.layout{grid-template-columns:1fr}}
+    .panel{background:rgba(17,24,47,.9);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 12px 34px var(--shadow)}
+    .panel h2{font-size:16px;margin:0 0 12px}
+    .panel h3{font-size:13px;margin:15px 0 7px}
+    .small{font-size:12px;color:var(--muted);line-height:1.55}
+    .notice{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#151d3c;color:#d6ddf5;font-size:12px;line-height:1.55}
+    .notice.danger{background:#281419;border-color:#67343a}
+    .notice.ok{background:#10271f;border-color:#235f49}
+    .section{margin-top:15px}
+    .row{display:flex;gap:8px;flex-wrap:wrap}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+    @media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+    .metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+    @media(max-width:1100px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    @media(max-width:650px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+    .metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px}
+    .metric b{font-size:20px;display:block}
+    .metric span{font-size:10px;color:var(--muted)}
+    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .badge{display:inline-flex;padding:5px 8px;border:1px solid var(--line);border-radius:999px;font-size:10px;color:var(--muted);background:#101635}
+    .check{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(41,54,94,.65)}
+    .check:last-child{border-bottom:0}
+    .check-title{font-size:12px;font-weight:800}
+    .check-desc{font-size:11px;color:var(--muted);margin-top:3px;word-break:break-word}
+    .status{font-size:10px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+    .status.ok{color:var(--ok);background:#0d2b22;border-color:#225f49}
+    .status.warn{color:var(--warn);background:#302811;border-color:#6d5a26}
+    .status.bad{color:var(--bad);background:#301518;border-color:#6c3037}
+    .status.info{color:var(--info);background:#10253e;border-color:#2b5c88}
+    .status.na{color:#bcc5dd;background:#191f35}
+    .finding{border:1px solid var(--line);border-left:4px solid var(--info);border-radius:11px;padding:11px;margin:8px 0;background:#0e1533}
+    .finding.high,.finding.medium{border-left-color:var(--bad)}
+    .finding.low{border-left-color:var(--warn)}
+    .finding.info{border-left-color:var(--info)}
+    .finding .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+    .sev{font-size:9px;letter-spacing:.11em;text-transform:uppercase}
+    pre,.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+    pre{white-space:pre-wrap;word-break:break-word}
+    .log{height:290px;overflow:auto;background:#070c18;border:1px solid var(--line);border-radius:12px;padding:10px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
+    table{width:100%;border-collapse:collapse;font-size:11px}
+    th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
+    th{color:var(--muted);font-weight:700}
+    code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#dfe4ff;background:#151d3c;padding:2px 4px;border-radius:4px;}
+    details{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px}
+    summary{cursor:pointer;font-size:11px}
+    .tabpanel{display:none}.tabpanel.active{display:block}
+    .progress{height:8px;background:#0a1024;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+    .progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--info));transition:width .15s}
+    .toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);cursor:pointer;}
+    .toggle input{width:auto;cursor:pointer;}
+    .pillrow{display:flex;flex-wrap:wrap;gap:6px}
+    .filelist{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}
+    .fileitem{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(41,54,94,.65)}
+    .fileitem:last-child{border-bottom:0}
+    footer{color:var(--muted);font-size:11px;line-height:1.6;padding-bottom:30px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <h1>hackifyoucan.html</h1>
+        <p>Hyper-Aggressive Safe Security Workbench — manual start, same-origin by default, non-destructive.</p>
+      </div>
+      <div class="state"><span class="dot" id="dot"></span><span id="stateText">Idle — no network activity has started</span></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="safe">Safe Hack</button>
+      <button class="tab" data-tab="customHttp">Custom HTTP Tests</button>
+      <button class="tab" data-tab="probeBuilder">Probe Builder</button>
+      <button class="tab" data-tab="files">Files</button>
+      <button class="tab" data-tab="network">Network &amp; Headers</button>
+      <button class="tab" data-tab="report">Report</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <aside>
+      <section class="panel tabpanel active" data-panel="overview">
+        <h2>Scope &amp; guardrails</h2>
+        <div class="notice danger">
+          Only test systems you own or are authorized to assess. This file does not brute-force passwords, steal credentials, delete/modify production data, upload files automatically, exploit third-party targets, or run destructive payloads.
+        </div>
+
+        <label>Base origin</label>
+        <input id="origin" readonly>
+
+        <label>Additional same-origin paths</label>
+        <textarea id="paths" placeholder="/api/chat&#10;/api/research&#10;/api/auth"></textarea>
+        <div class="small">One path per line. Full off-origin URLs are rejected.</div>
+
+        <label>Discovery paths</label>
+        <textarea id="discovery" placeholder="/robots.txt&#10;/sitemap.xml&#10;/.well-known/security.txt"></textarea>
+
+        <div class="grid2 section">
+          <div>
+            <label>Concurrency</label>
+            <select id="concurrency">
+              <option value="1">1 — gentle</option><option value="2" selected>2 — balanced</option><option value="3">3 — stronger</option><option value="4">4 — aggressive (still rate-limited)</option>
+            </select>
+          </div>
+          <div>
+            <label>Timeout (ms)</label>
+            <input id="timeout" type="number" min="2000" max="30000" step="1000" value="12000">
+          </div>
+        </div>
+
+        <label class="toggle section"><input id="allowPost" type="checkbox"> Enable optional POST probes that must be explicitly approved per test</label>
+        <div class="small">POST support is disabled by default because a browser tool cannot know whether an endpoint mutates data.</div>
+
+        <div class="row section">
+          <button id="start">Start Hyper-Aggressive Safe Test</button>
+          <button id="stop" class="danger" disabled>Stop</button>
+          <button id="clear" class="secondary">Clear</button>
+        </div>
+
+        <div class="row section">
+          <button id="exportJson" class="secondary" disabled>Export JSON</button>
+          <button id="exportHtml" class="secondary" disabled>Export HTML</button>
+        </div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="safe">
+        <h2>Safe hack controls</h2>
+        <div class="small">These probes actively interact with your current origin but are designed to avoid state-changing operations.</div>
+        <h3>Probe intensity</h3>
+        <select id="intensity">
+          <option value="standard">Standard — headers, endpoints, DOM, CORS</option>
+          <option value="strong">Strong — add reflection, normalization, cache and parameter probes</option>
+          <option value="max">Maximum safe — all non-destructive probes plus larger read-only discovery</option>
+          <option value="hyper">Hyper-Aggressive — enables all advanced non-destructive probes</option>
+        </select>
+        <h3>Probe categories</h3>
+        <div class="pillrow">
+          <label class="toggle"><input type="checkbox" class="cat" value="surface" checked> Surface</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="headers" checked> Headers</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="cors" checked> CORS</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="errors" checked> Error leakage</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="reflection" checked> Reflection</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="normalization" checked> Path normalization</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="cache" checked> Cache behavior</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="dom" checked> DOM/XSS surface</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="storage" checked> Browser storage</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="files" checked> Local file static scan</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="paramFuzz"> Param Fuzzing</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="advHeaders"> Adv. Headers</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="sriChecks"> SRI Checks</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="contentTypeProbe"> Content-Type Probe</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="errorFingerprint"> Error Fingerprint</label>
+        </div>
+        <div class="notice section">
+          “Hyper-Aggressive” does not mean exploit execution. It means the most active, thorough, and non-destructive testing this frontend can perform without pretending it can safely determine whether an arbitrary request is mutating.
+        </div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="customHttp">
+        <h2>Add a safe custom HTTP test</h2>
+        <div class="small">Custom tests are saved only in this page unless you export them. Off-origin targets are rejected. Use GET/HEAD/OPTIONS by default.</div>
+        <label>Name</label>
+        <input id="customName" placeholder="Example: verify public cache policy">
+        <label>Method</label>
+        <select id="customMethod"><option>GET</option><option>HEAD</option><option>OPTIONS</option><option>POST</option></select>
+        <label>Path</label>
+        <input id="customPath" placeholder="/api/your-endpoint?test=1">
+        <label>Header JSON (optional)</label>
+        <textarea id="customHeaders" placeholder="{&quot;X-Security-Test&quot;:&quot;my-safe-check&quot;}"></textarea>
+        <label>Body (POST only, optional)</label>
+        <textarea id="customBody" placeholder="{&quot;probe&quot;:&quot;safe-test&quot;}"></textarea>
+        <label>Expected safe behavior</label>
+        <textarea id="customExpected" placeholder="Explain what status/header/body behavior you expect. This is guidance for the report, not proof."></textarea>
+        <label class="toggle"><input id="customManualApproval" type="checkbox"> I have checked this test and manually approve it</label>
+        <div class="row section">
+          <button id="addCustom">Add test</button>
+          <button id="runCustoms" class="secondary">Run custom tests</button>
+          <button id="clearCustoms" class="secondary">Clear custom tests</button>
+        </div>
+        <div class="section" id="customList"></div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="probeBuilder">
+        <h2>Advanced Probe Builder</h2>
+        <div class="small">Define custom, hyper-aggressive (but safe) probes to run against discovered endpoints. These are saved only in this page unless you export them.</div>
+
+        <h3>Custom Regex Scanners (Response Body)</h3>
+        <label>Scanner Name</label><input id="regexScannerName" placeholder="e.g., Internal ID Leak">
+        <label>Regex Pattern (JavaScript format)</label><input id="regexScannerPattern" placeholder="e.g., /internal_id=\d+/i">
+        <label>Severity</label><select id="regexScannerSeverity"><option>INFO</option><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select>
+        <label>Description</label><textarea id="regexScannerDescription" placeholder="What does this pattern indicate?"></textarea>
+        <div class="row section"><button id="addRegexScanner">Add Regex Scanner</button><button id="clearRegexScanners" class="secondary">Clear Scanners</button></div>
+        <div class="section" id="regexScannerList"></div>
+
+        <h3 class="section">Custom Header Injection Probes</h3>
+        <label>Probe Name</label><input id="headerProbeName" placeholder="e.g., X-Forwarded-Host Bypass">
+        <label>Header Name</label><input id="headerProbeHeaderName" placeholder="e.g., X-Forwarded-Host">
+        <label>Header Value</label><input id="headerProbeHeaderValue" placeholder="e.g., evil.com">
+        <label>Apply to Path Regex (optional)</label><input id="headerProbePathRegex" placeholder="e.g., /api/.*">
+        <div class="row section"><button id="addHeaderProbe">Add Header Probe</button><button id="clearHeaderProbes" class="secondary">Clear Probes</button></div>
+        <div class="section" id="headerProbeList"></div>
+
+        <h3 class="section">URL Parameter Fuzzers</h3>
+        <label>Fuzzer Name</label><input id="paramFuzzerName" placeholder="e.g., XSS Payload Test">
+        <label>Parameter Name (e.g., 'id', 'q')</label><input id="paramFuzzerParamName" placeholder="e.g., id">
+        <label>Payloads (one per line)</label><textarea id="paramFuzzerPayloads" placeholder="<script>alert(1)</script>&#10;{{7*7}}&#10;/etc/passwd"></textarea>
+        <label>Apply to Path Regex (optional)</label><input id="paramFuzzerPathRegex" placeholder="e.g., /search.*">
+        <div class="row section"><button id="addParamFuzzer">Add Param Fuzzer</button><button id="clearParamFuzzers" class="secondary">Clear Fuzzers</button></div>
+        <div class="section" id="paramFuzzerList"></div>
+
+        <div class="row section">
+          <button id="runProbeBuilderProbes" class="warn">Run All Custom Probes</button>
+        </div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="files">
+        <h2>Local files</h2>
+        <div class="small">Choose source files from your repository. Files are read locally in your browser and are never uploaded by this tool.</div>
+        <label>Repository/source files</label>
+        <input id="filePicker" type="file" multiple accept=".html,.htm,.js,.mjs,.cjs,.ts,.tsx,.jsx,.json,.yaml,.yml,.env,.txt,.md,.css,.sql,.py,.java,.go,.php,.rb,.rs">
+        <div class="row section">
+          <button id="scanFiles">Scan selected files</button>
+          <button id="clearFiles" class="secondary">Clear file results</button>
+        </div>
+        <div class="small section">The static scan looks for common secret patterns, unsafe sinks, dynamic code execution, risky URL handling, insecure cookie/storage usage, and suspicious server-side string construction.</div>
+        <div class="section" id="fileResults"></div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="network">
+        <h2>Network &amp; headers</h2>
+        <div class="small">Browser-visible observations from safe requests. HttpOnly cookies and server-only behavior cannot be fully inspected from JavaScript.</div>
+        <label>Extra endpoints</label>
+        <textarea id="networkPaths" placeholder="/api/chat&#10;/api/research"></textarea>
+        <div class="row section">
+          <button id="probeNetwork">Probe endpoints</button>
+          <button id="probeHeaders" class="secondary">Recheck current page headers</button>
+        </div>
+      </section>
+    </aside>
+
+    <section>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h2 id="tabHeading">Overview</h2>
+            <div class="small" id="scope">No test started.</div>
+          </div>
+          <div class="status info" id="overall">IDLE</div>
+        </div>
+        <div class="progress section"><div id="progressBar"></div></div>
+        <div class="metrics section">
+          <div class="metric"><b id="nChecks">0</b><span>checks</span></div>
+          <div class="metric"><b id="nPass">0</b><span>pass</span></div>
+          <div class="metric"><b id="nWarn">0</b><span>warnings</span></div>
+          <div class="metric"><b id="nFail">0</b><span>confirmed concerns</span></div>
+          <div class="metric"><b id="nNA">0</b><span>not testable here</span></div>
+          <div class="metric"><b id="nFind">0</b><span>findings</span></div>
+        </div>
+      </section>
+
+      <section class="panel section tabpanel active" data-panel="overview">
+        <h2>What this tool can and cannot prove</h2>
+        <div class="grid2">
+          <div class="notice ok">
+            <b>Can test actively:</b><br>
+            same-origin status/method behavior; headers; CORS observations; safe reflection probes; error disclosure; path normalization differences; cache headers; DOM sinks; browser storage; local source files; advanced header/param fuzzing; content-type negotiation; SRI checks.
+          </div>
+          <div class="notice danger">
+            <b>Cannot prove from this page alone:</b><br>
+            SQL injection exploitability; server-side SSRF; database isolation; cloud IAM; authorization correctness across accounts; secret rotation; backend RCE; server-side rate-limit correctness; hidden routes not discoverable from your supplied sources.
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <h2>Findings</h2>
+        <div id="findings"><div class="notice ok">No findings yet. Start a test to begin.</div></div>
+      </section>
+
+      <section class="panel section">
+        <h2>Security checks</h2>
+        <div id="checks"></div>
+      </section>
+
+      <section class="panel section">
+        <h2>Endpoint observations</h2>
+        <div style="overflow-x:auto;">
+          <div id="endpointTable" class="small">No endpoint observations yet.</div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <h2>Activity log</h2>
+        <div class="log" id="log"></div>
+      </section>
+
+      <section class="panel section tabpanel" data-panel="report">
+        <h2>Machine-readable report</h2>
+        <textarea id="json" spellcheck="false" style="min-height:340px"></textarea>
+      </section>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap">
+  Safety model: manual start; same-origin scope; bounded concurrency; timeout; no credential guessing; no destructive verbs by default; no automatic uploads; no automatic external scanning. A PASS means no issue was confirmed by this browser-side test, not that the backend is vulnerability-free.
+</footer>
+
+<script>
+(() => {
+'use strict';
+
+const S = {
+  running:false, stop:false, checks:[], findings:[], endpoints:[], errors:[],
+  customHttp:[], fileFindings:[], discovered:[], startedAt:null, endedAt:null,
+  customRegexScanners: [], customHeaderProbes: [], customParamFuzzers: []
+};
+const $ = id => document.getElementById(id);
+const iso = () => new Date().toISOString();
+const unique = a => [...new Set(a)];
+const text = (v,n=1800) => { try { const s=String(v??''); return s.length>n?s.slice(0,n)+'…':s; } catch{return '[unserializable]';} };
+const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lines = v => unique(String(v||'').split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean));
+const sameOrigin = raw => { try { const u=new URL(raw,location.origin); return u.origin===location.origin && u.protocol===location.protocol ? u:null; } catch{return null;} };
+
+function log(msg, level='INFO'){
+  const line=`[${new Date().toLocaleTimeString()}] [${level}] ${msg}`;
+  $('log').textContent += ($('log').textContent?'\n':'')+line;
+  $('log').scrollTop = $('log').scrollHeight;
+}
+function state(textValue,mode='idle'){
+  $('stateText').textContent=textValue;
+  $('dot').style.background=mode==='run'?'var(--info)':mode==='ok'?'var(--ok)':mode==='bad'?'var(--bad)':'var(--warn)';
+}
+function check(name,status,details='',evidence={}){
+  const c={name,status,details,evidence,time:iso()}; S.checks.push(c); renderChecks(); metrics(); return c;
+}
+function find(severity,title,detail,evidence={}){
+  S.findings.push({severity,title,detail,evidence,time:iso()}); renderFindings(); metrics();
+}
+function metrics(){
+  $('nChecks').textContent=S.checks.length;
+  $('nPass').textContent=S.checks.filter(x=>x.status==='PASS').length;
+  $('nWarn').textContent=S.checks.filter(x=>x.status==='WARN').length;
+  $('nFail').textContent=S.checks.filter(x=>x.status==='FAIL').length;
+  $('nNA').textContent=S.checks.filter(x=>x.status==='N/A').length;
+  $('nFind').textContent=S.findings.length;
+  const o=$('overall');
+  if(S.checks.some(x=>x.status==='FAIL')){o.textContent='CONFIRMED CONCERN';o.className='status bad'}
+  else if(S.checks.some(x=>x.status==='WARN')){o.textContent='WARNINGS';o.className='status warn'}
+  else if(S.checks.length){o.textContent='PASS';o.className='status ok'}
+  else{o.textContent='IDLE';o.className='status info'}
+}
+function renderFindings(){
+  const h=$('findings');
+  if(!S.findings.length){h.innerHTML='<div class="notice ok">No findings recorded.</div>';return}
+  h.innerHTML=S.findings.map(f=>{
+    const cls=(f.severity==='HIGH'||f.severity==='MEDIUM')?'high':f.severity==='LOW'?'low':'info';
+    return `<div class="finding ${cls}"><div class="head"><b>${esc(f.title)}</b><span class="sev">${esc(f.severity)}</span></div><div class="small">${esc(f.detail)}</div>${Object.keys(f.evidence||{}).length?`<details><summary>Evidence</summary><pre>${esc(JSON.stringify(f.evidence,null,2))}</pre></details>`:''}</div>`
+  }).join('');
+}
+function renderChecks(){
+  $('checks').innerHTML=S.checks.map(c=>`<div class="check"><div><div class="check-title">${esc(c.name)}</div><div class="check-desc">${esc(c.details)}</div></div><span class="status ${c.status==='PASS'?'ok':c.status==='FAIL'?'bad':c.status==='WARN'?'warn': 'na'}">${esc(c.status)}</span></div>`).join('');
+}
+function renderEndpoints(){
+  const h=$('endpointTable');
+  if(!S.endpoints.length){h.textContent='No endpoint observations yet.';return}
+  h.innerHTML=`<table><thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Type</th><th>Cache</th><th>Note</th></tr></thead><tbody>${
+    S.endpoints.map(e=>`<tr><td><code>${esc(e.method)}</code></td><td><code>${esc(e.path)}</code></td><td>${e.status??'—'}</td><td>${esc(e.type||'—')}</td><td>${esc(e.cache||'—')}</td><td>${esc(e.note||'')}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+function parseJsonSafe(s,fallback={}){
+  try{const x=JSON.parse(s);return x&&typeof x==='object'&&!Array.isArray(x)?x:fallback}catch{return fallback}
+}
+
+async function req(url,opts={}){
+  if(S.stop) throw new Error('STOP_REQUESTED');
+  const ms=Math.max(2000,Math.min(30000,Number($('timeout').value)||12000));
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),ms);
+  try{
+    const h=new Headers(opts.headers||{}); h.set('Cache-Control','no-cache');
+    for (const p of S.customHeaderProbes) {
+      if (!p.pathRegex || new RegExp(p.pathRegex).test(new URL(url).pathname)) {
+        h.set(p.headerName, p.headerValue);
+      }
+    }
+    const r=await fetch(url,{...opts,headers:h,cache:'no-store',redirect:'manual',referrerPolicy:'no-referrer',credentials:'same-origin',signal:c.signal});
+    const body=await r.text().catch(()=> '');
+    return {r,body};
+  }finally{clearTimeout(t)}
+}
+
+function inspectDom(cats){
+  log('Inspecting DOM, storage, scripts, forms and client-side surfaces.');
+  const insecure=[...document.querySelectorAll('script[src],img[src],iframe[src],link[href],a[href],form[action]')].map(e=>e.src||e.href||e.action).filter(Boolean).filter(u=>/^http:\/\//i.test(u));
+  const inlineHandlers=[...document.querySelectorAll('[onclick],[onerror],[onload],[onmouseover],[onfocus],[oninput],[onsubmit]')];
+  const scripts=[...document.scripts].map(s=>s.src).filter(Boolean);
+  const third=scripts.filter(u=>{try{return new URL(u).origin!==location.origin}catch{return false}});
+  const ls=(()=>{try{return Object.keys(localStorage)}catch{return[]}})();
+  const ss=(()=>{try{return Object.keys(sessionStorage)}catch{return[]}})();
+  const suspicious=unique([...ls,...ss].filter(k=>/(token|secret|password|api.?key|auth|cookie|session|jwt)/i.test(k)));
+  const forms=[...document.forms].map(f=>({action:f.action||location.href,method:(f.method||'GET').toUpperCase()}));
+  const off=forms.filter(f=>{try{return new URL(f.action,location.href).origin!==location.origin}catch{return false}});
+  const metaCsp=document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content||'';
+  check('HTTPS / secure context',location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'?'PASS':'FAIL',location.protocol==='https:'?'Page is served over HTTPS.':'Production page is not HTTPS.',{protocol:location.protocol});
+  if(location.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(location.hostname)) find('HIGH','HTTP deployment detected','Sensitive sessions should not be handled over plain HTTP.',{url:location.href});
+  check('Mixed-content references',insecure.length?'WARN':'PASS',insecure.length?`${insecure.length} HTTP reference(s) found.`:'No obvious HTTP references.',{references:insecure.slice(0,50)});
+  if(insecure.length)find('MEDIUM','Mixed-content references','Current DOM contains HTTP resource/action references.',{references:insecure.slice(0,50)});
+  check('Inline JavaScript handlers',inlineHandlers.length?'WARN':'PASS',inlineHandlers.length?`${inlineHandlers.length} inline event-handler attributes.`:'No inline handlers detected.',{count:inlineHandlers.length});
+  if(inlineHandlers.length)find('LOW','Inline event handlers detected','Review inline handlers if you want a strict CSP.',{count:inlineHandlers.length});
+  check('CSP meta element',metaCsp?'PASS':'WARN',metaCsp?'A CSP meta element exists.':'No CSP meta element; a server header is preferred.',{present:!!metaCsp});
+  check('Third-party scripts',third.length?'WARN':'PASS',third.length?`${third.length} third-party script(s) observed.`:'No third-party scripts observed.',{scripts:third});
+  if(third.length)find('LOW','Third-party JavaScript detected','Review trust, integrity and CSP for every external script.',{scripts:third});
+  check('Off-origin forms',off.length?'WARN':'PASS',off.length?`${off.length} form action(s) leave the origin.`:'No off-origin forms observed.',{forms});
+  check('Client storage key names',suspicious.length?'WARN':'PASS',suspicious.length?`Potentially sensitive key names: ${suspicious.join(', ')}`:'No suspicious secret-looking key names.',{localStorage:ls,sessionStorage:ss});
+  if(suspicious.length)find('MEDIUM','Potential sensitive client storage','Review the actual values. This tool intentionally does not print them.',{keys:suspicious});
+  const readable=document.cookie.split(';').map(x=>x.trim().split('=')[0]).filter(Boolean);
+  check('Browser-visible cookies',readable.length?'WARN':'PASS',readable.length?`${readable.length} cookie name(s) are readable by JS.`:'No JavaScript-readable cookies.',{names:readable});
+  if(readable.length)find('LOW','JavaScript-readable cookies exist','Review whether any auth/session cookie should be HttpOnly.',{names:readable});
+
+  if (cats.has('sriChecks')) {
+    const externalResources = [...document.querySelectorAll('script[src][integrity], link[rel="stylesheet"][href][integrity]')];
+    const missingSRI = [...document.querySelectorAll('script[src]:not([integrity]), link[rel="stylesheet"][href]:not([integrity])')].filter(el => {
+      try { return new URL(el.src || el.href).origin !== location.origin; } catch { return false; }
+    });
+    check('Subresource Integrity (SRI)', missingSRI.length ? 'WARN' : 'PASS',
+      missingSRI.length ? `${missingSRI.length} external resource(s) are missing SRI.` : 'All external scripts/stylesheets have SRI.',
+      {missingSRI: missingSRI.map(el => el.src || el.href).slice(0, 50)});
+    if (missingSRI.length) find('LOW', 'Missing Subresource Integrity', 'External scripts or stylesheets are loaded without SRI.', {resources: missingSRI.map(el => el.src || el.href).slice(0, 50)});
+  }
+}
+
+function headerCheck(r){
+  const h=r.headers, get=n=>h.get(n);
+  const xfo=get('x-frame-options'),csp=get('content-security-policy'),hsts=get('strict-transport-security');
+  const xcto=get('x-content-type-options'),ref=get('referrer-policy'),perm=get('permissions-policy');
+  const coop=get('cross-origin-opener-policy'),corp=get('cross-origin-resource-policy');
+  check('Frame protection',xfo||(csp&&/frame-ancestors/i.test(csp))?'PASS':'WARN',xfo?`X-Frame-Options: ${xfo}`:csp&&/frame-ancestors/i.test(csp)?'CSP frame-ancestors observed.':'No frame protection header observed.',{xfo,frameAncestors:csp?.match(/frame-ancestors[^;]*/i)?.[0]||null});
+  if(!xfo&&!(csp&&/frame-ancestors/i.test(csp)))find('MEDIUM','Clickjacking defense not observed','Add X-Frame-Options or an appropriate CSP frame-ancestors directive.',{url:r.url});
+  check('Content-Security-Policy',csp?'PASS':'WARN',csp?'CSP header present.':'CSP header not observed.',{csp});
+  if(!csp)find('MEDIUM','Content-Security-Policy missing','A strong CSP can limit client-side injection impact.',{url:r.url});
+  check('HSTS',(location.protocol!=='https:'||hsts)?'PASS':'WARN',hsts?`HSTS: ${hsts}`:'HSTS not observed.',{hsts});
+  check('X-Content-Type-Options',xcto?.toLowerCase()==='nosniff'?'PASS':'WARN',xcto||'nosniff not observed.',{xcto});
+  if(xcto?.toLowerCase()!=='nosniff')find('LOW','X-Content-Type-Options not observed','Consider X-Content-Type-Options: nosniff.',{url:r.url});
+  check('Referrer-Policy',ref?'PASS':'WARN',ref||'Referrer-Policy not observed.',{referrerPolicy:ref});
+  check('Permissions-Policy',perm?'PASS':'WARN',perm||'Permissions-Policy not observed.',{permissionsPolicy:perm});
+  check('COOP',coop?'PASS':'WARN',coop||'Cross-Origin-Opener-Policy not observed.',{coop});
+  check('CORP',corp?'PASS':'WARN',corp||'Cross-Origin-Resource-Policy not observed.',{corp});
+  return {xfo,csp,hsts,xcto,ref,perm,coop,corp};
+}
+
+function addEndpoint(method,u,r,note=''){
+  S.endpoints.push({method,path:u.pathname+u.search,status:r.status,type:r.headers.get('content-type')||'',cache:r.headers.get('cache-control')||'',note});
+  renderEndpoints();
+}
+
+function bodySignals(body, cats){
+  const p=[
+    [/Traceback \(most recent call last\)/i,'Python traceback'],
+    [/stack trace/i,'stack trace'],
+    [/SQLSTATE\[/i,'SQLSTATE'],
+    [/SequelizeDatabaseError/i,'Sequelize error'],
+    [/PrismaClient/i,'Prisma diagnostic'],
+    [/MongoServerError/i,'MongoDB diagnostic'],
+    [/FirebaseError/i,'Firebase diagnostic'],
+    [/node_modules\//i,'node_modules path'],
+    [/Authorization:\s*Bearer\s+[A-Za-z0-9._-]{20,}/i,'Bearer token-like string'],
+    [/(?:api[_ -]?key|secret|password)\s*[:=]\s*["'][^"']{10,}/i,'credential-like assignment'],
+    ...(cats.has('errorFingerprint') ? [
+      [/Django debug page/i, 'Django debug page signature'],
+      [/Rails error page/i, 'Ruby on Rails error signature'],
+      [/Spring Boot error/i, 'Spring Boot error signature'],
+      [/Fatal error:/i, 'PHP Fatal error'],
+      [/java\.lang\.Exception/i, 'Java exception trace'],
+      [/Error: ENOENT/i, 'File not found error (Node.js)']
+    ] : [])
+  ];
+  const matchedSignals = p.filter(([rx])=>rx.test(body)).map(([,x])=>x);
+
+  for (const scanner of S.customRegexScanners) {
+    try {
+      if (new RegExp(scanner.regexPattern).test(body)) {
+        matchedSignals.push(`Custom: ${scanner.name}`);
+        find(scanner.severity, `Custom Regex Match: ${scanner.name}`, scanner.description, {pattern: scanner.regexPattern});
+      }
+    } catch (e) {
+      log(`Error running custom regex scanner '${scanner.name}': ${e.message}`, 'ERROR');
+    }
+  }
+
+  return matchedSignals;
+}
+
+async function probePath(raw, cats){
+  const u=sameOrigin(raw); if(!u){log(`Rejected invalid/off-origin path: ${raw}`,'WARN');return}
+  if(S.stop)return;
+  log(`GET ${u.pathname}${u.search}`);
+  try{
+    const {r,body}=await req(u.href,{method:'GET'});
+    addEndpoint('GET',u,r,r.status>=500?'5xx response':'');
+    if(cats.has('headers')&&u.pathname==='/')headerCheck(r);
+    const sig=bodySignals(body, cats);
+    check(`Response leak scan ${u.pathname}`,sig.length?'FAIL':'PASS',sig.length?`High-signal debug/secret pattern(s): ${sig.join(', ')}`:'No high-signal debug/credential pattern detected.',{signals:sig});
+    if(sig.length)find('MEDIUM','Potential debug/credential disclosure','A safe GET response contains high-signal diagnostic/credential text.',{path:u.pathname,signals:sig});
+    if(r.status>=500){check(`Server error ${u.pathname}`,'WARN',`HTTP ${r.status} on a safe GET.`,{status:r.status});find('MEDIUM','Server returned 5xx','A safe GET triggered a server error.',{path:u.pathname,status:r.status})}
+    if(cats.has('cors')&&u.pathname.startsWith('/api/')) await probeCors(u);
+    if(cats.has('normalization')) await probeNormalization(u);
+    if(cats.has('cache')) await probeCache(u,r);
+    if(cats.has('reflection')) await probeReflection(u);
+    if(cats.has('paramFuzz')) await probeParamFuzzing(u);
+    if(cats.has('contentTypeProbe')) await probeContentTypeNegotiation(u);
+  }catch(e){
+    if(e.message==='STOP_REQUESTED')return;
+    check(`GET ${u.pathname}`,'N/A',`Browser could not complete the request: ${text(e.message||e)}`,{});
+  }
+}
+
+async function probeCors(u){
+  try{
+    const originProbe='https://security-test.invalid';
+    const preflightHeaders = {
+      'Origin': originProbe,
+      'Access-Control-Request-Method': 'POST',
+      'Access-Control-Request-Headers': 'X-Custom-Header,Content-Type',
+      'X-Arix-Security-Test':'cors-preflight-observation'
+    };
+    const {r: preflightR} = await req(u.href, {method: 'OPTIONS', headers: preflightHeaders});
+    const acaoPreflight = preflightR.headers.get('access-control-allow-origin');
+    const acamPreflight = preflightR.headers.get('access-control-allow-methods');
+    
+    addEndpoint('OPTIONS', u, preflightR, `CORS Preflight: ACAO=${acaoPreflight||'none'}`);
+
+    if (acaoPreflight === '*' && acamPreflight?.includes('POST')) {
+      check('CORS Preflight allows * and POST', 'FAIL', 'CORS preflight allows any origin and POST method.', {path: u.pathname});
+      find('HIGH', 'CORS Preflight Wildcard & POST', 'The server CORS preflight response allows * and POST.', {path: u.pathname, acao: acaoPreflight});
+    }
+
+    const {r: getR} = await req(u.href, {
+      method: 'GET',
+      headers: {'Origin': originProbe, 'X-Arix-Security-Test': 'cors-get-observation'}
+    });
+    const acaoGet = getR.headers.get('access-control-allow-origin');
+    const accGet = getR.headers.get('access-control-allow-credentials');
+
+    addEndpoint('GET', u, getR, `CORS GET: ACAO=${acaoGet||'none'}`);
+
+    if (acaoGet === '*') {
+      check('CORS GET allows * origin', 'FAIL', 'CORS GET response allows any origin.', {path: u.pathname});
+    }
+    if (accGet === 'true') {
+      if (acaoGet === '*') {
+        find('HIGH', 'CORS GET Wildcard + Credentials', 'Allows credentials with wildcard origin.', {path: u.pathname});
+      } else {
+        check('CORS GET allows credentials', 'WARN', 'CORS GET allows credentials.', {path: u.pathname});
+      }
+    }
+  } catch (e) {
+    if (e.message === 'STOP_REQUESTED') return;
+    check(`CORS Probe ${u.pathname}`, 'N/A', `CORS probe failed: ${text(e.message||e)}`, {});
+  }
+}
+
+async function probeNormalization(u) {
+  try {
+    const originalPath = u.pathname;
+    const testPaths = [
+      originalPath + '/../',
+      originalPath.replace(/\/[^/]+$/, '/%2e%2e%2f'),
+      originalPath.replace(/\/[^/]+$/, '/./'),
+      originalPath.replace(/\/[^/]+$/, '/;'),
+      originalPath.replace(/\/[^/]+$/, '//'),
+      originalPath.replace(/\/[^/]+$/, '/%2f')
+    ].filter(p => p !== originalPath);
+
+    const originalResponse = await req(u.href, {method: 'HEAD'});
+    const originalStatus = originalResponse.r.status;
+
+    for (const testPath of testPaths) {
+      if (S.stop) return;
+      const testUrl = new URL(testPath + u.search, u.origin).href;
+      const testResponse = await req(testUrl, {method: 'HEAD'});
+      const testStatus = testResponse.r.status;
+
+      if (testStatus === originalStatus && originalStatus !== 404) {
+        check(`Path Normalization: ${testPath}`, 'WARN', `Resolves to same status as original.`, {testPath, originalStatus, testStatus});
+      }
+    }
+  } catch (e) {
+    if (e.message === 'STOP_REQUESTED') return;
+    check(`Path Normalization Probe ${u.pathname}`, 'N/A', `Normalization probe failed.`, {});
+  }
+}
+
+async function probeCache(u, originalResponse) {
+  try {
+    const cacheControl = originalResponse.r.headers.get('cache-control') || '';
+    if (cacheControl.includes('public') || cacheControl.includes('max-age')) {
+      check(`Cache-Control for ${u.pathname}`, 'WARN', `Response is publicly cacheable: ${cacheControl}`, {});
+    }
+    const vary = originalResponse.r.headers.get('vary');
+    if (!vary && (cacheControl.includes('public') || cacheControl.includes('max-age'))) {
+      check(`Vary header for ${u.pathname}`, 'WARN', `No Vary header for cacheable content.`, {});
+    }
+  } catch (e) {
+    if (e.message === 'STOP_REQUESTED') return;
+  }
+}
+
+async function probeReflection(u) {
+  try {
+    const reflectionPayloads = ['<script>alert(1)</script>', '">{{7*7}}', 'javascript:alert(3)'];
+    const params = new URLSearchParams(u.search);
+    if (!params.toString()) return;
+
+    for (const [key, value] of params.entries()) {
+      for (const payload of reflectionPayloads) {
+        if (S.stop) return;
+        const testParams = new URLSearchParams(params);
+        testParams.set(key, payload);
+        const testUrl = new URL(u.pathname + '?' + testParams.toString(), u.origin).href;
+        
+        const {body} = await req(testUrl, {method: 'GET'});
+        if (body.includes(payload)) {
+          check(`Reflection: param '${key}'`, 'FAIL', `Payload reflected in body.`, {path: u.pathname, param: key});
+          find('HIGH', 'Reflected Input Detected', `Payload was reflected unescaped for param '${key}'.`, {path: u.pathname, param: key});
+        }
+      }
+    }
+  } catch (e) {
+    if (e.message === 'STOP_REQUESTED') return;
+  }
+}
+
+async function probeParamFuzzing(u) {
+  try {
+    const params = new URLSearchParams(u.search);
+    if (!params.toString() && !S.customParamFuzzers.some(f => !f.paramName)) return;
+
+    for (const fuzzer of S.customParamFuzzers) {
+      if (fuzzer.pathRegex && !new RegExp(fuzzer.pathRegex).test(u.pathname)) continue;
+      
+      const targetParamNames = fuzzer.paramName ? [fuzzer.paramName] : [...params.keys()];
+      for (const paramName of unique(targetParamNames)) {
+        for (const payload of fuzzer.payloads) {
+          if (S.stop) return;
+          const testParams = new URLSearchParams(params);
+          testParams.set(paramName, payload);
+          const testUrl = new URL(u.pathname + '?' + testParams.toString(), u.origin).href;
+          
+          const {body} = await req(testUrl, {method: 'GET'});
+          const signals = bodySignals(body, new Set(['errorFingerprint']));
+          
+          if (body.includes(payload)) {
+            find('HIGH', `Param Fuzzing Reflection: ${fuzzer.name}`, `Payload reflected unescaped.`, {path: u.pathname, param: paramName});
+          } else if (signals.length) {
+            find('MEDIUM', `Param Fuzzing Error: ${fuzzer.name}`, `Payload triggered error signals.`, {path: u.pathname, signals});
+          }
+        }
+      }
+    }
+  } catch (e) {
+    if (e.message === 'STOP_REQUESTED') return;
+  }
+}
+
+async function probeContentTypeNegotiation(u) {
+  try {
+    const acceptHeaders = ['application/xml', 'text/html', 'text/plain'];
+    const originalResponse = await req(u.href, {method: 'GET', headers: {'Accept': 'application/json, */*'}});
+    
+    for (const accept of acceptHeaders) {
+      if (S.stop) return;
+      const {r, body} = await req(u.href, {method: 'GET', headers: {'Accept': accept}});
+      if (r.status !== originalResponse.r.status) {
+        check(`Content-Type Negotiation: ${accept}`, 'WARN', `Status changed from ${originalResponse.r.status} to ${r.status}.`, {path: u.pathname});
+      }
+    }
+  } catch (e) {
+    if (e.message === 'STOP_REQUESTED') return;
+  }
+}
+
+async function fileScan() {
+  S.fileFindings = [];
+  $('fileResults').innerHTML = '';
+  const files = $('filePicker').files;
+  if (files.length === 0) {
+    $('fileResults').innerHTML = '<div class="notice warn">No files selected.</div>';
+    return;
+  }
+  log(`Scanning ${files.length} local files...`);
+
+  const secretPatterns = [
+    { name: 'API Key (Generic)', regex: /(api_key|apikey|client_id|client_secret|access_token|secret_key|auth_token)\s*=\s*['"]([a-zA-Z0-9_-]{16,})['"]/gmi, severity: 'HIGH', description: 'Potential API key or secret exposed.' },
+    { name: 'AWS Access Key', regex: /(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16,}/g, severity: 'HIGH', description: 'Potential AWS Access Key ID.' },
+    { name: 'Google API Key', regex: /AIza[0-9A-Za-z-_]{35}/g, severity: 'HIGH', description: 'Potential Google API Key.' },
+    { name: 'GitHub Token', regex: /ghp_[0-9a-zA-Z]{36}/g, severity: 'HIGH', description: 'Potential GitHub Token.' },
+    { name: 'Password config', regex: /(password|passwd|pwd)\s*=\s*['"](.{6,})['"]/gmi, severity: 'HIGH', description: 'Password found.' },
+    { name: 'Eval Function', regex: /\beval\s*\(/g, severity: 'MEDIUM', description: 'Use of eval().' },
+    { name: 'Document.write', regex: /\bdocument\.write\s*\(/g, severity: 'MEDIUM', description: 'Use of document.write().' },
+    { name: 'Inner/OuterHTML', regex: /(\.innerHTML|\.outerHTML)\s*=\s*[^;]+/g, severity: 'LOW', description: 'Assignment to inner/outerHTML.' },
+    { name: 'Weak Crypto', regex: /(MD5|SHA1)\([^)]+\)/gmi, severity: 'LOW', description: 'Use of weak crypto functions.' }
+  ];
+
+  for (const file of files) {
+    if (S.stop) break;
+    try {
+      const content = await file.text();
+      for (const pattern of secretPatterns) {
+        let match;
+        while ((match = pattern.regex.exec(content)) !== null) {
+          S.fileFindings.push({file: file.name, severity: pattern.severity, title: pattern.name, detail: pattern.description});
+          find(pattern.severity, `File Scan: ${pattern.name} in ${file.name}`, pattern.description, {file: file.name, match: match[0]});
+        }
+      }
+    } catch (e) {
+      log(`Error reading file ${file.name}: ${e.message}`, 'ERROR');
+    }
+  }
+  renderFileResults();
+}
+
+function renderFileResults() {
+  const h = $('fileResults');
+  if (!S.fileFindings.length) {
+    h.innerHTML = '<div class="notice ok">No findings in selected files.</div>';
+    return;
+  }
+  h.innerHTML = S.fileFindings.map(f => {
+    const cls = (f.severity === 'HIGH' || f.severity === 'MEDIUM') ? 'high' : 'info';
+    return `<div class="finding ${cls}"><div class="head"><b>${esc(f.title)} in ${esc(f.file)}</b><span class="sev">${esc(f.severity)}</span></div><div class="small">${esc(f.detail)}</div></div>`
+  }).join('');
+}
+
+function addCustomTest() {
+  const name = $('customName').value.trim();
+  const method = $('customMethod').value;
+  const path = $('customPath').value.trim();
+  const headers = parseJsonSafe($('customHeaders').value);
+  const body = $('customBody').value.trim();
+  const approved = $('customManualApproval').checked;
+
+  if (!name || !path || !approved) return alert('Please fill Name, Path, and approve.');
+  if (!sameOrigin(path)) return alert('Path must be same-origin.');
+
+  S.customHttp.push({name, method, path, headers, body, approved});
+  renderCustomTests();
+  $('customName').value = ''; $('customPath').value = ''; $('customManualApproval').checked = false;
+  log(`Added custom test: ${name}`);
+}
+
+function renderCustomTests() {
+  const h = $('customList');
+  if (!S.customHttp.length) { h.innerHTML = '<div class="notice info">No custom tests added.</div>'; return; }
+  h.innerHTML = S.customHttp.map((t, i) => `<div class="finding info"><div class="head"><b>${esc(t.name)}</b></div><div class="small">${esc(t.method)} ${esc(t.path)}</div><button class="danger secondary" onclick="removeCustomTest(${i})">Remove</button></div>`).join('');
+}
+
+function removeCustomTest(index) {
+  S.customHttp.splice(index, 1);
+  renderCustomTests();
+}
+
+async function runCustomTests() {
+  if (S.running) return alert('Test is already running.');
+  S.running = true; S.stop = false;
+  state('Running custom tests...', 'run');
+  $('start').disabled = true; $('stop').disabled = false;
+  
+  for (const test of S.customHttp) {
+    if (S.stop) break;
+    if (!test.approved) continue;
+    try {
+      const {r} = await req(test.path, {method: test.method, headers: test.headers, body: test.method!=='GET'?test.body:undefined});
+      addEndpoint(test.method, new URL(test.path, location.origin), r, `Custom: ${test.name}`);
+      check(`Custom Test: ${test.name}`, r.status >= 400 ? 'WARN' : 'PASS', `Status: ${r.status}`, {});
+    } catch (e) {
+      if (e.message === 'STOP_REQUESTED') break;
+    }
+  }
+  S.running = false;
+  state('Custom tests finished.', 'ok');
+  $('start').disabled = false; $('stop').disabled = true;
+  metrics();
+}
+
+function addRegexScanner() {
+  const name = $('regexScannerName').value.trim();
+  const pattern = $('regexScannerPattern').value.trim();
+  const severity = $('regexScannerSeverity').value;
+  if (!name || !pattern) return alert('Name and regex required.');
+  try { new RegExp(pattern); } catch (e) { return alert(`Invalid regex: ${e.message}`); }
+  S.customRegexScanners.push({name, regexPattern: pattern, severity});
+  renderRegexScanners();
+  $('regexScannerName').value = ''; $('regexScannerPattern').value = '';
+}
+
+function renderRegexScanners() {
+  const h = $('regexScannerList');
+  if (!S.customRegexScanners.length) { h.innerHTML = '<div class="notice info">No custom regex scanners.</div>'; return; }
+  h.innerHTML = S.customRegexScanners.map((s, i) => `<div class="finding info"><div class="head"><b>${esc(s.name)}</b></div><div class="small"><code>${esc(s.regexPattern)}</code></div><button class="danger secondary" onclick="removeRegexScanner(${i})">Remove</button></div>`).join('');
+}
+
+function removeRegexScanner(index) {
+  S.customRegexScanners.splice(index, 1);
+  renderRegexScanners();
+}
+
+function addHeaderProbe() {
+  const name = $('headerProbeName').value.trim();
+  const headerName = $('headerProbeHeaderName').value.trim();
+  const headerValue = $('headerProbeHeaderValue').value.trim();
+  if (!name || !headerName || !headerValue) return alert('Name, header name, and value required.');
+  S.customHeaderProbes.push({name, headerName, headerValue});
+  renderHeaderProbes();
+  $('headerProbeName').value = ''; $('headerProbeHeaderName').value = ''; $('headerProbeHeaderValue').value = '';
+}
+
+function renderHeaderProbes() {
+  const h = $('headerProbeList');
+  if (!S.customHeaderProbes.length) { h.innerHTML = '<div class="notice info">No custom header probes.</div>'; return; }
+  h.innerHTML = S.customHeaderProbes.map((p, i) => `<div class="finding info"><div class="head"><b>${esc(p.name)}</b></div><div class="small">${esc(p.headerName)}: ${esc(p.headerValue)}</div><button class="danger secondary" onclick="removeHeaderProbe(${i})">Remove</button></div>`).join('');
+}
+
+function removeHeaderProbe(index) {
+  S.customHeaderProbes.splice(index, 1);
+  renderHeaderProbes();
+}
+
+function addParamFuzzer() {
+  const name = $('paramFuzzerName').value.trim();
+  const payloads = lines($('paramFuzzerPayloads').value);
+  if (!name || !payloads.length) return alert('Name and payloads required.');
+  S.customParamFuzzers.push({name, paramName: $('paramFuzzerParamName').value.trim(), payloads});
+  renderParamFuzzers();
+  $('paramFuzzerName').value = ''; $('paramFuzzerPayloads').value = '';
+}
+
+function renderParamFuzzers() {
+  const h = $('paramFuzzerList');
+  if (!S.customParamFuzzers.length) { h.innerHTML = '<div class="notice info">No param fuzzers.</div>'; return; }
+  h.innerHTML = S.customParamFuzzers.map((f, i) => `<div class="finding info"><div class="head"><b>${esc(f.name)}</b></div><div class="small">${f.payloads.length} payloads</div><button class="danger secondary" onclick="removeParamFuzzer(${i})">Remove</button></div>`).join('');
+}
+
+function removeParamFuzzer(index) {
+  S.customParamFuzzers.splice(index, 1);
+  renderParamFuzzers();
+}
+
+async function runProbeBuilderProbes() {
+  $('intensity').value = 'hyper';
+  [...document.querySelectorAll('.cat')].forEach(cb => { cb.checked = true; });
+  await start();
+}
+
+async function start() {
+  if (S.running) return alert('Test is running.');
+  S.running = true; S.stop = false; S.startedAt = iso();
+  S.checks = []; S.findings = []; S.endpoints = []; S.errors = []; S.fileFindings = [];
+  $('log').textContent = ''; $('progressBar').style.width = '0%';
+  $('start').disabled = true; $('stop').disabled = false;
+  $('exportJson').disabled = true; $('exportHtml').disabled = true;
+
+  log('Starting hyper-aggressive safe test...');
+  state('Running...', 'run');
+  metrics(); renderFindings(); renderChecks(); renderEndpoints(); renderFileResults();
+
+  const origin = $('origin').value;
+  const pathsToProbe = unique(['/', ...lines($('paths').value), ...lines($('discovery').value)]).map(p => new URL(p, origin).href);
+  const concurrency = Number($('concurrency').value) || 2;
+  const selectedCats = new Set([...document.querySelectorAll('.cat:checked')].map(cb => cb.value));
+
+  $('scope').textContent = `Scope: ${origin}, ${pathsToProbe.length} paths.`;
+
+  let completed = 0;
+  const totalTasks = pathsToProbe.length + (selectedCats.has('dom')?1:0) + (selectedCats.has('files')?1:0);
+  const updateProgress = () => { $('progressBar').style.width = `${(completed / totalTasks) * 100}%`; };
+
+  const queue = [...pathsToProbe];
+  const activePromises = new Set();
+
+  while (queue.length > 0 || activePromises.size > 0) {
+    if (S.stop) break;
+    while (activePromises.size < concurrency && queue.length > 0) {
+      const path = queue.shift();
+      const promise = probePath(path, selectedCats).finally(() => {
+        activePromises.delete(promise); completed++; updateProgress();
+      });
+      activePromises.add(promise);
+    }
+    if (activePromises.size > 0) await Promise.race(activePromises);
+  }
+
+  if (!S.stop) {
+    if (selectedCats.has('dom')) { inspectDom(selectedCats); completed++; updateProgress(); }
+    if (selectedCats.has('files') && $('filePicker').files.length) { await fileScan(); completed++; updateProgress(); }
+    if (S.customHttp.length) { await runCustomTests(); }
+    log('Hyper-aggressive safe test finished.', 'INFO');
+    state('Finished', 'ok');
+  }
+
+  S.running = false; S.endedAt = iso();
+  $('start').disabled = false; $('stop').disabled = true;
+  $('exportJson').disabled = false; $('exportHtml').disabled = false;
+  metrics(); generateReport();
+}
+
+function stop() {
+  S.stop = true;
+  log('Stop requested. Finishing tasks...', 'WARN');
+  state('Stopping...', 'warn');
+  $('stop').disabled = true;
+}
+
+function clear() {
+  if (S.running) return;
+  S.checks = []; S.findings = []; S.endpoints = []; S.errors = []; S.customHttp = []; S.fileFindings = [];
+  $('log').textContent = ''; $('progressBar').style.width = '0%';
+  $('exportJson').disabled = true; $('exportHtml').disabled = true;
+  state('Idle', 'idle'); metrics(); renderFindings(); renderChecks(); renderEndpoints(); renderFileResults();
+}
+
+function generateReport() {
+  const report = {
+    metadata: { tool: 'hackifyoucan.html', generatedAt: iso(), baseOrigin: $('origin').value },
+    summary: { totalChecks: S.checks.length, totalFindings: S.findings.length },
+    findings: S.findings, checks: S.checks, endpoints: S.endpoints, fileFindings: S.fileFindings
+  };
+  $('json').value = JSON.stringify(report, null, 2);
+}
+
+function exportJson() {
+  generateReport();
+  const blob = new Blob([$('json').value], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `report_${iso().replace(/[:.]/g,'-')}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+
+function exportHtml() {
+  generateReport();
+  const html = `<!doctype html><title>Report</title><style>body{font-family:system-ui;padding:20px;}</style><h1>Report</h1><pre>${esc($('json').value)}</pre>`;
+  const blob = new Blob([html], {type:'text/html'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `report_${iso().replace(/[:.]/g,'-')}.html`; a.click(); URL.revokeObjectURL(a.href);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  $('origin').value = location.origin;
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); tab.classList.add('active');
+      document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
+      document.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add('active');
+      $('tabHeading').textContent = tab.textContent;
+    });
+  });
+
+  $('start').addEventListener('click', start);
+  $('stop').addEventListener('click', stop);
+  $('clear').addEventListener('click', clear);
+  $('exportJson').addEventListener('click', exportJson);
+  $('exportHtml').addEventListener('click', exportHtml);
+  $('scanFiles').addEventListener('click', fileScan);
+  $('clearFiles').addEventListener('click', () => { S.fileFindings=[]; renderFileResults(); });
+
+  $('addCustom').addEventListener('click', addCustomTest);
+  $('runCustoms').addEventListener('click', runCustomTests);
+  $('clearCustoms').addEventListener('click', () => { S.customHttp=[]; renderCustomTests(); });
+
+  $('addRegexScanner').addEventListener('click', addRegexScanner);
+  $('clearRegexScanners').addEventListener('click', () => { S.customRegexScanners=[]; renderRegexScanners(); });
+  $('addHeaderProbe').addEventListener('click', addHeaderProbe);
+  $('clearHeaderProbes').addEventListener('click', () => { S.customHeaderProbes=[]; renderHeaderProbes(); });
+  $('addParamFuzzer').addEventListener('click', addParamFuzzer);
+  $('clearParamFuzzers').addEventListener('click', () => { S.customParamFuzzers=[]; renderParamFuzzers(); });
+  $('runProbeBuilderProbes').addEventListener('click', runProbeBuilderProbes);
+
+  window.removeCustomTest = removeCustomTest;
+  window.removeRegexScanner = removeRegexScanner;
+  window.removeHeaderProbe = removeHeaderProbe;
+  window.removeParamFuzzer = removeParamFuzzer;
+});
+
+})();
+</script>
+</body>
+</html>
+```eof
