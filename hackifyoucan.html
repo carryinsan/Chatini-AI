@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>trytohack.html — Advanced Safe Security Workbench</title>
+<meta name="description" content="Manual-start, same-origin, non-destructive web application security workbench with custom safe probes and local file analysis.">
+<style>
+:root{
+  color-scheme:dark;--bg:#080d1b;--panel:#11182f;--panel2:#0d1430;--text:#eef2ff;
+  --muted:#a9b5d1;--line:#29365e;--ok:#3fe09a;--warn:#ffd166;--bad:#ff6b6b;
+  --info:#69b5ff;--accent:#9c8cff;--accent2:#6f60e8;--shadow:rgba(0,0,0,.25)
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#070c18,#0b1122 55%,#070c18);color:var(--text)}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+button{border:0;border-radius:10px;padding:10px 13px;background:var(--accent2);color:#fff;font-weight:800;cursor:pointer}
+button:hover{filter:brightness(1.08)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.secondary{background:#1a2548}
+button.warn{background:#6d5521}
+button.danger{background:#782f35}
+button.ghost{background:transparent;border:1px solid var(--line)}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a1027;color:var(--text);padding:10px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:100px;resize:vertical}
+label{display:block;font-size:12px;color:var(--muted);margin:11px 0 6px}
+header{position:sticky;top:0;z-index:20;background:rgba(7,12,24,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1500px;margin:0 auto;padding:0 18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:17px 0;flex-wrap:wrap}
+.brand h1{margin:0;font-size:26px}
+.brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.state{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 11px;font-size:12px;color:var(--muted);background:#101735}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.tabs{display:flex;gap:6px;overflow:auto;padding-bottom:12px}
+.tab{white-space:nowrap;padding:9px 12px;border-radius:10px;background:#121a37;color:var(--muted);border:1px solid var(--line);cursor:pointer;font-size:12px;font-weight:800}
+.tab.active{background:#241f55;color:#fff;border-color:#5549a8}
+main{padding:18px 0 45px}
+.layout{display:grid;grid-template-columns:360px 1fr;gap:18px}
+@media(max-width:1000px){.layout{grid-template-columns:1fr}}
+.panel{background:rgba(17,24,47,.9);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 12px 34px var(--shadow)}
+.panel h2{font-size:16px;margin:0 0 12px}
+.panel h3{font-size:13px;margin:15px 0 7px}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+.notice{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#151d3c;color:#d6ddf5;font-size:12px;line-height:1.55}
+.notice.danger{background:#281419;border-color:#67343a}
+.notice.ok{background:#10271f;border-color:#235f49}
+.section{margin-top:15px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+@media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+@media(max-width:1100px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:650px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px}
+.metric b{font-size:20px;display:block}
+.metric span{font-size:10px;color:var(--muted)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{display:inline-flex;padding:5px 8px;border:1px solid var(--line);border-radius:999px;font-size:10px;color:var(--muted);background:#101635}
+.check{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(41,54,94,.65)}
+.check:last-child{border-bottom:0}
+.check-title{font-size:12px;font-weight:800}
+.check-desc{font-size:11px;color:var(--muted);margin-top:3px}
+.status{font-size:10px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.status.ok{color:var(--ok);background:#0d2b22;border-color:#225f49}
+.status.warn{color:var(--warn);background:#302811;border-color:#6d5a26}
+.status.bad{color:var(--bad);background:#301518;border-color:#6c3037}
+.status.info{color:var(--info);background:#10253e;border-color:#2b5c88}
+.status.na{color:#bcc5dd;background:#191f35}
+.finding{border:1px solid var(--line);border-left:4px solid var(--info);border-radius:11px;padding:11px;margin:8px 0;background:#0e1533}
+.finding.high,.finding.medium{border-left-color:var(--bad)}
+.finding.low{border-left-color:var(--warn)}
+.finding.info{border-left-color:var(--info)}
+.finding .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sev{font-size:9px;letter-spacing:.11em;text-transform:uppercase}
+pre,.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{white-space:pre-wrap;word-break:break-word}
+.log{height:290px;overflow:auto;background:#070c18;border:1px solid var(--line);border-radius:12px;padding:10px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:700}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#dfe4ff}
+details{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px}
+summary{cursor:pointer;font-size:11px}
+.tabpanel{display:none}.tabpanel.active{display:block}
+.progress{height:8px;background:#0a1024;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--info));transition:width .15s}
+.toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted)}
+.toggle input{width:auto}
+.pillrow{display:flex;flex-wrap:wrap;gap:6px}
+.filelist{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}
+.fileitem{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(41,54,94,.65)}
+.fileitem:last-child{border-bottom:0}
+footer{color:var(--muted);font-size:11px;line-height:1.6;padding-bottom:30px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <h1>trytohack.html</h1>
+        <p>Advanced safe security workbench — manual start, same-origin by default, non-destructive.</p>
+      </div>
+      <div class="state"><span class="dot" id="dot"></span><span id="stateText">Idle — no network activity has started</span></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="safe">Safe Hack</button>
+      <button class="tab" data-tab="custom">Custom Tests</button>
+      <button class="tab" data-tab="files">Files</button>
+      <button class="tab" data-tab="network">Network & Headers</button>
+      <button class="tab" data-tab="report">Report</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <aside>
+      <section class="panel tabpanel active" data-panel="overview">
+        <h2>Scope & guardrails</h2>
+        <div class="notice danger">
+          Only test systems you own or are authorized to assess. This file does not brute-force passwords, steal credentials, delete/modify production data, upload files automatically, exploit third-party targets, or run destructive payloads.
+        </div>
+
+        <label>Base origin</label>
+        <input id="origin" readonly>
+
+        <label>Additional same-origin paths</label>
+        <textarea id="paths" placeholder="/api/chat&#10;/api/research&#10;/api/auth"></textarea>
+        <div class="small">One path per line. Full off-origin URLs are rejected.</div>
+
+        <label>Discovery paths</label>
+        <textarea id="discovery" placeholder="/robots.txt&#10;/sitemap.xml&#10;/.well-known/security.txt"></textarea>
+
+        <div class="grid2 section">
+          <div>
+            <label>Concurrency</label>
+            <select id="concurrency">
+              <option value="1">1 — gentle</option><option value="2" selected>2 — balanced</option><option value="3">3 — stronger</option><option value="4">4 — aggressive (still rate-limited)</option>
+            </select>
+          </div>
+          <div>
+            <label>Timeout (ms)</label>
+            <input id="timeout" type="number" min="2000" max="30000" step="1000" value="12000">
+          </div>
+        </div>
+
+        <label class="toggle section"><input id="allowPost" type="checkbox"> Enable optional POST probes that must be explicitly approved per test</label>
+        <div class="small">POST support is disabled by default because a browser tool cannot know whether an endpoint mutates data.</div>
+
+        <div class="row section">
+          <button id="start">Start Advanced Safe Test</button>
+          <button id="stop" class="danger" disabled>Stop</button>
+          <button id="clear" class="secondary">Clear</button>
+        </div>
+
+        <div class="row section">
+          <button id="exportJson" class="secondary">Export JSON</button>
+          <button id="exportHtml" class="secondary">Export HTML</button>
+        </div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="safe">
+        <h2>Safe hack controls</h2>
+        <div class="small">These probes actively interact with your current origin but are designed to avoid state-changing operations.</div>
+        <h3>Probe intensity</h3>
+        <select id="intensity">
+          <option value="standard">Standard — headers, endpoints, DOM, CORS</option>
+          <option value="strong" selected>Strong — add reflection, normalization, cache and parameter probes</option>
+          <option value="max">Maximum safe — all non-destructive probes plus larger read-only discovery</option>
+        </select>
+        <h3>Probe categories</h3>
+        <div class="pillrow">
+          <label class="toggle"><input type="checkbox" class="cat" value="surface" checked> Surface</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="headers" checked> Headers</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="cors" checked> CORS</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="errors" checked> Error leakage</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="reflection" checked> Reflection</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="normalization" checked> Path normalization</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="cache" checked> Cache behavior</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="dom" checked> DOM/XSS surface</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="storage" checked> Browser storage</label>
+          <label class="toggle"><input type="checkbox" class="cat" value="files" checked> Local file static scan</label>
+        </div>
+        <div class="notice section">
+          “Maximum safe” does not mean exploit execution. It means the most active testing this frontend can perform without pretending it can safely determine whether an arbitrary request is mutating.
+        </div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="custom">
+        <h2>Add a safe custom test</h2>
+        <div class="small">Custom tests are saved only in this page unless you export them. Off-origin targets are rejected. Use GET/HEAD/OPTIONS by default.</div>
+        <label>Name</label>
+        <input id="customName" placeholder="Example: verify public cache policy">
+        <label>Method</label>
+        <select id="customMethod"><option>GET</option><option>HEAD</option><option>OPTIONS</option><option>POST</option></select>
+        <label>Path</label>
+        <input id="customPath" placeholder="/api/your-endpoint?test=1">
+        <label>Header JSON (optional)</label>
+        <textarea id="customHeaders" placeholder='{"X-Security-Test":"my-safe-check"}'></textarea>
+        <label>Body (POST only, optional)</label>
+        <textarea id="customBody" placeholder='{"probe":"safe-test"}'></textarea>
+        <label>Expected safe behavior</label>
+        <textarea id="customExpected" placeholder="Explain what status/header/body behavior you expect. This is guidance for the report, not proof."></textarea>
+        <label class="toggle"><input id="customManualApproval" type="checkbox"> I have checked this test and manually approve it</label>
+        <div class="row section">
+          <button id="addCustom">Add test</button>
+          <button id="runCustoms" class="secondary">Run custom tests</button>
+          <button id="clearCustoms" class="secondary">Clear custom tests</button>
+        </div>
+        <div class="section" id="customList"></div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="files">
+        <h2>Local files</h2>
+        <div class="small">Choose source files from your repository. Files are read locally in your browser and are never uploaded by this tool.</div>
+        <label>Repository/source files</label>
+        <input id="filePicker" type="file" multiple accept=".html,.htm,.js,.mjs,.cjs,.ts,.tsx,.jsx,.json,.yaml,.yml,.env,.txt,.md,.css,.sql,.py,.java,.go,.php,.rb,.rs">
+        <div class="row section">
+          <button id="scanFiles">Scan selected files</button>
+          <button id="clearFiles" class="secondary">Clear file results</button>
+        </div>
+        <div class="small section">The static scan looks for common secret patterns, unsafe sinks, dynamic code execution, risky URL handling, insecure cookie/storage usage, and suspicious server-side string construction. It reports patterns; it does not claim exploitability.</div>
+        <div class="section" id="fileResults"></div>
+      </section>
+
+      <section class="panel tabpanel" data-panel="network">
+        <h2>Network & headers</h2>
+        <div class="small">Browser-visible observations from safe requests. HttpOnly cookies and server-only behavior cannot be fully inspected from JavaScript.</div>
+        <label>Extra endpoints</label>
+        <textarea id="networkPaths" placeholder="/api/chat&#10;/api/research"></textarea>
+        <div class="row section">
+          <button id="probeNetwork">Probe endpoints</button>
+          <button id="probeHeaders" class="secondary">Recheck current page headers</button>
+        </div>
+        <div class="section" id="networkTable"></div>
+      </section>
+    </aside>
+
+    <section>
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h2 id="tabHeading">Overview</h2>
+            <div class="small" id="scope">No test started.</div>
+          </div>
+          <div class="status info" id="overall">IDLE</div>
+        </div>
+        <div class="progress section"><div id="progressBar"></div></div>
+        <div class="metrics section">
+          <div class="metric"><b id="nChecks">0</b><span>checks</span></div>
+          <div class="metric"><b id="nPass">0</b><span>pass</span></div>
+          <div class="metric"><b id="nWarn">0</b><span>warnings</span></div>
+          <div class="metric"><b id="nFail">0</b><span>confirmed concerns</span></div>
+          <div class="metric"><b id="nNA">0</b><span>not testable here</span></div>
+          <div class="metric"><b id="nFind">0</b><span>findings</span></div>
+        </div>
+      </section>
+
+      <section class="panel section">
+        <h2>Findings</h2>
+        <div id="findings"><div class="notice ok">No findings yet. Start a test to begin.</div></div>
+      </section>
+
+      <section class="panel section">
+        <h2>Security checks</h2>
+        <div id="checks"></div>
+      </section>
+
+      <section class="panel section">
+        <h2>Endpoint observations</h2>
+        <div id="endpointTable" class="small">No endpoint observations yet.</div>
+      </section>
+
+      <section class="panel section">
+        <h2>Activity log</h2>
+        <div class="log" id="log"></div>
+      </section>
+
+      <section class="panel section tabpanel active" data-panel="overview">
+        <h2>What this tool can and cannot prove</h2>
+        <div class="grid2">
+          <div class="notice ok">
+            <b>Can test actively:</b><br>
+            same-origin status/method behavior; headers; CORS observations; safe reflection probes; error disclosure; path normalization differences; cache headers; DOM sinks; browser storage; local source files; endpoint surface.
+          </div>
+          <div class="notice danger">
+            <b>Cannot prove from this page alone:</b><br>
+            SQL injection exploitability; server-side SSRF; database isolation; cloud IAM; authorization correctness across accounts; secret rotation; backend RCE; server-side rate-limit correctness; hidden routes not discoverable from your supplied sources.
+          </div>
+        </div>
+      </section>
+
+      <section class="panel section tabpanel active" data-panel="report">
+        <h2>Machine-readable report</h2>
+        <textarea id="json" spellcheck="false" style="min-height:340px"></textarea>
+      </section>
+    </section>
+  </div>
+</main>
+
+<footer class="wrap">
+  Safety model: manual start; same-origin scope; bounded concurrency; timeout; no credential guessing; no destructive verbs by default; no automatic uploads; no automatic external scanning. A PASS means no issue was confirmed by this browser-side test, not that the backend is vulnerability-free.
+</footer>
+
+<script>
+(() => {
+'use strict';
+
+const S = {
+  running:false, stop:false, checks:[], findings:[], endpoints:[], errors:[],
+  custom:[], fileFindings:[], discovered:[], startedAt:null, endedAt:null
+};
+const $ = id => document.getElementById(id);
+const iso = () => new Date().toISOString();
+const unique = a => [...new Set(a)];
+const text = (v,n=1800) => { try { const s=String(v??''); return s.length>n?s.slice(0,n)+'…':s; } catch{return '[unserializable]';} };
+const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const lines = v => unique(String(v||'').split(/\\r?\\n|,/).map(x=>x.trim()).filter(Boolean));
+const sameOrigin = raw => { try { const u=new URL(raw,location.origin); return u.origin===location.origin && u.protocol===location.protocol ? u:null; } catch{return null;} };
+
+function log(msg, level='INFO'){
+  const line=`[${new Date().toLocaleTimeString()}] [${level}] ${msg}`;
+  $('log').textContent += ($('log').textContent?'\\n':'')+line;
+  $('log').scrollTop=$('log').scrollHeight;
+}
+function state(textValue,mode='idle'){
+  $('stateText').textContent=textValue;
+  $('dot').style.background=mode==='run'?'var(--info)':mode==='ok'?'var(--ok)':mode==='bad'?'var(--bad)':'var(--warn)';
+}
+function check(name,status,details='',evidence={}){
+  const c={name,status,details,evidence,time:iso()}; S.checks.push(c); renderChecks(); metrics(); return c;
+}
+function find(severity,title,detail,evidence={}){
+  S.findings.push({severity,title,detail,evidence,time:iso()}); renderFindings(); metrics();
+}
+function metrics(){
+  $('nChecks').textContent=S.checks.length;
+  $('nPass').textContent=S.checks.filter(x=>x.status==='PASS').length;
+  $('nWarn').textContent=S.checks.filter(x=>x.status==='WARN').length;
+  $('nFail').textContent=S.checks.filter(x=>x.status==='FAIL').length;
+  $('nNA').textContent=S.checks.filter(x=>x.status==='N/A').length;
+  $('nFind').textContent=S.findings.length;
+  const o=$('overall');
+  if(S.checks.some(x=>x.status==='FAIL')){o.textContent='CONFIRMED CONCERN';o.className='status bad'}
+  else if(S.checks.some(x=>x.status==='WARN')){o.textContent='WARNINGS';o.className='status warn'}
+  else if(S.checks.length){o.textContent='PASS';o.className='status ok'}
+  else{o.textContent='IDLE';o.className='status info'}
+}
+function renderFindings(){
+  const h=$('findings');
+  if(!S.findings.length){h.innerHTML='<div class="notice ok">No findings recorded.</div>';return}
+  h.innerHTML=S.findings.map(f=>{
+    const cls=(f.severity==='HIGH'||f.severity==='MEDIUM')?'high':f.severity==='LOW'?'low':'info';
+    return `<div class="finding ${cls}"><div class="head"><b>${esc(f.title)}</b><span class="sev">${esc(f.severity)}</span></div><div class="small">${esc(f.detail)}</div>${Object.keys(f.evidence||{}).length?`<details><summary>Evidence</summary><pre>${esc(JSON.stringify(f.evidence,null,2))}</pre></details>`:''}</div>`
+  }).join('');
+}
+function renderChecks(){
+  $('checks').innerHTML=S.checks.map(c=>`<div class="check"><div><div class="check-title">${esc(c.name)}</div><div class="check-desc">${esc(c.details)}</div></div><span class="status ${c.status==='PASS'?'ok':c.status==='FAIL'?'bad':c.status==='WARN'?'warn': 'na'}">${esc(c.status)}</span></div>`).join('');
+}
+function renderEndpoints(){
+  const h=$('endpointTable');
+  if(!S.endpoints.length){h.textContent='No endpoint observations yet.';return}
+  h.innerHTML=`<table><thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Type</th><th>Cache</th><th>Note</th></tr></thead><tbody>${
+    S.endpoints.map(e=>`<tr><td><code>${esc(e.method)}</code></td><td><code>${esc(e.path)}</code></td><td>${e.status??'—'}</td><td>${esc(e.type||'—')}</td><td>${esc(e.cache||'—')}</td><td>${esc(e.note||'')}</td></tr>`).join('')
+  }</tbody></table>`;
+}
+function parseJsonSafe(s,fallback={}){
+  try{const x=JSON.parse(s);return x&&typeof x==='object'&&!Array.isArray(x)?x:fallback}catch{return fallback}
+}
+
+async function req(url,opts={}){
+  if(S.stop) throw new Error('STOP_REQUESTED');
+  const ms=Math.max(2000,Math.min(30000,Number($('timeout').value)||12000));
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),ms);
+  try{
+    const h=new Headers(opts.headers||{}); h.set('Cache-Control','no-cache');
+    const r=await fetch(url,{...opts,headers:h,cache:'no-store',redirect:'manual',referrerPolicy:'no-referrer',credentials:'same-origin',signal:c.signal});
+    const body=await r.text().catch(()=> '');
+    return {r,body};
+  }finally{clearTimeout(t)}
+}
+
+function inspectDom(){
+  log('Inspecting DOM, storage, scripts, forms and client-side surfaces.');
+  const insecure=[...document.querySelectorAll('script[src],img[src],iframe[src],link[href],a[href],form[action]')].map(e=>e.src||e.href||e.action).filter(Boolean).filter(u=>/^http:\/\//i.test(u));
+  const inlineHandlers=[...document.querySelectorAll('[onclick],[onerror],[onload],[onmouseover],[onfocus],[oninput],[onsubmit]')];
+  const scripts=[...document.scripts].map(s=>s.src).filter(Boolean);
+  const third=scripts.filter(u=>{try{return new URL(u).origin!==location.origin}catch{return false}});
+  const ls=(()=>{try{return Object.keys(localStorage)}catch{return[]}})();
+  const ss=(()=>{try{return Object.keys(sessionStorage)}catch{return[]}})();
+  const suspicious=unique([...ls,...ss].filter(k=>/(token|secret|password|api.?key|auth|cookie|session|jwt)/i.test(k)));
+  const forms=[...document.forms].map(f=>({action:f.action||location.href,method:(f.method||'GET').toUpperCase()}));
+  const off=forms.filter(f=>{try{return new URL(f.action,location.href).origin!==location.origin}catch{return false}});
+  const metaCsp=document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content||'';
+  check('HTTPS / secure context',location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'?'PASS':'FAIL',location.protocol==='https:'?'Page is served over HTTPS.':'Production page is not HTTPS.',{protocol:location.protocol});
+  if(location.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(location.hostname)) find('HIGH','HTTP deployment detected','Sensitive sessions should not be handled over plain HTTP.',{url:location.href});
+  check('Mixed-content references',insecure.length?'WARN':'PASS',insecure.length?`${insecure.length} HTTP reference(s) found.`:'No obvious HTTP references.',{references:insecure.slice(0,50)});
+  if(insecure.length)find('MEDIUM','Mixed-content references','Current DOM contains HTTP resource/action references.',{references:insecure.slice(0,50)});
+  check('Inline JavaScript handlers',inlineHandlers.length?'WARN':'PASS',inlineHandlers.length?`${inlineHandlers.length} inline event-handler attributes.`:'No inline handlers detected.',{count:inlineHandlers.length});
+  if(inlineHandlers.length)find('LOW','Inline event handlers detected','Review inline handlers if you want a strict CSP.',{count:inlineHandlers.length});
+  check('CSP meta element',metaCsp?'PASS':'WARN',metaCsp?'A CSP meta element exists.':'No CSP meta element; a server header is preferred.',{present:!!metaCsp});
+  check('Third-party scripts',third.length?'WARN':'PASS',third.length?`${third.length} third-party script(s) observed.`:'No third-party scripts observed.',{scripts:third});
+  if(third.length)find('LOW','Third-party JavaScript detected','Review trust, integrity and CSP for every external script.',{scripts:third});
+  check('Off-origin forms',off.length?'WARN':'PASS',off.length?`${off.length} form action(s) leave the origin.`:'No off-origin forms observed.',{forms});
+  check('Client storage key names',suspicious.length?'WARN':'PASS',suspicious.length?`Potentially sensitive key names: ${suspicious.join(', ')}`:'No suspicious secret-looking key names.',{localStorage:ls,sessionStorage:ss});
+  if(suspicious.length)find('MEDIUM','Potential sensitive client storage','Review the actual values. This tool intentionally does not print them.',{keys:suspicious});
+  const readable=document.cookie.split(';').map(x=>x.trim().split('=')[0]).filter(Boolean);
+  check('Browser-visible cookies',readable.length?'WARN':'PASS',readable.length?`${readable.length} cookie name(s) are readable by JS.`:'No JavaScript-readable cookies.',{names:readable});
+  if(readable.length)find('LOW','JavaScript-readable cookies exist','Review whether any auth/session cookie should be HttpOnly.',{names:readable});
+}
+
+function headerCheck(r){
+  const h=r.headers, get=n=>h.get(n);
+  const xfo=get('x-frame-options'),csp=get('content-security-policy'),hsts=get('strict-transport-security');
+  const xcto=get('x-content-type-options'),ref=get('referrer-policy'),perm=get('permissions-policy');
+  const coop=get('cross-origin-opener-policy'),corp=get('cross-origin-resource-policy');
+  check('Frame protection',xfo||(csp&&/frame-ancestors/i.test(csp))?'PASS':'WARN',xfo?`X-Frame-Options: ${xfo}`:csp&&/frame-ancestors/i.test(csp)?'CSP frame-ancestors observed.':'No frame protection header observed.',{xfo,frameAncestors:csp?.match(/frame-ancestors[^;]*/i)?.[0]||null});
+  if(!xfo&&!(csp&&/frame-ancestors/i.test(csp)))find('MEDIUM','Clickjacking defense not observed','Add X-Frame-Options or an appropriate CSP frame-ancestors directive.',{url:r.url});
+  check('Content-Security-Policy',csp?'PASS':'WARN',csp?'CSP header present.':'CSP header not observed.',{csp});
+  if(!csp)find('MEDIUM','Content-Security-Policy missing','A strong CSP can limit client-side injection impact.',{url:r.url});
+  check('HSTS',(location.protocol!=='https:'||hsts)?'PASS':'WARN',hsts?`HSTS: ${hsts}`:'HSTS not observed.',{hsts});
+  check('X-Content-Type-Options',xcto?.toLowerCase()==='nosniff'?'PASS':'WARN',xcto||'nosniff not observed.',{xcto});
+  if(xcto?.toLowerCase()!=='nosniff')find('LOW','X-Content-Type-Options not observed','Consider X-Content-Type-Options: nosniff.',{url:r.url});
+  check('Referrer-Policy',ref?'PASS':'WARN',ref||'Referrer-Policy not observed.',{referrerPolicy:ref});
+  check('Permissions-Policy',perm?'PASS':'WARN',perm||'Permissions-Policy not observed.',{permissionsPolicy:perm});
+  check('COOP',coop?'PASS':'WARN',coop||'Cross-Origin-Opener-Policy not observed.',{coop});
+  check('CORP',corp?'PASS':'WARN',corp||'Cross-Origin-Resource-Policy not observed.',{corp});
+  return {xfo,csp,hsts,xcto,ref,perm,coop,corp};
+}
+
+function addEndpoint(method,u,r,note=''){
+  S.endpoints.push({method,path:u.pathname+u.search,status:r.status,type:r.headers.get('content-type')||'',cache:r.headers.get('cache-control')||'',note});
+  renderEndpoints();
+}
+
+function bodySignals(body){
+  const p=[
+    [/Traceback \\(most recent call last\\)/i,'Python traceback'],
+    [/stack trace/i,'stack trace'],
+    [/SQLSTATE\\[/i,'SQLSTATE'],
+    [/SequelizeDatabaseError/i,'Sequelize error'],
+    [/PrismaClient/i,'Prisma diagnostic'],
+    [/MongoServerError/i,'MongoDB diagnostic'],
+    [/FirebaseError/i,'Firebase diagnostic'],
+    [/node_modules\\//i,'node_modules path'],
+    [/Authorization:\\s*Bearer\\s+[A-Za-z0-9._-]{20,}/i,'Bearer token-like string'],
+    [/(?:api[_ -]?key|secret|password)\\s*[:=]\\s*["'][^"']{10,}/i,'credential-like assignment']
+  ];
+  return p.filter(([rx])=>rx.test(body)).map(([,x])=>x);
+}
+
+async function probePath(raw, cats){
+  const u=sameOrigin(raw); if(!u){log(`Rejected invalid/off-origin path: ${raw}`,'WARN');return}
+  if(S.stop)return;
+  log(`GET ${u.pathname}${u.search}`);
+  try{
+    const {r,body}=await req(u.href,{method:'GET'});
+    addEndpoint('GET',u,r,r.status>=500?'5xx response':'');
+    if(cats.has('headers')&&u.pathname==='/')headerCheck(r);
+    const sig=bodySignals(body);
+    check(`Response leak scan ${u.pathname}`,sig.length?'FAIL':'PASS',sig.length?`High-signal debug/secret pattern(s): ${sig.join(', ')}`:'No high-signal debug/credential pattern detected.',{signals:sig});
+    if(sig.length)find('MEDIUM','Potential debug/credential disclosure','A safe GET response contains high-signal diagnostic/credential text. Inspect the server response and logs.',{path:u.pathname,signals:sig});
+    if(r.status>=500){check(`Server error ${u.pathname}`,'WARN',`HTTP ${r.status} on a safe GET.`,{status:r.status});find('MEDIUM','Server returned 5xx','A safe GET triggered a server error. Review the endpoint implementation and logs.',{path:u.pathname,status:r.status})}
+    if(cats.has('cors')&&u.pathname.startsWith('/api/')) await probeCors(u);
+    if(cats.has('normalization')) await probeNormalization(u);
+    if(cats.has('cache')) await probeCache(u,r);
+    if(cats.has('reflection')) await probeReflection(u);
+  }catch(e){
+    if(e.message==='STOP_REQUESTED')return;
+    check(`GET ${u.pathname}`,'N/A',`Browser could not complete the request: ${text(e.message||e)}`,{});
+  }
+}
+
+async function probeCors(u){
+  try{
+    const originProbe='https://security-test.invalid';
+    const {r}=await req(u.href,{method:'GET',headers:{'Origin':originProbe,'X-Arix-Security-Test':'cors-observation'}});
+    const acao=r.headers.get('access-control-allow-origin'), acac=r.headers.get('access-control-allow-credentials');
+    addEndpoint('GET',u,r,`ACAO=${acao||'none'}`);
+    if(acao==='*'&&acac==='true'){check(`CORS ${u.pathname}`,'FAIL','Wildcard ACAO with credentials=true observed.',{acao,acac});find('HIGH','Wildcard CORS with credentials','This combination is dangerous when sensitive credentials are accepted; verify the actual browser behavior and endpoint purpose.',{path:u.pathname,acao,acac})}
+    else if(acao){check(`CORS ${u.pathname}`,'WARN',`CORS header observed: ${acao}${acac?`; credentials=${acac}`:''}.`,{acao,acac})}
+    else check(`CORS ${u.pathname}`,'PASS','No ACAO header observed.',{});
+  }catch(e){check(`CORS ${u.pathname}`,'N/A','Browser policy prevented a complete CORS observation.',{error:text(e.message||e)})}
+}
+
+async function probeNormalization(u){
+  const variants=unique([
+    u.pathname.replace(/\\/+/g,'/'),
+    u.pathname+'/./',
+    u.pathname+'/../'+u.pathname.split('/').filter(Boolean).pop(),
+    u.pathname.replace(/\/$/,'')+'%2F',
+    u.pathname.replace(/%2F/gi,'%2f')
+  ]).filter(x=>x!==u.pathname);
+  const results=[];
+  for(const p of variants.slice(0,5)){
+    if(S.stop)break;
+    const v=sameOrigin(p);if(!v)continue;
+    try{const {r}=await req(v.href,{method:'GET'});results.push({path:v.pathname,status:r.status,location:r.headers.get('location')})}catch{}
+  }
+  const statuses=unique(results.map(x=>x.status));
+  check(`Path normalization ${u.pathname}`,results.length?'PASS':'N/A',results.length?`Compared ${results.length} harmless path variants.`:'No variants could be tested.',{results,statuses});
+  if(results.some(x=>x.status>=500))find('MEDIUM','Path normalization causes 5xx','One or more harmless normalization variants triggered a server error.',{base:u.pathname,results});
+}
+
+async function probeCache(u,r0){
+  if(!/(api|account|auth|user|session|private|memory|chat)/i.test(u.pathname))return;
+  const cache=r0.headers.get('cache-control')||'';
+  check(`Cache policy ${u.pathname}`,/no-store|private/i.test(cache)?'PASS':cache?'WARN':'WARN',cache?`Cache-Control: ${cache}`:'No Cache-Control header observed.',{cache});
+  if(/public/i.test(cache))find('MEDIUM','Potentially public caching of sensitive-looking endpoint','Review whether authenticated/private responses can ever be stored in shared caches.',{path:u.pathname,cache});
+}
+
+async function probeReflection(u){
+  if(!u.search)return;
+  const params=new URLSearchParams(u.search);
+  const token=`SEC_TEST_${crypto.getRandomValues(new Uint32Array(2)).join('')}`;
+  params.set('security_probe',token);
+  const v=new URL(u.href);v.search=params.toString();
+  try{
+    const {r,body}=await req(v.href,{method:'GET',headers:{'X-Security-Probe':'reflection'}});
+    addEndpoint('GET',v,r,body.includes(token)?'probe marker reflected':'');
+    if(body.includes(token)){check(`Reflection ${u.pathname}`,'WARN','A unique probe marker was reflected in the response. Reflection alone is not XSS; inspect encoding/context.',{parameter:'security_probe',marker:token,contentType:r.headers.get('content-type')||''});find('MEDIUM','User-controlled marker reflected','A harmless unique marker appeared in the response. Determine whether output encoding is correct for its context.',{path:u.pathname,parameter:'security_probe',marker:token})}
+    else check(`Reflection ${u.pathname}`,'PASS','Unique probe marker was not reflected in the response.',{});
+  }catch(e){check(`Reflection ${u.pathname}`,'N/A','Reflection test could not complete.',{error:text(e.message||e)})}
+}
+
+async function methodProbe(path){
+  const u=sameOrigin(path);if(!u)return;
+  for(const method of ['HEAD','OPTIONS']){
+    if(S.stop)break;
+    try{
+      const {r}=await req(u.href,{method});
+      addEndpoint(method,u,r,r.status===500?'5xx response':'');
+      check(`${method} ${u.pathname}`,r.status>=500?'WARN':'PASS',`HTTP ${r.status}.`,{status:r.status,allow:r.headers.get('allow')||null});
+    }catch(e){check(`${method} ${u.pathname}`,'N/A','Safe method probe could not complete.',{error:text(e.message||e)})}
+  }
+}
+
+async function root(){
+  const u=new URL('/',location.origin);
+  try{
+    const {r,body}=await req(u.href,{method:'GET'});addEndpoint('GET',u,r);
+    headerCheck(r);
+    const sig=bodySignals(body);
+    check('Root debug disclosure',sig.length?'WARN':'PASS',sig.length?`Signals: ${sig.join(', ')}`:'No high-signal debug/credential pattern in root response.',{signals:sig});
+    if(sig.length)find('LOW','Potential root debug disclosure','Inspect whether the matched framework text is harmless hosting metadata or actual diagnostics.',{signals:sig});
+  }catch(e){check('Root request','FAIL',`Could not fetch /. ${text(e.message||e)}`,{});find('MEDIUM','Root request failed','The workbench could not complete a same-origin GET to /.',{error:text(e.message||e)})}
+}
+
+function candidatePaths(){
+  const linked=[...document.querySelectorAll('a[href],form[action],script[src],link[href]')]
+    .map(e=>e.href||e.action||e.src).map(x=>{try{return new URL(x,location.href)}catch{return null}})
+    .filter(u=>u&&u.origin===location.origin).map(u=>u.pathname+(u.search||''));
+  const common=['/api','/api/chat','/api/research','/api/upload','/api/auth','/api/login','/api/logout','/api/user','/api/memory','/api/health','/health','/robots.txt','/sitemap.xml','/security.txt','/.well-known/security.txt','/manifest.json'];
+  return unique([...common,...linked,...lines($('paths').value)]).filter(p=>p.startsWith('/')&&p.length<400).slice(0,250);
+}
+function cats(){
+  return new Set([...document.querySelectorAll('.cat:checked')].map(x=>x.value));
+}
+
+async function runPool(items,worker){
+  const limit=Math.max(1,Math.min(4,Number($('concurrency').value)||2));let i=0;
+  async function w(){while(!S.stop){const n=i++;if(n>=items.length)return;await worker(items[n],n);updateProgress(n+1,items.length)}}
+  await Promise.all(Array.from({length:limit},w));
+}
+function updateProgress(done,total){$('progressBar').style.width=(total?Math.min(100,(done/total)*100):0)+'%'}
+
+async function runAll(){
+  if(S.running)return;
+  S.running=true;S.stop=false;S.startedAt=iso();S.checks=[];S.findings=[];S.endpoints=[];S.errors=[];S.discovered=[];
+  $('start').disabled=true;$('stop').disabled=false;$('progressBar').style.width='0%';
+  $('scope').textContent=`Scope locked to ${location.origin} • ${new Date().toLocaleString()}`;
+  $('json').value='';$('log').textContent='';renderChecks();renderFindings();renderEndpoints();metrics();state('Running…','run');log(`Started advanced safe test on ${location.origin}.`);
+  try{
+    const c=cats();
+    if(c.has('dom')||c.has('storage'))inspectDom();
+    if(!S.stop)await root();
+    const paths=candidatePaths();
+    log(`Testing ${paths.length} candidate same-origin paths with bounded concurrency.`);
+    if(c.has('surface')||c.has('headers')||c.has('errors')||c.has('cors')||c.has('reflection')||c.has('normalization')||c.has('cache')){
+      await runPool(paths,p=>probePath(p,c));
+    }
+    if(!S.stop&&c.has('surface')) await runPool(paths.slice(0,80),p=>methodProbe(p));
+    await runCustomTests();
+    S.endedAt=iso();
+    finish();
+  }catch(e){
+    S.errors.push({stage:'run',error:String(e),stack:e?.stack||null});find('MEDIUM','Runner error','The scanner encountered an unexpected error. Results may be incomplete.',{error:text(e.message||e)});finish(true)
+  }
+}
+
+async function runCustomTests(){
+  if(!S.custom.length)return;
+  log(`Running ${S.custom.length} custom test(s).`);
+  for(const t of S.custom){
+    if(S.stop)break;
+    const u=sameOrigin(t.path);if(!u){check(`Custom ${t.name}`,'N/A','Rejected because the path is off-origin or invalid.',{});continue}
+    if(t.method==='POST' && ! $('allowPost').checked){check(`Custom ${t.name}`,'N/A','POST probes are globally disabled.',{});continue}
+    if(t.method==='POST' && !t.manual){check(`Custom ${t.name}`,'N/A','POST test lacks per-test manual approval.',{});continue}
+    try{
+      const headers=parseJsonSafe(t.headers,{});
+      const opts={method:t.method,headers};
+      if(t.method==='POST'){opts.body=t.body||'';headers['Content-Type']=headers['Content-Type']||'application/json'}
+      const {r,body}=await req(u.href,opts);addEndpoint(t.method,u,r,`custom: ${t.name}`);
+      check(`Custom ${t.name}`,r.status>=500?'WARN':'PASS',`HTTP ${r.status}. Expected behavior noted by user: ${text(t.expected,400)}`,{status:r.status,expected:t.expected,contentType:r.headers.get('content-type')||''});
+      const sig=bodySignals(body);if(sig.length)find('MEDIUM',`Custom test signal: ${t.name}`,'Response contains high-signal debug/credential patterns.',{signals:sig});
+    }catch(e){check(`Custom ${t.name}`,'N/A',`Custom test could not complete: ${text(e.message||e)}`,{})}
+  }
+}
+function finish(runnerError=false){
+  $('start').disabled=false;$('stop').disabled=true;S.running=false;updateProgress(1,1);
+  if(runnerError)state('Stopped with runner error','bad');
+  else if(S.stop){state('Stopped by operator — partial results preserved','warn');log('Stopped by operator.','WARN')}
+  else if(S.checks.some(c=>c.status==='FAIL')){state('Completed — confirmed concerns found','bad');log('Completed with confirmed concerns.','WARN')}
+  else if(S.checks.some(c=>c.status==='WARN')){state('Completed — review warnings','ok');log('Completed with review warnings.','INFO')}
+  else{state('Completed — no issues detected by these checks','ok');log('Completed.','INFO')}
+  $('json').value=JSON.stringify(report(),null,2);metrics();renderChecks();renderFindings();renderEndpoints();
+}
+
+function report(){
+  return {
+    tool:'trytohack.html',version:'2.0.0',
+    purpose:'Advanced manual-start same-origin non-destructive browser security workbench',
+    generatedAt:iso(),scope:{origin:location.origin,page:location.href,startedAt:S.startedAt,endedAt:S.endedAt,concurrency:Number($('concurrency').value)||2,intensity:$('intensity').value},
+    result:{overall:S.checks.some(x=>x.status==='FAIL')?'FAIL':S.checks.some(x=>x.status==='WARN')?'WARNINGS':S.checks.length?'PASS':'IDLE',
+      counts:{checks:S.checks.length,pass:S.checks.filter(x=>x.status==='PASS').length,warn:S.checks.filter(x=>x.status==='WARN').length,fail:S.checks.filter(x=>x.status==='FAIL').length,notTestableHere:S.checks.filter(x=>x.status==='N/A').length}},
+    findings:S.findings,checks:S.checks,endpoints:S.endpoints,customTests:S.custom,fileFindings:S.fileFindings,discovered:S.discovered,errors:S.errors,
+    limitations:[
+      'Browser code cannot prove server-side SQL injection, SSRF, database isolation, cloud IAM, backend authorization, secret rotation, or arbitrary code execution resistance.',
+      'A PASS is evidence that this browser-side test did not confirm a problem; it is not proof that the application is secure.',
+      'HttpOnly cookies and server-only secrets are intentionally not readable by JavaScript.',
+      'POST custom tests require global enablement and explicit per-test approval; destructive verbs are never available here.'
+    ]
+  };
+}
+
+function addCustom(){
+  const name=$('customName').value.trim();const path=$('customPath').value.trim();const method=$('customMethod').value;
+  if(!name||!path){alert('Name and path are required.');return}
+  if(!sameOrigin(path)){alert('Only same-origin paths are allowed.');return}
+  if(method==='POST'&&(!$('allowPost').checked||!$('customManualApproval').checked)){alert('Enable POST globally and manually approve this specific test.');return}
+  const t={id:crypto.randomUUID(),name,path,method,headers:$('customHeaders').value.trim(),body:$('customBody').value,expected:$('customExpected').value,manual:$('customManualApproval').checked,createdAt:iso()};
+  S.custom.push(t);renderCustom();log(`Added custom test: ${name}`,'INFO');
+}
+function renderCustom(){
+  const h=$('customList');
+  if(!S.custom.length){h.innerHTML='<div class="notice">No custom tests added yet.</div>';return}
+  h.innerHTML=S.custom.map((t,i)=>`<div class="finding info"><div class="head"><b>${esc(t.name)}</b><span class="sev">${esc(t.method)}</span></div><div class="small"><code>${esc(t.path)}</code><br>${esc(t.expected||'No expectation supplied.')}</div><div class="row section"><button class="ghost" data-del="${i}">Remove</button></div></div>`).join('');
+  h.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{S.custom.splice(Number(b.dataset.del),1);renderCustom()});
+}
+function scanTextFile(name,content){
+  const signals=[];
+  const patterns=[
+    [/AKIA[0-9A-Z]{16}/g,'AWS access key'],
+    [/AIza[0-9A-Za-z_-]{20,}/g,'Google API key-like'],
+    [/sk-[A-Za-z0-9_-]{16,}/g,'OpenAI-style key-like'],
+    [/ghp_[A-Za-z0-9]{20,}/g,'GitHub token-like'],
+    [/xox[baprs]-[A-Za-z0-9-]{10,}/g,'Slack token-like'],
+    [/-----BEGIN (?:RSA|OPENSSH|EC|DSA) PRIVATE KEY-----/g,'private key header'],
+    [/(?:api[_-]?key|secret|password|token)\\s*[:=]\\s*["'`][^"'`\\r\\n]{8,}/gi,'credential-like assignment'],
+    [/eval\\s*\\(/g,'eval()'],
+    [/new Function\\s*\\(/g,'new Function()'],
+    [/document\\.write\\s*\\(/g,'document.write()'],
+    [/innerHTML\\s*=/g,'innerHTML assignment'],
+    [/outerHTML\\s*=/g,'outerHTML assignment'],
+    [/insertAdjacentHTML\\s*\\(/g,'insertAdjacentHTML()'],
+    [/dangerouslySetInnerHTML/g,'dangerouslySetInnerHTML'],
+    [/child_process\\.(exec|spawn|execFile)/g,'Node child_process execution'],
+    [/exec\\s*\\(/g,'generic exec() pattern'],
+    [/subprocess\\.(run|Popen|call)/g,'Python subprocess'],
+    [/fetch\\s*\\([^)]*https?:\\/\\//gi,'hard-coded remote fetch URL'],
+    [/localStorage\\.(setItem|getItem)\\s*\\(/g,'localStorage access'],
+    [/sessionStorage\\.(setItem|getItem)\\s*\\(/g,'sessionStorage access']
+  ];
+  for(const [rx,label] of patterns){
+    const matches=content.match(rx);if(matches?.length)signals.push({label,count:matches.length})
+  }
+  S.fileFindings.push({name,bytes:new Blob([content]).size,signals});
+}
+async function scanFiles(){
+  const files=[...$('filePicker').files]; if(!files.length){alert('Choose repository/source files first.');return}
+  S.fileFindings=[];$('fileResults').innerHTML='';log(`Scanning ${files.length} local file(s).`);
+  for(const f of files){
+    try{const c=await f.text();scanTextFile(f.name,c)}catch(e){S.fileFindings.push({name:f.name,error:String(e)})}
+  }
+  renderFiles();
+}
+function renderFiles(){
+  const h=$('fileResults');
+  if(!S.fileFindings.length){h.innerHTML='<div class="notice">No file findings yet.</div>';return}
+  h.innerHTML=S.fileFindings.map(x=>{
+    const bad=x.signals?.filter(s=>/(key|token|secret|password|private key)/i.test(s.label)).length;
+    return `<div class="finding ${bad?'medium':'info'}"><div class="head"><b>${esc(x.name)}</b><span class="sev">${x.bytes||0} bytes</span></div>${x.error?`<div class="small">${esc(x.error)}</div>`:`<div class="small">${x.signals?.length?x.signals.map(s=>`${esc(s.label)} (${s.count})`).join(' • '):'No high-signal static patterns detected.'}</div>`}</div>`
+  }).join('');
+}
+
+async function probeNetwork(){
+  const ps=lines($('networkPaths').value);if(!ps.length){alert('Enter one or more same-origin paths.');return}
+  for(const p of ps){if(S.stop)break;await probePath(p,new Set(['headers','cors','errors','reflection','normalization','cache']))}
+  $('networkTable').innerHTML=$('endpointTable').innerHTML;metrics();$('json').value=JSON.stringify(report(),null,2)
+}
+
+async function recheckHeaders(){
+  try{
+    const {r}=await req(location.origin+'/',{method:'GET'});headerCheck(r);metrics();$('json').value=JSON.stringify(report(),null,2)
+  }catch(e){check('Header recheck','N/A','Could not fetch current origin.',{error:text(e.message||e)})}
+}
+
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));
+  document.querySelectorAll('[data-panel]').forEach(x=>x.classList.toggle('active',x.dataset.panel===b.dataset.tab));
+  $('tabHeading').textContent=b.textContent.trim();
+});
+
+$('origin').value=location.origin;
+$('start').onclick=runAll;
+$('stop').onclick=()=>{S.stop=true;log('Stop requested; current harmless operation will finish.','WARN')};
+$('clear').onclick=()=>{
+  if(S.running)S.stop=true;S.checks=[];S.findings=[];S.endpoints=[];S.errors=[];S.fileFindings=[];S.discovered=[];
+  $('log').textContent='';$('json').value='';$('endpointTable').textContent='No endpoint observations yet.';
+  $('findings').innerHTML='<div class="notice ok">Cleared.</div>';renderChecks();metrics();state('Idle — no network activity has started');$('progressBar').style.width='0%';
+};
+$('addCustom').onclick=addCustom;
+$('runCustoms').onclick=runCustomTests;
+$('clearCustoms').onclick=()=>{S.custom=[];renderCustom()};
+$('scanFiles').onclick=scanFiles;
+$('clearFiles').onclick=()=>{S.fileFindings=[];renderFiles()};
+$('probeNetwork').onclick=probeNetwork;
+$('probeHeaders').onclick=recheckHeaders;
+$('exportJson').onclick=()=>{
+  const blob=new Blob([JSON.stringify(report(),null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`security-report-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
+};
+$('exportHtml').onclick=()=>{
+  const j=JSON.stringify(report(),null,2);
+  const out=`<!doctype html><meta charset="utf-8"><title>Security report</title><style>body{font-family:system-ui;padding:20px;background:#0b1020;color:#eee}pre{white-space:pre-wrap}</style><h1>trytohack.html report</h1><pre>${esc(j)}</pre>`;
+  const blob=new Blob([out],{type:'text/html'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`security-report-${new Date().toISOString().replace(/[:.]/g,'-')}.html`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)
+};
+window.addEventListener('beforeunload',e=>{if(S.running){e.preventDefault();e.returnValue=''}});
+
+renderCustom();renderFiles();renderChecks();renderFindings();metrics();state('Idle — no network activity has started');
+})();
+</script>
+</body>
+</html>
