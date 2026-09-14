@@ -1,119 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>hackifyoucan.html — Hyper-Aggressive Safe Security Workbench</title>
-  <meta name="description" content="Manual-start, same-origin, non-destructive web application security workbench with advanced safe probes, custom attack definitions, and local file analysis.">
-  <style>
-    :root{
-      color-scheme:dark;--bg:#080d1b;--panel:#11182f;--panel2:#0d1430;--text:#eef2ff;
-      --muted:#a9b5d1;--line:#29365e;--ok:#3fe09a;--warn:#ffd166;--bad:#ff6b6b;
-      --info:#69b5ff;--accent:#9c8cff;--accent2:#6f60e8;--shadow:rgba(0,0,0,.25)
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#070c18,#0b1122 55%,#070c18);color:var(--text)}
-    body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
-    button,input,select,textarea{font:inherit}
-    button{border:0;border-radius:10px;padding:10px 13px;background:var(--accent2);color:#fff;font-weight:800;cursor:pointer}
-    button:hover{filter:brightness(1.08)}
-    button:disabled{opacity:.45;cursor:not-allowed}
-    button.secondary{background:#1a2548}
-    button.warn{background:#6d5521}
-    button.danger{background:#782f35}
-    button.ghost{background:transparent;border:1px solid var(--line)}
-    input,select,textarea{width:100%;border:1px solid var(--line);border-radius:10px;background:#0a1027;color:var(--text);padding:10px;outline:none}
-    input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-    textarea{min-height:100px;resize:vertical;font-family:monospace;font-size:12px;}
-    label{display:block;font-size:12px;color:var(--muted);margin:11px 0 6px}
-    header{position:sticky;top:0;z-index:20;background:rgba(7,12,24,.96);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
-    .wrap{max-width:1500px;margin:0 auto;padding:0 18px}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:15px;padding:17px 0;flex-wrap:wrap}
-    .brand h1{margin:0;font-size:26px}
-    .brand p{margin:5px 0 0;color:var(--muted);font-size:13px}
-    .state{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:8px 11px;font-size:12px;color:var(--muted);background:#101735}
-    .dot{width:8px;height:8px;border-radius:50%;background:var(--warn)}
-    .tabs{display:flex;gap:6px;overflow:auto;padding-bottom:12px}
-    .tab{white-space:nowrap;padding:9px 12px;border-radius:10px;background:#121a37;color:var(--muted);border:1px solid var(--line);cursor:pointer;font-size:12px;font-weight:800}
-    .tab.active{background:#241f55;color:#fff;border-color:#5549a8}
-    main{padding:18px 0 45px}
-    .layout{display:grid;grid-template-columns:360px 1fr;gap:18px}
-    @media(max-width:1000px){.layout{grid-template-columns:1fr}}
-    .panel{background:rgba(17,24,47,.9);border:1px solid var(--line);border-radius:16px;padding:15px;box-shadow:0 12px 34px var(--shadow)}
-    .panel h2{font-size:16px;margin:0 0 12px}
-    .panel h3{font-size:13px;margin:15px 0 7px}
-    .small{font-size:12px;color:var(--muted);line-height:1.55}
-    .notice{padding:11px 12px;border:1px solid var(--line);border-radius:11px;background:#151d3c;color:#d6ddf5;font-size:12px;line-height:1.55}
-    .notice.danger{background:#281419;border-color:#67343a}
-    .notice.ok{background:#10271f;border-color:#235f49}
-    .section{margin-top:15px}
-    .row{display:flex;gap:8px;flex-wrap:wrap}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
-    @media(max-width:700px){.grid2,.grid3{grid-template-columns:1fr}}
-    .metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
-    @media(max-width:1100px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media(max-width:650px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    .metric{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:11px}
-    .metric b{font-size:20px;display:block}
-    .metric span{font-size:10px;color:var(--muted)}
-    .toolbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-    .badge{display:inline-flex;padding:5px 8px;border:1px solid var(--line);border-radius:999px;font-size:10px;color:var(--muted);background:#101635}
-    .check{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(41,54,94,.65)}
-    .check:last-child{border-bottom:0}
-    .check-title{font-size:12px;font-weight:800}
-    .check-desc{font-size:11px;color:var(--muted);margin-top:3px;word-break:break-word}
-    .status{font-size:10px;padding:5px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
-    .status.ok{color:var(--ok);background:#0d2b22;border-color:#225f49}
-    .status.warn{color:var(--warn);background:#302811;border-color:#6d5a26}
-    .status.bad{color:var(--bad);background:#301518;border-color:#6c3037}
-    .status.info{color:var(--info);background:#10253e;border-color:#2b5c88}
-    .status.na{color:#bcc5dd;background:#191f35}
-    .finding{border:1px solid var(--line);border-left:4px solid var(--info);border-radius:11px;padding:11px;margin:8px 0;background:#0e1533}
-    .finding.high,.finding.medium{border-left-color:var(--bad)}
-    .finding.low{border-left-color:var(--warn)}
-    .finding.info{border-left-color:var(--info)}
-    .finding .head{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
-    .sev{font-size:9px;letter-spacing:.11em;text-transform:uppercase}
-    pre,.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-    pre{white-space:pre-wrap;word-break:break-word}
-    .log{height:290px;overflow:auto;background:#070c18;border:1px solid var(--line);border-radius:12px;padding:10px;font:12px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap}
-    table{width:100%;border-collapse:collapse;font-size:11px}
-    th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-align:top;word-break:break-word}
-    th{color:var(--muted);font-weight:700}
-    code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:#dfe4ff;background:#151d3c;padding:2px 4px;border-radius:4px;}
-    details{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:8px}
-    summary{cursor:pointer;font-size:11px}
-    .tabpanel{display:none}.tabpanel.active{display:block}
-    .progress{height:8px;background:#0a1024;border:1px solid var(--line);border-radius:99px;overflow:hidden}
-    .progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent2),var(--info));transition:width .15s}
-    .toggle{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--muted);cursor:pointer;}
-    .toggle input{width:auto;cursor:pointer;}
-    .pillrow{display:flex;flex-wrap:wrap;gap:6px}
-    .filelist{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px}
-    .fileitem{display:flex;justify-content:space-between;gap:8px;padding:8px;border-bottom:1px solid rgba(41,54,94,.65)}
-    .fileitem:last-child{border-bottom:0}
-    footer{color:var(--muted);font-size:11px;line-height:1.6;padding-bottom:30px}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>trytohack.html — Hyper-Aggressive Safe Security Workbench</title>
+<meta name="description" content="Manual-start, same-origin, non-destructive web application security workbench with massive fuzzing, custom payloads, and local file analysis.">
+<style>
+:root{
+  color-scheme:dark;--bg:#050914;--panel:#0d1326;--panel2:#0a0f1d;--text:#e2e8f0;
+  --muted:#94a3b8;--line:#1e293b;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;
+  --info:#3b82f6;--accent:#8b5cf6;--accent2:#6366f1;--shadow:rgba(0,0,0,.4)
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#050914,#080d1f 55%,#050914);color:var(--text)}
+body{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+button{border:0;border-radius:8px;padding:10px 14px;background:var(--accent2);color:#fff;font-weight:700;cursor:pointer;transition:all 0.15s ease;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+button.secondary{background:#1e293b}
+button.warn{background:#78350f;color:#fef3c7}
+button.danger{background:#7f1d1d;color:#fee2e2}
+button.ghost{background:transparent;border:1px solid var(--line)}
+button.ghost:hover{background:#1e293b}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:#030712;color:var(--text);padding:10px 12px;outline:none;transition:border-color 0.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(139,92,246,0.2)}
+textarea{min-height:110px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.5}
+label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+header{position:sticky;top:0;z-index:50;background:rgba(5,9,20,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1600px;margin:0 auto;padding:0 20px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 0;flex-wrap:wrap}
+.brand h1{margin:0;font-size:24px;background:linear-gradient(to right,var(--accent),var(--info));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;letter-spacing:-0.5px}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.state{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:12px;color:var(--text);background:#0f172a;box-shadow:0 2px 8px var(--shadow)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.dot.run{background:var(--info);box-shadow:0 0 8px var(--info);animation:pulse 1.5s infinite}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+@keyframes pulse{0%{opacity:.6;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}100%{opacity:.6;transform:scale(0.8)}}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:16px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;padding:10px 16px;border-radius:8px;background:#0f172a;color:var(--muted);border:1px solid var(--line);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s}
+.tab:hover{background:#1e293b;color:var(--text)}
+.tab.active{background:var(--accent2);color:#fff;border-color:var(--accent);box-shadow:0 4px 12px rgba(99,102,241,0.25)}
+main{padding:24px 0 60px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:24px}
+@media(max-width:1024px){.layout{grid-template-columns:1fr}}
+.panel{background:rgba(13,19,38,.75);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 8px 32px var(--shadow);backdrop-filter:blur(10px)}
+.panel h2{font-size:17px;margin:0 0 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.panel h3{font-size:14px;margin:20px 0 10px;color:var(--text)}
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.notice{padding:12px 16px;border:1px solid var(--line);border-radius:8px;background:#1e293b;color:#f8fafc;font-size:13px;line-height:1.6;margin-bottom:16px}
+.notice.danger{background:#450a0a;border-color:#7f1d1d;color:#fecaca}
+.notice.ok{background:#064e3b;border-color:#047857;color:#d1fae5}
+.notice.warn{background:#451a03;border-color:#92400e;color:#fde68a}
+.section{margin-top:20px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:768px){.grid2,.grid3{grid-template-columns:1fr}}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+@media(max-width:1200px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px;text-align:center;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2)}
+.metric b{font-size:28px;display:block;margin-bottom:4px;font-weight:900}
+.metric span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+.metric.fail b{color:var(--bad)}
+.metric.warn b{color:var(--warn)}
+.metric.pass b{color:var(--ok)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:16px}
+.check{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.check:last-child{border-bottom:0}
+.check-title{font-size:13px;font-weight:700;color:var(--text)}
+.check-desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.status{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;font-weight:700;letter-spacing:0.5px;text-transform:uppercase}
+.status.ok{color:#34d399;background:#022c22;border-color:#059669}
+.status.warn{color:#fbbf24;background:#451a03;border-color:#d97706}
+.status.bad{color:#f87171;background:#450a0a;border-color:#dc2626}
+.status.info{color:#60a5fa;background:#172554;border-color:#2563eb}
+.status.na{color:#94a3b8;background:#0f172a;border-color:#334155}
+.finding{border:1px solid var(--line);max-width:100%;overflow:hidden;border-left:4px solid var(--info);border-radius:8px;padding:16px;margin:12px 0;background:#0f172a;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.finding.high{border-left-color:var(--bad);background:linear-gradient(90deg,rgba(69,10,10,0.4),transparent)}
+.finding.medium{border-left-color:var(--warn);background:linear-gradient(90deg,rgba(69,26,3,0.4),transparent)}
+.finding.low{border-left-color:var(--info)}
+.finding .head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.finding .head b{font-size:14px;color:var(--text)}
+.sev{font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;background:rgba(0,0,0,0.3);border:1px solid var(--line)}
+.high .sev{color:var(--bad);border-color:var(--bad)}
+.medium .sev{color:var(--warn);border-color:var(--warn)}
+pre,.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{white-space:pre-wrap;word-break:break-word;background:#030712;padding:12px;border-radius:6px;border:1px solid var(--line);font-size:11px;color:#a5b4fc;overflow-x:auto}
+.log{height:350px;overflow:auto;overflow-wrap:anywhere;background:#030712;border:1px solid var(--line);border-radius:8px;padding:12px;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;color:#94a3b8}
+.log .INFO{color:#60a5fa}
+.log .WARN{color:#fbbf24}
+.log .ERROR{color:#f87171}
+.log .SUCCESS{color:#34d399}
+table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px}td,th{overflow-wrap:anywhere}
+th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:700;background:#0f172a}
+td code{color:#a5b4fc;background:#1e293b;padding:2px 6px;border-radius:4px}
+details{border:1px solid var(--line);border-radius:6px;padding:10px;margin-top:12px;background:#0a0f1d}
+summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+summary:hover{color:var(--text)}
+.tabpanel{display:none;animation:fadeIn 0.3s ease}
+.tabpanel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.progress-wrap{background:#0f172a;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-bottom:8px;position:relative}
+.progress{height:12px;background:linear-gradient(90deg,var(--info),var(--accent));width:0%;transition:width 0.2s ease, background-color 0.3s}
+.progress-text{position:absolute;top:0;left:0;width:100%;text-align:center;font-size:9px;line-height:12px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.8);mix-blend-mode:difference}
+.toggle{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text);cursor:pointer}
+.toggle input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px}
+.pill{background:#1e293b;border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;transition:all 0.2s}
+.pill:hover{background:#334155}
+.pill input{margin:0;width:14px;height:14px}
+.pill:has(input:checked){background:var(--accent2);border-color:var(--accent);color:#fff}
+.filelist{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#0a0f1d}
+.fileitem{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.fileitem:last-child{border-bottom:0}
+footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;padding-bottom:40px;border-top:1px solid var(--line);margin-top:20px;padding-top:20px}
+</style>
 </head>
 <body>
 <header>
   <div class="wrap">
     <div class="top">
       <div class="brand">
-        <h1>hackifyoucan.html</h1>
-        <p>Hyper-Aggressive Safe Security Workbench — manual start, same-origin by default, non-destructive.</p>
+        <h1>trytohack.html</h1>
+        <p>Deep, Safe Same-Origin Web Application Security Workbench</p>
       </div>
-      <div class="state"><span class="dot" id="dot"></span><span id="stateText">Idle — no network activity has started</span></div>
+      <div class="state" id="stateContainer">
+        <span class="dot" id="dot"></span>
+        <span id="stateText" style="font-weight:600">IDLE — System Ready</span>
+      </div>
     </div>
     <div class="tabs" role="tablist">
-      <button class="tab active" data-tab="overview">Overview</button>
-      <button class="tab" data-tab="safe">Safe Hack</button>
-      <button class="tab" data-tab="customHttp">Custom HTTP Tests</button>
-      <button class="tab" data-tab="probeBuilder">Probe Builder</button>
-      <button class="tab" data-tab="files">Files</button>
-      <button class="tab" data-tab="network">Network &amp; Headers</button>
-      <button class="tab" data-tab="report">Report</button>
+      <button class="tab active" data-tab="overview">Overview & Config</button>
+      <button class="tab" data-tab="fuzzing">Payloads & Tricks</button>
+      <button class="tab" data-tab="custom">Custom Requests</button>
+      <button class="tab" data-tab="files">Local Repo Scan</button>
+      <button class="tab" data-tab="network">Network Probes</button>
+      <button class="tab" data-tab="report">Results & Report</button>
     </div>
   </div>
 </header>
@@ -121,909 +148,837 @@
 <main class="wrap">
   <div class="layout">
     <aside>
+      <!-- TAB 1: OVERVIEW & CONFIG -->
       <section class="panel tabpanel active" data-panel="overview">
-        <h2>Scope &amp; guardrails</h2>
-        <div class="notice danger">
-          Only test systems you own or are authorized to assess. This file does not brute-force passwords, steal credentials, delete/modify production data, upload files automatically, exploit third-party targets, or run destructive payloads.
+        <h2>Target Configuration</h2>
+        <div class="notice warn">
+          <b>Rule of Engagement:</b> Only test authorized, same-origin deployments. This workbench performs deliberate, rate-limited, same-origin checks. It does not fabricate results and it does not execute destructive exploits.
         </div>
 
-        <label>Base origin</label>
-        <input id="origin" readonly>
+        <label>Base Origin (Must match deployment for CORS)</label>
+        <input id="origin" value="" placeholder="https://lexis-ai-chatini.vercel.app">
+        <div class="small" style="margin-top:4px">Leave default to scan the current deployment origin.</div>
 
-        <label>Additional same-origin paths</label>
-        <textarea id="paths" placeholder="/api/chat&#10;/api/research&#10;/api/auth"></textarea>
-        <div class="small">One path per line. Full off-origin URLs are rejected.</div>
-
-        <label>Discovery paths</label>
-        <textarea id="discovery" placeholder="/robots.txt&#10;/sitemap.xml&#10;/.well-known/security.txt"></textarea>
-
+        <label>Seed Paths (Discovery starting points)</label>
+        <textarea id="paths" placeholder="/api/auth
+/api/users
+/api/data
+/admin"></textarea>
+        
         <div class="grid2 section">
           <div>
-            <label>Concurrency</label>
+            <label>Concurrency Limit</label>
             <select id="concurrency">
-              <option value="1">1 — gentle</option><option value="2" selected>2 — balanced</option><option value="3">3 — stronger</option><option value="4">4 — aggressive (still rate-limited)</option>
+              <option value="2">2 (Gentle)</option>
+              <option value="5" selected>5 (Standard)</option>
+              <option value="10">10 (Aggressive)</option>
+              <option value="25">25 (Hyper-Aggressive)</option>
             </select>
           </div>
           <div>
             <label>Timeout (ms)</label>
-            <input id="timeout" type="number" min="2000" max="30000" step="1000" value="12000">
+            <input id="timeout" type="number" min="1000" max="30000" step="1000" value="10000">
           </div>
         </div>
 
-        <label class="toggle section"><input id="allowPost" type="checkbox"> Enable optional POST probes that must be explicitly approved per test</label>
-        <div class="small">POST support is disabled by default because a browser tool cannot know whether an endpoint mutates data.</div>
-
-        <div class="row section">
-          <button id="start">Start Hyper-Aggressive Safe Test</button>
-          <button id="stop" class="danger" disabled>Stop</button>
-          <button id="clear" class="secondary">Clear</button>
+        <div class="grid2 section">
+          <div>
+            <label>Scan Pace</label>
+            <select id="pace">
+              <option value="1200" selected>Careful — 1 request about every 1.2s</option>
+              <option value="700">Thorough — about 1 request / 0.7s</option>
+              <option value="350">Normal — about 1 request / 0.35s</option>
+            </select>
+          </div>
+          <div>
+            <label>Scan Depth</label>
+            <select id="depth">
+              <option value="basic">Basic — availability + headers</option>
+              <option value="deep" selected>Deep — methods + CORS + reflection</option>
+              <option value="complete">Complete — deep + repository source scan</option>
+            </select>
+          </div>
         </div>
 
-        <div class="row section">
-          <button id="exportJson" class="secondary" disabled>Export JSON</button>
-          <button id="exportHtml" class="secondary" disabled>Export HTML</button>
-        </div>
-      </section>
-
-      <section class="panel tabpanel" data-panel="safe">
-        <h2>Safe hack controls</h2>
-        <div class="small">These probes actively interact with your current origin but are designed to avoid state-changing operations.</div>
-        <h3>Probe intensity</h3>
+        <h3 class="section">Fuzzing Intensity</h3>
         <select id="intensity">
-          <option value="standard">Standard — headers, endpoints, DOM, CORS</option>
-          <option value="strong">Strong — add reflection, normalization, cache and parameter probes</option>
-          <option value="max">Maximum safe — all non-destructive probes plus larger read-only discovery</option>
-          <option value="hyper">Hyper-Aggressive — enables all advanced non-destructive probes</option>
+          <option value="light">Light (Headers, CORS, Basic Status)</option>
+          <option value="standard" selected>Standard (Method Fuzzing, Reflection, Common Secrets)</option>
+          <option value="hyper">Hyper-Aggressive (SQLi/XSS/LFI payloads, Deep Discovery, Header Injection)</option>
         </select>
-        <h3>Probe categories</h3>
+
+        <h3 class="section">Active Modules</h3>
         <div class="pillrow">
-          <label class="toggle"><input type="checkbox" class="cat" value="surface" checked> Surface</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="headers" checked> Headers</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="cors" checked> CORS</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="errors" checked> Error leakage</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="reflection" checked> Reflection</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="normalization" checked> Path normalization</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="cache" checked> Cache behavior</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="dom" checked> DOM/XSS surface</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="storage" checked> Browser storage</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="files" checked> Local file static scan</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="paramFuzz"> Param Fuzzing</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="advHeaders"> Adv. Headers</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="sriChecks"> SRI Checks</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="contentTypeProbe"> Content-Type Probe</label>
-          <label class="toggle"><input type="checkbox" class="cat" value="errorFingerprint"> Error Fingerprint</label>
+          <label class="pill"><input type="checkbox" class="mod" value="discovery" checked> Dir Discovery</label>
+          <label class="pill"><input type="checkbox" class="mod" value="headers" checked> Header Auth</label>
+          <label class="pill"><input type="checkbox" class="mod" value="methods" checked> Verb Fuzz</label>
+          <label class="pill"><input type="checkbox" class="mod" value="cors" checked> CORS Origin</label>
+          <label class="pill"><input type="checkbox" class="mod" value="xss" checked> XSS Reflection</label>
+          <label class="pill"><input type="checkbox" class="mod" value="sqli" checked> SQLi / DB Errors</label>
+          <label class="pill"><input type="checkbox" class="mod" value="lfi" checked> Path Traversal</label>
+          <label class="pill"><input type="checkbox" class="mod" value="ssti" checked> Template Injection</label>
         </div>
-        <div class="notice section">
-          “Hyper-Aggressive” does not mean exploit execution. It means the most active, thorough, and non-destructive testing this frontend can perform without pretending it can safely determine whether an arbitrary request is mutating.
-        </div>
-      </section>
 
-      <section class="panel tabpanel" data-panel="customHttp">
-        <h2>Add a safe custom HTTP test</h2>
-        <div class="small">Custom tests are saved only in this page unless you export them. Off-origin targets are rejected. Use GET/HEAD/OPTIONS by default.</div>
-        <label>Name</label>
-        <input id="customName" placeholder="Example: verify public cache policy">
-        <label>Method</label>
-        <select id="customMethod"><option>GET</option><option>HEAD</option><option>OPTIONS</option><option>POST</option></select>
-        <label>Path</label>
-        <input id="customPath" placeholder="/api/your-endpoint?test=1">
-        <label>Header JSON (optional)</label>
-        <textarea id="customHeaders" placeholder="{&quot;X-Security-Test&quot;:&quot;my-safe-check&quot;}"></textarea>
-        <label>Body (POST only, optional)</label>
-        <textarea id="customBody" placeholder="{&quot;probe&quot;:&quot;safe-test&quot;}"></textarea>
-        <label>Expected safe behavior</label>
-        <textarea id="customExpected" placeholder="Explain what status/header/body behavior you expect. This is guidance for the report, not proof."></textarea>
-        <label class="toggle"><input id="customManualApproval" type="checkbox"> I have checked this test and manually approve it</label>
+        <div class="row section" style="margin-top:24px">
+          <button id="startBtn" style="flex:1;font-size:14px;padding:14px">🔥 START DEEP SAFE SCAN</button>
+          <button id="stopBtn" class="danger" disabled>STOP</button>
+        </div>
         <div class="row section">
-          <button id="addCustom">Add test</button>
-          <button id="runCustoms" class="secondary">Run custom tests</button>
-          <button id="clearCustoms" class="secondary">Clear custom tests</button>
+          <button id="clearBtn" class="ghost" style="flex:1">Clear State</button>
         </div>
-        <div class="section" id="customList"></div>
       </section>
 
-      <section class="panel tabpanel" data-panel="probeBuilder">
-        <h2>Advanced Probe Builder</h2>
-        <div class="small">Define custom, hyper-aggressive (but safe) probes to run against discovered endpoints. These are saved only in this page unless you export them.</div>
+      <!-- TAB 2: PAYLOADS & TRICKS -->
+      <section class="panel tabpanel" data-panel="fuzzing">
+        <h2>Custom Hacking Tricks</h2>
+        <div class="small" style="margin-bottom:16px">Define your own fuzzing dictionaries. The Hyper-Aggressive engine will append these to discovered endpoints and query parameters.</div>
 
-        <h3>Custom Regex Scanners (Response Body)</h3>
-        <label>Scanner Name</label><input id="regexScannerName" placeholder="e.g., Internal ID Leak">
-        <label>Regex Pattern (JavaScript format)</label><input id="regexScannerPattern" placeholder="e.g., /internal_id=\d+/i">
-        <label>Severity</label><select id="regexScannerSeverity"><option>INFO</option><option>LOW</option><option>MEDIUM</option><option>HIGH</option></select>
-        <label>Description</label><textarea id="regexScannerDescription" placeholder="What does this pattern indicate?"></textarea>
-        <div class="row section"><button id="addRegexScanner">Add Regex Scanner</button><button id="clearRegexScanners" class="secondary">Clear Scanners</button></div>
-        <div class="section" id="regexScannerList"></div>
+        <label>Custom Discovery Wordlist (Paths)</label>
+        <textarea id="customWordlist" placeholder="/.env
+/.git/config
+/wp-admin
+/api/v1/users
+/phpinfo.php
+/.aws/credentials
+/backup.sql"></textarea>
+        <div class="small">One path per line. These are appended to the origin and checked for 200/403/500 status.</div>
 
-        <h3 class="section">Custom Header Injection Probes</h3>
-        <label>Probe Name</label><input id="headerProbeName" placeholder="e.g., X-Forwarded-Host Bypass">
-        <label>Header Name</label><input id="headerProbeHeaderName" placeholder="e.g., X-Forwarded-Host">
-        <label>Header Value</label><input id="headerProbeHeaderValue" placeholder="e.g., evil.com">
-        <label>Apply to Path Regex (optional)</label><input id="headerProbePathRegex" placeholder="e.g., /api/.*">
-        <div class="row section"><button id="addHeaderProbe">Add Header Probe</button><button id="clearHeaderProbes" class="secondary">Clear Probes</button></div>
-        <div class="section" id="headerProbeList"></div>
-
-        <h3 class="section">URL Parameter Fuzzers</h3>
-        <label>Fuzzer Name</label><input id="paramFuzzerName" placeholder="e.g., XSS Payload Test">
-        <label>Parameter Name (e.g., 'id', 'q')</label><input id="paramFuzzerParamName" placeholder="e.g., id">
-        <label>Payloads (one per line)</label><textarea id="paramFuzzerPayloads" placeholder="<script>alert(1)</script>&#10;{{7*7}}&#10;/etc/passwd"></textarea>
-        <label>Apply to Path Regex (optional)</label><input id="paramFuzzerPathRegex" placeholder="e.g., /search.*">
-        <div class="row section"><button id="addParamFuzzer">Add Param Fuzzer</button><button id="clearParamFuzzers" class="secondary">Clear Fuzzers</button></div>
-        <div class="section" id="paramFuzzerList"></div>
-
+        <label class="section">Custom Parameter Payloads (SQLi/XSS/Command)</label>
+        <textarea id="customPayloads" placeholder="' OR 1=1--
+&quot;&gt;&lt;svg/onload=alert(1)&gt;
+../../../../etc/passwd
+{{7*7}}
+| whoami"></textarea>
+        <div class="small">These strings are injected into known parameters and paths during reflection/error testing.</div>
+        
         <div class="row section">
-          <button id="runProbeBuilderProbes" class="warn">Run All Custom Probes</button>
+          <button id="savePayloadsBtn">Save Custom Tricks</button>
+          <button id="resetPayloadsBtn" class="secondary">Load Defaults</button>
         </div>
       </section>
 
+      <!-- TAB 3: CUSTOM REQUESTS -->
+      <section class="panel tabpanel" data-panel="custom">
+        <h2>Custom Safe Requests</h2>
+        <div class="small">Craft specific manual probes to run alongside the automated scanner.</div>
+        <label>Test Name</label>
+        <input id="reqName" placeholder="E.g., GraphQL Introspection">
+        
+        <div class="grid2">
+          <div>
+            <label>Method</label>
+            <select id="reqMethod"><option>GET</option><option>POST</option><option>PUT</option><option>OPTIONS</option><option>DELETE</option></select>
+          </div>
+          <div>
+            <label>Path</label>
+            <input id="reqPath" placeholder="/graphql">
+          </div>
+        </div>
+
+        <label>Headers (JSON)</label>
+        <textarea id="reqHeaders" placeholder="{&quot;Content-Type&quot;:&quot;application/json&quot;, &quot;X-Custom-Bypass&quot;:&quot;127.0.0.1&quot;}" style="min-height:80px"></textarea>
+        
+        <label>Body (String/JSON)</label>
+        <textarea id="reqBody" placeholder="{&quot;query&quot;:&quot;{ __schema { types { name } } }&quot;}" style="min-height:80px"></textarea>
+        
+        <label class="toggle section"><input id="reqManual" type="checkbox"> I confirm this request is safe and non-destructive.</label>
+        
+        <div class="row section">
+          <button id="addReqBtn">Add to Queue</button>
+          <button id="runReqsBtn" class="secondary">Run Custom Now</button>
+          <button id="clearReqsBtn" class="ghost">Clear List</button>
+        </div>
+        
+        <div id="customList" class="section"></div>
+      </section>
+
+      <!-- TAB 4: FILES -->
       <section class="panel tabpanel" data-panel="files">
-        <h2>Local files</h2>
-        <div class="small">Choose source files from your repository. Files are read locally in your browser and are never uploaded by this tool.</div>
-        <label>Repository/source files</label>
-        <input id="filePicker" type="file" multiple accept=".html,.htm,.js,.mjs,.cjs,.ts,.tsx,.jsx,.json,.yaml,.yml,.env,.txt,.md,.css,.sql,.py,.java,.go,.php,.rb,.rs">
-        <div class="row section">
-          <button id="scanFiles">Scan selected files</button>
-          <button id="clearFiles" class="secondary">Clear file results</button>
+        <h2>Repository & Source Analysis</h2>
+        <div class="small">
+          Two real modes are supported: choose files directly from the repository on your computer, or enter deployed relative paths and let this page fetch them from the current origin. Findings are based on the bytes actually read; no synthetic findings are created.
         </div>
-        <div class="small section">The static scan looks for common secret patterns, unsafe sinks, dynamic code execution, risky URL handling, insecure cookie/storage usage, and suspicious server-side string construction.</div>
-        <div class="section" id="fileResults"></div>
+
+        <label>Local Repository Files</label>
+        <input id="fileInput" type="file" multiple webkitdirectory directory accept=".js,.mjs,.ts,.jsx,.tsx,.html,.css,.json,.env,.txt,.md,.py,.java,.go,.php">
+        <div class="row section">
+          <button id="scanFilesBtn">Analyze Selected Files</button>
+          <button id="clearFilesBtn" class="secondary">Clear</button>
+        </div>
+
+        <label class="section">Deployed Repository Paths</label>
+        <textarea id="repoPaths" style="min-height:240px" placeholder="public/index.html
+public/app.html
+api/chat.js
+lib/privacyEngine.js"></textarea>
+        <div class="small">Use paths that are actually reachable from the deployment. For example, <code>public/app.html</code> is often deployed as <code>/app.html</code>; source-only files such as <code>lib/privacyEngine.js</code> may not be publicly fetchable, in which case the scanner will report that honestly instead of inventing results.</div>
+        <div class="row section">
+          <button id="scanRepoBtn">Deep Scan Deployed Paths</button>
+          <button id="advancedSourceBtn" class="warn">Advanced JS/HTML Audit</button>
+          <button id="loadRepoBtn" class="secondary">Load My Repository List</button>
+        </div>
+        <div class="notice" style="margin-top:12px"><b>Advanced JS/HTML Audit:</b> analyzes every selected JavaScript/HTML file individually without executing it. It adds structural analysis, endpoint extraction, source/sink proximity checks, authentication-boundary heuristics, secret review, script/form analysis, and per-file evidence. Static matches are labeled for review rather than automatically treated as exploitable vulnerabilities.</div>
+
+        <div id="fileResults" class="section filelist">
+          <div class="notice">No files analyzed yet.</div>
+        </div>
       </section>
 
+      <!-- TAB 5: NETWORK -->
       <section class="panel tabpanel" data-panel="network">
-        <h2>Network &amp; headers</h2>
-        <div class="small">Browser-visible observations from safe requests. HttpOnly cookies and server-only behavior cannot be fully inspected from JavaScript.</div>
-        <label>Extra endpoints</label>
-        <textarea id="networkPaths" placeholder="/api/chat&#10;/api/research"></textarea>
+        <h2>Network & Headers Probe</h2>
+        <div class="small">Manually re-test specific endpoints for Security Headers and CORS misconfigurations.</div>
+        
+        <label>Endpoints to Probe</label>
+        <textarea id="netPaths" placeholder="/
+/api/chat"></textarea>
+        
         <div class="row section">
-          <button id="probeNetwork">Probe endpoints</button>
-          <button id="probeHeaders" class="secondary">Recheck current page headers</button>
+          <button id="probeNetBtn">Probe Specific Endpoints</button>
+          <button id="probeCurrentBtn" class="secondary">Check Current Page Headers</button>
         </div>
       </section>
     </aside>
 
     <section>
+      <!-- MAIN VIEW -->
       <section class="panel">
         <div class="toolbar">
           <div>
-            <h2 id="tabHeading">Overview</h2>
-            <div class="small" id="scope">No test started.</div>
+            <h2 id="tabTitle" style="border:0;padding:0;margin:0">Overview & Config</h2>
+            <div class="small" id="scopeDisplay">Ready to initialize.</div>
           </div>
-          <div class="status info" id="overall">IDLE</div>
+          <div class="status info" id="overallStatus">STANDBY</div>
         </div>
-        <div class="progress section"><div id="progressBar"></div></div>
+        
+        <div class="progress-wrap">
+          <div class="progress" id="progressBar"></div>
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+        
         <div class="metrics section">
-          <div class="metric"><b id="nChecks">0</b><span>checks</span></div>
-          <div class="metric"><b id="nPass">0</b><span>pass</span></div>
-          <div class="metric"><b id="nWarn">0</b><span>warnings</span></div>
-          <div class="metric"><b id="nFail">0</b><span>confirmed concerns</span></div>
-          <div class="metric"><b id="nNA">0</b><span>not testable here</span></div>
-          <div class="metric"><b id="nFind">0</b><span>findings</span></div>
+          <div class="metric"><b id="mTotal">0</b><span>Requests</span></div>
+          <div class="metric pass"><b id="mPass">0</b><span>Passed</span></div>
+          <div class="metric warn"><b id="mWarn">0</b><span>Warnings</span></div>
+          <div class="metric fail"><b id="mFail">0</b><span>Critical</span></div>
+          <div class="metric"><b id="mFind">0</b><span>Findings</span></div>
+          <div class="metric"><b id="mTime">0s</b><span>Elapsed</span></div>
         </div>
       </section>
 
-      <section class="panel section tabpanel active" data-panel="overview">
-        <h2>What this tool can and cannot prove</h2>
-        <div class="grid2">
-          <div class="notice ok">
-            <b>Can test actively:</b><br>
-            same-origin status/method behavior; headers; CORS observations; safe reflection probes; error disclosure; path normalization differences; cache headers; DOM sinks; browser storage; local source files; advanced header/param fuzzing; content-type negotiation; SRI checks.
+      <!-- RESULTS CONTENT -->
+      <div class="tabpanel active" data-panel="overview">
+        <div class="grid2 section">
+          <section class="panel">
+            <h2>Critical Findings</h2>
+            <div id="findingsView"><div class="notice ok">Awaiting scan...</div></div>
+          </section>
+          <section class="panel">
+            <h2>Live Activity Log</h2>
+            <div class="log" id="logView"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="tabpanel" data-panel="fuzzing">
+        <section class="panel section">
+          <h2>Fuzzing Dictionary Info</h2>
+          <div class="notice">
+            The scanner uses controlled, non-executing markers and response observations. It checks for:
+            <ul>
+              <li><b>SQLi:</b> Syntax errors, DB-specific tracebacks (MySQL, Postgres, Oracle, SQLite).</li>
+              <li><b>XSS:</b> Exact DOM reflection of unencoded payload markers.</li>
+              <li><b>LFI/RCE:</b> Linux root signatures, Windows boot loader strings, Python stack traces.</li>
+              <li><b>Header Injection:</b> Host overrides, X-Forwarded-For admin bypass attempts.</li>
+            </ul>
           </div>
-          <div class="notice danger">
-            <b>Cannot prove from this page alone:</b><br>
-            SQL injection exploitability; server-side SSRF; database isolation; cloud IAM; authorization correctness across accounts; secret rotation; backend RCE; server-side rate-limit correctness; hidden routes not discoverable from your supplied sources.
+        </section>
+      </div>
+
+      <div class="tabpanel" data-panel="custom">
+        <section class="panel section">
+          <h2>Custom Request Results</h2>
+          <div id="customResultsView"><div class="notice">Run custom requests to see results here.</div></div>
+        </section>
+      </div>
+      
+      <div class="tabpanel" data-panel="network">
+        <section class="panel section">
+          <h2>Detailed Endpoint Analysis</h2>
+          <div style="overflow-x:auto">
+            <table id="endpointTable">
+              <thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Type</th><th>Observation</th></tr></thead>
+              <tbody id="endpointTbody">
+                <tr><td colspan="5" style="text-align:center">No data yet.</td></tr>
+              </tbody>
+            </table>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
-      <section class="panel section">
-        <h2>Findings</h2>
-        <div id="findings"><div class="notice ok">No findings yet. Start a test to begin.</div></div>
-      </section>
-
-      <section class="panel section">
-        <h2>Security checks</h2>
-        <div id="checks"></div>
-      </section>
-
-      <section class="panel section">
-        <h2>Endpoint observations</h2>
-        <div style="overflow-x:auto;">
-          <div id="endpointTable" class="small">No endpoint observations yet.</div>
-        </div>
-      </section>
-
-      <section class="panel section">
-        <h2>Activity log</h2>
-        <div class="log" id="log"></div>
-      </section>
-
-      <section class="panel section tabpanel" data-panel="report">
-        <h2>Machine-readable report</h2>
-        <textarea id="json" spellcheck="false" style="min-height:340px"></textarea>
-      </section>
+      <div class="tabpanel" data-panel="report">
+        <section class="panel section">
+          <div class="toolbar">
+            <h2 style="border:0;padding:0;margin:0">Detailed Security Report</h2>
+            <div class="row">
+              <button id="dlJsonBtn" class="secondary">Download JSON</button>
+              <button id="dlHtmlBtn" class="secondary">Download HTML</button>
+            </div>
+          </div>
+          <textarea id="jsonOutput" spellcheck="false" style="min-height:500px" readonly placeholder="Run a scan to generate the report..."></textarea>
+        </section>
+        <section class="panel section">
+          <h2>All Security Checks</h2>
+          <div id="checksView"></div>
+        </section>
+      </div>
     </section>
   </div>
 </main>
 
-<footer class="wrap">
-  Safety model: manual start; same-origin scope; bounded concurrency; timeout; no credential guessing; no destructive verbs by default; no automatic uploads; no automatic external scanning. A PASS means no issue was confirmed by this browser-side test, not that the backend is vulnerability-free.
+<footer>
+  <b>Safety & Constraints:</b> This is a browser-based, same-origin defensive workbench. It makes deliberate requests to the selected deployment, uses rate limiting between requests, and reports only observations supported by actual responses or actual source files read in the browser.
 </footer>
 
 <script>
 (() => {
-'use strict';
+  'use strict';
 
-const S = {
-  running:false, stop:false, checks:[], findings:[], endpoints:[], errors:[],
-  customHttp:[], fileFindings:[], discovered:[], startedAt:null, endedAt:null,
-  customRegexScanners: [], customHeaderProbes: [], customParamFuzzers: []
-};
-const $ = id => document.getElementById(id);
-const iso = () => new Date().toISOString();
-const unique = a => [...new Set(a)];
-const text = (v,n=1800) => { try { const s=String(v??''); return s.length>n?s.slice(0,n)+'…':s; } catch{return '[unserializable]';} };
-const esc = v => String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const lines = v => unique(String(v||'').split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean));
-const sameOrigin = raw => { try { const u=new URL(raw,location.origin); return u.origin===location.origin && u.protocol===location.protocol ? u:null; } catch{return null;} };
+  const state = {
+    running:false, stop:false, startTime:null, timer:null, reqCount:0,
+    findings:[], checks:[], endpoints:[], customReqs:[], fileResults:[],
+    currentPhase:'IDLE', lastRequestAt:0, report:null
+  };
 
-function log(msg, level='INFO'){
-  const line=`[${new Date().toLocaleTimeString()}] [${level}] ${msg}`;
-  $('log').textContent += ($('log').textContent?'\n':'')+line;
-  $('log').scrollTop = $('log').scrollHeight;
-}
-function state(textValue,mode='idle'){
-  $('stateText').textContent=textValue;
-  $('dot').style.background=mode==='run'?'var(--info)':mode==='ok'?'var(--ok)':mode==='bad'?'var(--bad)':'var(--warn)';
-}
-function check(name,status,details='',evidence={}){
-  const c={name,status,details,evidence,time:iso()}; S.checks.push(c); renderChecks(); metrics(); return c;
-}
-function find(severity,title,detail,evidence={}){
-  S.findings.push({severity,title,detail,evidence,time:iso()}); renderFindings(); metrics();
-}
-function metrics(){
-  $('nChecks').textContent=S.checks.length;
-  $('nPass').textContent=S.checks.filter(x=>x.status==='PASS').length;
-  $('nWarn').textContent=S.checks.filter(x=>x.status==='WARN').length;
-  $('nFail').textContent=S.checks.filter(x=>x.status==='FAIL').length;
-  $('nNA').textContent=S.checks.filter(x=>x.status==='N/A').length;
-  $('nFind').textContent=S.findings.length;
-  const o=$('overall');
-  if(S.checks.some(x=>x.status==='FAIL')){o.textContent='CONFIRMED CONCERN';o.className='status bad'}
-  else if(S.checks.some(x=>x.status==='WARN')){o.textContent='WARNINGS';o.className='status warn'}
-  else if(S.checks.length){o.textContent='PASS';o.className='status ok'}
-  else{o.textContent='IDLE';o.className='status info'}
-}
-function renderFindings(){
-  const h=$('findings');
-  if(!S.findings.length){h.innerHTML='<div class="notice ok">No findings recorded.</div>';return}
-  h.innerHTML=S.findings.map(f=>{
-    const cls=(f.severity==='HIGH'||f.severity==='MEDIUM')?'high':f.severity==='LOW'?'low':'info';
-    return `<div class="finding ${cls}"><div class="head"><b>${esc(f.title)}</b><span class="sev">${esc(f.severity)}</span></div><div class="small">${esc(f.detail)}</div>${Object.keys(f.evidence||{}).length?`<details><summary>Evidence</summary><pre>${esc(JSON.stringify(f.evidence,null,2))}</pre></details>`:''}</div>`
-  }).join('');
-}
-function renderChecks(){
-  $('checks').innerHTML=S.checks.map(c=>`<div class="check"><div><div class="check-title">${esc(c.name)}</div><div class="check-desc">${esc(c.details)}</div></div><span class="status ${c.status==='PASS'?'ok':c.status==='FAIL'?'bad':c.status==='WARN'?'warn': 'na'}">${esc(c.status)}</span></div>`).join('');
-}
-function renderEndpoints(){
-  const h=$('endpointTable');
-  if(!S.endpoints.length){h.textContent='No endpoint observations yet.';return}
-  h.innerHTML=`<table><thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Type</th><th>Cache</th><th>Note</th></tr></thead><tbody>${
-    S.endpoints.map(e=>`<tr><td><code>${esc(e.method)}</code></td><td><code>${esc(e.path)}</code></td><td>${e.status??'—'}</td><td>${esc(e.type||'—')}</td><td>${esc(e.cache||'—')}</td><td>${esc(e.note||'')}</td></tr>`).join('')
-  }</tbody></table>`;
-}
-function parseJsonSafe(s,fallback={}){
-  try{const x=JSON.parse(s);return x&&typeof x==='object'&&!Array.isArray(x)?x:fallback}catch{return fallback}
-}
+  const $ = id => document.getElementById(id);
+  const $$ = selector => Array.from(document.querySelectorAll(selector));
+  const esc = str => String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const nowIso = () => new Date().toISOString();
 
-async function req(url,opts={}){
-  if(S.stop) throw new Error('STOP_REQUESTED');
-  const ms=Math.max(2000,Math.min(30000,Number($('timeout').value)||12000));
-  const c=new AbortController(), t=setTimeout(()=>c.abort(),ms);
-  try{
-    const h=new Headers(opts.headers||{}); h.set('Cache-Control','no-cache');
-    for (const p of S.customHeaderProbes) {
-      if (!p.pathRegex || new RegExp(p.pathRegex).test(new URL(url).pathname)) {
-        h.set(p.headerName, p.headerValue);
-      }
-    }
-    const r=await fetch(url,{...opts,headers:h,cache:'no-store',redirect:'manual',referrerPolicy:'no-referrer',credentials:'same-origin',signal:c.signal});
-    const body=await r.text().catch(()=> '');
-    return {r,body};
-  }finally{clearTimeout(t)}
-}
-
-function inspectDom(cats){
-  log('Inspecting DOM, storage, scripts, forms and client-side surfaces.');
-  const insecure=[...document.querySelectorAll('script[src],img[src],iframe[src],link[href],a[href],form[action]')].map(e=>e.src||e.href||e.action).filter(Boolean).filter(u=>/^http:\/\//i.test(u));
-  const inlineHandlers=[...document.querySelectorAll('[onclick],[onerror],[onload],[onmouseover],[onfocus],[oninput],[onsubmit]')];
-  const scripts=[...document.scripts].map(s=>s.src).filter(Boolean);
-  const third=scripts.filter(u=>{try{return new URL(u).origin!==location.origin}catch{return false}});
-  const ls=(()=>{try{return Object.keys(localStorage)}catch{return[]}})();
-  const ss=(()=>{try{return Object.keys(sessionStorage)}catch{return[]}})();
-  const suspicious=unique([...ls,...ss].filter(k=>/(token|secret|password|api.?key|auth|cookie|session|jwt)/i.test(k)));
-  const forms=[...document.forms].map(f=>({action:f.action||location.href,method:(f.method||'GET').toUpperCase()}));
-  const off=forms.filter(f=>{try{return new URL(f.action,location.href).origin!==location.origin}catch{return false}});
-  const metaCsp=document.querySelector('meta[http-equiv="Content-Security-Policy"]')?.content||'';
-  check('HTTPS / secure context',location.protocol==='https:'||location.hostname==='localhost'||location.hostname==='127.0.0.1'?'PASS':'FAIL',location.protocol==='https:'?'Page is served over HTTPS.':'Production page is not HTTPS.',{protocol:location.protocol});
-  if(location.protocol!=='https:'&&!['localhost','127.0.0.1'].includes(location.hostname)) find('HIGH','HTTP deployment detected','Sensitive sessions should not be handled over plain HTTP.',{url:location.href});
-  check('Mixed-content references',insecure.length?'WARN':'PASS',insecure.length?`${insecure.length} HTTP reference(s) found.`:'No obvious HTTP references.',{references:insecure.slice(0,50)});
-  if(insecure.length)find('MEDIUM','Mixed-content references','Current DOM contains HTTP resource/action references.',{references:insecure.slice(0,50)});
-  check('Inline JavaScript handlers',inlineHandlers.length?'WARN':'PASS',inlineHandlers.length?`${inlineHandlers.length} inline event-handler attributes.`:'No inline handlers detected.',{count:inlineHandlers.length});
-  if(inlineHandlers.length)find('LOW','Inline event handlers detected','Review inline handlers if you want a strict CSP.',{count:inlineHandlers.length});
-  check('CSP meta element',metaCsp?'PASS':'WARN',metaCsp?'A CSP meta element exists.':'No CSP meta element; a server header is preferred.',{present:!!metaCsp});
-  check('Third-party scripts',third.length?'WARN':'PASS',third.length?`${third.length} third-party script(s) observed.`:'No third-party scripts observed.',{scripts:third});
-  if(third.length)find('LOW','Third-party JavaScript detected','Review trust, integrity and CSP for every external script.',{scripts:third});
-  check('Off-origin forms',off.length?'WARN':'PASS',off.length?`${off.length} form action(s) leave the origin.`:'No off-origin forms observed.',{forms});
-  check('Client storage key names',suspicious.length?'WARN':'PASS',suspicious.length?`Potentially sensitive key names: ${suspicious.join(', ')}`:'No suspicious secret-looking key names.',{localStorage:ls,sessionStorage:ss});
-  if(suspicious.length)find('MEDIUM','Potential sensitive client storage','Review the actual values. This tool intentionally does not print them.',{keys:suspicious});
-  const readable=document.cookie.split(';').map(x=>x.trim().split('=')[0]).filter(Boolean);
-  check('Browser-visible cookies',readable.length?'WARN':'PASS',readable.length?`${readable.length} cookie name(s) are readable by JS.`:'No JavaScript-readable cookies.',{names:readable});
-  if(readable.length)find('LOW','JavaScript-readable cookies exist','Review whether any auth/session cookie should be HttpOnly.',{names:readable});
-
-  if (cats.has('sriChecks')) {
-    const externalResources = [...document.querySelectorAll('script[src][integrity], link[rel="stylesheet"][href][integrity]')];
-    const missingSRI = [...document.querySelectorAll('script[src]:not([integrity]), link[rel="stylesheet"][href]:not([integrity])')].filter(el => {
-      try { return new URL(el.src || el.href).origin !== location.origin; } catch { return false; }
-    });
-    check('Subresource Integrity (SRI)', missingSRI.length ? 'WARN' : 'PASS',
-      missingSRI.length ? `${missingSRI.length} external resource(s) are missing SRI.` : 'All external scripts/stylesheets have SRI.',
-      {missingSRI: missingSRI.map(el => el.src || el.href).slice(0, 50)});
-    if (missingSRI.length) find('LOW', 'Missing Subresource Integrity', 'External scripts or stylesheets are loaded without SRI.', {resources: missingSRI.map(el => el.src || el.href).slice(0, 50)});
-  }
-}
-
-function headerCheck(r){
-  const h=r.headers, get=n=>h.get(n);
-  const xfo=get('x-frame-options'),csp=get('content-security-policy'),hsts=get('strict-transport-security');
-  const xcto=get('x-content-type-options'),ref=get('referrer-policy'),perm=get('permissions-policy');
-  const coop=get('cross-origin-opener-policy'),corp=get('cross-origin-resource-policy');
-  check('Frame protection',xfo||(csp&&/frame-ancestors/i.test(csp))?'PASS':'WARN',xfo?`X-Frame-Options: ${xfo}`:csp&&/frame-ancestors/i.test(csp)?'CSP frame-ancestors observed.':'No frame protection header observed.',{xfo,frameAncestors:csp?.match(/frame-ancestors[^;]*/i)?.[0]||null});
-  if(!xfo&&!(csp&&/frame-ancestors/i.test(csp)))find('MEDIUM','Clickjacking defense not observed','Add X-Frame-Options or an appropriate CSP frame-ancestors directive.',{url:r.url});
-  check('Content-Security-Policy',csp?'PASS':'WARN',csp?'CSP header present.':'CSP header not observed.',{csp});
-  if(!csp)find('MEDIUM','Content-Security-Policy missing','A strong CSP can limit client-side injection impact.',{url:r.url});
-  check('HSTS',(location.protocol!=='https:'||hsts)?'PASS':'WARN',hsts?`HSTS: ${hsts}`:'HSTS not observed.',{hsts});
-  check('X-Content-Type-Options',xcto?.toLowerCase()==='nosniff'?'PASS':'WARN',xcto||'nosniff not observed.',{xcto});
-  if(xcto?.toLowerCase()!=='nosniff')find('LOW','X-Content-Type-Options not observed','Consider X-Content-Type-Options: nosniff.',{url:r.url});
-  check('Referrer-Policy',ref?'PASS':'WARN',ref||'Referrer-Policy not observed.',{referrerPolicy:ref});
-  check('Permissions-Policy',perm?'PASS':'WARN',perm||'Permissions-Policy not observed.',{permissionsPolicy:perm});
-  check('COOP',coop?'PASS':'WARN',coop||'Cross-Origin-Opener-Policy not observed.',{coop});
-  check('CORP',corp?'PASS':'WARN',corp||'Cross-Origin-Resource-Policy not observed.',{corp});
-  return {xfo,csp,hsts,xcto,ref,perm,coop,corp};
-}
-
-function addEndpoint(method,u,r,note=''){
-  S.endpoints.push({method,path:u.pathname+u.search,status:r.status,type:r.headers.get('content-type')||'',cache:r.headers.get('cache-control')||'',note});
-  renderEndpoints();
-}
-
-function bodySignals(body, cats){
-  const p=[
-    [/Traceback \(most recent call last\)/i,'Python traceback'],
-    [/stack trace/i,'stack trace'],
-    [/SQLSTATE\[/i,'SQLSTATE'],
-    [/SequelizeDatabaseError/i,'Sequelize error'],
-    [/PrismaClient/i,'Prisma diagnostic'],
-    [/MongoServerError/i,'MongoDB diagnostic'],
-    [/FirebaseError/i,'Firebase diagnostic'],
-    [/node_modules\//i,'node_modules path'],
-    [/Authorization:\s*Bearer\s+[A-Za-z0-9._-]{20,}/i,'Bearer token-like string'],
-    [/(?:api[_ -]?key|secret|password)\s*[:=]\s*["'][^"']{10,}/i,'credential-like assignment'],
-    ...(cats.has('errorFingerprint') ? [
-      [/Django debug page/i, 'Django debug page signature'],
-      [/Rails error page/i, 'Ruby on Rails error signature'],
-      [/Spring Boot error/i, 'Spring Boot error signature'],
-      [/Fatal error:/i, 'PHP Fatal error'],
-      [/java\.lang\.Exception/i, 'Java exception trace'],
-      [/Error: ENOENT/i, 'File not found error (Node.js)']
-    ] : [])
+  const REPO_LIST = [
+    'api/accessibility.js','api/admin.js','api/agent.js','api/algorithm.js','api/analytics.js',
+    'api/app-builder.js','api/arixmail.js','api/auth.js','api/brain-map.js','api/business.js',
+    'api/businesspro.js','api/chat.js','api/chatshare.js','api/cron.js','api/diagram.js','api/drive.js',
+    'api/events.js','api/file.js','api/growth.js','api/image.js','api/keys.js','api/lab.js',
+    'api/legalscrape.js','api/maths.js','api/memory.js','api/multiplayer.js','api/permissions.js',
+    'api/podcast.js','api/presentation.js','api/project.js','api/repair.js','api/research.js',
+    'api/scrape.js','api/server.js','api/share.js','api/study-deck.js','api/subscription.js',
+    'api/task.js','api/taskplanner.js','api/track.js','api/twin.js','api/usertracker.js',
+    'lib/privacyEngine.js','public/.gitignore','public/README.md','public/admin.html',
+    'public/adminonlysubscription.html','public/adminuserfeaturetracker.html','public/adsformyapp.html',
+    'public/agent.html','public/ai.js','public/analytics.html','public/apiadmin123456.html',
+    'public/apikeys.html','public/app.html','public/app.js','public/app123.html','public/apptesting.html',
+    'public/apptesting2.html','public/arix_mail.html','public/arixhandlemail.html','public/arixlegal.html',
+    'public/betaversion.html','public/business.html','public/businesspro.html','public/case.html',
+    'public/case.js','public/code123code.html','public/dashboard.html','public/document.js','public/hackandfail.html',
+    'public/hackifyoucan.html','public/index.html','public/legal.js','public/legalapp.js','public/oldapp.html',
+    'public/package.json','public/plans.html','public/privacy.js','public/safety.js','public/security.js',
+    'public/security123impsecurity.html','public/sw.js','public/terms&conditions.html','public/trytohack.html',
+    'public/updates.html','public/vercel.json'
   ];
-  const matchedSignals = p.filter(([rx])=>rx.test(body)).map(([,x])=>x);
 
-  for (const scanner of S.customRegexScanners) {
-    try {
-      if (new RegExp(scanner.regexPattern).test(body)) {
-        matchedSignals.push(`Custom: ${scanner.name}`);
-        find(scanner.severity, `Custom Regex Match: ${scanner.name}`, scanner.description, {pattern: scanner.regexPattern});
-      }
-    } catch (e) {
-      log(`Error running custom regex scanner '${scanner.name}': ${e.message}`, 'ERROR');
+  const DEFAULT_SAFE_MARKERS = [
+    '__TTH_REFLECT_7A91__',
+    '__TTH_REFLECT_C42E__'
+  ];
+
+  const SECRET_RULES = [
+    ['Google API key', /AIza[0-9A-Za-z_-]{35}/g],
+    ['GitHub token', /\bgh[pousr]_[A-Za-z0-9]{30,}\b/g],
+    ['Slack token', /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/g],
+    ['Private key', /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g],
+    ['Generic secret assignment', /\b(?:secret|api[_-]?key|token|password)\s*[:=]\s*["'][^"']{8,}["']/gi]
+  ];
+
+  const SOURCE_RULES = [
+    ['Dynamic code execution', /\beval\s*\(/g, 'Review whether untrusted input can reach eval().'],
+    ['Function constructor', /\bnew\s+Function\s*\(/g, 'Dynamic code generation can turn data into executable code.'],
+    ['HTML injection sink', /\b(?:innerHTML|outerHTML)\s*=/g, 'Check whether assigned content is trusted or encoded.'],
+    ['DOM insertion sink', /\binsertAdjacentHTML\s*\(/g, 'Check whether inserted HTML is attacker-controlled.'],
+    ['Document write sink', /\bdocument\.write(?:ln)?\s*\(/g, 'Review whether attacker-controlled data can reach document.write().'],
+    ['Open redirect candidate', /\blocation\.(?:href|assign|replace)\s*=\s*[^;]+/g, 'Review whether destination is derived from untrusted input.'],
+    ['Shell command API', /\b(?:exec|execFile|spawn|spawnSync)\s*\(/g, 'Review command arguments and user-input boundaries.'],
+    ['Filesystem write', /\b(?:writeFile|writeFileSync|appendFile|appendFileSync|rm|unlink|unlinkSync)\s*\(/g, 'Review paths, authorization, and user-controlled filenames.'],
+    ['Filesystem read', /\b(?:readFile|readFileSync|createReadStream)\s*\(/g, 'Review whether user-controlled paths can reach filesystem reads.'],
+    ['Prototype mutation', /(?:__proto__|constructor\s*\.|prototype)\s*\[/g, 'Review dynamic property assignment for prototype pollution risk.'],
+    ['Weak random source', /\bMath\.random\s*\(/g, 'Do not use Math.random for security-sensitive tokens.'],
+    ['Insecure cookie setting', /document\.cookie\s*=\s*[^;]+/g, 'Review Secure, HttpOnly, SameSite, and sensitive-cookie exposure.'],
+    ['Potential hard-coded credential', /\b(?:api[_-]?key|secret|token|password|private[_-]?key)\s*[:=]\s*["\'`][^"\'`\r\n]{8,}["\'`]/gi, 'Verify the value is not a live credential and rotate it if exposed.']
+  ];
+
+  const ADVANCED_PATTERNS = [
+    ['Fetch/XHR call', /\b(?:fetch|XMLHttpRequest|axios\.(?:get|post|put|patch|delete|request))\s*\(/g],
+    ['API route declaration', /(?:export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)|module\.exports\s*=|exports\.(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s*=)/g],
+    ['Request body source', /(?:req|request)\.(?:body|query|params|headers|cookies)\b/g],
+    ['URL/query source', /(?:location\.(?:search|hash|href)|URLSearchParams|window\.location|document\.referrer)\b/g],
+    ['DOM input source', /(?:\.value\b|\.files\b|\.dataset\b|contenteditable|FormData\s*\()/g],
+    ['Auth/session signal', /(?:authorization|authenticate|isAuthenticated|session|cookies?|jwt|bearer|csrf|xsrf|role|permission|admin)\b/gi],
+    ['SQL/query execution', /(?:query|execute|raw|sequelize|prisma|knex|mongodb|mongoose)\s*\(/gi],
+    ['Error disclosure', /(?:res\.(?:send|json)|throw\s+new\s+Error|console\.(?:error|log)|\bstack\b)/g],
+    ['External script', /<script[^>]+src=["\'][^"\']+["\']/gi],
+    ['Form action', /<form[^>]+action=["\'][^"\']+["\']/gi],
+    ['PostMessage listener', /addEventListener\s*\(\s*["\']message["\']/g],
+    ['Message origin check', /(?:event|e|evt)\.origin/g],
+    ['CORS configuration', /access-control-allow-(?:origin|credentials|headers|methods)/gi]
+  ];
+
+  function normalizeOrigin(raw){
+    const u = new URL(raw || location.origin, location.href);
+    if (!/^https?:$/.test(u.protocol)) throw new Error('Origin must use http:// or https://');
+    return u.origin;
+  }
+
+  function normalizePath(raw){
+    let p = String(raw || '').trim();
+    if (!p) return '';
+    if (/^https?:\/\//i.test(p)) {
+      const u = new URL(p);
+      const base = new URL($('origin').value || location.origin, location.href);
+      if (u.origin !== base.origin) throw new Error('Cross-origin URL rejected: ' + p);
+      p = u.pathname + u.search;
     }
+    if (!p.startsWith('/')) p = '/' + p;
+    return p;
   }
 
-  return matchedSignals;
-}
-
-async function probePath(raw, cats){
-  const u=sameOrigin(raw); if(!u){log(`Rejected invalid/off-origin path: ${raw}`,'WARN');return}
-  if(S.stop)return;
-  log(`GET ${u.pathname}${u.search}`);
-  try{
-    const {r,body}=await req(u.href,{method:'GET'});
-    addEndpoint('GET',u,r,r.status>=500?'5xx response':'');
-    if(cats.has('headers')&&u.pathname==='/')headerCheck(r);
-    const sig=bodySignals(body, cats);
-    check(`Response leak scan ${u.pathname}`,sig.length?'FAIL':'PASS',sig.length?`High-signal debug/secret pattern(s): ${sig.join(', ')}`:'No high-signal debug/credential pattern detected.',{signals:sig});
-    if(sig.length)find('MEDIUM','Potential debug/credential disclosure','A safe GET response contains high-signal diagnostic/credential text.',{path:u.pathname,signals:sig});
-    if(r.status>=500){check(`Server error ${u.pathname}`,'WARN',`HTTP ${r.status} on a safe GET.`,{status:r.status});find('MEDIUM','Server returned 5xx','A safe GET triggered a server error.',{path:u.pathname,status:r.status})}
-    if(cats.has('cors')&&u.pathname.startsWith('/api/')) await probeCors(u);
-    if(cats.has('normalization')) await probeNormalization(u);
-    if(cats.has('cache')) await probeCache(u,r);
-    if(cats.has('reflection')) await probeReflection(u);
-    if(cats.has('paramFuzz')) await probeParamFuzzing(u);
-    if(cats.has('contentTypeProbe')) await probeContentTypeNegotiation(u);
-  }catch(e){
-    if(e.message==='STOP_REQUESTED')return;
-    check(`GET ${u.pathname}`,'N/A',`Browser could not complete the request: ${text(e.message||e)}`,{});
+  function getLines(id){
+    const el = $(id); if (!el) return [];
+    return [...new Set(el.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
   }
-}
 
-async function probeCors(u){
-  try{
-    const originProbe='https://security-test.invalid';
-    const preflightHeaders = {
-      'Origin': originProbe,
-      'Access-Control-Request-Method': 'POST',
-      'Access-Control-Request-Headers': 'X-Custom-Header,Content-Type',
-      'X-Arix-Security-Test':'cors-preflight-observation'
+  function getMods(){ return new Set($$('.mod:checked').map(e=>e.value)); }
+
+  function setStatus(text, type='info', dot='run'){
+    $('stateText').textContent = text;
+    $('overallStatus').textContent = text.split(' ')[0].toUpperCase();
+    $('overallStatus').className = `status ${type}`;
+    $('dot').className = `dot ${dot}`;
+  }
+
+  function log(msg, type='INFO'){
+    const line = document.createElement('div');
+    line.innerHTML = `<span style="color:#64748b">[${new Date().toLocaleTimeString()}]</span> <span class="${type}">[${esc(type)}]</span> ${esc(msg)}`;
+    $('logView').appendChild(line);
+    $('logView').scrollTop = $('logView').scrollHeight;
+  }
+
+  function updateMetrics(){
+    $('mTotal').textContent = state.reqCount;
+    $('mPass').textContent = state.checks.filter(x=>x.status==='PASS').length;
+    $('mWarn').textContent = state.checks.filter(x=>x.status==='WARN').length;
+    $('mFail').textContent = state.checks.filter(x=>x.status==='FAIL').length;
+    $('mFind').textContent = state.findings.length;
+  }
+
+  function addCheck(name,status,details,evidence={}){
+    state.checks.push({name,status,details,evidence,time:nowIso()});
+    updateMetrics(); renderChecks();
+  }
+
+  function addFinding(severity,title,detail,evidence={}){
+    const fingerprint = JSON.stringify([severity,title,detail,evidence]);
+    if (state.findings.some(f=>f.fingerprint===fingerprint)) return;
+    state.findings.push({severity,title,detail,evidence,time:nowIso(),fingerprint});
+    updateMetrics(); renderFindings();
+    log(`FINDING [${severity}] ${title}`, severity==='HIGH'?'ERROR':severity==='MEDIUM'?'WARN':'INFO');
+  }
+
+  function renderFindings(){
+    const h=$('findingsView');
+    if(!state.findings.length){ h.innerHTML='<div class="notice ok">No confirmed security findings yet.</div>'; return; }
+    const rank={HIGH:0,MEDIUM:1,LOW:2,INFO:3};
+    h.innerHTML=[...state.findings].sort((a,b)=>(rank[a.severity]??9)-(rank[b.severity]??9)).map(f=>`
+      <div class="finding ${esc(f.severity.toLowerCase())}">
+        <div class="head"><b>${esc(f.title)}</b><span class="sev">${esc(f.severity)}</span></div>
+        <div class="small">${esc(f.detail)}</div>
+        <details><summary>Evidence</summary><pre>${esc(JSON.stringify(f.evidence,null,2))}</pre></details>
+      </div>`).join('');
+  }
+
+  function renderChecks(){
+    $('checksView').innerHTML=state.checks.map(c=>{
+      const cls=c.status==='PASS'?'ok':c.status==='FAIL'?'bad':c.status==='WARN'?'warn':'na';
+      return `<div class="check"><div><div class="check-title">${esc(c.name)}</div><div class="check-desc">${esc(c.details)}</div></div><div class="status ${cls}">${esc(c.status)}</div></div>`;
+    }).join('') || '<div class="notice">No checks completed.</div>';
+  }
+
+  function renderEndpoints(){
+    const tb=$('endpointTbody');
+    if(!state.endpoints.length){ tb.innerHTML='<tr><td colspan="5" style="text-align:center">No endpoint observations yet.</td></tr>'; return; }
+    tb.innerHTML=state.endpoints.map(e=>{
+      const status=Number(e.status)||0;
+      const cls=status<300?'ok':status<400?'info':status<500?'warn':'bad';
+      return `<tr><td><code>${esc(e.method)}</code></td><td><code>${esc(e.path)}</code></td><td><span class="status ${cls}">${esc(status || '-')}</span></td><td>${esc(e.type||'-')}</td><td>${esc(e.obs||'')}</td></tr>`;
+    }).join('');
+  }
+
+  function updateProgress(done,total,label){
+    const pct=total?Math.min(100,(done/total)*100):0;
+    $('progressBar').style.width=pct.toFixed(1)+'%';
+    $('progressText').textContent=`${label}: ${done}/${total}`;
+  }
+
+  async function pace(){
+    const base=Math.max(0,parseInt($('pace').value,10)||700);
+    const since=Date.now()-state.lastRequestAt;
+    const wait=Math.max(0,base-since)+Math.floor(Math.random()*Math.min(250,Math.max(30,base*0.2)));
+    if(wait>0) await sleep(wait);
+    state.lastRequestAt=Date.now();
+  }
+
+  async function safeFetch(url, opts={}){
+    if(state.stop) throw new Error('STOP_REQUESTED');
+    const origin=new URL($('origin').value || location.origin, location.href).origin;
+    const u=new URL(url, origin);
+    if(u.origin!==origin) throw new Error('Cross-origin request blocked by scanner policy');
+    await pace();
+    state.reqCount++; updateMetrics();
+    const timeout=Math.min(30000,Math.max(1000,parseInt($('timeout').value,10)||10000));
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeout);
+    try{
+      const headers=new Headers(opts.headers||{});
+      headers.set('Cache-Control','no-cache');
+      const response=await fetch(u.href,{...opts,headers,cache:'no-store',redirect:'follow',credentials:'same-origin',signal:controller.signal});
+      const text=await response.text().catch(()=> '');
+      return {ok:true,res:response,text};
+    }catch(err){
+      return {ok:false,error:err.name==='AbortError'?'Timeout':err.message};
+    }finally{ clearTimeout(timer); }
+  }
+
+  function addEndpoint(method,path,res,obs){
+    state.endpoints.push({method,path,status:res?.status||0,type:res?.headers?.get('content-type')||'-',obs});
+    renderEndpoints();
+  }
+
+  async function baseline(origin){
+    state.currentPhase='BASELINE'; log('Phase 1/6: baseline and security headers');
+    const r=await safeFetch(origin+'/');
+    if(!r.ok){ addCheck('Application root','FAIL','The current deployment could not be fetched.',{error:r.error}); return false; }
+    addEndpoint('GET','/',r.res,'Baseline application response');
+    const h=r.res.headers;
+    const sec={
+      'content-security-policy':h.get('content-security-policy'),
+      'strict-transport-security':h.get('strict-transport-security'),
+      'x-frame-options':h.get('x-frame-options'),
+      'x-content-type-options':h.get('x-content-type-options'),
+      'referrer-policy':h.get('referrer-policy'),
+      'permissions-policy':h.get('permissions-policy')
     };
-    const {r: preflightR} = await req(u.href, {method: 'OPTIONS', headers: preflightHeaders});
-    const acaoPreflight = preflightR.headers.get('access-control-allow-origin');
-    const acamPreflight = preflightR.headers.get('access-control-allow-methods');
-    
-    addEndpoint('OPTIONS', u, preflightR, `CORS Preflight: ACAO=${acaoPreflight||'none'}`);
+    const missing=Object.entries(sec).filter(([,v])=>!v).map(([k])=>k);
+    if(missing.length) addFinding('MEDIUM','Missing security response headers','One or more recommended browser security headers were not present on the baseline response.',{missing});
+    else addCheck('Security headers','PASS','Baseline response contained the reviewed security headers.',sec);
+    addCheck('HTTPS transport',origin.startsWith('https://')?'PASS':'WARN',origin.startsWith('https://')?'Deployment uses HTTPS.':'Deployment is using HTTP.',{origin});
+    return true;
+  }
 
-    if (acaoPreflight === '*' && acamPreflight?.includes('POST')) {
-      check('CORS Preflight allows * and POST', 'FAIL', 'CORS preflight allows any origin and POST method.', {path: u.pathname});
-      find('HIGH', 'CORS Preflight Wildcard & POST', 'The server CORS preflight response allows * and POST.', {path: u.pathname, acao: acaoPreflight});
+  async function checkWellKnown(origin){
+    state.currentPhase='STANDARD DISCOVERY';
+    log('Phase 2/6: checking standard metadata and explicitly supplied paths');
+    const standard=['/robots.txt','/sitemap.xml','/.well-known/security.txt'];
+    for(let i=0;i<standard.length;i++){
+      if(state.stop) break;
+      const p=standard[i]; const r=await safeFetch(origin+p);
+      if(r.ok){
+        addEndpoint('GET',p,r.res,'Standard metadata probe');
+        if(r.res.status<400) addCheck(`Standard path ${p}`, 'PASS','Reachable from the deployed origin.',{status:r.res.status});
+        else addCheck(`Standard path ${p}`,'WARN',`Returned HTTP ${r.res.status}.`,{});
+      } else addCheck(`Standard path ${p}`,'WARN','Request failed or timed out.',{error:r.error});
+      updateProgress(i+1,standard.length,'Metadata');
     }
+  }
 
-    const {r: getR} = await req(u.href, {
-      method: 'GET',
-      headers: {'Origin': originProbe, 'X-Arix-Security-Test': 'cors-get-observation'}
-    });
-    const acaoGet = getR.headers.get('access-control-allow-origin');
-    const accGet = getR.headers.get('access-control-allow-credentials');
-
-    addEndpoint('GET', u, getR, `CORS GET: ACAO=${acaoGet||'none'}`);
-
-    if (acaoGet === '*') {
-      check('CORS GET allows * origin', 'FAIL', 'CORS GET response allows any origin.', {path: u.pathname});
+  async function probePath(path,mods,deep=true){
+    const p=normalizePath(path); if(!p) return;
+    const r=await safeFetch($('origin').value+p);
+    if(!r.ok){
+      addEndpoint('GET',p,{},'Network error: '+r.error);
+      return {path,ok:false};
     }
-    if (accGet === 'true') {
-      if (acaoGet === '*') {
-        find('HIGH', 'CORS GET Wildcard + Credentials', 'Allows credentials with wildcard origin.', {path: u.pathname});
-      } else {
-        check('CORS GET allows credentials', 'WARN', 'CORS GET allows credentials.', {path: u.pathname});
+    addEndpoint('GET',p,r.res,'Explicit target');
+    if(r.res.status>=500) addFinding('LOW','Server error response',`The endpoint ${p} returned HTTP ${r.res.status}.`,{path:p,status:r.res.status});
+
+    if(deep && mods.has('methods')){
+      const o=await safeFetch($('origin').value+p,{method:'OPTIONS'});
+      if(o.ok){
+        addEndpoint('OPTIONS',p,o.res,`Allow: ${o.res.headers.get('allow')||'not disclosed'}`);
+        const allow=o.res.headers.get('allow');
+        if(allow && /(PUT|PATCH|DELETE)/i.test(allow)) addCheck(`Method exposure ${p}`,'WARN','Endpoint advertises mutating HTTP methods. Confirm authorization and CSRF protections.',{allow});
       }
     }
-  } catch (e) {
-    if (e.message === 'STOP_REQUESTED') return;
-    check(`CORS Probe ${u.pathname}`, 'N/A', `CORS probe failed: ${text(e.message||e)}`, {});
-  }
-}
 
-async function probeNormalization(u) {
-  try {
-    const originalPath = u.pathname;
-    const testPaths = [
-      originalPath + '/../',
-      originalPath.replace(/\/[^/]+$/, '/%2e%2e%2f'),
-      originalPath.replace(/\/[^/]+$/, '/./'),
-      originalPath.replace(/\/[^/]+$/, '/;'),
-      originalPath.replace(/\/[^/]+$/, '//'),
-      originalPath.replace(/\/[^/]+$/, '/%2f')
-    ].filter(p => p !== originalPath);
-
-    const originalResponse = await req(u.href, {method: 'HEAD'});
-    const originalStatus = originalResponse.r.status;
-
-    for (const testPath of testPaths) {
-      if (S.stop) return;
-      const testUrl = new URL(testPath + u.search, u.origin).href;
-      const testResponse = await req(testUrl, {method: 'HEAD'});
-      const testStatus = testResponse.r.status;
-
-      if (testStatus === originalStatus && originalStatus !== 404) {
-        check(`Path Normalization: ${testPath}`, 'WARN', `Resolves to same status as original.`, {testPath, originalStatus, testStatus});
+    if(deep && mods.has('cors')){
+      const c=await safeFetch($('origin').value+p,{headers:{Origin:'https://scanner.invalid'}});
+      if(c.ok){
+        const acao=c.res.headers.get('access-control-allow-origin');
+        const acac=c.res.headers.get('access-control-allow-credentials');
+        addEndpoint('GET',p,c.res,`CORS observation: ACAO=${acao||'-'} credentials=${acac||'-'}`);
+        if(acao==='https://scanner.invalid' || (acao==='*' && acac==='true')) addFinding('HIGH','Potentially unsafe CORS policy',`The endpoint ${p} accepted a cross-site Origin value in its response headers.`,{acao,acac});
       }
     }
-  } catch (e) {
-    if (e.message === 'STOP_REQUESTED') return;
-    check(`Path Normalization Probe ${u.pathname}`, 'N/A', `Normalization probe failed.`, {});
-  }
-}
 
-async function probeCache(u, originalResponse) {
-  try {
-    const cacheControl = originalResponse.r.headers.get('cache-control') || '';
-    if (cacheControl.includes('public') || cacheControl.includes('max-age')) {
-      check(`Cache-Control for ${u.pathname}`, 'WARN', `Response is publicly cacheable: ${cacheControl}`, {});
+    if(deep && mods.has('xss')){
+      const marker=DEFAULT_SAFE_MARKERS[state.reqCount % DEFAULT_SAFE_MARKERS.length];
+      const sep=p.includes('?')?'&':'?';
+      const target=$('origin').value+p+sep+'tth_marker='+encodeURIComponent(marker);
+      const x=await safeFetch(target);
+      if(x.ok && x.text.includes(marker)) addFinding('MEDIUM','Unencoded reflection detected',`A controlled non-executing marker was reflected in the response from ${p}. Reflection is not by itself proof of XSS, but the output context should be reviewed.`,{marker,path:p});
     }
-    const vary = originalResponse.r.headers.get('vary');
-    if (!vary && (cacheControl.includes('public') || cacheControl.includes('max-age'))) {
-      check(`Vary header for ${u.pathname}`, 'WARN', `No Vary header for cacheable content.`, {});
-    }
-  } catch (e) {
-    if (e.message === 'STOP_REQUESTED') return;
+
+    return {path:p,ok:true,status:r.res.status};
   }
-}
 
-async function probeReflection(u) {
-  try {
-    const reflectionPayloads = ['<script>alert(1)</script>', '">{{7*7}}', 'javascript:alert(3)'];
-    const params = new URLSearchParams(u.search);
-    if (!params.toString()) return;
+  async function scanEndpoints(paths,mods){
+    state.currentPhase='ENDPOINT ANALYSIS';
+    const unique=[...new Set(paths.map(normalizePath).filter(Boolean))];
+    log(`Phase 3/6: detailed endpoint analysis for ${unique.length} supplied paths`);
+    for(let i=0;i<unique.length && !state.stop;i++){
+      await probePath(unique[i],mods,true);
+      updateProgress(i+1,unique.length,'Endpoints');
+    }
+  }
 
-    for (const [key, value] of params.entries()) {
-      for (const payload of reflectionPayloads) {
-        if (S.stop) return;
-        const testParams = new URLSearchParams(params);
-        testParams.set(key, payload);
-        const testUrl = new URL(u.pathname + '?' + testParams.toString(), u.origin).href;
-        
-        const {body} = await req(testUrl, {method: 'GET'});
-        if (body.includes(payload)) {
-          check(`Reflection: param '${key}'`, 'FAIL', `Payload reflected in body.`, {path: u.pathname, param: key});
-          find('HIGH', 'Reflected Input Detected', `Payload was reflected unescaped for param '${key}'.`, {path: u.pathname, param: key});
-        }
+  async function deepDiscovery(paths,mods){
+    state.currentPhase='DISCOVERY';
+    const unique=[...new Set(paths.map(normalizePath).filter(Boolean))];
+    log(`Phase 4/6: slow discovery sweep of ${unique.length} paths`);
+    for(let i=0;i<unique.length && !state.stop;i++){
+      const p=unique[i];
+      const r=await safeFetch($('origin').value+p,{method:'GET'});
+      if(r.ok){
+        addEndpoint('GET',p,r.res,'Discovery sweep');
+        if(r.res.status===200 && /(?:\.env$|\.git\/|credentials|private|backup|secret)/i.test(p)) addFinding('HIGH','Potential sensitive resource exposed',`A suspicious path returned HTTP 200: ${p}`,{path:p,status:r.res.status});
+        if(r.res.status===403) addCheck(`Access control ${p}`,'PASS','Resource exists but returned 403.',{path:p});
       }
+      updateProgress(i+1,unique.length,'Discovery');
     }
-  } catch (e) {
-    if (e.message === 'STOP_REQUESTED') return;
   }
-}
 
-async function probeParamFuzzing(u) {
-  try {
-    const params = new URLSearchParams(u.search);
-    if (!params.toString() && !S.customParamFuzzers.some(f => !f.paramName)) return;
+  function extractLines(text){
+    return [...new Set(String(text||'').split(/\r?\n/).filter(Boolean))].slice(0,3000);
+  }
 
-    for (const fuzzer of S.customParamFuzzers) {
-      if (fuzzer.pathRegex && !new RegExp(fuzzer.pathRegex).test(u.pathname)) continue;
-      
-      const targetParamNames = fuzzer.paramName ? [fuzzer.paramName] : [...params.keys()];
-      for (const paramName of unique(targetParamNames)) {
-        for (const payload of fuzzer.payloads) {
-          if (S.stop) return;
-          const testParams = new URLSearchParams(params);
-          testParams.set(paramName, payload);
-          const testUrl = new URL(u.pathname + '?' + testParams.toString(), u.origin).href;
-          
-          const {body} = await req(testUrl, {method: 'GET'});
-          const signals = bodySignals(body, new Set(['errorFingerprint']));
-          
-          if (body.includes(payload)) {
-            find('HIGH', `Param Fuzzing Reflection: ${fuzzer.name}`, `Payload reflected unescaped.`, {path: u.pathname, param: paramName});
-          } else if (signals.length) {
-            find('MEDIUM', `Param Fuzzing Error: ${fuzzer.name}`, `Payload triggered error signals.`, {path: u.pathname, signals});
+  function lineOf(text,index){ return text.slice(0,index).split(/\r?\n/).length; }
+  function snippetContext(text,index,radius=220){ return text.slice(Math.max(0,index-radius),Math.min(text.length,index+radius)); }
+  function sourceRisk(text,index){
+    const ctx=snippetContext(text,index,420);
+    const source=/(req|request)\.(body|query|params|headers|cookies)|location\.(search|hash|href)|URLSearchParams|\.value\b|FormData\s*\(|document\.referrer/i.test(ctx);
+    const sink=/(innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\s*\(|new\s+Function|location\.(?:href|assign|replace)\s*=|exec(?:File)?\s*\(|spawn(?:Sync)?\s*\(|writeFile(?:Sync)?\s*\()/i.test(ctx);
+    return source&&sink?'HIGH_REVIEW':'REVIEW';
+  }
+  function advancedSourceAudit(name,text){
+    const ext=(name.split('.').pop()||'').toLowerCase();
+    const isHtml=ext==='html', isJs=['js','mjs','ts','jsx','tsx'].includes(ext);
+    const out={file:name,extension:ext,lines:text.split(/\r?\n/).length,bytes:text.length,patterns:[],reviewItems:[],routeHints:[]};
+    if(!(isHtml||isJs)) return out;
+    for(const [label,rx] of ADVANCED_PATTERNS){ rx.lastIndex=0; let m,n=0; while((m=rx.exec(text))&&n<25){ out.patterns.push({type:label,line:lineOf(text,m.index),index:m.index,snippet:snippetContext(text,m.index)}); n++; } }
+    if(isJs){ const rr=/(?:export\s+(?:async\s+)?function\s+)(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b|(?:exports\.(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD))\s*=/g; let m; while((m=rr.exec(text))) out.routeHints.push({method:(m[1]||m[2]).toUpperCase(),line:lineOf(text,m.index)}); }
+    const sinks=out.patterns.filter(x=>['HTML injection sink','DOM insertion sink','Document write sink','Dynamic code execution','Function constructor','Shell command API','Filesystem write','Filesystem read','Open redirect candidate'].includes(x.type));
+    const sources=out.patterns.filter(x=>['Request body source','URL/query source','DOM input source'].includes(x.type));
+    const auth=out.patterns.filter(x=>x.type==='Auth/session signal').length;
+    if(sources.length&&sinks.length) for(const sink of sinks.slice(0,12)) out.reviewItems.push({type:sink.type,severity:sourceRisk(text,sink.index)==='HIGH_REVIEW'?'HIGH':'REVIEW',line:sink.line,detail:sourceRisk(text,sink.index)==='HIGH_REVIEW'?'An input/request source occurs near this sink; verify the actual data-flow path manually.':'Dangerous sink found, but this pass did not establish a direct input-to-sink flow.'});
+    if(isJs&&out.routeHints.length&&!auth) out.reviewItems.push({type:'Possible missing authorization boundary',severity:'REVIEW',detail:'An exported API handler was found without a nearby authentication/authorization signal. This is heuristic and not proof of a missing access control check.'});
+    if(isHtml){ const inline=[...text.matchAll(/<script(?![^>]*\bsrc=)[^>]*>/gi)].length; const forms=[...text.matchAll(/<form\b/gi)].length; if(inline) out.reviewItems.push({type:'Inline script',severity:'REVIEW',detail:`${inline} inline script block(s) found; review CSP nonce/hash strategy.`}); out.security={inlineScripts:inline,forms}; }
+    if(/https?:\/\//i.test(text)) out.reviewItems.push({type:'External URL reference',severity:'REVIEW',detail:'Review external destinations, secret leakage in URLs, and allowlists.'});
+    return out;
+  }
+
+  function scanSource(name,text){
+    const findings=[];
+    for(const [label,rx,advice] of SOURCE_RULES){
+      rx.lastIndex=0; const matches=[]; let m; while((m=rx.exec(text))&&matches.length<8) matches.push({index:m.index,line:lineOf(text,m.index),snippet:snippetContext(text,m.index,180),classification:sourceRisk(text,m.index)});
+      if(matches.length) findings.push({type:label,advice,matches});
+    }
+    for(const [label,rx] of SECRET_RULES){ rx.lastIndex=0; const matches=[]; let m; while((m=rx.exec(text))&&matches.length<5) matches.push({index:m.index,line:lineOf(text,m.index)}); if(matches.length) findings.push({type:label,severity:'HIGH_REVIEW',advice:'Verify whether the matched value is a live credential.',matches}); }
+    return {findings,advanced:advancedSourceAudit(name,text)};
+  }
+  async function renderSourceAuditResult(result,label){
+    const reviewCount=(result.findings?.length||0)+(result.advanced?.reviewItems?.length||0);
+    const box=document.createElement('div'); box.className='finding '+(reviewCount?'medium':'low');
+    box.innerHTML=`<div class="head"><b>${esc(label)}</b><span class="sev">${reviewCount?'REVIEW':'NO REVIEW ITEMS'}</span></div><div class="small">${esc(result.advanced?.lines||0)} lines · ${esc(result.advanced?.bytes||0)} bytes · ${esc(result.advanced?.patterns?.length||0)} structural matches · ${esc(result.advanced?.routeHints?.length||0)} API route hint(s)</div><details><summary>Detailed evidence</summary><pre>${esc(JSON.stringify(result,null,2))}</pre></details>`;
+    $('fileResults').appendChild(box);
+  }
+
+  async function scanLocalFiles(){
+    if(state.running) return;
+    const files=Array.from($('fileInput').files||[]).filter(f=>/\.(?:js|mjs|ts|jsx|tsx|html)$/i.test(f.name));
+    if(!files.length){ alert('Choose the repository folder/files first.'); return; }
+    $('fileResults').innerHTML=''; state.fileResults=[]; state.findings=[]; updateMetrics();
+    log(`Advanced source audit: ${files.length} actual JS/HTML files`,'INFO');
+    for(let i=0;i<files.length;i++){
+      if(state.stop) break; const f=files[i];
+      try{ const text=await f.text(); const audit=scanSource(f.webkitRelativePath||f.name,text); const record={file:f.webkitRelativePath||f.name,size:f.size,sourceReview:audit}; state.fileResults.push(record); await renderSourceAuditResult(audit,record.file); const n=(audit.findings?.length||0)+(audit.advanced?.reviewItems?.length||0); if(n) addFinding('MEDIUM',`Advanced source review: ${record.file}`,`${n} evidence-backed review item(s) found.`,record); }
+      catch(e){ $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice danger"><b>${esc(f.name)}</b><br>${esc(e.message)}</div>`); }
+      updateProgress(i+1,files.length,'Advanced source audit'); await sleep(20);
+    }
+    log('Advanced JS/HTML source audit completed','SUCCESS'); generateReport();
+  }
+
+  function pathToDeploymentPath(path){
+    let p=normalizePath(path);
+    // public/ is normally the deployment root on static hosting.
+    if(/^\/public\//i.test(p)) p=p.replace(/^\/public/i,'');
+    if(p==='/public') p='/';
+    return p;
+  }
+
+  async function scanDeployedRepo(embedded=false){
+    if(state.running && !embedded) return;
+    const paths=getLines('repoPaths').map(pathToDeploymentPath);
+    if(!paths.length){ alert('Enter deployed repository paths first.'); return; }
+    $('fileResults').innerHTML='';
+    state.fileResults=[];
+    setStatus('RUNNING REPOSITORY SCAN','info','run');
+    const manageState=!embedded;
+    if(manageState){ state.running=true; state.stop=false; $('scanRepoBtn').disabled=true; $('startBtn').disabled=true; $('stopBtn').disabled=false; }
+    log(`Repository scan: ${paths.length} real paths supplied`,'INFO');
+    for(let i=0;i<paths.length && !state.stop;i++){
+      const p=paths[i];
+      try{
+        const r=await safeFetch($('origin').value+p);
+        if(!r.ok){
+          const result={file:p,error:r.error}; state.fileResults.push(result);
+          $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice warn"><b>${esc(p)}</b><br>Not fetched: ${esc(r.error)}</div>`);
+        }else{
+          const ctype=r.res.headers.get('content-type')||'';
+          const looksSource=/javascript|json|html|text|css|xml/i.test(ctype) || /\.(?:js|mjs|ts|jsx|tsx|html|css|json|md|txt|env)$/i.test(p);
+          if(!looksSource){
+            $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice warn"><b>${esc(p)}</b><br>HTTP ${r.res.status}; content-type ${esc(ctype||'-')}. It was fetched, but it does not look like source text, so no source findings were invented.</div>`);
+          }else{
+            const issues=scanSource(p,r.text);
+            const result={file:p,httpStatus:r.res.status,contentType:ctype,size:r.text.length,issues}; state.fileResults.push(result);
+            $('fileResults').insertAdjacentHTML('beforeend',`<div class="finding ${issues.length?'medium':'low'}"><div class="head"><b>${esc(p)}</b><span class="sev">HTTP ${esc(r.res.status)} · ${issues.length?'REVIEW':'CLEAN'}</span></div><div class="small">${issues.length?esc(issues.map(x=>x.type).join(', ')):'Fetched successfully and no reviewed source patterns matched.'}</div><details><summary>Evidence</summary><pre>${esc(JSON.stringify({contentType:ctype,issues},null,2))}</pre></details></div>`);
+            if(issues.length) addFinding('MEDIUM',`Repository source review: ${p}`,`The deployed response matched ${issues.length} source-review pattern(s).`,{issues,contentType:ctype});
           }
         }
+      }catch(e){
+        $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice danger"><b>${esc(p)}</b><br>${esc(e.message)}</div>`);
       }
+      updateProgress(i+1,paths.length,'Repository');
     }
-  } catch (e) {
-    if (e.message === 'STOP_REQUESTED') return;
+    if(manageState){ state.running=false; $('scanRepoBtn').disabled=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; setStatus(state.stop?'REPOSITORY SCAN STOPPED':'REPOSITORY SCAN COMPLETE',state.stop?'warn':'ok',state.stop?'warn':'ok'); generateReport(); }
   }
-}
 
-async function probeContentTypeNegotiation(u) {
-  try {
-    const acceptHeaders = ['application/xml', 'text/html', 'text/plain'];
-    const originalResponse = await req(u.href, {method: 'GET', headers: {'Accept': 'application/json, */*'}});
-    
-    for (const accept of acceptHeaders) {
-      if (S.stop) return;
-      const {r, body} = await req(u.href, {method: 'GET', headers: {'Accept': accept}});
-      if (r.status !== originalResponse.r.status) {
-        check(`Content-Type Negotiation: ${accept}`, 'WARN', `Status changed from ${originalResponse.r.status} to ${r.status}.`, {path: u.pathname});
-      }
+  async function runCustomRequests(){
+    if(state.running) return;
+    if(!state.customReqs.length){ alert('Queue at least one request first.'); return; }
+    state.running=true; state.stop=false; $('startBtn').disabled=true; $('stopBtn').disabled=false;
+    log(`Running ${state.customReqs.length} queued custom requests`,'INFO');
+    $('customResultsView').innerHTML='';
+    for(let i=0;i<state.customReqs.length && !state.stop;i++){
+      const r=state.customReqs[i];
+      const path=normalizePath(r.path);
+      const result=await safeFetch($('origin').value+path,{method:r.method,headers:r.headers,body:['GET','HEAD'].includes(r.method)?undefined:r.body||undefined});
+      if(result.ok){
+        addEndpoint(r.method,path,result.res,'Custom request');
+        $('customResultsView').insertAdjacentHTML('beforeend',`<div class="finding low"><div class="head"><b>${esc(r.name)}</b><span class="sev">HTTP ${result.res.status}</span></div><div class="small">${esc(path)}</div><details><summary>Response sample</summary><pre>${esc(result.text.slice(0,4000))}</pre></details></div>`);
+      }else $('customResultsView').insertAdjacentHTML('beforeend',`<div class="notice warn">${esc(r.name)}: ${esc(result.error)}</div>`);
+      updateProgress(i+1,state.customReqs.length,'Custom');
     }
-  } catch (e) {
-    if (e.message === 'STOP_REQUESTED') return;
+    state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true;
+    generateReport();
+    setStatus(state.stop?'CUSTOM REQUESTS STOPPED':'CUSTOM REQUESTS COMPLETE',state.stop?'warn':'ok',state.stop?'warn':'ok');
   }
-}
 
-async function fileScan() {
-  S.fileFindings = [];
-  $('fileResults').innerHTML = '';
-  const files = $('filePicker').files;
-  if (files.length === 0) {
-    $('fileResults').innerHTML = '<div class="notice warn">No files selected.</div>';
-    return;
+  function generateReport(){
+    const report={meta:{tool:'trytohack.html',version:'5.0-safe-advanced-source',date:nowIso(),origin:$('origin').value,paceMs:Number($('pace').value),depth:$('depth').value},stats:{totalRequests:state.reqCount,findings:state.findings.length,checks:state.checks.length,endpoints:state.endpoints.length,files:state.fileResults.length},findings:state.findings,checks:state.checks,endpoints:state.endpoints,fileResults:state.fileResults};
+    state.report=report; $('jsonOutput').value=JSON.stringify(report,null,2); return $('jsonOutput').value;
   }
-  log(`Scanning ${files.length} local files...`);
 
-  const secretPatterns = [
-    { name: 'API Key (Generic)', regex: /(api_key|apikey|client_id|client_secret|access_token|secret_key|auth_token)\s*=\s*['"]([a-zA-Z0-9_-]{16,})['"]/gmi, severity: 'HIGH', description: 'Potential API key or secret exposed.' },
-    { name: 'AWS Access Key', regex: /(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16,}/g, severity: 'HIGH', description: 'Potential AWS Access Key ID.' },
-    { name: 'Google API Key', regex: /AIza[0-9A-Za-z-_]{35}/g, severity: 'HIGH', description: 'Potential Google API Key.' },
-    { name: 'GitHub Token', regex: /ghp_[0-9a-zA-Z]{36}/g, severity: 'HIGH', description: 'Potential GitHub Token.' },
-    { name: 'Password config', regex: /(password|passwd|pwd)\s*=\s*['"](.{6,})['"]/gmi, severity: 'HIGH', description: 'Password found.' },
-    { name: 'Eval Function', regex: /\beval\s*\(/g, severity: 'MEDIUM', description: 'Use of eval().' },
-    { name: 'Document.write', regex: /\bdocument\.write\s*\(/g, severity: 'MEDIUM', description: 'Use of document.write().' },
-    { name: 'Inner/OuterHTML', regex: /(\.innerHTML|\.outerHTML)\s*=\s*[^;]+/g, severity: 'LOW', description: 'Assignment to inner/outerHTML.' },
-    { name: 'Weak Crypto', regex: /(MD5|SHA1)\([^)]+\)/gmi, severity: 'LOW', description: 'Use of weak crypto functions.' }
-  ];
-
-  for (const file of files) {
-    if (S.stop) break;
-    try {
-      const content = await file.text();
-      for (const pattern of secretPatterns) {
-        let match;
-        while ((match = pattern.regex.exec(content)) !== null) {
-          S.fileFindings.push({file: file.name, severity: pattern.severity, title: pattern.name, detail: pattern.description});
-          find(pattern.severity, `File Scan: ${pattern.name} in ${file.name}`, pattern.description, {file: file.name, match: match[0]});
-        }
-      }
-    } catch (e) {
-      log(`Error reading file ${file.name}: ${e.message}`, 'ERROR');
-    }
+  function download(filename,text,type){
+    const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
-  renderFileResults();
-}
 
-function renderFileResults() {
-  const h = $('fileResults');
-  if (!S.fileFindings.length) {
-    h.innerHTML = '<div class="notice ok">No findings in selected files.</div>';
-    return;
-  }
-  h.innerHTML = S.fileFindings.map(f => {
-    const cls = (f.severity === 'HIGH' || f.severity === 'MEDIUM') ? 'high' : 'info';
-    return `<div class="finding ${cls}"><div class="head"><b>${esc(f.title)} in ${esc(f.file)}</b><span class="sev">${esc(f.severity)}</span></div><div class="small">${esc(f.detail)}</div></div>`
-  }).join('');
-}
+  async function startEngine(){
+    if(state.running) return;
+    let origin;
+    try{ origin=normalizeOrigin($('origin').value); $('origin').value=origin; }catch(e){ alert(e.message); return; }
+    const paths=getLines('paths').map(normalizePath).filter(Boolean);
+    const wordlist=getLines('customWordlist').map(normalizePath).filter(Boolean);
+    const mods=getMods();
+    const depth=$('depth').value;
+    const targetPaths=[...new Set([...paths,...wordlist])];
+    if(!targetPaths.length) targetPaths.push('/');
 
-function addCustomTest() {
-  const name = $('customName').value.trim();
-  const method = $('customMethod').value;
-  const path = $('customPath').value.trim();
-  const headers = parseJsonSafe($('customHeaders').value);
-  const body = $('customBody').value.trim();
-  const approved = $('customManualApproval').checked;
+    state.running=true; state.stop=false; state.reqCount=0; state.findings=[]; state.checks=[]; state.endpoints=[]; state.fileResults=[]; state.startTime=Date.now(); state.lastRequestAt=0;
+    $('startBtn').disabled=true; $('stopBtn').disabled=false; $('scanRepoBtn').disabled=true;
+    $('logView').innerHTML=''; $('checksView').innerHTML=''; $('findingsView').innerHTML='<div class="notice">Scan started.</div>'; $('endpointTbody').innerHTML='';
+    $('scopeDisplay').textContent=`${origin} · ${targetPaths.length} endpoint/path targets · ${$('pace').options[$('pace').selectedIndex].text}`;
+    setStatus('RUNNING DEEP SAFE SCAN','info','run');
+    state.timer=setInterval(()=>{$('mTime').textContent=Math.floor((Date.now()-state.startTime)/1000)+'s';},1000);
 
-  if (!name || !path || !approved) return alert('Please fill Name, Path, and approve.');
-  if (!sameOrigin(path)) return alert('Path must be same-origin.');
-
-  S.customHttp.push({name, method, path, headers, body, approved});
-  renderCustomTests();
-  $('customName').value = ''; $('customPath').value = ''; $('customManualApproval').checked = false;
-  log(`Added custom test: ${name}`);
-}
-
-function renderCustomTests() {
-  const h = $('customList');
-  if (!S.customHttp.length) { h.innerHTML = '<div class="notice info">No custom tests added.</div>'; return; }
-  h.innerHTML = S.customHttp.map((t, i) => `<div class="finding info"><div class="head"><b>${esc(t.name)}</b></div><div class="small">${esc(t.method)} ${esc(t.path)}</div><button class="danger secondary" onclick="removeCustomTest(${i})">Remove</button></div>`).join('');
-}
-
-function removeCustomTest(index) {
-  S.customHttp.splice(index, 1);
-  renderCustomTests();
-}
-
-async function runCustomTests() {
-  if (S.running) return alert('Test is already running.');
-  S.running = true; S.stop = false;
-  state('Running custom tests...', 'run');
-  $('start').disabled = true; $('stop').disabled = false;
-  
-  for (const test of S.customHttp) {
-    if (S.stop) break;
-    if (!test.approved) continue;
-    try {
-      const {r} = await req(test.path, {method: test.method, headers: test.headers, body: test.method!=='GET'?test.body:undefined});
-      addEndpoint(test.method, new URL(test.path, location.origin), r, `Custom: ${test.name}`);
-      check(`Custom Test: ${test.name}`, r.status >= 400 ? 'WARN' : 'PASS', `Status: ${r.status}`, {});
-    } catch (e) {
-      if (e.message === 'STOP_REQUESTED') break;
+    try{
+      const ok=await baseline(origin);
+      if(ok && !state.stop){ await checkWellKnown(origin); }
+      if(ok && !state.stop){ await scanEndpoints(targetPaths,mods); }
+      if(ok && !state.stop && depth!=='basic'){ await deepDiscovery(targetPaths,mods); }
+      if(ok && !state.stop && depth==='complete'){ await scanDeployedRepo(true); }
+    }catch(e){
+      if(e.message!=='STOP_REQUESTED'){ log(`Engine error: ${e.message}`,'ERROR'); addFinding('MEDIUM','Scanner exception','The scanner itself encountered an exception.',{error:e.message}); }
+    }finally{
+      clearInterval(state.timer); state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; $('scanRepoBtn').disabled=false; updateMetrics(); renderEndpoints(); generateReport();
+      $('progressBar').style.width='100%'; $('progressText').textContent=state.stop?'STOPPED':'100% COMPLETE';
+      const bad=state.findings.some(f=>f.severity==='HIGH');
+      const medium=state.findings.some(f=>f.severity==='MEDIUM');
+      setStatus(state.stop?'STOPPED':bad?'COMPLETED - HIGH RISK FOUND':medium?'COMPLETED - REVIEW NEEDED':'COMPLETED - NO CONFIRMED HIGH RISK',state.stop?'warn':bad?'bad':medium?'warn':'ok',state.stop?'warn':bad?'bad':medium?'warn':'ok');
+      log(`Scan finished. ${state.reqCount} real requests were made.`,'SUCCESS');
     }
   }
-  S.running = false;
-  state('Custom tests finished.', 'ok');
-  $('start').disabled = false; $('stop').disabled = true;
-  metrics();
-}
 
-function addRegexScanner() {
-  const name = $('regexScannerName').value.trim();
-  const pattern = $('regexScannerPattern').value.trim();
-  const severity = $('regexScannerSeverity').value;
-  if (!name || !pattern) return alert('Name and regex required.');
-  try { new RegExp(pattern); } catch (e) { return alert(`Invalid regex: ${e.message}`); }
-  S.customRegexScanners.push({name, regexPattern: pattern, severity});
-  renderRegexScanners();
-  $('regexScannerName').value = ''; $('regexScannerPattern').value = '';
-}
+  // Initialization: current deployment by default; no fabricated findings/results.
+  $('origin').value=location.origin;
+  $('paths').value='';
+  $('customWordlist').value='';
+  $('customPayloads').value=DEFAULT_SAFE_MARKERS.join('\n');
+  $('repoPaths').value=REPO_LIST.join('\n');
+  renderChecks(); renderEndpoints(); updateMetrics();
 
-function renderRegexScanners() {
-  const h = $('regexScannerList');
-  if (!S.customRegexScanners.length) { h.innerHTML = '<div class="notice info">No custom regex scanners.</div>'; return; }
-  h.innerHTML = S.customRegexScanners.map((s, i) => `<div class="finding info"><div class="head"><b>${esc(s.name)}</b></div><div class="small"><code>${esc(s.regexPattern)}</code></div><button class="danger secondary" onclick="removeRegexScanner(${i})">Remove</button></div>`).join('');
-}
+  // Tabs
+  $$('.tab').forEach(b=>b.addEventListener('click',()=>{
+    $$('.tab').forEach(x=>x.classList.remove('active')); $$('.tabpanel').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); const panel=document.querySelector(`[data-panel="${CSS.escape(b.dataset.tab)}"]`); if(panel) panel.classList.add('active'); $('tabTitle').textContent=b.textContent;
+  }));
 
-function removeRegexScanner(index) {
-  S.customRegexScanners.splice(index, 1);
-  renderRegexScanners();
-}
+  $('startBtn').addEventListener('click',startEngine);
+  $('stopBtn').addEventListener('click',()=>{ state.stop=true; log('Stop requested. Current request will finish, then the scanner will halt.','WARN'); setStatus('STOP REQUESTED','warn','warn'); });
+  $('clearBtn').addEventListener('click',()=>{ if(state.running){alert('Stop the scan before clearing state.');return;} location.reload(); });
 
-function addHeaderProbe() {
-  const name = $('headerProbeName').value.trim();
-  const headerName = $('headerProbeHeaderName').value.trim();
-  const headerValue = $('headerProbeHeaderValue').value.trim();
-  if (!name || !headerName || !headerValue) return alert('Name, header name, and value required.');
-  S.customHeaderProbes.push({name, headerName, headerValue});
-  renderHeaderProbes();
-  $('headerProbeName').value = ''; $('headerProbeHeaderName').value = ''; $('headerProbeHeaderValue').value = '';
-}
-
-function renderHeaderProbes() {
-  const h = $('headerProbeList');
-  if (!S.customHeaderProbes.length) { h.innerHTML = '<div class="notice info">No custom header probes.</div>'; return; }
-  h.innerHTML = S.customHeaderProbes.map((p, i) => `<div class="finding info"><div class="head"><b>${esc(p.name)}</b></div><div class="small">${esc(p.headerName)}: ${esc(p.headerValue)}</div><button class="danger secondary" onclick="removeHeaderProbe(${i})">Remove</button></div>`).join('');
-}
-
-function removeHeaderProbe(index) {
-  S.customHeaderProbes.splice(index, 1);
-  renderHeaderProbes();
-}
-
-function addParamFuzzer() {
-  const name = $('paramFuzzerName').value.trim();
-  const payloads = lines($('paramFuzzerPayloads').value);
-  if (!name || !payloads.length) return alert('Name and payloads required.');
-  S.customParamFuzzers.push({name, paramName: $('paramFuzzerParamName').value.trim(), payloads});
-  renderParamFuzzers();
-  $('paramFuzzerName').value = ''; $('paramFuzzerPayloads').value = '';
-}
-
-function renderParamFuzzers() {
-  const h = $('paramFuzzerList');
-  if (!S.customParamFuzzers.length) { h.innerHTML = '<div class="notice info">No param fuzzers.</div>'; return; }
-  h.innerHTML = S.customParamFuzzers.map((f, i) => `<div class="finding info"><div class="head"><b>${esc(f.name)}</b></div><div class="small">${f.payloads.length} payloads</div><button class="danger secondary" onclick="removeParamFuzzer(${i})">Remove</button></div>`).join('');
-}
-
-function removeParamFuzzer(index) {
-  S.customParamFuzzers.splice(index, 1);
-  renderParamFuzzers();
-}
-
-async function runProbeBuilderProbes() {
-  $('intensity').value = 'hyper';
-  [...document.querySelectorAll('.cat')].forEach(cb => { cb.checked = true; });
-  await start();
-}
-
-async function start() {
-  if (S.running) return alert('Test is running.');
-  S.running = true; S.stop = false; S.startedAt = iso();
-  S.checks = []; S.findings = []; S.endpoints = []; S.errors = []; S.fileFindings = [];
-  $('log').textContent = ''; $('progressBar').style.width = '0%';
-  $('start').disabled = true; $('stop').disabled = false;
-  $('exportJson').disabled = true; $('exportHtml').disabled = true;
-
-  log('Starting hyper-aggressive safe test...');
-  state('Running...', 'run');
-  metrics(); renderFindings(); renderChecks(); renderEndpoints(); renderFileResults();
-
-  const origin = $('origin').value;
-  const pathsToProbe = unique(['/', ...lines($('paths').value), ...lines($('discovery').value)]).map(p => new URL(p, origin).href);
-  const concurrency = Number($('concurrency').value) || 2;
-  const selectedCats = new Set([...document.querySelectorAll('.cat:checked')].map(cb => cb.value));
-
-  $('scope').textContent = `Scope: ${origin}, ${pathsToProbe.length} paths.`;
-
-  let completed = 0;
-  const totalTasks = pathsToProbe.length + (selectedCats.has('dom')?1:0) + (selectedCats.has('files')?1:0);
-  const updateProgress = () => { $('progressBar').style.width = `${(completed / totalTasks) * 100}%`; };
-
-  const queue = [...pathsToProbe];
-  const activePromises = new Set();
-
-  while (queue.length > 0 || activePromises.size > 0) {
-    if (S.stop) break;
-    while (activePromises.size < concurrency && queue.length > 0) {
-      const path = queue.shift();
-      const promise = probePath(path, selectedCats).finally(() => {
-        activePromises.delete(promise); completed++; updateProgress();
-      });
-      activePromises.add(promise);
-    }
-    if (activePromises.size > 0) await Promise.race(activePromises);
-  }
-
-  if (!S.stop) {
-    if (selectedCats.has('dom')) { inspectDom(selectedCats); completed++; updateProgress(); }
-    if (selectedCats.has('files') && $('filePicker').files.length) { await fileScan(); completed++; updateProgress(); }
-    if (S.customHttp.length) { await runCustomTests(); }
-    log('Hyper-aggressive safe test finished.', 'INFO');
-    state('Finished', 'ok');
-  }
-
-  S.running = false; S.endedAt = iso();
-  $('start').disabled = false; $('stop').disabled = true;
-  $('exportJson').disabled = false; $('exportHtml').disabled = false;
-  metrics(); generateReport();
-}
-
-function stop() {
-  S.stop = true;
-  log('Stop requested. Finishing tasks...', 'WARN');
-  state('Stopping...', 'warn');
-  $('stop').disabled = true;
-}
-
-function clear() {
-  if (S.running) return;
-  S.checks = []; S.findings = []; S.endpoints = []; S.errors = []; S.customHttp = []; S.fileFindings = [];
-  $('log').textContent = ''; $('progressBar').style.width = '0%';
-  $('exportJson').disabled = true; $('exportHtml').disabled = true;
-  state('Idle', 'idle'); metrics(); renderFindings(); renderChecks(); renderEndpoints(); renderFileResults();
-}
-
-function generateReport() {
-  const report = {
-    metadata: { tool: 'hackifyoucan.html', generatedAt: iso(), baseOrigin: $('origin').value },
-    summary: { totalChecks: S.checks.length, totalFindings: S.findings.length },
-    findings: S.findings, checks: S.checks, endpoints: S.endpoints, fileFindings: S.fileFindings
-  };
-  $('json').value = JSON.stringify(report, null, 2);
-}
-
-function exportJson() {
-  generateReport();
-  const blob = new Blob([$('json').value], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `report_${iso().replace(/[:.]/g,'-')}.json`; a.click(); URL.revokeObjectURL(a.href);
-}
-
-function exportHtml() {
-  generateReport();
-  const html = `<!doctype html><title>Report</title><style>body{font-family:system-ui;padding:20px;}</style><h1>Report</h1><pre>${esc($('json').value)}</pre>`;
-  const blob = new Blob([html], {type:'text/html'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `report_${iso().replace(/[:.]/g,'-')}.html`; a.click(); URL.revokeObjectURL(a.href);
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  $('origin').value = location.origin;
-  document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); tab.classList.add('active');
-      document.querySelectorAll('.tabpanel').forEach(p => p.classList.remove('active'));
-      document.querySelector(`[data-panel="${tab.dataset.tab}"]`).classList.add('active');
-      $('tabHeading').textContent = tab.textContent;
-    });
+  $('addReqBtn').addEventListener('click',()=>{
+    if(!$('reqManual').checked){alert('Confirm that the request is safe and non-destructive.');return;}
+    let headers={};
+    try{headers=$('reqHeaders').value.trim()?JSON.parse($('reqHeaders').value):{};}catch(e){alert('Headers must be valid JSON.');return;}
+    const path=$('reqPath').value.trim(); if(!path){alert('Enter a request path.');return;}
+    try{normalizePath(path);}catch(e){alert(e.message);return;}
+    const req={name:$('reqName').value.trim()||'Unnamed request',method:$('reqMethod').value,path,headers,body:$('reqBody').value};
+    state.customReqs.push(req);
+    $('customList').insertAdjacentHTML('beforeend',`<div class="notice ok">Added: <code>${esc(req.method)}</code> ${esc(req.path)}</div>`);
+    $('reqManual').checked=false;
   });
+  $('clearReqsBtn').addEventListener('click',()=>{state.customReqs=[];$('customList').innerHTML='';});
+  $('runReqsBtn').addEventListener('click',runCustomRequests);
 
-  $('start').addEventListener('click', start);
-  $('stop').addEventListener('click', stop);
-  $('clear').addEventListener('click', clear);
-  $('exportJson').addEventListener('click', exportJson);
-  $('exportHtml').addEventListener('click', exportHtml);
-  $('scanFiles').addEventListener('click', fileScan);
-  $('clearFiles').addEventListener('click', () => { S.fileFindings=[]; renderFileResults(); });
+  $('savePayloadsBtn').addEventListener('click',()=>{localStorage.setItem('tth_wordlist',$('customWordlist').value);localStorage.setItem('tth_markers',$('customPayloads').value);alert('Your current wordlist and safe marker list were saved locally.');});
+  $('resetPayloadsBtn').addEventListener('click',()=>{localStorage.removeItem('tth_wordlist');localStorage.removeItem('tth_markers');$('customWordlist').value='';$('customPayloads').value=DEFAULT_SAFE_MARKERS.join('\n');});
+  const savedWords=localStorage.getItem('tth_wordlist'); const savedMarkers=localStorage.getItem('tth_markers'); if(savedWords!==null)$('customWordlist').value=savedWords; if(savedMarkers!==null)$('customPayloads').value=savedMarkers;
 
-  $('addCustom').addEventListener('click', addCustomTest);
-  $('runCustoms').addEventListener('click', runCustomTests);
-  $('clearCustoms').addEventListener('click', () => { S.customHttp=[]; renderCustomTests(); });
+  $('scanFilesBtn').addEventListener('click',scanLocalFiles);
+  $('clearFilesBtn').addEventListener('click',()=>{$('fileResults').innerHTML='<div class="notice">Cleared.</div>';$('fileInput').value='';state.fileResults=[];});
+  $('advancedSourceBtn').addEventListener('click',scanLocalFiles);
+  $('loadRepoBtn').addEventListener('click',()=>{$('repoPaths').value=REPO_LIST.join('\n');log(`Loaded ${REPO_LIST.length} repository paths supplied for this project.`,'INFO');});
+  $('scanRepoBtn').addEventListener('click',scanDeployedRepo);
 
-  $('addRegexScanner').addEventListener('click', addRegexScanner);
-  $('clearRegexScanners').addEventListener('click', () => { S.customRegexScanners=[]; renderRegexScanners(); });
-  $('addHeaderProbe').addEventListener('click', addHeaderProbe);
-  $('clearHeaderProbes').addEventListener('click', () => { S.customHeaderProbes=[]; renderHeaderProbes(); });
-  $('addParamFuzzer').addEventListener('click', addParamFuzzer);
-  $('clearParamFuzzers').addEventListener('click', () => { S.customParamFuzzers=[]; renderParamFuzzers(); });
-  $('runProbeBuilderProbes').addEventListener('click', runProbeBuilderProbes);
+  $('probeNetBtn').addEventListener('click',async()=>{
+    $('paths').value=getLines('netPaths').join('\n'); $('depth').value='deep'; $('intensity').value='light'; await startEngine();
+  });
+  $('probeCurrentBtn').addEventListener('click',async()=>{$('paths').value='/';$('depth').value='basic';$('intensity').value='light';await startEngine();});
 
-  window.removeCustomTest = removeCustomTest;
-  window.removeRegexScanner = removeRegexScanner;
-  window.removeHeaderProbe = removeHeaderProbe;
-  window.removeParamFuzzer = removeParamFuzzer;
-});
+  $('dlJsonBtn').addEventListener('click',()=>download('trytohack-report.json',generateReport(),'application/json;charset=utf-8'));
+  $('dlHtmlBtn').addEventListener('click',()=>{const body=`<!doctype html><meta charset="utf-8"><title>trytohack report</title><body><h1>trytohack security report</h1><pre>${esc(generateReport())}</pre></body>`;download('trytohack-report.html',body,'text/html;charset=utf-8');});
 
+  window.addEventListener('beforeunload',e=>{if(state.running){e.preventDefault();e.returnValue='';}});
 })();
 </script>
 </body>
 </html>
-```eof
