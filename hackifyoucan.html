@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -128,7 +127,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
     <div class="top">
       <div class="brand">
         <h1>trytohack.html</h1>
-        <p>Hyper-Aggressive, Safe Same-Origin Web Application Security Workbench</p>
+        <p>Deep, Safe Same-Origin Web Application Security Workbench</p>
       </div>
       <div class="state" id="stateContainer">
         <span class="dot" id="dot"></span>
@@ -153,7 +152,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
       <section class="panel tabpanel active" data-panel="overview">
         <h2>Target Configuration</h2>
         <div class="notice warn">
-          <b>Rule of Engagement:</b> Only test authorized, same-origin deployments. This file executes massive concurrent requests designed to stress-test your frontend and backend parsers safely.
+          <b>Rule of Engagement:</b> Only test authorized, same-origin deployments. This workbench performs deliberate, rate-limited, same-origin checks. It does not fabricate results and it does not execute destructive exploits.
         </div>
 
         <label>Base Origin (Must match deployment for CORS)</label>
@@ -178,7 +177,26 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
           </div>
           <div>
             <label>Timeout (ms)</label>
-            <input id="timeout" type="number" min="1000" max="30000" step="1000" value="8000">
+            <input id="timeout" type="number" min="1000" max="30000" step="1000" value="10000">
+          </div>
+        </div>
+
+        <div class="grid2 section">
+          <div>
+            <label>Scan Pace</label>
+            <select id="pace">
+              <option value="1200" selected>Careful — 1 request about every 1.2s</option>
+              <option value="700">Thorough — about 1 request / 0.7s</option>
+              <option value="350">Normal — about 1 request / 0.35s</option>
+            </select>
+          </div>
+          <div>
+            <label>Scan Depth</label>
+            <select id="depth">
+              <option value="basic">Basic — availability + headers</option>
+              <option value="deep" selected>Deep — methods + CORS + reflection</option>
+              <option value="complete">Complete — deep + repository source scan</option>
+            </select>
           </div>
         </div>
 
@@ -202,7 +220,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
         </div>
 
         <div class="row section" style="margin-top:24px">
-          <button id="startBtn" style="flex:1;font-size:14px;padding:14px">🔥 START HYPER HACK</button>
+          <button id="startBtn" style="flex:1;font-size:14px;padding:14px">🔥 START DEEP SAFE SCAN</button>
           <button id="stopBtn" class="danger" disabled>STOP</button>
         </div>
         <div class="row section">
@@ -276,17 +294,29 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
 
       <!-- TAB 4: FILES -->
       <section class="panel tabpanel" data-panel="files">
-        <h2>Local Source Code Analysis</h2>
-        <div class="small">Select files from your repository. This performs local, aggressive regex matching for secrets, keys, and unsafe JavaScript sinks. Files NEVER leave your browser.</div>
-        
-        <label>Select Repository Files</label>
-        <input id="fileInput" type="file" multiple accept=".js,.mjs,.ts,.jsx,.tsx,.html,.css,.json,.env,.txt,.md,.py,.java,.go,.php">
-        
+        <h2>Repository & Source Analysis</h2>
+        <div class="small">
+          Two real modes are supported: choose files directly from the repository on your computer, or enter deployed relative paths and let this page fetch them from the current origin. Findings are based on the bytes actually read; no synthetic findings are created.
+        </div>
+
+        <label>Local Repository Files</label>
+        <input id="fileInput" type="file" multiple webkitdirectory directory accept=".js,.mjs,.ts,.jsx,.tsx,.html,.css,.json,.env,.txt,.md,.py,.java,.go,.php">
         <div class="row section">
-          <button id="scanFilesBtn">Analyze Source Code</button>
+          <button id="scanFilesBtn">Analyze Selected Files</button>
           <button id="clearFilesBtn" class="secondary">Clear</button>
         </div>
-        
+
+        <label class="section">Deployed Repository Paths</label>
+        <textarea id="repoPaths" style="min-height:240px" placeholder="public/index.html
+public/app.html
+api/chat.js
+lib/privacyEngine.js"></textarea>
+        <div class="small">Use paths that are actually reachable from the deployment. For example, <code>public/app.html</code> is often deployed as <code>/app.html</code>; source-only files such as <code>lib/privacyEngine.js</code> may not be publicly fetchable, in which case the scanner will report that honestly instead of inventing results.</div>
+        <div class="row section">
+          <button id="scanRepoBtn">Deep Scan Deployed Paths</button>
+          <button id="loadRepoBtn" class="secondary">Load My Repository List</button>
+        </div>
+
         <div id="fileResults" class="section filelist">
           <div class="notice">No files analyzed yet.</div>
         </div>
@@ -352,7 +382,7 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
         <section class="panel section">
           <h2>Fuzzing Dictionary Info</h2>
           <div class="notice">
-            The scanner uses built-in hyper-aggressive lists combined with your custom tricks. It looks for:
+            The scanner uses controlled, non-executing markers and response observations. It checks for:
             <ul>
               <li><b>SQLi:</b> Syntax errors, DB-specific tracebacks (MySQL, Postgres, Oracle, SQLite).</li>
               <li><b>XSS:</b> Exact DOM reflection of unencoded payload markers.</li>
@@ -405,576 +435,511 @@ footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;paddi
 </main>
 
 <footer>
-  <b>Safety & Constraints:</b> This is a client-side (browser) workbench. It strictly adheres to Same-Origin policies unless explicitly overridden via CORS. It cannot cause server-side RCE directly from the browser without an existing severe backend vulnerability. "Hyper-Aggressive" refers to the intensity of request fuzzing, not local machine exploitation.
+  <b>Safety & Constraints:</b> This is a browser-based, same-origin defensive workbench. It makes deliberate requests to the selected deployment, uses rate limiting between requests, and reports only observations supported by actual responses or actual source files read in the browser.
 </footer>
 
 <script>
 (() => {
   'use strict';
 
-  // State Management
   const state = {
-    running: false, stop: false, startTime: null, timer: null, reqCount: 0,
-    findings: [], checks: [], endpoints: [], customReqs: [], fileResults: []
+    running:false, stop:false, startTime:null, timer:null, reqCount:0,
+    findings:[], checks:[], endpoints:[], customReqs:[], fileResults:[],
+    currentPhase:'IDLE', lastRequestAt:0, report:null
   };
 
   const $ = id => document.getElementById(id);
-  const $$ = sel => document.querySelectorAll(sel);
-  const esc = str => String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const $$ = selector => Array.from(document.querySelectorAll(selector));
+  const esc = str => String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const nowIso = () => new Date().toISOString();
 
-  const SIGNATURES = {
-    sqli: [/SQL syntax/i, /mysql_fetch/i, /ORA-\d{5}/i, /PostgreSQL/i, /SQLite3::/i, /SequelizeDatabaseError/i, /PrismaClient/i],
-    lfi: [/root:x:0:0/i, /\[boot loader\]/i, /daemon:x:1:1/i],
-    xss: [/arix/], // Controlled marker
-    ssti: [/49/],
-    secrets: [/AIza[0-9A-Za-z\-_]{35}/, /sk-[a-zA-Z0-9]{20,}/, /ghp_[a-zA-Z0-9]{36}/, /xox[baprs]-[a-zA-Z0-9]{10,}/, /-----BEGIN PRIVATE KEY-----/]
-  };
+  const REPO_LIST = [
+    'api/accessibility.js','api/admin.js','api/agent.js','api/algorithm.js','api/analytics.js',
+    'api/app-builder.js','api/arixmail.js','api/auth.js','api/brain-map.js','api/business.js',
+    'api/businesspro.js','api/chat.js','api/chatshare.js','api/cron.js','api/diagram.js','api/drive.js',
+    'api/events.js','api/file.js','api/growth.js','api/image.js','api/keys.js','api/lab.js',
+    'api/legalscrape.js','api/maths.js','api/memory.js','api/multiplayer.js','api/permissions.js',
+    'api/podcast.js','api/presentation.js','api/project.js','api/repair.js','api/research.js',
+    'api/scrape.js','api/server.js','api/share.js','api/study-deck.js','api/subscription.js',
+    'api/task.js','api/taskplanner.js','api/track.js','api/twin.js','api/usertracker.js',
+    'lib/privacyEngine.js','public/.gitignore','public/README.md','public/admin.html',
+    'public/adminonlysubscription.html','public/adminuserfeaturetracker.html','public/adsformyapp.html',
+    'public/agent.html','public/ai.js','public/analytics.html','public/apiadmin123456.html',
+    'public/apikeys.html','public/app.html','public/app.js','public/app123.html','public/apptesting.html',
+    'public/apptesting2.html','public/arix_mail.html','public/arixhandlemail.html','public/arixlegal.html',
+    'public/betaversion.html','public/business.html','public/businesspro.html','public/case.html',
+    'public/case.js','public/code123code.html','public/dashboard.html','public/document.js','public/hackandfail.html',
+    'public/hackifyoucan.html','public/index.html','public/legal.js','public/legalapp.js','public/oldapp.html',
+    'public/package.json','public/plans.html','public/privacy.js','public/safety.js','public/security.js',
+    'public/security123impsecurity.html','public/sw.js','public/terms&conditions.html','public/trytohack.html',
+    'public/updates.html','public/vercel.json'
+  ];
 
-  // Initialization
-  $('origin').value = /^https?:$/.test(location.protocol) ? location.origin : '';
-  if (!location.origin || location.origin === 'null') { $('scopeDisplay').textContent = 'Open this file from the GitHub deployment (HTTPS) to enable live network checks.'; }
-  loadSavedConfig();
+  const DEFAULT_SAFE_MARKERS = [
+    '__TTH_REFLECT_7A91__',
+    '__TTH_REFLECT_C42E__'
+  ];
 
-  function loadSavedConfig() {
-    try {
-      const savedPaths = localStorage.getItem('trytohack.customWordlist');
-      const savedPayloads = localStorage.getItem('trytohack.customPayloads');
-      if (savedPaths !== null) $('customWordlist').value = savedPaths;
-      if (savedPayloads !== null) $('customPayloads').value = savedPayloads;
-    } catch {}
-  }
+  const SECRET_RULES = [
+    ['Google API key', /AIza[0-9A-Za-z_-]{35}/g],
+    ['GitHub token', /\bgh[pousr]_[A-Za-z0-9]{30,}\b/g],
+    ['Slack token', /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/g],
+    ['Private key', /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g],
+    ['Generic secret assignment', /\b(?:secret|api[_-]?key|token|password)\s*[:=]\s*["'][^"']{8,}["']/gi]
+  ];
 
-  function normalizeOrigin(value) {
-    const raw = String(value || '').trim();
-    if (!raw) return location.origin;
-    const u = new URL(raw, location.href);
-    if (!/^https?:$/.test(u.protocol)) throw new Error('Target must use http:// or https://');
+  const SOURCE_RULES = [
+    ['Dynamic code execution', /\beval\s*\(/g, 'Review whether untrusted input can reach eval().'],
+    ['Function constructor', /\bnew\s+Function\s*\(/g, 'Dynamic code generation can turn data into executable code.'],
+    ['HTML injection sink', /\binnerHTML\s*=/g, 'Check whether assigned content is trusted or encoded.'],
+    ['DOM insertion sink', /\binsertAdjacentHTML\s*\(/g, 'Check whether inserted HTML is attacker-controlled.'],
+    ['Open redirect candidate', /\blocation\.(?:href|assign|replace)\s*=\s*[^;]+/g, 'Review whether destination is derived from untrusted input.'],
+    ['Shell command API', /\b(?:exec|execFile|spawn|spawnSync)\s*\(/g, 'Review command arguments and user-input boundaries.'],
+    ['Filesystem write', /\b(?:writeFile|writeFileSync|appendFile|appendFileSync)\s*\(/g, 'Review paths and authorization before writing files.'],
+    ['Prototype mutation', /(?:__proto__|prototype)\s*\[/g, 'Review dynamic property assignment for prototype pollution risk.'],
+    ['Weak random source', /\bMath\.random\s*\(/g, 'Do not use Math.random for security-sensitive tokens.']
+  ];
+
+  function normalizeOrigin(raw){
+    const u = new URL(raw || location.origin, location.href);
+    if (!/^https?:$/.test(u.protocol)) throw new Error('Origin must use http:// or https://');
     return u.origin;
   }
 
-  function normalizePath(value) {
-    const v = String(value || '').trim();
-    if (!v) return '/';
-    try {
-      return new URL(v, location.origin).pathname + (new URL(v, location.origin).search || '');
-    } catch {
-      return v.startsWith('/') ? v : `/${v}`;
+  function normalizePath(raw){
+    let p = String(raw || '').trim();
+    if (!p) return '';
+    if (/^https?:\/\//i.test(p)) {
+      const u = new URL(p);
+      const base = new URL($('origin').value || location.origin, location.href);
+      if (u.origin !== base.origin) throw new Error('Cross-origin URL rejected: ' + p);
+      p = u.pathname + u.search;
     }
+    if (!p.startsWith('/')) p = '/' + p;
+    return p;
   }
 
-  // UI Functions
-  function log(msg, type='INFO') {
-    const d = new Date().toLocaleTimeString();
-    const l = $('logView');
-    l.innerHTML += `<span style="color:#64748b">[${d}]</span> <span class="${type}">[${type}]</span> ${esc(msg)}\n`;
-    l.scrollTop = l.scrollHeight;
+  function getLines(id){
+    const el = $(id); if (!el) return [];
+    return [...new Set(el.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
   }
 
-  function setStatus(text, type='info', dotClass='run') {
+  function getMods(){ return new Set($$('.mod:checked').map(e=>e.value)); }
+
+  function setStatus(text, type='info', dot='run'){
     $('stateText').textContent = text;
     $('overallStatus').textContent = text.split(' ')[0].toUpperCase();
     $('overallStatus').className = `status ${type}`;
-    $('dot').className = `dot ${dotClass}`;
+    $('dot').className = `dot ${dot}`;
   }
 
-  function updateMetrics() {
+  function log(msg, type='INFO'){
+    const line = document.createElement('div');
+    line.innerHTML = `<span style="color:#64748b">[${new Date().toLocaleTimeString()}]</span> <span class="${type}">[${esc(type)}]</span> ${esc(msg)}`;
+    $('logView').appendChild(line);
+    $('logView').scrollTop = $('logView').scrollHeight;
+  }
+
+  function updateMetrics(){
     $('mTotal').textContent = state.reqCount;
-    $('mPass').textContent = state.checks.filter(c=>c.status==='PASS').length;
-    $('mWarn').textContent = state.checks.filter(c=>c.status==='WARN').length;
-    $('mFail').textContent = state.checks.filter(c=>c.status==='FAIL').length;
+    $('mPass').textContent = state.checks.filter(x=>x.status==='PASS').length;
+    $('mWarn').textContent = state.checks.filter(x=>x.status==='WARN').length;
+    $('mFail').textContent = state.checks.filter(x=>x.status==='FAIL').length;
     $('mFind').textContent = state.findings.length;
   }
 
-  function addCheck(name, status, details, evidence={}) {
-    state.checks.push({name, status, details, evidence, time: new Date().toISOString()});
-    updateMetrics();
-    renderChecks();
+  function addCheck(name,status,details,evidence={}){
+    state.checks.push({name,status,details,evidence,time:nowIso()});
+    updateMetrics(); renderChecks();
   }
 
-  function addFinding(severity, title, detail, evidence={}) {
-    state.findings.push({severity, title, detail, evidence, time: new Date().toISOString()});
-    updateMetrics();
-    renderFindings();
-    log(`FINDING [${severity}]: ${title}`, severity === 'HIGH' ? 'ERROR' : severity === 'MEDIUM' ? 'WARN' : 'INFO');
+  function addFinding(severity,title,detail,evidence={}){
+    const fingerprint = JSON.stringify([severity,title,detail,evidence]);
+    if (state.findings.some(f=>f.fingerprint===fingerprint)) return;
+    state.findings.push({severity,title,detail,evidence,time:nowIso(),fingerprint});
+    updateMetrics(); renderFindings();
+    log(`FINDING [${severity}] ${title}`, severity==='HIGH'?'ERROR':severity==='MEDIUM'?'WARN':'INFO');
   }
 
-  function renderFindings() {
-    const h = $('findingsView');
-    if(!state.findings.length) { h.innerHTML = '<div class="notice ok">No vulnerabilities confirmed yet.</div>'; return; }
-    h.innerHTML = state.findings.sort((a,b) => (a.severity==='HIGH'?-1:1)).map(f => `
-      <div class="finding ${f.severity.toLowerCase()}">
+  function renderFindings(){
+    const h=$('findingsView');
+    if(!state.findings.length){ h.innerHTML='<div class="notice ok">No confirmed security findings yet.</div>'; return; }
+    const rank={HIGH:0,MEDIUM:1,LOW:2,INFO:3};
+    h.innerHTML=[...state.findings].sort((a,b)=>(rank[a.severity]??9)-(rank[b.severity]??9)).map(f=>`
+      <div class="finding ${esc(f.severity.toLowerCase())}">
         <div class="head"><b>${esc(f.title)}</b><span class="sev">${esc(f.severity)}</span></div>
         <div class="small">${esc(f.detail)}</div>
-        ${Object.keys(f.evidence).length ? `<details><summary>View Evidence</summary><pre>${esc(JSON.stringify(f.evidence,null,2))}</pre></details>` : ''}
-      </div>
-    `).join('');
+        <details><summary>Evidence</summary><pre>${esc(JSON.stringify(f.evidence,null,2))}</pre></details>
+      </div>`).join('');
   }
 
-  function renderChecks() {
-    const h = $('checksView');
-    h.innerHTML = state.checks.map(c => {
-      const cls = c.status==='PASS'?'ok':c.status==='FAIL'?'bad':c.status==='WARN'?'warn':'na';
-      return `<div class="check">
-        <div><div class="check-title">${esc(c.name)}</div><div class="check-desc">${esc(c.details)}</div></div>
-        <div class="status ${cls}">${c.status}</div>
-      </div>`;
+  function renderChecks(){
+    $('checksView').innerHTML=state.checks.map(c=>{
+      const cls=c.status==='PASS'?'ok':c.status==='FAIL'?'bad':c.status==='WARN'?'warn':'na';
+      return `<div class="check"><div><div class="check-title">${esc(c.name)}</div><div class="check-desc">${esc(c.details)}</div></div><div class="status ${cls}">${esc(c.status)}</div></div>`;
+    }).join('') || '<div class="notice">No checks completed.</div>';
+  }
+
+  function renderEndpoints(){
+    const tb=$('endpointTbody');
+    if(!state.endpoints.length){ tb.innerHTML='<tr><td colspan="5" style="text-align:center">No endpoint observations yet.</td></tr>'; return; }
+    tb.innerHTML=state.endpoints.map(e=>{
+      const status=Number(e.status)||0;
+      const cls=status<300?'ok':status<400?'info':status<500?'warn':'bad';
+      return `<tr><td><code>${esc(e.method)}</code></td><td><code>${esc(e.path)}</code></td><td><span class="status ${cls}">${esc(status || '-')}</span></td><td>${esc(e.type||'-')}</td><td>${esc(e.obs||'')}</td></tr>`;
     }).join('');
   }
 
-  function renderEndpoints() {
-    const tb = $('endpointTbody');
-    if(!state.endpoints.length) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center">No data.</td></tr>'; return; }
-    tb.innerHTML = state.endpoints.map(e => `
-      <tr>
-        <td><code>${esc(e.method)}</code></td>
-        <td><code>${esc(e.path)}</code></td>
-        <td><span class="status ${e.status===0?'na':e.status<300?'ok':e.status<400?'info':e.status<500?'warn':'bad'}">${e.status || 'LIVE LINK'}</span></td>
-        <td>${esc(e.type)}</td>
-        <td>${esc(e.obs)}</td>
-      </tr>
-    `).join('');
+  function updateProgress(done,total,label){
+    const pct=total?Math.min(100,(done/total)*100):0;
+    $('progressBar').style.width=pct.toFixed(1)+'%';
+    $('progressText').textContent=`${label}: ${done}/${total}`;
   }
 
-  // Core Request Engine
-  async function safeFetch(url, opts={}) {
-    if (state.stop) throw new Error("STOP_REQUESTED");
-    state.reqCount++;
-    const ms = parseInt($('timeout').value) || 8000;
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), ms);
-    
-    try {
-      const headers = new Headers(opts.headers || {});
-      headers.set('Cache-Control', 'no-cache');
-      
-      const res = await fetch(url, {
-        ...opts, headers,
-        cache: 'no-store',
-        redirect: 'manual',
-        signal: controller.signal
-      });
-      const text = await res.text().catch(()=>'');
-      return { res, text, ok: true };
-    } catch (err) {
-      if(err.name === 'AbortError') return { error: 'Timeout', ok: false };
-      return { error: err.message, ok: false };
-    } finally {
-      clearTimeout(id);
+  async function pace(){
+    const base=Math.max(0,parseInt($('pace').value,10)||700);
+    const since=Date.now()-state.lastRequestAt;
+    const wait=Math.max(0,base-since)+Math.floor(Math.random()*Math.min(250,Math.max(30,base*0.2)));
+    if(wait>0) await sleep(wait);
+    state.lastRequestAt=Date.now();
+  }
+
+  async function safeFetch(url, opts={}){
+    if(state.stop) throw new Error('STOP_REQUESTED');
+    const origin=new URL($('origin').value || location.origin, location.href).origin;
+    const u=new URL(url, origin);
+    if(u.origin!==origin) throw new Error('Cross-origin request blocked by scanner policy');
+    await pace();
+    state.reqCount++; updateMetrics();
+    const timeout=Math.min(30000,Math.max(1000,parseInt($('timeout').value,10)||10000));
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeout);
+    try{
+      const headers=new Headers(opts.headers||{});
+      headers.set('Cache-Control','no-cache');
+      const response=await fetch(u.href,{...opts,headers,cache:'no-store',redirect:'follow',credentials:'same-origin',signal:controller.signal});
+      const text=await response.text().catch(()=> '');
+      return {ok:true,res:response,text};
+    }catch(err){
+      return {ok:false,error:err.name==='AbortError'?'Timeout':err.message};
+    }finally{ clearTimeout(timer); }
+  }
+
+  function addEndpoint(method,path,res,obs){
+    state.endpoints.push({method,path,status:res?.status||0,type:res?.headers?.get('content-type')||'-',obs});
+    renderEndpoints();
+  }
+
+  async function baseline(origin){
+    state.currentPhase='BASELINE'; log('Phase 1/6: baseline and security headers');
+    const r=await safeFetch(origin+'/');
+    if(!r.ok){ addCheck('Application root','FAIL','The current deployment could not be fetched.',{error:r.error}); return false; }
+    addEndpoint('GET','/',r.res,'Baseline application response');
+    const h=r.res.headers;
+    const sec={
+      'content-security-policy':h.get('content-security-policy'),
+      'strict-transport-security':h.get('strict-transport-security'),
+      'x-frame-options':h.get('x-frame-options'),
+      'x-content-type-options':h.get('x-content-type-options'),
+      'referrer-policy':h.get('referrer-policy'),
+      'permissions-policy':h.get('permissions-policy')
+    };
+    const missing=Object.entries(sec).filter(([,v])=>!v).map(([k])=>k);
+    if(missing.length) addFinding('MEDIUM','Missing security response headers','One or more recommended browser security headers were not present on the baseline response.',{missing});
+    else addCheck('Security headers','PASS','Baseline response contained the reviewed security headers.',sec);
+    addCheck('HTTPS transport',origin.startsWith('https://')?'PASS':'WARN',origin.startsWith('https://')?'Deployment uses HTTPS.':'Deployment is using HTTP.',{origin});
+    return true;
+  }
+
+  async function checkWellKnown(origin){
+    state.currentPhase='STANDARD DISCOVERY';
+    log('Phase 2/6: checking standard metadata and explicitly supplied paths');
+    const standard=['/robots.txt','/sitemap.xml','/.well-known/security.txt'];
+    for(let i=0;i<standard.length;i++){
+      if(state.stop) break;
+      const p=standard[i]; const r=await safeFetch(origin+p);
+      if(r.ok){
+        addEndpoint('GET',p,r.res,'Standard metadata probe');
+        if(r.res.status<400) addCheck(`Standard path ${p}`, 'PASS','Reachable from the deployed origin.',{status:r.res.status});
+        else addCheck(`Standard path ${p}`,'WARN',`Returned HTTP ${r.res.status}.`,{});
+      } else addCheck(`Standard path ${p}`,'WARN','Request failed or timed out.',{error:r.error});
+      updateProgress(i+1,standard.length,'Metadata');
     }
   }
 
-  // Helper to parse lists
-  const getLines = id => { const el=$(id); return el ? [...new Set(el.value.split('\n').map(s=>s.trim()).filter(Boolean))] : []; };
-  const getMods = () => new Set([...$$('.mod:checked')].map(e=>e.value));
-
-  // --- ATTACK MODULES ---
-
-  async function checkRootAndHeaders(origin) {
-    log(`Probing root headers on ${origin}...`);
-    const { res, text, ok } = await safeFetch(origin + '/');
-    if (!ok) {
-      addCheck('Root Accessibility', 'FAIL', 'Could not access origin root. Is it online and same-origin?');
-      return;
+  async function probePath(path,mods,deep=true){
+    const p=normalizePath(path); if(!p) return;
+    const r=await safeFetch($('origin').value+p);
+    if(!r.ok){
+      addEndpoint('GET',p,{},'Network error: '+r.error);
+      return {path,ok:false};
     }
-    
-    state.endpoints.push({ method: 'GET', path: '/', status: res.status, type: res.headers.get('content-type')||'-', obs: 'Baseline' });
-    renderEndpoints();
-    
-    const h = res.headers;
-    const secHeaders = {
-      'Strict-Transport-Security': h.get('strict-transport-security'),
-      'Content-Security-Policy': h.get('content-security-policy'),
-      'X-Frame-Options': h.get('x-frame-options'),
-      'X-Content-Type-Options': h.get('x-content-type-options')
-    };
+    addEndpoint('GET',p,r.res,'Explicit target');
+    if(r.res.status>=500) addFinding('LOW','Server error response',`The endpoint ${p} returned HTTP ${r.res.status}.`,{path:p,status:r.res.status});
 
-    if(!secHeaders['Content-Security-Policy']) addFinding('MEDIUM', 'Missing CSP', 'No Content-Security-Policy header detected on root.', {headers: secHeaders});
-    if(secHeaders['X-Content-Type-Options'] !== 'nosniff') addCheck('MIME Sniffing', 'WARN', 'X-Content-Type-Options: nosniff is missing.');
-    
-    addCheck('Security Headers', 'PASS', 'Header observation complete.', secHeaders);
+    if(deep && mods.has('methods')){
+      const o=await safeFetch($('origin').value+p,{method:'OPTIONS'});
+      if(o.ok){
+        addEndpoint('OPTIONS',p,o.res,`Allow: ${o.res.headers.get('allow')||'not disclosed'}`);
+        const allow=o.res.headers.get('allow');
+        if(allow && /(PUT|PATCH|DELETE)/i.test(allow)) addCheck(`Method exposure ${p}`,'WARN','Endpoint advertises mutating HTTP methods. Confirm authorization and CSRF protections.',{allow});
+      }
+    }
+
+    if(deep && mods.has('cors')){
+      const c=await safeFetch($('origin').value+p,{headers:{Origin:'https://scanner.invalid'}});
+      if(c.ok){
+        const acao=c.res.headers.get('access-control-allow-origin');
+        const acac=c.res.headers.get('access-control-allow-credentials');
+        addEndpoint('GET',p,c.res,`CORS observation: ACAO=${acao||'-'} credentials=${acac||'-'}`);
+        if(acao==='https://scanner.invalid' || (acao==='*' && acac==='true')) addFinding('HIGH','Potentially unsafe CORS policy',`The endpoint ${p} accepted a cross-site Origin value in its response headers.`,{acao,acac});
+      }
+    }
+
+    if(deep && mods.has('xss')){
+      const marker=DEFAULT_SAFE_MARKERS[state.reqCount % DEFAULT_SAFE_MARKERS.length];
+      const sep=p.includes('?')?'&':'?';
+      const target=$('origin').value+p+sep+'tth_marker='+encodeURIComponent(marker);
+      const x=await safeFetch(target);
+      if(x.ok && x.text.includes(marker)) addFinding('MEDIUM','Unencoded reflection detected',`A controlled non-executing marker was reflected in the response from ${p}. Reflection is not by itself proof of XSS, but the output context should be reviewed.`,{marker,path:p});
+    }
+
+    return {path:p,ok:true,status:r.res.status};
   }
 
-  async function runDiscovery(origin, pathsList, concurrency) {
-    log(`Running massive path discovery (${pathsList.length} targets)...`);
-    
-    let i = 0;
-    const worker = async () => {
-      while(i < pathsList.length && !state.stop) {
-        const p = pathsList[i++];
-        if (!p.startsWith('/')) continue;
-        
-        const url = origin + p;
-        let result = await safeFetch(url, { method: 'HEAD' });
-        if (!result.ok || (result.res && result.res.status === 405)) result = await safeFetch(url, { method: 'GET' });
-        const { res, text, ok } = result;
-        if (ok) {
-          state.endpoints.push({ method: res.requestedMethod || 'GET', path: p, status: res.status, type: res.headers.get('content-type')||'-', obs: p === '/' ? 'Live baseline' : 'User-specified discovery' });
-          if(res.status === 200 && /(?:^|\/)(?:credentials|secrets|private|backup|config)(?:\.|$)/i.test(p)) {
-            addFinding('HIGH', `Potentially sensitive resource exposed: ${p}`, `The live target returned HTTP 200 for a user-specified sensitive-looking path.`, { path: p });
-          }
-          if (p === '/' && text) {
-            const discovered = [...text.matchAll(/(?:href|action)\s*=\s*[\"']([^\"'#?][^\"']*)/gi)]
-              .map(m => m[1]).filter(Boolean).map(v => { try { return new URL(v, origin).pathname; } catch { return null; } })
-              .filter(v => v && v.startsWith('/'));
-            for (const link of new Set(discovered)) {
-              if (!state.stop && !state.endpoints.some(e => e.path === link)) state.endpoints.push({ method: 'DISCOVER', path: link, status: 0, type: 'link', obs: 'Extracted from live root HTML' });
-            }
-            renderEndpoints();
+  async function scanEndpoints(paths,mods){
+    state.currentPhase='ENDPOINT ANALYSIS';
+    const unique=[...new Set(paths.map(normalizePath).filter(Boolean))];
+    log(`Phase 3/6: detailed endpoint analysis for ${unique.length} supplied paths`);
+    for(let i=0;i<unique.length && !state.stop;i++){
+      await probePath(unique[i],mods,true);
+      updateProgress(i+1,unique.length,'Endpoints');
+    }
+  }
+
+  async function deepDiscovery(paths,mods){
+    state.currentPhase='DISCOVERY';
+    const unique=[...new Set(paths.map(normalizePath).filter(Boolean))];
+    log(`Phase 4/6: slow discovery sweep of ${unique.length} paths`);
+    for(let i=0;i<unique.length && !state.stop;i++){
+      const p=unique[i];
+      const r=await safeFetch($('origin').value+p,{method:'GET'});
+      if(r.ok){
+        addEndpoint('GET',p,r.res,'Discovery sweep');
+        if(r.res.status===200 && /(?:\.env$|\.git\/|credentials|private|backup|secret)/i.test(p)) addFinding('HIGH','Potential sensitive resource exposed',`A suspicious path returned HTTP 200: ${p}`,{path:p,status:r.res.status});
+        if(r.res.status===403) addCheck(`Access control ${p}`,'PASS','Resource exists but returned 403.',{path:p});
+      }
+      updateProgress(i+1,unique.length,'Discovery');
+    }
+  }
+
+  function extractLines(text){
+    return [...new Set(String(text||'').split(/\r?\n/).filter(Boolean))].slice(0,3000);
+  }
+
+  function scanSource(name,text){
+    const findings=[];
+    for(const [label,rx,advice] of SOURCE_RULES){
+      rx.lastIndex=0; const matches=[]; let m;
+      while((m=rx.exec(text)) && matches.length<8) matches.push({index:m.index,snippet:text.slice(Math.max(0,m.index-80),Math.min(text.length,m.index+160))});
+      if(matches.length) findings.push({type:label,advice,matches});
+    }
+    for(const [label,rx] of SECRET_RULES){
+      rx.lastIndex=0; const matches=[]; let m;
+      while((m=rx.exec(text)) && matches.length<5) matches.push({index:m.index});
+      if(matches.length) findings.push({type:label,advice:'Verify that this value is not a live credential. Rotate exposed credentials immediately if confirmed.',matches});
+    }
+    return findings;
+  }
+
+  async function scanLocalFiles(){
+    if(state.running) return;
+    const files=Array.from($('fileInput').files||[]);
+    if(!files.length){ alert('Choose the repository folder/files first.'); return; }
+    $('fileResults').innerHTML='';
+    state.fileResults=[];
+    log(`Source analysis: reading ${files.length} actual local files`,'INFO');
+    for(let i=0;i<files.length;i++){
+      if(state.stop) break;
+      const f=files[i];
+      try{
+        const text=await f.text();
+        const issues=scanSource(f.webkitRelativePath||f.name,text);
+        const result={file:f.webkitRelativePath||f.name,size:f.size,issues}; state.fileResults.push(result);
+        const box=document.createElement('div'); box.className='finding '+(issues.length?'medium':'low');
+        box.innerHTML=`<div class="head"><b>${esc(result.file)}</b><span class="sev">${issues.length?'REVIEW':'CLEAN'}</span></div><div class="small">${issues.length?esc(issues.map(x=>x.type).join(', ')):'No reviewed source patterns matched.'}</div><details><summary>Evidence</summary><pre>${esc(JSON.stringify(issues,null,2))}</pre></details>`;
+        $('fileResults').appendChild(box);
+        if(issues.length) addFinding('MEDIUM',`Source review: ${result.file}`,`Actual file content matched ${issues.length} review pattern(s).`,{issues});
+      }catch(e){
+        $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice danger">${esc(f.name)}: ${esc(e.message)}</div>`);
+      }
+      updateProgress(i+1,files.length,'Local files');
+    }
+    log('Local source analysis completed','SUCCESS');
+  }
+
+  function pathToDeploymentPath(path){
+    let p=normalizePath(path);
+    // public/ is normally the deployment root on static hosting.
+    if(/^\/public\//i.test(p)) p=p.replace(/^\/public/i,'');
+    if(p==='/public') p='/';
+    return p;
+  }
+
+  async function scanDeployedRepo(embedded=false){
+    if(state.running && !embedded) return;
+    const paths=getLines('repoPaths').map(pathToDeploymentPath);
+    if(!paths.length){ alert('Enter deployed repository paths first.'); return; }
+    $('fileResults').innerHTML='';
+    state.fileResults=[];
+    setStatus('RUNNING REPOSITORY SCAN','info','run');
+    const manageState=!embedded;
+    if(manageState){ state.running=true; state.stop=false; $('scanRepoBtn').disabled=true; $('startBtn').disabled=true; $('stopBtn').disabled=false; }
+    log(`Repository scan: ${paths.length} real paths supplied`,'INFO');
+    for(let i=0;i<paths.length && !state.stop;i++){
+      const p=paths[i];
+      try{
+        const r=await safeFetch($('origin').value+p);
+        if(!r.ok){
+          const result={file:p,error:r.error}; state.fileResults.push(result);
+          $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice warn"><b>${esc(p)}</b><br>Not fetched: ${esc(r.error)}</div>`);
+        }else{
+          const ctype=r.res.headers.get('content-type')||'';
+          const looksSource=/javascript|json|html|text|css|xml/i.test(ctype) || /\.(?:js|mjs|ts|jsx|tsx|html|css|json|md|txt|env)$/i.test(p);
+          if(!looksSource){
+            $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice warn"><b>${esc(p)}</b><br>HTTP ${r.res.status}; content-type ${esc(ctype||'-')}. It was fetched, but it does not look like source text, so no source findings were invented.</div>`);
+          }else{
+            const issues=scanSource(p,r.text);
+            const result={file:p,httpStatus:r.res.status,contentType:ctype,size:r.text.length,issues}; state.fileResults.push(result);
+            $('fileResults').insertAdjacentHTML('beforeend',`<div class="finding ${issues.length?'medium':'low'}"><div class="head"><b>${esc(p)}</b><span class="sev">HTTP ${esc(r.res.status)} · ${issues.length?'REVIEW':'CLEAN'}</span></div><div class="small">${issues.length?esc(issues.map(x=>x.type).join(', ')):'Fetched successfully and no reviewed source patterns matched.'}</div><details><summary>Evidence</summary><pre>${esc(JSON.stringify({contentType:ctype,issues},null,2))}</pre></details></div>`);
+            if(issues.length) addFinding('MEDIUM',`Repository source review: ${p}`,`The deployed response matched ${issues.length} source-review pattern(s).`,{issues,contentType:ctype});
           }
         }
-        
-        $('progressBar').style.width = `${((i/pathsList.length)*100)}%`;
-        $('progressText').textContent = `Discovery: ${i}/${pathsList.length}`;
+      }catch(e){
+        $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice danger"><b>${esc(p)}</b><br>${esc(e.message)}</div>`);
       }
-    };
-    
-    await Promise.all(Array.from({length: concurrency}, worker));
-    renderEndpoints();
+      updateProgress(i+1,paths.length,'Repository');
+    }
+    if(manageState){ state.running=false; $('scanRepoBtn').disabled=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; setStatus(state.stop?'REPOSITORY SCAN STOPPED':'REPOSITORY SCAN COMPLETE',state.stop?'warn':'ok',state.stop?'warn':'ok'); generateReport(); }
   }
 
-  async function runFuzzing(origin, pathsList, payloads, mods, concurrency) {
-    log(`Initiating hyper-aggressive fuzzing on ${pathsList.length} paths...`);
-    
-    let tasks = [];
-    pathsList.forEach(p => {
-      if(!p.startsWith('/')) return;
-      // 1. Method fuzzing
-      if(mods.has('methods')) tasks.push({ path: p, type: 'method' });
-      // 2. CORS check
-      if(mods.has('cors')) tasks.push({ path: p, type: 'cors' });
-      // 3. Payload Injection (Query params)
-      if (mods.has('sqli') || mods.has('xss') || mods.has('lfi') || mods.has('ssti')) {
-        payloads.forEach(py => tasks.push({ path: p, payload: py, type: 'inject' }));
-      }
-      // 4. Header Injection
-      if(mods.has('headers')) tasks.push({ path: p, type: 'headers' });
-    });
-
-    log(`Total fuzzing tasks generated: ${tasks.length}`);
-    if (!tasks.length) { $('progressBar').style.width='100%'; $('progressText').textContent='No fuzzing tasks selected'; return; }
-    let i = 0;
-    const worker = async () => {
-      while(i < tasks.length && !state.stop) {
-        const task = tasks[i++];
-        $('progressBar').style.width = `${((i/tasks.length)*100)}%`;
-        $('progressText').textContent = `Fuzzing: ${i}/${tasks.length}`;
-        
-        const url = origin + task.path;
-
-        try {
-          if (task.type === 'method') {
-            const { res, ok } = await safeFetch(url, { method: 'OPTIONS' });
-            if(ok && res.headers.get('allow')) {
-              state.endpoints.push({ method: 'OPTIONS', path: task.path, status: res.status, type: '-', obs: `Allow: ${res.headers.get('allow')}` });
-            }
-          } 
-          else if (task.type === 'cors') {
-            const { res, ok } = await safeFetch(url, { headers: { 'Origin': 'https://evil-attacker.com' } });
-            if(ok) {
-              const acao = res.headers.get('access-control-allow-origin');
-              const acac = res.headers.get('access-control-allow-credentials');
-              if(acao === 'https://evil-attacker.com' || (acao === '*' && acac === 'true')) {
-                addFinding('HIGH', `Insecure CORS on ${task.path}`, `Reflected attacker origin or wildcard with credentials.`, { acao, acac });
-              }
-            }
-          }
-          else if (task.type === 'headers') {
-            const { res, text, ok } = await safeFetch(url, { headers: { 'X-Forwarded-For': '127.0.0.1', 'X-Original-URL': '/admin', 'Host': 'evil.com' } });
-            if (ok && res.status === 200 && text.includes('admin') && !task.path.includes('admin')) {
-               addFinding('MEDIUM', `Possible Header Auth Bypass`, `Modifying headers on ${task.path} altered response behavior.`, { path: task.path });
-            }
-          }
-          else if (task.type === 'inject') {
-            // Construct a fuzzed URL. If it has no query string, append ?q=payload
-            const hasQuery = task.path.includes('?');
-            const targetUrl = url + (hasQuery ? `&fuzz=${encodeURIComponent(task.payload)}` : `?fuzz=${encodeURIComponent(task.payload)}`);
-            
-            const { res, text, ok } = await safeFetch(targetUrl);
-            if(ok) {
-              // Analyze response for signatures
-              if (res.status >= 500) {
-                addFinding('LOW', `500 Server Error via Fuzzing`, `Payload caused a server crash on ${task.path}.`, { payload: task.payload });
-              }
-              
-              if (mods.has('xss') && task.payload.includes('arix') && text.includes(task.payload)) {
-                 addFinding('HIGH', `Reflected XSS Vulnerability`, `Unencoded payload reflected on ${task.path}.`, { payload: task.payload });
-              }
-              
-              if (mods.has('sqli')) {
-                for(const rx of SIGNATURES.sqli) {
-                  if(rx.test(text)) addFinding('HIGH', `SQL Injection Signature`, `Database error leaked on ${task.path}.`, { payload: task.payload, match: rx.toString() });
-                }
-              }
-
-              if (mods.has('lfi')) {
-                for(const rx of SIGNATURES.lfi) {
-                  if(rx.test(text)) addFinding('HIGH', `Path Traversal / LFI`, `OS system file leaked on ${task.path}.`, { payload: task.payload, match: rx.toString() });
-                }
-              }
-            }
-          }
-        } catch (e) {
-          // Ignore individual fetch errors in worker loop to keep going
-        }
-      }
-    };
-
-    await Promise.all(Array.from({length: concurrency}, worker));
-    renderEndpoints();
+  async function runCustomRequests(){
+    if(state.running) return;
+    if(!state.customReqs.length){ alert('Queue at least one request first.'); return; }
+    state.running=true; state.stop=false; $('startBtn').disabled=true; $('stopBtn').disabled=false;
+    log(`Running ${state.customReqs.length} queued custom requests`,'INFO');
+    $('customResultsView').innerHTML='';
+    for(let i=0;i<state.customReqs.length && !state.stop;i++){
+      const r=state.customReqs[i];
+      const path=normalizePath(r.path);
+      const result=await safeFetch($('origin').value+path,{method:r.method,headers:r.headers,body:['GET','HEAD'].includes(r.method)?undefined:r.body||undefined});
+      if(result.ok){
+        addEndpoint(r.method,path,result.res,'Custom request');
+        $('customResultsView').insertAdjacentHTML('beforeend',`<div class="finding low"><div class="head"><b>${esc(r.name)}</b><span class="sev">HTTP ${result.res.status}</span></div><div class="small">${esc(path)}</div><details><summary>Response sample</summary><pre>${esc(result.text.slice(0,4000))}</pre></details></div>`);
+      }else $('customResultsView').insertAdjacentHTML('beforeend',`<div class="notice warn">${esc(r.name)}: ${esc(result.error)}</div>`);
+      updateProgress(i+1,state.customReqs.length,'Custom');
+    }
+    state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true;
+    generateReport();
+    setStatus(state.stop?'CUSTOM REQUESTS STOPPED':'CUSTOM REQUESTS COMPLETE',state.stop?'warn':'ok',state.stop?'warn':'ok');
   }
 
-  // --- MAIN CONTROLLER ---
+  function generateReport(){
+    const report={meta:{tool:'trytohack.html',version:'4.0-safe-deep',date:nowIso(),origin:$('origin').value,paceMs:Number($('pace').value),depth:$('depth').value},stats:{totalRequests:state.reqCount,findings:state.findings.length,checks:state.checks.length,endpoints:state.endpoints.length,files:state.fileResults.length},findings:state.findings,checks:state.checks,endpoints:state.endpoints,fileResults:state.fileResults};
+    state.report=report; $('jsonOutput').value=JSON.stringify(report,null,2); return $('jsonOutput').value;
+  }
 
-  async function startEngine() {
-    if (state.running) return;
-    
+  function download(filename,text,type){
+    const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+
+  async function startEngine(){
+    if(state.running) return;
     let origin;
-    try { origin = normalizeOrigin($('origin').value); } catch (e) { alert(e.message); return; }
-    if (/^https?:$/.test(location.protocol) && new URL(origin).origin !== location.origin) {
-      alert("For browser safety this workbench only scans the page's own deployment origin.");
-      return;
-    }
-    $('origin').value = origin;
-    $('scopeDisplay').textContent = `Live target: ${origin}`;
+    try{ origin=normalizeOrigin($('origin').value); $('origin').value=origin; }catch(e){ alert(e.message); return; }
+    const paths=getLines('paths').map(normalizePath).filter(Boolean);
+    const wordlist=getLines('customWordlist').map(normalizePath).filter(Boolean);
+    const mods=getMods();
+    const depth=$('depth').value;
+    const targetPaths=[...new Set([...paths,...wordlist])];
+    if(!targetPaths.length) targetPaths.push('/');
 
-    // Reset State
-    state.running = true; state.stop = false; state.reqCount = 0;
-    state.findings = []; state.checks = []; state.endpoints = [];
-    state.startTime = Date.now();
-    
-    $('startBtn').disabled = true;
-    $('stopBtn').disabled = false;
-    $('logView').innerHTML = '';
-    $('checksView').innerHTML = '';
-    $('findingsView').innerHTML = '';
-    $('endpointTbody').innerHTML = '<tr><td colspan="5" style="text-align:center">Scanning...</td></tr>';
-    $('progressBar').style.width = '0%';
-    
-    setStatus('RUNNING HYPER SCAN', 'info', 'run');
-    log(`Initializing Engine targeting: ${origin}`, 'INFO');
-    
-    state.timer = setInterval(() => {
-      $('mTime').textContent = Math.floor((Date.now() - state.startTime)/1000) + 's';
-    }, 1000);
+    state.running=true; state.stop=false; state.reqCount=0; state.findings=[]; state.checks=[]; state.endpoints=[]; state.fileResults=[]; state.startTime=Date.now(); state.lastRequestAt=0;
+    $('startBtn').disabled=true; $('stopBtn').disabled=false; $('scanRepoBtn').disabled=true;
+    $('logView').innerHTML=''; $('checksView').innerHTML=''; $('findingsView').innerHTML='<div class="notice">Scan started.</div>'; $('endpointTbody').innerHTML='';
+    $('scopeDisplay').textContent=`${origin} · ${targetPaths.length} endpoint/path targets · ${$('pace').options[$('pace').selectedIndex].text}`;
+    setStatus('RUNNING DEEP SAFE SCAN','info','run');
+    state.timer=setInterval(()=>{$('mTime').textContent=Math.floor((Date.now()-state.startTime)/1000)+'s';},1000);
 
-    const mods = getMods();
-    const concurrency = parseInt($('concurrency').value) || 5;
-    const pathsList = getLines('paths');
-    const customWordlist = getLines('customWordlist');
-    const payloads = getLines('customPayloads');
-
-    try {
-      await checkRootAndHeaders(origin);
-
-      if (!state.stop && mods.has('discovery')) {
-        const fullPaths = [...new Set(['/', ...pathsList, ...customWordlist].map(normalizePath))];
-        await runDiscovery(origin, fullPaths, concurrency);
-      }
-
-      if (!state.stop && $('intensity').value !== 'light') {
-        const basePaths = pathsList.length ? pathsList.map(normalizePath) : ['/'];
-        await runFuzzing(origin, basePaths, payloads, mods, concurrency);
-      }
-
-      // Run Custom Manual Requests
-      if (!state.stop && state.customReqs.length > 0) {
-        log(`Running ${state.customReqs.length} custom manual requests...`);
-        for(let r of state.customReqs) {
-          if(state.stop) break;
-          const { res, text, ok } = await safeFetch(origin + r.path, { method: r.method, headers: r.headers, body: r.body });
-          if(ok) {
-            state.endpoints.push({ method: r.method, path: r.path, status: res.status, type: '-', obs: 'Custom Req' });
-            addCheck(`Custom: ${r.name}`, res.status < 400 ? 'PASS' : 'WARN', `Returned ${res.status}`);
-          }
-        }
-        renderEndpoints();
-      }
-
-    } catch (err) {
-      log(`Engine Error: ${err.message}`, 'ERROR');
-      addFinding('MEDIUM', 'Scanner Exception', err.message);
-    } finally {
-      clearInterval(state.timer);
-      state.running = false;
-      $('startBtn').disabled = false;
-      $('stopBtn').disabled = true;
-      $('progressBar').style.width = '100%';
-      $('progressText').textContent = '100% COMPLETE';
-      
-      const isBad = state.findings.some(f => f.severity === 'HIGH' || f.severity === 'MEDIUM');
-      setStatus(state.stop ? 'STOPPED BY USER' : isBad ? 'COMPLETED - THREATS FOUND' : 'COMPLETED - CLEAN', state.stop ? 'warn' : isBad ? 'bad' : 'ok', state.stop ? 'warn' : isBad ? 'bad' : 'ok');
-      log(`Scan Finished. Total requests: ${state.reqCount}`, 'SUCCESS');
-      
-      generateReport();
+    try{
+      const ok=await baseline(origin);
+      if(ok && !state.stop){ await checkWellKnown(origin); }
+      if(ok && !state.stop){ await scanEndpoints(targetPaths,mods); }
+      if(ok && !state.stop && depth!=='basic'){ await deepDiscovery(targetPaths,mods); }
+      if(ok && !state.stop && depth==='complete'){ await scanDeployedRepo(true); }
+    }catch(e){
+      if(e.message!=='STOP_REQUESTED'){ log(`Engine error: ${e.message}`,'ERROR'); addFinding('MEDIUM','Scanner exception','The scanner itself encountered an exception.',{error:e.message}); }
+    }finally{
+      clearInterval(state.timer); state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; $('scanRepoBtn').disabled=false; updateMetrics(); renderEndpoints(); generateReport();
+      $('progressBar').style.width='100%'; $('progressText').textContent=state.stop?'STOPPED':'100% COMPLETE';
+      const bad=state.findings.some(f=>f.severity==='HIGH');
+      const medium=state.findings.some(f=>f.severity==='MEDIUM');
+      setStatus(state.stop?'STOPPED':bad?'COMPLETED - HIGH RISK FOUND':medium?'COMPLETED - REVIEW NEEDED':'COMPLETED - NO CONFIRMED HIGH RISK',state.stop?'warn':bad?'bad':medium?'warn':'ok',state.stop?'warn':bad?'bad':medium?'warn':'ok');
+      log(`Scan finished. ${state.reqCount} real requests were made.`,'SUCCESS');
     }
   }
 
-  // --- REPORTING ---
-
-  function generateReport() {
-    const report = {
-      meta: { tool: 'trytohack.html', version: '3.0 - Hyper-Aggressive', date: new Date().toISOString() },
-      stats: { totalRequests: state.reqCount, findingsCount: state.findings.length },
-      findings: state.findings,
-      checks: state.checks,
-      endpoints: state.endpoints
-    };
-    const jsonStr = JSON.stringify(report, null, 2);
-    $('jsonOutput').value = jsonStr;
-    return jsonStr;
-  }
-
-  function download(filename, text, type) {
-    const blob = new Blob([text], {type});
-    const a = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    a.href = url; a.download = filename;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-  }
-
-  // --- LOCAL FILE SCANNER ---
-
-  async function scanLocalFiles() {
-    const files = $('fileInput').files;
-    if (!files.length) return alert('Select files first.');
-    const out = $('fileResults');
-    out.innerHTML = '';
-    state.fileResults = [];
-    
-    log(`Scanning ${files.length} local files for secrets...`);
-
-    for(let f of files) {
-      try {
-        const text = await f.text();
-        let issues = [];
-        
-        for (let [type, rx] of Object.entries(SIGNATURES.secrets)) {
-          if (rx.test(text)) issues.push(type);
-        }
-        if (/eval\(|innerHTML\s*=|dangerouslySetInnerHTML/.test(text)) issues.push('unsafe_js_sink');
-        
-        if (issues.length) {
-          out.innerHTML += `<div class="fileitem"><div style="flex:1"><b>${esc(f.name)}</b><br><span style="color:var(--bad);font-size:11px">Flags: ${issues.join(', ')}</span></div></div>`;
-          addFinding('MEDIUM', `Secret/Sink in File: ${f.name}`, `Static analysis detected: ${issues.join(', ')}`);
-        } else {
-          out.innerHTML += `<div class="fileitem"><div><b>${esc(f.name)}</b><br><span style="color:var(--ok);font-size:11px">Clean</span></div></div>`;
-        }
-      } catch (e) {
-        out.innerHTML += `<div class="fileitem"><span style="color:var(--warn)">Error reading ${esc(f.name)}</span></div>`;
-      }
-    }
-  }
-
-  // --- EVENT LISTENERS ---
+  // Initialization: current deployment by default; no fabricated findings/results.
+  $('origin').value=location.origin;
+  $('paths').value='';
+  $('customWordlist').value='';
+  $('customPayloads').value=DEFAULT_SAFE_MARKERS.join('\n');
+  $('repoPaths').value=REPO_LIST.join('\n');
+  renderChecks(); renderEndpoints(); updateMetrics();
 
   // Tabs
-  $$('.tab').forEach(b => b.addEventListener('click', () => {
-    $$('.tab').forEach(x => x.classList.remove('active'));
-    $$('.tabpanel').forEach(x => x.classList.remove('active'));
-    b.classList.add('active');
-    $(`[data-panel="${b.dataset.tab}"]`).classList.add('active');
-    $('tabTitle').textContent = b.textContent;
+  $$('.tab').forEach(b=>b.addEventListener('click',()=>{
+    $$('.tab').forEach(x=>x.classList.remove('active')); $$('.tabpanel').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); const panel=document.querySelector(`[data-panel="${CSS.escape(b.dataset.tab)}"]`); if(panel) panel.classList.add('active'); $('tabTitle').textContent=b.textContent;
   }));
 
-  // Main Actions
-  $('startBtn').addEventListener('click', startEngine);
-  $('stopBtn').addEventListener('click', () => { state.stop = true; log('Stop signal sent...', 'WARN'); });
-  $('clearBtn').addEventListener('click', () => { if (state.running) return; location.reload(); });
+  $('startBtn').addEventListener('click',startEngine);
+  $('stopBtn').addEventListener('click',()=>{ state.stop=true; log('Stop requested. Current request will finish, then the scanner will halt.','WARN'); setStatus('STOP REQUESTED','warn','warn'); });
+  $('clearBtn').addEventListener('click',()=>{ if(state.running){alert('Stop the scan before clearing state.');return;} location.reload(); });
 
-  // Custom Requests
-  $('addReqBtn').addEventListener('click', () => {
-    if (!$('reqManual').checked) return alert('You must confirm the request is safe.');
-    try {
-      const method = $('reqMethod').value.toUpperCase();
-      const req = {
-        name: $('reqName').value.trim() || 'Unnamed',
-        method,
-        path: normalizePath($('reqPath').value),
-        headers: $('reqHeaders').value.trim() ? JSON.parse($('reqHeaders').value) : {},
-        body: !['GET','HEAD'].includes(method) ? $('reqBody').value : null
-      };
-      if (!req.path.startsWith('/')) throw new Error('Path must stay on the same origin and start with /.');
-      state.customReqs.push(req);
-      $('customList').innerHTML += `<div class="notice">Added: [${req.method}] ${esc(req.path)}</div>`;
-      $('reqManual').checked = false;
-    } catch (e) { alert(`Could not add request: ${e.message}`); }
+  $('addReqBtn').addEventListener('click',()=>{
+    if(!$('reqManual').checked){alert('Confirm that the request is safe and non-destructive.');return;}
+    let headers={};
+    try{headers=$('reqHeaders').value.trim()?JSON.parse($('reqHeaders').value):{};}catch(e){alert('Headers must be valid JSON.');return;}
+    const path=$('reqPath').value.trim(); if(!path){alert('Enter a request path.');return;}
+    try{normalizePath(path);}catch(e){alert(e.message);return;}
+    const req={name:$('reqName').value.trim()||'Unnamed request',method:$('reqMethod').value,path,headers,body:$('reqBody').value};
+    state.customReqs.push(req);
+    $('customList').insertAdjacentHTML('beforeend',`<div class="notice ok">Added: <code>${esc(req.method)}</code> ${esc(req.path)}</div>`);
+    $('reqManual').checked=false;
   });
-  $('clearReqsBtn').addEventListener('click', () => { state.customReqs = []; $('customList').innerHTML = ''; });
-  $('runReqsBtn').addEventListener('click', async () => {
-    if (state.running) return alert('A scan is already running.');
-    if (!state.customReqs.length) return alert('Add at least one request first.');
-    try {
-      const origin = normalizeOrigin($('origin').value);
-      state.running = true; state.stop = false; state.startTime = Date.now();
-      $('startBtn').disabled = true; $('stopBtn').disabled = false;
-      setStatus('RUNNING CUSTOM REQUESTS', 'info', 'run');
-      for (const r of state.customReqs) {
-        if (state.stop) break;
-        const result = await safeFetch(origin + r.path, { method:r.method, headers:r.headers, body:r.body });
-        if (result.ok) {
-          const {res} = result;
-          state.endpoints.push({method:r.method,path:r.path,status:res.status,type:res.headers.get('content-type')||'-',obs:'Custom request'});
-          addCheck(`Custom: ${r.name}`, res.status < 400 ? 'PASS' : 'WARN', `Returned ${res.status}`);
-        } else {
-          addCheck(`Custom: ${r.name}`, 'WARN', `Request failed: ${result.error || 'Unknown error'}`);
-        }
-        renderEndpoints();
-      }
-      setStatus(state.stop ? 'STOPPED BY USER' : 'CUSTOM REQUESTS COMPLETE', state.stop ? 'warn' : 'ok', state.stop ? 'warn' : 'ok');
-    } catch (e) { log(`Custom request runner error: ${e.message}`, 'ERROR'); }
-    finally { state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; generateReport(); }
-  });
+  $('clearReqsBtn').addEventListener('click',()=>{state.customReqs=[];$('customList').innerHTML='';});
+  $('runReqsBtn').addEventListener('click',runCustomRequests);
 
-  // Payloads Config
-  $('savePayloadsBtn').addEventListener('click', () => {
-    try {
-      localStorage.setItem('trytohack.customWordlist', $('customWordlist').value);
-      localStorage.setItem('trytohack.customPayloads', $('customPayloads').value);
-      log('Custom dictionaries saved locally and ready for the next scan.', 'SUCCESS');
-    } catch (e) {
-      log(`Could not save custom dictionaries: ${e.message}`, 'ERROR');
-    }
-  });
-  $('resetPayloadsBtn').addEventListener('click', () => {
-    $('customWordlist').value = '';
-    $('customPayloads').value = '';
-    try { localStorage.removeItem('trytohack.customWordlist'); localStorage.removeItem('trytohack.customPayloads'); } catch {}
-    log('Custom dictionaries cleared.', 'SUCCESS');
-  });
+  $('savePayloadsBtn').addEventListener('click',()=>{localStorage.setItem('tth_wordlist',$('customWordlist').value);localStorage.setItem('tth_markers',$('customPayloads').value);alert('Your current wordlist and safe marker list were saved locally.');});
+  $('resetPayloadsBtn').addEventListener('click',()=>{localStorage.removeItem('tth_wordlist');localStorage.removeItem('tth_markers');$('customWordlist').value='';$('customPayloads').value=DEFAULT_SAFE_MARKERS.join('\n');});
+  const savedWords=localStorage.getItem('tth_wordlist'); const savedMarkers=localStorage.getItem('tth_markers'); if(savedWords!==null)$('customWordlist').value=savedWords; if(savedMarkers!==null)$('customPayloads').value=savedMarkers;
 
-  // File Scanner
-  $('scanFilesBtn').addEventListener('click', scanLocalFiles);
-  $('clearFilesBtn').addEventListener('click', () => { $('fileResults').innerHTML = '<div class="notice">Cleared.</div>'; $('fileInput').value = ''; });
+  $('scanFilesBtn').addEventListener('click',scanLocalFiles);
+  $('clearFilesBtn').addEventListener('click',()=>{$('fileResults').innerHTML='<div class="notice">Cleared.</div>';$('fileInput').value='';state.fileResults=[];});
+  $('loadRepoBtn').addEventListener('click',()=>{$('repoPaths').value=REPO_LIST.join('\n');log(`Loaded ${REPO_LIST.length} repository paths supplied for this project.`,'INFO');});
+  $('scanRepoBtn').addEventListener('click',scanDeployedRepo);
 
-  // Network Tools
-  $('probeNetBtn').addEventListener('click', async () => {
-    const paths = getLines('netPaths').map(normalizePath);
-    if (!paths.length) return alert('Enter at least one endpoint.');
-    if (state.running) return alert('A scan is already running.');
-    $('paths').value = [...new Set(paths)].join('\n');
-    $('intensity').value = 'light';
-    await startEngine();
+  $('probeNetBtn').addEventListener('click',async()=>{
+    $('paths').value=getLines('netPaths').join('\n'); $('depth').value='deep'; $('intensity').value='light'; await startEngine();
   });
-  $('probeCurrentBtn').addEventListener('click', async () => {
-    if (state.running) return alert('A scan is already running.');
-    $('paths').value = '/'; $('intensity').value = 'light';
-    await startEngine();
-  });
+  $('probeCurrentBtn').addEventListener('click',async()=>{$('paths').value='/';$('depth').value='basic';$('intensity').value='light';await startEngine();});
 
-  // Downloads
-  $('dlJsonBtn').addEventListener('click', () => download('trytohack-report.json', generateReport(), 'application/json'));
-  $('dlHtmlBtn').addEventListener('click', () => {
-    const report = esc(generateReport());
-    const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Security Report</title><style>body{background:#0f172a;color:#e2e8f0;font-family:monospace;padding:20px}pre{white-space:pre-wrap}</style></head><body><h1>Security Report</h1><pre>' + report + '</pre></body></html>';
-    download('trytohack-report.html', html, 'text/html');
-  });
+  $('dlJsonBtn').addEventListener('click',()=>download('trytohack-report.json',generateReport(),'application/json;charset=utf-8'));
+  $('dlHtmlBtn').addEventListener('click',()=>{const body=`<!doctype html><meta charset="utf-8"><title>trytohack report</title><body><h1>trytohack security report</h1><pre>${esc(generateReport())}</pre></body>`;download('trytohack-report.html',body,'text/html;charset=utf-8');});
 
-  // Prevent accidental close
-  window.addEventListener('beforeunload', (e) => {
-    if(state.running) { e.preventDefault(); e.returnValue = ''; }
-  });
-
+  window.addEventListener('beforeunload',e=>{if(state.running){e.preventDefault();e.returnValue='';}});
 })();
 </script>
 </body>
