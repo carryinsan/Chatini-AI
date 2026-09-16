@@ -65,6 +65,8 @@ export default async function handler(req) {
                     process.env.GEMINI_API_KEY_1,
                     process.env.GEMINI_API_KEY_2,
                     process.env.GEMINI_API_KEY_3,
+                    process.env.GEMINI_API_KEY_4,
+                    process.env.GEMINI_API_KEY_5,
                     process.env.GEMINI_API_KEY
                 ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
@@ -105,7 +107,7 @@ MANDATORY RULES:
                 // Key Rotation with Failover
                 for (let i = 0; i < GEMINI_KEYS.length; i++) {
                     const currentKey = GEMINI_KEYS[i];
-                    const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
+                    const streamUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:streamGenerateContent?alt=sse&key=${currentKey}`;
 
                     try {
                         const res = await fetch(streamUrl, {
