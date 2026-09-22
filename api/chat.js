@@ -1466,7 +1466,12 @@ The visible thinking should communicate concise reasoning summaries and meaningf
         telemetry.inputTokens = Math.ceil((systemPrompt.length + userQuery.length) / 4);
 
         // INJECT TIMESTAMP TO THE ACTUAL FINAL USER COMMAND
-        processedMessages[processedMessages.length - 1].content = `[USER COMMAND - INITIATED AT: ${currentDateTimeLocal} - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}`;
+        let recencyReminder = "";
+        if (isThinkingEnabled) {
+          recencyReminder = `\n\n[SYSTEM REMINDER: You MUST use <thinking title="...">...</thinking> blocks to reason BEFORE answering, and INTERLEAVE them throughout your response for complex steps (e.g., verifying, calculating, analyzing tradeoffs). Do NOT skip the thinking blocks.]`;
+        }
+
+        processedMessages[processedMessages.length - 1].content = `[USER COMMAND - INITIATED AT: ${currentDateTimeLocal} - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}${recencyReminder}`;
 
         const geminiMessages = processedMessages.map((m, i) => {
           const parts = [{ text: m.content }];
