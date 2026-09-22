@@ -2574,40 +2574,84 @@ function generateBrainMap() {
 }
 
 async function shareFullChat() {
-    if (messages.length === 0) return showToast("Chat is empty");
-    showToast("Generating Share Link...");
-    
-    // Visual loading state on the sidebar button
-    const btn = document.querySelector('button[onclick="shareFullChat()"]');
-    if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-sm text-indigo-500"></i> Sharing...';
-    
-    try {
-        const res = await fetch('/api/chatshare', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat: chats.find(c => c.id === currentChatId) })
-        });
-        const data = await res.json();
-        
-        if (data.success && data.id) {
-            const link = window.location.origin + '?chat=' + data.id;
-            await navigator.clipboard.writeText(link);
-            showToast("Link Copied! Anyone can view.");
-        } else {
-            throw new Error("API failed");
-        }
-    } catch (e) {
-        // Fallback local share simulation if backend endpoint is unavailable
-        const shareId = 'local_' + currentChatId;
-        const link = window.location.origin + window.location.pathname + '?chat=' + shareId;
-        await navigator.clipboard.writeText(link);
-        showToast("Chat Link Copied!");
+    if (messages.length === 0) {
+        showToast("Chat is empty");
+        return;
     }
-    
-    // Restore button state
-    if(btn) btn.innerHTML = '<i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat';
-}
 
+    showToast("Generating Share Link...");
+
+    const btn = document.querySelector('button[onclick="shareFullChat()"]');
+
+    if (btn) {
+        btn.innerHTML =
+            '<i class="ph-bold ph-spinner animate-spin text-sm text-indigo-500"></i> Sharing...';
+        btn.disabled = true;
+    }
+
+    try {
+        const currentChat = chats.find(
+            (c) => c.id === currentChatId
+        );
+
+        if (!currentChat) {
+            throw new Error("Current chat could not be found.");
+        }
+
+        const res = await fetch("/api/chatshare", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                chatData: currentChat,
+            }),
+        });
+
+        let data;
+
+        try {
+            data = await res.json();
+        } catch {
+            throw new Error(
+                `Share API returned invalid JSON (HTTP ${res.status})`
+            );
+        }
+
+        if (!res.ok || !data.success || !(data.id || data.shareId)) {
+            throw new Error(
+                data?.error ||
+                `Share API failed (HTTP ${res.status})`
+            );
+        }
+
+        const shareId = data.id || data.shareId;
+
+        const link =
+            window.location.origin +
+            window.location.pathname +
+            "?chat=" +
+            encodeURIComponent(shareId);
+
+        await navigator.clipboard.writeText(link);
+
+        showToast("Link Copied! Anyone can view.");
+    } catch (e) {
+        console.error("Share Chat Error:", e);
+
+        showToast(
+            e?.message
+                ? `Share failed: ${e.message}`
+                : "Failed to create share link."
+        );
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML =
+                '<i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat';
+        }
+    }
+}
 // ====== EXTENSION MANAGER ======
 
 
