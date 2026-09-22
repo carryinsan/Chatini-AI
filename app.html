@@ -2170,24 +2170,97 @@ function showToast(msg) {
     setTimeout(() => toast.classList.add('opacity-0', '-translate-y-10'), 2500); 
 }
 
-async function copyToClipboard(msgId) { 
-    const msg = messages.find(m => m.id === msgId); 
-    if (!msg) return; 
-    try { 
+async function copyToClipboard(msgId) {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    try {
+        const wrapper = document.getElementById('msg-wrapper-' + msgId);
+
+        let textToCopy = "";
+
+        if (wrapper) {
+            // Copy the ACTUAL RENDERED MESSAGE, not the raw HTML source.
+            const rendered = wrapper.querySelector('.msg-content');
+
+            if (rendered) {
+                const clone = rendered.cloneNode(true);
+
+                // Remove UI / metadata that should NEVER enter copied text.
+                clone.querySelectorAll(
+                    '#Arix-persistent-loader,' +
+                    '#Arix-repair-loader,' +
+                    '.think-step,' +
+                    '.action-bar,' +
+                    '.verification-tab,' +
+                    'style,' +
+                    'script,' +
+                    'svg,' +
+                    'button,' +
+                    'template'
+                ).forEach(el => el.remove());
+
+                // innerText respects visible formatting and line breaks.
+                textToCopy = clone.innerText || clone.textContent || "";
+            }
+        }
+
+        // Robust fallback if the rendered message is unavailable.
+        if (!textToCopy.trim()) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(
+                String(msg.content || ""),
+                "text/html"
+            );
+
+            doc.querySelectorAll(
+                '#Arix-persistent-loader,' +
+                '#Arix-repair-loader,' +
+                '.think-step,' +
+                '.action-bar,' +
+                '.verification-tab,' +
+                'style,' +
+                'script,' +
+                'svg,' +
+                'button,' +
+                'template'
+            ).forEach(el => el.remove());
+
+            textToCopy = doc.body.innerText || doc.body.textContent || "";
+        }
+
+        // Normalize whitespace without destroying paragraph/list line breaks.
+        textToCopy = textToCopy
+            .replace(/\u00A0/g, ' ')
+            .replace(/[ \t]+\n/g, '\n')
+            .replace(/\n[ \t]+/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+
+        if (!textToCopy) {
+            return showToast("Nothing to copy.");
+        }
+
         if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(msg.content);
-        } else { 
+            await navigator.clipboard.writeText(textToCopy);
+        } else {
             const t = document.createElement("textarea");
-            t.value = msg.content; 
-            document.body.appendChild(t); 
+            t.value = textToCopy;
+            t.style.position = "fixed";
+            t.style.left = "-9999px";
+            t.style.top = "0";
+            document.body.appendChild(t);
+            t.focus();
             t.select();
-            document.execCommand("copy"); 
-            t.remove(); 
-        } 
-        showToast("Copied to clipboard!"); 
+            document.execCommand("copy");
+            t.remove();
+        }
+
+        showToast("Copied to clipboard!");
     } catch (err) {
-        showToast("Copy failed!"); 
-    } 
+        console.error("Copy error:", err);
+        showToast("Copy failed!");
+    }
 }
 
 function openPdfModal(msgId) { 
