@@ -2797,12 +2797,13 @@ function saveCurrentChat() {
     }));
     
     const chatData = { 
-        id: currentChatId, 
-        title: chatIndex > -1 ? chats[chatIndex].title : title,
-        messages: safeMessages, 
-        extId: currentChatExtId, 
-        date: Date.now() 
-    };
+            id: currentChatId, 
+            title: chatIndex > -1 ? chats[chatIndex].title : title,
+            messages: safeMessages, 
+            extId: currentChatExtId, 
+            date: Date.now(),
+            pinned: chatIndex > -1 ? chats[chatIndex].pinned : false
+        };
     
     if (chatIndex > -1) chats[chatIndex] = chatData; 
     else chats.unshift(chatData);
@@ -2858,19 +2859,37 @@ function renameChat(id, e) {
     } 
 }
 
+function togglePinChat(id, e) {
+    e.stopPropagation();
+    const chat = chats.find(c => c.id === id);
+    if (chat) {
+        chat.pinned = !chat.pinned;
+        localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+        renderHistoryList();
+    }
+}
+
 function renderHistoryList() { 
+    // Sort: Pinned chats first, then order by newest activity date descending
+    chats.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return (b.date || 0) - (a.date || 0);
+    });
+
     els.historyList.innerHTML = chats.map(chat => 
-        `<div class="group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-50 border border-theme-100 shadow-sm' : 'hover:bg-gray-50 border border-transparent'}" onclick="loadChat('${chat.id}')">
+        `<div class="group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-100 border border-theme-300 shadow-md ring-1 ring-theme-200' : 'hover:bg-gray-50 border border-transparent'} relative" onclick="loadChat('${chat.id}')">
             <div class="flex items-center gap-2 overflow-hidden">
-                <i class="ph-bold ph-chat-circle ${chat.id === currentChatId ? 'text-theme-600' : 'text-gray-400'} flex-shrink-0 text-lg"></i>
+                <i class="${chat.pinned ? 'ph-fill ph-push-pin text-amber-500' : 'ph-bold ph-chat-circle'} ${chat.id === currentChatId && !chat.pinned ? 'text-theme-600' : (!chat.pinned ? 'text-gray-400' : '')} flex-shrink-0 text-lg"></i>
                 <div class="flex flex-col">
-                    <span class="text-[13px] font-medium ${chat.id === currentChatId ? 'text-theme-800' : 'text-gray-700'} truncate">${chat.title}</span>
+                    <span class="text-[13px] font-bold ${chat.id === currentChatId ? 'text-theme-900' : 'text-gray-700'} truncate">${chat.title}</span>
                     ${chat.extId ? '<span class="text-[9px] text-purple-600 font-bold uppercase tracking-wide flex items-center gap-1"><i class="ph-bold ph-brain"></i> Active Ext</span>' : ""}
                 </div>
             </div>
-            <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick="renameChat('${chat.id}', event)" class="text-gray-400 hover:text-blue-600 p-1 bg-white hover:bg-blue-50 rounded shadow-sm border border-gray-100"><i class="ph-bold ph-pencil-simple"></i></button>
-                <button onclick="deleteChat('${chat.id}', event)" class="text-gray-400 hover:text-red-600 p-1 bg-white hover:bg-red-50 rounded shadow-sm border border-gray-100"><i class="ph-bold ph-trash"></i></button>
+            <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity relative z-20">
+                <button onclick="togglePinChat('${chat.id}', event)" class="text-gray-400 hover:text-amber-500 p-1 bg-white hover:bg-amber-50 rounded shadow-sm border border-gray-100" title="${chat.pinned ? 'Unpin Chat' : 'Pin Chat'}"><i class="ph-bold ${chat.pinned ? 'ph-push-pin-slash' : 'ph-push-pin'}"></i></button>
+                <button onclick="renameChat('${chat.id}', event)" class="text-gray-400 hover:text-blue-600 p-1 bg-white hover:bg-blue-50 rounded shadow-sm border border-gray-100" title="Rename"><i class="ph-bold ph-pencil-simple"></i></button>
+                <button onclick="deleteChat('${chat.id}', event)" class="text-gray-400 hover:text-red-600 p-1 bg-white hover:bg-red-50 rounded shadow-sm border border-gray-100" title="Delete"><i class="ph-bold ph-trash"></i></button>
             </div>
         </div>`
     ).join(""); 
