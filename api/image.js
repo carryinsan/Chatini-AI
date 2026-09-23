@@ -711,11 +711,9 @@ function imageWidget({ sourceURL, watermarkedURL, prompt, settings, watermarkId 
   const safePrompt = escapeHTML(prompt);
   const safeSource = escapeHTML(sourceURL);
   const safeWatermarked = escapeHTML(watermarkedURL);
-  const safeStyle = escapeHTML(settings.style || 'auto');
-  const fileName = `ArixAI_Flux_Schnell_${watermarkId}.svg`;
 
   return `<div class="mt-4 mb-2 flex flex-col bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl backdrop-blur-sm">
-    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40 gap-3">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40 gap-3 flex-wrap">
       <div class="flex items-center gap-2 min-w-0">
         <span class="flex items-center justify-center w-7 h-7 rounded-full bg-fuchsia-500 text-white text-xs">✦</span>
         <div class="min-w-0">
@@ -723,31 +721,49 @@ function imageWidget({ sourceURL, watermarkedURL, prompt, settings, watermarkId 
           <div class="text-[10px] text-gray-500 font-mono">Pixazo • flux-schnell</div>
         </div>
       </div>
-      <a href="${safeWatermarked}" download="${fileName}" class="text-xs font-semibold text-fuchsia-300 bg-fuchsia-400/10 hover:bg-fuchsia-400/20 px-3 py-1.5 rounded-md transition-colors shrink-0">Download Watermarked Image</a>
+      <div class="flex items-center gap-2 shrink-0">
+         <span class="text-[10px] text-gray-400 mr-1 uppercase tracking-wider font-bold">Download:</span>
+         <a href="javascript:void(0)" onclick="window.downloadArixImage('${safeSource}', '${watermarkId}', 'png')" class="text-[11px] font-bold text-white bg-fuchsia-600 hover:bg-fuchsia-500 px-3 py-1.5 rounded-lg transition-colors">PNG</a>
+         <a href="javascript:void(0)" onclick="window.downloadArixImage('${safeSource}', '${watermarkId}', 'jpg')" class="text-[11px] font-bold text-white bg-fuchsia-600 hover:bg-fuchsia-500 px-3 py-1.5 rounded-lg transition-colors">JPG</a>
+         <a href="${safeWatermarked}" download="ArixAI_${watermarkId}.svg" class="text-[11px] font-bold text-fuchsia-300 bg-fuchsia-400/10 hover:bg-fuchsia-400/20 px-3 py-1.5 rounded-lg transition-colors">SVG</a>
+      </div>
     </div>
 
-    <div class="relative bg-black flex items-center justify-center overflow-hidden">
-      <img src="${safeWatermarked}" alt="ArixAI generated image" class="w-full h-auto object-contain max-h-[72vh]" loading="eager" />
+    <div class="relative bg-black flex items-center justify-center overflow-hidden p-0">
+      <img src="${safeSource}" alt="ArixAI generated image" class="w-full h-auto object-contain max-h-[72vh]" loading="eager" />
     </div>
 
     <div class="p-4 bg-black/40">
       <p class="text-sm text-gray-300 font-medium leading-relaxed">“${safePrompt}”</p>
-      <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono text-gray-500">
-        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Aspect</span><br/>${escapeHTML(settings.aspect)}</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Steps</span><br/>${settings.steps}</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Size</span><br/>${settings.width}×${settings.height}</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Watermark</span><br/>ArixAI • ${escapeHTML(watermarkId)}</div>
-      </div>
-      <details class="mt-3 text-[10px] text-gray-500">
-        <summary class="cursor-pointer hover:text-gray-300">Generation details</summary>
-        <div class="mt-2 bg-black/40 rounded-md p-3 font-mono leading-relaxed">
-          Model: flux-schnell<br/>
-          Style: ${safeStyle}<br/>
-          Provider output: <a href="${safeSource}" target="_blank" rel="noopener noreferrer" class="text-fuchsia-300 underline">Open original provider file</a><br/>
-          Watermark: algorithmic ArixAI SVG export
-        </div>
-      </details>
     </div>
+    
+    <script>
+      if (!window.downloadArixImage) {
+        window.downloadArixImage = async (url, id, format) => {
+          try {
+            const res = await fetch(url, { mode: 'cors' });
+            const blob = await res.blob();
+            const img = new Image();
+            const imgUrl = URL.createObjectURL(blob);
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              canvas.width = img.width; canvas.height = img.height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0);
+              const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+              const a = document.createElement('a');
+              a.href = canvas.toDataURL(mime, 0.95);
+              a.download = 'ArixAI_' + id + '.' + format;
+              a.click();
+              URL.revokeObjectURL(imgUrl);
+            };
+            img.src = imgUrl;
+          } catch(e) { 
+            window.open(url, '_blank'); 
+          }
+        };
+      }
+    </script>
   </div>`;
 }
 
@@ -755,7 +771,6 @@ function videoWidget({ sourceURL, prompt, settings, watermarkId, exactProgress }
   const safeURL = escapeHTML(sourceURL);
   const safePrompt = escapeHTML(prompt);
   const safeId = escapeHTML(watermarkId);
-  const accurateProgress = exactProgress == null ? 'Provider did not report an exact percentage' : `${exactProgress}% provider-reported`;
 
   return `<div class="mt-4 mb-2 flex flex-col bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl backdrop-blur-sm">
     <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40 gap-3">
@@ -766,7 +781,7 @@ function videoWidget({ sourceURL, prompt, settings, watermarkId, exactProgress }
           <div class="text-[10px] text-gray-500 font-mono">Pixazo • ltx-video</div>
         </div>
       </div>
-      <a href="${safeURL}" target="_blank" rel="noopener noreferrer" download="ArixAI_ltx-video_${safeId}.mp4" class="text-xs font-semibold text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 px-3 py-1.5 rounded-md transition-colors shrink-0">Download / Open MP4</a>
+      <a href="${safeURL}" target="_blank" rel="noopener noreferrer" download="ArixAI_ltx-video_${safeId}.mp4" class="text-xs font-semibold text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 px-3 py-1.5 rounded-md transition-colors shrink-0">Download MP4</a>
     </div>
 
     <div class="relative bg-black overflow-hidden">
@@ -778,15 +793,6 @@ function videoWidget({ sourceURL, prompt, settings, watermarkId, exactProgress }
 
     <div class="p-4 bg-black/40">
       <p class="text-sm text-gray-300 font-medium leading-relaxed">“${safePrompt}”</p>
-      <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono text-gray-500">
-        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">Aspect</span><br/>${escapeHTML(settings.aspect)}</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">Duration</span><br/>${settings.duration}s</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">FPS</span><br/>${settings.fps}</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">Progress</span><br/>${accurateProgress}</div>
-      </div>
-      <div class="mt-3 text-[10px] text-gray-500 leading-relaxed">
-        ArixAI watermark is enforced on the visible player overlay and requested in the generation prompt. The raw Pixazo MP4 is not falsely claimed to be pixel-burned when the provider does not expose server-side watermarking.
-      </div>
     </div>
   </div>`;
 }
