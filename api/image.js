@@ -2,110 +2,116 @@ export const config = {
   runtime: 'edge',
 };
 
+export const maxDuration = 300;
+
 /*
  * ArixAI Unified Visual Engine
- * -----------------------------
- * One Edge route for both image + video generation through Pixazo.
  *
- * ENVIRONMENT VARIABLE:
- *   PIZAXO_KEY = your Pixazo API key
+ * One route:
+ *   POST /api/image
  *
- * Primary endpoints requested by ArixAI:
- *   POST https://api.pixazo.ai/v1/images/generations
- *   POST https://api.pixazo.ai/v1/videos/generations
+ * Image:
+ *   Pixazo Flux 1 Schnell (free)
+ *   https://gateway.pixazo.ai/flux-1-schnell/v1/getData
  *
- * Primary models:
- *   Image: flux-schnell
- *   Video: ltx-video
+ * Video:
+ *   Pixazo LTX Video (free)
+ *   https://gateway.pixazo.ai/ltx-video/v1/text-to-video
  *
- * The route accepts either:
- *   { prompt, modality: 'image' | 'video', settings: {...} }
- * or the simpler legacy shape:
- *   { prompt }
- * (which defaults to image generation).
+ * Environment variable:
+ *   PIZAXO_KEY   (preferred)
+ *
+ * Diagnostic:
+ *   GET /api/image?health=1
+ *
+ * IMPORTANT:
+ * - Never returns the API key.
+ * - Never invents provider progress percentages.
+ * - When Pixazo gives no exact percentage, progress is null and the UI
+ *   should show an active/indeterminate state instead of a fake number.
  */
 
-const PIXAZO_BASE = 'https://api.pixazo.ai/v1';
-const IMAGE_ENDPOINT = `${PIXAZO_BASE}/images/generations`;
-const VIDEO_ENDPOINT = `${PIXAZO_BASE}/videos/generations`;
-const IMAGE_MODEL = 'flux-schnell';
-const VIDEO_MODEL = 'ltx-video';
-
-const MAX_PROMPT_CHARS = 4000;
-const MAX_NEGATIVE_CHARS = 2000;
-const MAX_REQUEST_BYTES = 12000;
-const POLL_INTERVAL_MS = 3000;
-const MAX_POLL_MS = 285000;
-const FETCH_TIMEOUT_MS = 50000;
+const VERSION = 'arixai-pixazo-visual-4.0.0';
 const WATERMARK_TEXT = 'ArixAI';
 
-const IMAGE_STYLES = {
+const PIXAZO = {
+  image: {
+    model: 'flux-schnell',
+    endpoint: 'https://gateway.pixazo.ai/flux-1-schnell/v1/getData',
+  },
+  video: {
+    model: 'ltx-video',
+    endpoint: 'https://gateway.pixazo.ai/ltx-video/v1/text-to-video',
+  },
+};
+
+const MAX_PROMPT = 2048;
+const MAX_NEGATIVE = 1500;
+const MAX_BODY_BYTES = 16000;
+const REQUEST_TIMEOUT_MS = 45000;
+const STATUS_TIMEOUT_MS = 30000;
+const VIDEO_POLL_INTERVAL_MS = 5000;
+const VIDEO_MAX_POLL_MS = 292000;
+
+const ALLOWED_ASPECTS = new Set([
+  'auto', '21:9', '2:1', '16:9', '4:3', '1:1', '3:4', '9:16', '4:5', '2:3', '3:2'
+]);
+
+const IMAGE_STYLE = {
   auto: '',
-  photorealistic: 'photorealistic, natural textures, realistic materials, physically plausible lighting',
-  cinematic: 'cinematic composition, dramatic but natural lighting, 35mm lens look, depth of field, filmic contrast',
-  anime: 'high-quality anime illustration, expressive linework, detailed background, polished 2D rendering',
+  photorealistic: 'photorealistic, natural materials, realistic textures, physically plausible lighting',
+  cinematic: 'cinematic composition, filmic lighting, realistic depth, controlled contrast, professional cinema frame',
+  anime: 'polished anime illustration, coherent linework, expressive composition, detailed environment',
   '3d': 'premium 3D render, physically based materials, global illumination, clean geometry, soft realistic shadows',
-  illustration: 'editorial illustration, refined shapes, intentional composition, polished professional artwork',
-  'digital-art': 'high-end digital artwork, refined detail, controlled edges, rich visual depth',
+  illustration: 'professional editorial illustration, clean shapes, intentional composition, polished artwork',
+  'digital-art': 'high-end digital artwork, refined detail, layered depth, controlled edges',
   watercolor: 'traditional watercolor painting, translucent washes, paper texture, delicate pigment variation',
   sketch: 'detailed pencil and ink sketch, controlled hatching, clean linework, paper grain',
   cyberpunk: 'cyberpunk atmosphere, neon accents, reflective surfaces, futuristic architecture, cinematic haze',
-  vintage: 'vintage photographic character, subtle film grain, period-authentic color and lighting',
-  product: 'commercial product photography, clean studio lighting, precise product geometry, premium presentation',
+  vintage: 'vintage photographic character, authentic film grain, period-appropriate lighting',
+  product: 'commercial product photography, clean studio lighting, premium presentation, accurate product geometry',
   portrait: 'professional portrait photography, flattering soft light, natural skin texture, realistic eyes and hair',
-  architecture: 'architectural photography, straight verticals, precise geometry, balanced perspective, refined detail',
-  minimalist: 'minimalist composition, restrained palette, clean negative space, crisp subject separation',
+  architecture: 'architectural photography, straight verticals, precise geometry, balanced perspective',
+  minimalist: 'minimalist composition, clean negative space, restrained palette, crisp subject separation',
   fantasy: 'epic fantasy artwork, atmospheric depth, intricate worldbuilding detail, cinematic lighting',
+  documentary: 'documentary photography, observational realism, authentic lighting, natural scene detail',
+  commercial: 'premium commercial advertising imagery, polished composition, clean visual hierarchy',
 };
 
-const VIDEO_STYLES = {
+const VIDEO_STYLE = {
   auto: '',
-  cinematic: 'cinematic visual language, controlled exposure, realistic depth, intentional composition',
   photorealistic: 'photorealistic motion, natural textures, realistic lighting and physics',
-  anime: 'polished anime animation, expressive motion, detailed background, coherent character design',
-  '3d': 'premium 3D animation, physically based materials, smooth believable motion, soft shadows',
-  artistic: 'stylized artistic animation, deliberate composition, expressive lighting, coherent motion',
+  cinematic: 'cinematic visual language, intentional camera movement, realistic depth, controlled exposure',
+  anime: 'polished anime animation, expressive motion, coherent character design, detailed backgrounds',
+  '3d': 'premium 3D animation, physically believable motion, realistic materials, soft shadows',
+  artistic: 'stylized artistic animation, expressive lighting, deliberate composition, coherent movement',
   documentary: 'natural documentary cinematography, observational camera behavior, realistic lighting',
   commercial: 'premium advertising visual language, clean composition, polished motion, product-ready lighting',
 };
 
-const ASPECTS = new Set(['16:9', '9:16', '1:1', '4:3', '3:4', '21:9', '3:2', '2:3', '4:5']);
-const IMAGE_SIZES = new Set(['1024x1024', '1024x576', '576x1024', '1024x768', '768x1024', '1024x440', '1024x683', '683x1024', '819x1024']);
-const FPS_VALUES = new Set([24, 25, 30, 48, 50, 60]);
-const VIDEO_STEPS_RANGE = [8, 30];
-const GUIDANCE_RANGE = [0, 15];
-const IMAGE_STEPS_RANGE = [1, 20];
-
-function jsonResponse(data, status = 200, headers = {}) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store, no-cache, must-revalidate',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      ...headers,
-    },
-  });
+function nowISO() {
+  return new Date().toISOString();
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function clamp(value, min, max, fallback) {
+function clampNumber(value, min, max, fallback) {
   const n = Number(value);
   if (!Number.isFinite(n)) return fallback;
   return Math.min(max, Math.max(min, n));
 }
 
-function clampInt(value, min, max, fallback) {
-  return Math.round(clamp(value, min, max, fallback));
+function clampInteger(value, min, max, fallback) {
+  return Math.round(clampNumber(value, min, max, fallback));
 }
 
-function cleanText(value, maxLength) {
-  return String(value ?? '').replace(/\u0000/g, '').trim().slice(0, maxLength);
+function cleanText(value, max) {
+  return String(value ?? '')
+    .replace(/\u0000/g, '')
+    .trim()
+    .slice(0, max);
 }
 
 function escapeHTML(value) {
@@ -117,22 +123,64 @@ function escapeHTML(value) {
     .replace(/'/g, '&#39;');
 }
 
-function shortHash(input) {
+function hash32(input) {
   let h = 2166136261;
-  const text = String(input);
-  for (let i = 0; i < text.length; i += 1) {
-    h ^= text.charCodeAt(i);
+  const s = String(input);
+  for (let i = 0; i < s.length; i += 1) {
+    h ^= s.charCodeAt(i);
     h = Math.imul(h, 16777619);
   }
-  return (h >>> 0).toString(16).slice(0, 8).toUpperCase();
+  return (h >>> 0).toString(16).padStart(8, '0').toUpperCase();
 }
 
-function parseInlineFlags(rawPrompt) {
-  let prompt = cleanText(rawPrompt, MAX_PROMPT_CHARS);
+function getEnvSnapshot() {
+  const candidates = [
+    { name: 'PIZAXO_KEY', value: process.env.PIZAXO_KEY },
+    // Compatibility fallbacks for common naming mistakes.
+    { name: 'PIXAZO_KEY', value: process.env.PIXAZO_KEY },
+    { name: 'PIZAXO_API_KEY', value: process.env.PIZAXO_API_KEY },
+  ];
+
+  const configured = candidates.find((item) => typeof item.value === 'string' && item.value.trim());
+
+  return {
+    configured: Boolean(configured),
+    source: configured?.name || null,
+    preferredPresent: Boolean(String(process.env.PIZAXO_KEY || '').trim()),
+    previewPresent: Boolean(String(process.env.PIXAZO_KEY || '').trim()),
+    apiAliasPresent: Boolean(String(process.env.PIZAXO_API_KEY || '').trim()),
+    vercelEnv: process.env.VERCEL_ENV || 'unknown',
+  };
+}
+
+function getApiKey() {
+  const snapshot = getEnvSnapshot();
+  if (!snapshot.configured) {
+    const err = new Error(
+      'The deployed ArixAI function cannot see a Pixazo API key. Expected Vercel variable PIZAXO_KEY (or compatibility alias PIXAZO_KEY / PIZAXO_API_KEY).'
+    );
+    err.code = 'CONFIG_PIZAXO_KEY_MISSING';
+    err.stage = 'configuration';
+    err.env = snapshot;
+    throw err;
+  }
+
+  const candidates = [
+    process.env.PIZAXO_KEY,
+    process.env.PIXAZO_KEY,
+    process.env.PIZAXO_API_KEY,
+  ];
+
+  const key = candidates.find((value) => typeof value === 'string' && value.trim());
+  return String(key).replace(/[\r\n\s]/g, '');
+}
+
+function parseInlineFlags(raw) {
+  let prompt = cleanText(raw, MAX_PROMPT);
   const flags = {};
 
-  const ar = prompt.match(/--ar\s+(16:9|9:16|1:1|4:3|3:4|21:9|3:2|2:3|4:5)\b/i);
-  if (ar) flags.aspectRatio = ar[1];
+  const ar = prompt.match(/--ar\s+(auto|21:9|2:1|16:9|4:3|1:1|3:4|9:16|4:5|2:3|3:2)\b/i);
+  if (ar) flags.aspect = ar[1].toLowerCase();
 
   const style = prompt.match(/--style\s+([a-z0-9-]+)\b/i);
   if (style) flags.style = style[1].toLowerCase();
@@ -140,16 +188,13 @@ function parseInlineFlags(rawPrompt) {
   const seed = prompt.match(/--seed\s+(-?\d+)\b/i);
   if (seed) flags.seed = Number(seed[1]);
 
-  const steps = prompt.match(/--steps\s+(\d+(?:\.\d+)?)\b/i);
+  const steps = prompt.match(/--steps\s+(\d+)\b/i);
   if (steps) flags.steps = Number(steps[1]);
-
-  const guidance = prompt.match(/--guidance\s+(\d+(?:\.\d+)?)\b/i);
-  if (guidance) flags.guidance = Number(guidance[1]);
 
   const fps = prompt.match(/--fps\s+(\d+(?:\.\d+)?)\b/i);
   if (fps) flags.fps = Number(fps[1]);
 
-  const duration = prompt.match(/--duration\s+(\d+(?:\.\d+)?)\b/i);
+  const duration = prompt.match(/--duration\s+(\d+)\b/i);
   if (duration) flags.duration = Number(duration[1]);
 
   if (/--raw\b/i.test(prompt)) flags.raw = true;
@@ -159,11 +204,10 @@ function parseInlineFlags(rawPrompt) {
   prompt = prompt
     .replace(/--ar\s+[^\s]+/gi, '')
     .replace(/--style\s+[^\s]+/gi, '')
-    .replace(/--seed\s+[-\d]+/gi, '')
-    .replace(/--steps\s+[\d.]+/gi, '')
-    .replace(/--guidance\s+[\d.]+/gi, '')
+    .replace(/--seed\s+-?\d+/gi, '')
+    .replace(/--steps\s+\d+/gi, '')
     .replace(/--fps\s+[\d.]+/gi, '')
-    .replace(/--duration\s+[\d.]+/gi, '')
+    .replace(/--duration\s+\d+/gi, '')
     .replace(/--audio\s+(?:on|off)/gi, '')
     .replace(/--raw\b/gi, '')
     .replace(/\s{2,}/g, ' ')
@@ -172,768 +216,711 @@ function parseInlineFlags(rawPrompt) {
   return { prompt, flags };
 }
 
-function aspectToSize(aspect) {
-  switch (aspect) {
-    case '16:9': return '1024x576';
-    case '9:16': return '576x1024';
-    case '4:3': return '1024x768';
-    case '3:4': return '768x1024';
-    case '21:9': return '1024x440';
-    case '3:2': return '1024x683';
-    case '2:3': return '683x1024';
-    case '4:5': return '819x1024';
-    default: return '1024x1024';
-  }
-}
+function stylePrompt(prompt, modality, settings) {
+  const dictionary = modality === 'video' ? VIDEO_STYLE : IMAGE_STYLE;
+  const style = String(settings.style || 'auto').toLowerCase();
+  const parts = [];
 
-function aspectToDimensions(aspect) {
-  switch (aspect) {
-    case '16:9': return [1280, 720];
-    case '9:16': return [720, 1280];
-    case '4:3': return [1024, 768];
-    case '3:4': return [768, 1024];
-    case '21:9': return [1344, 576];
-    case '3:2': return [1152, 768];
-    case '2:3': return [768, 1152];
-    case '4:5': return [960, 1200];
-    default: return [1024, 1024];
-  }
-}
+  if (!settings.raw) {
+    if (dictionary[style]) parts.push(dictionary[style]);
 
-function snapLTXFrames(frames) {
-  // LTX's documented frame pattern is 1 + 8k: 25, 33, 41 ...
-  const raw = Math.max(9, Math.round(frames));
-  const k = Math.max(1, Math.round((raw - 1) / 8));
-  return 1 + 8 * k;
-}
-
-function optimizePrompt({ prompt, modality, style, negativePrompt, settings }) {
-  const safePrompt = cleanText(prompt, MAX_PROMPT_CHARS);
-  if (!safePrompt) throw new Error('Prompt is required.');
-
-  const selectedStyle = String(style || 'auto').toLowerCase();
-  const dictionary = modality === 'video' ? VIDEO_STYLES : IMAGE_STYLES;
-  const styleModifier = dictionary[selectedStyle] || '';
-
-  const explicitNegative = cleanText(negativePrompt, MAX_NEGATIVE_CHARS);
-  const defaultNegative = modality === 'video'
-    ? 'blurry, low quality, distorted anatomy, flicker, jitter, inconsistent character, warped objects, duplicate subjects, unreadable text, compression artifacts'
-    : 'blurry, low quality, distorted anatomy, malformed hands, duplicate subjects, warped objects, oversaturated, compression artifacts';
-
-  if (!settings.enhancePrompt || settings.raw) {
-    return {
-      prompt: safePrompt,
-      negative: explicitNegative || defaultNegative,
-    };
+    if (modality === 'image') {
+      if (settings.camera) parts.push(`camera: ${settings.camera}`);
+      if (settings.lighting) parts.push(`lighting: ${settings.lighting}`);
+      if (settings.composition) parts.push(`composition: ${settings.composition}`);
+      parts.push('high detail, coherent perspective, refined textures, clean subject separation');
+    } else {
+      if (settings.cameraMotion) parts.push(`camera movement: ${settings.cameraMotion}`);
+      if (settings.lighting) parts.push(`lighting: ${settings.lighting}`);
+      parts.push('strong temporal consistency, coherent subject identity, physically plausible motion, stable composition');
+    }
   }
 
-  if (modality === 'video') {
-    const motion = cleanText(settings.cameraMotion, 180);
-    const lighting = cleanText(settings.lighting, 180);
-    const detail = [
-      styleModifier,
-      motion ? `camera movement: ${motion}` : '',
-      lighting ? `lighting: ${lighting}` : '',
-      'strong temporal consistency, coherent subject identity, physically plausible movement, clean frames, intentional shot composition',
-    ].filter(Boolean).join(', ');
-
-    return {
-      prompt: `${safePrompt}${detail ? `, ${detail}` : ''}`,
-      negative: explicitNegative || defaultNegative,
-    };
-  }
-
-  const camera = cleanText(settings.camera, 180);
-  const lighting = cleanText(settings.lighting, 180);
-  const composition = cleanText(settings.composition, 180);
-  const detail = [
-    styleModifier,
-    camera ? `camera: ${camera}` : '',
-    lighting ? `lighting: ${lighting}` : '',
-    composition ? `composition: ${composition}` : '',
-    'high detail, clean subject separation, coherent perspective, refined textures, professional visual quality',
-  ].filter(Boolean).join(', ');
-
-  return {
-    prompt: `${safePrompt}${detail ? `, ${detail}` : ''}`,
-    negative: explicitNegative || defaultNegative,
-  };
+  const result = `${prompt}${parts.length ? `, ${parts.join(', ')}` : ''}`.slice(0, 4000);
+  return result;
 }
 
-function normalizeSettings(input, modality, flags) {
-  const source = input && typeof input === 'object' ? input : {};
+function normalizeSettings(body, modality, flags) {
+  const source = body && typeof body === 'object' ? body : {};
 
-  const aspectCandidate = source.aspectRatio ?? source.aspect ?? flags.aspectRatio ?? '1:1';
-  const aspectRatio = ASPECTS.has(String(aspectCandidate)) ? String(aspectCandidate) : (modality === 'video' ? '16:9' : '1:1');
-
-  const style = String(source.style ?? flags.style ?? 'auto').toLowerCase();
-  const raw = Boolean(source.raw ?? flags.raw ?? false);
-  const enhancePrompt = source.enhancePrompt !== false && !raw;
+  let aspect = String(source.aspect ?? source.aspectRatio ?? flags.aspect ?? (modality === 'video' ? '16:9' : '1:1')).toLowerCase();
+  if (!ALLOWED_ASPECTS.has(aspect)) aspect = modality === 'video' ? '16:9' : '1:1';
 
   const settings = {
-    aspectRatio,
-    style,
-    raw,
-    enhancePrompt,
+    aspect,
+    style: String(source.style ?? flags.style ?? 'auto').toLowerCase(),
+    raw: Boolean(source.raw ?? flags.raw ?? false),
+    enhancePrompt: source.enhancePrompt !== false && !(source.raw ?? flags.raw),
+    negativePrompt: cleanText(source.negativePrompt ?? source.negative ?? '', MAX_NEGATIVE),
     seed: Number.isFinite(Number(source.seed ?? flags.seed)) ? Number(source.seed ?? flags.seed) : undefined,
-    negativePrompt: cleanText(source.negativePrompt ?? source.negative ?? '', MAX_NEGATIVE_CHARS),
-    camera: cleanText(source.camera ?? '', 180),
-    cameraMotion: cleanText(source.cameraMotion ?? '', 180),
-    lighting: cleanText(source.lighting ?? '', 180),
-    composition: cleanText(source.composition ?? '', 180),
+    camera: cleanText(source.camera, 180),
+    cameraMotion: cleanText(source.cameraMotion, 180),
+    lighting: cleanText(source.lighting, 180),
+    composition: cleanText(source.composition, 180),
   };
 
   if (modality === 'image') {
-    const requestedSize = String(source.size || aspectToSize(aspectRatio));
-    settings.size = IMAGE_SIZES.has(requestedSize) ? requestedSize : aspectToSize(aspectRatio);
-    settings.steps = clampInt(source.steps ?? flags.steps, IMAGE_STEPS_RANGE[0], IMAGE_STEPS_RANGE[1], 4);
-    settings.guidance = clamp(source.guidance ?? flags.guidance, GUIDANCE_RANGE[0], GUIDANCE_RANGE[1], 3.5);
-    settings.n = clampInt(source.n ?? 1, 1, 1, 1);
-    settings.format = ['png', 'jpg', 'jpeg', 'webp'].includes(String(source.format || '').toLowerCase())
-      ? String(source.format).toLowerCase()
-      : 'png';
+    // Flux Schnell documents 1-8 steps. Width/height are accepted by the API.
+    settings.steps = clampInteger(source.steps ?? flags.steps, 1, 8, 4);
+    settings.width = normalizeDimension(source.width, aspectToImageDimensions(aspect)[0]);
+    settings.height = normalizeDimension(source.height, aspectToImageDimensions(aspect)[1]);
   } else {
-    settings.duration = clampInt(source.duration ?? flags.duration, 2, 10, 6);
-    settings.fps = FPS_VALUES.has(Number(source.fps ?? flags.fps)) ? Number(source.fps ?? flags.fps) : 24;
-    settings.steps = clampInt(source.steps ?? flags.steps, VIDEO_STEPS_RANGE[0], VIDEO_STEPS_RANGE[1], 15);
-    settings.guidance = clamp(source.guidance ?? flags.guidance, GUIDANCE_RANGE[0], GUIDANCE_RANGE[1], 3);
-    settings.generateAudio = typeof source.generateAudio === 'boolean'
+    settings.duration = clampInteger(source.duration ?? flags.duration, 2, 10, 6);
+    settings.fps = clampNumber(source.fps ?? flags.fps, 1, 60, 24);
+    settings.audio = typeof source.generateAudio === 'boolean'
       ? source.generateAudio
       : (typeof flags.audio === 'boolean' ? flags.audio : true);
-    settings.watermark = true;
-    const [width, height] = aspectToDimensions(aspectRatio);
-    settings.width = clampInt(source.width, 32, 1536, width);
-    settings.height = clampInt(source.height, 32, 1536, height);
   }
 
   return settings;
 }
 
-function validatePrompt(prompt) {
-  const value = cleanText(prompt, MAX_PROMPT_CHARS);
-  if (!value) throw new Error('Prompt cannot be empty.');
-  if (value.length > MAX_PROMPT_CHARS) throw new Error(`Prompt is limited to ${MAX_PROMPT_CHARS} characters.`);
-  return value;
+function normalizeDimension(value, fallback) {
+  let n = Number(value);
+  if (!Number.isFinite(n)) n = fallback;
+  n = Math.round(n / 32) * 32;
+  return Math.min(1920, Math.max(256, n));
 }
 
-async function readBody(req) {
-  const declared = Number(req.headers.get('content-length') || 0);
-  if (declared && declared > MAX_REQUEST_BYTES) throw new Error('Request body is too large.');
-
-  const raw = await req.text();
-  if (new TextEncoder().encode(raw).byteLength > MAX_REQUEST_BYTES) throw new Error('Request body is too large.');
-  try {
-    return JSON.parse(raw || '{}');
-  } catch {
-    throw new Error('Invalid JSON request body.');
+function aspectToImageDimensions(aspect) {
+  switch (aspect) {
+    case '16:9': return [1024, 576];
+    case '9:16': return [576, 1024];
+    case '4:3': return [1024, 768];
+    case '3:4': return [768, 1024];
+    case '21:9': return [1024, 440];
+    case '2:1': return [1024, 512];
+    case '4:5': return [819, 1024];
+    case '2:3': return [682, 1024];
+    case '3:2': return [1024, 682];
+    default: return [1024, 1024];
   }
 }
 
-function getApiKey() {
-  const key = String(process.env.PIZAXO_KEY || '').replace(/[\r\n\s]/g, '');
-  if (!key) throw new Error('PIZAXO_KEY is not configured in Vercel Environment Variables.');
-  return key;
-}
-
-function authHeaders(apiKey, scheme = 'bearer') {
-  return scheme === 'subscription'
-    ? {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Ocp-Apim-Subscription-Key': apiKey,
-      }
-    : {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-cache',
-        'Authorization': `Bearer ${apiKey}`,
-      };
-}
-
-async function fetchWithTimeout(url, options, timeoutMs = FETCH_TIMEOUT_MS) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } catch (error) {
-    if (error?.name === 'AbortError') throw new Error(`Pixazo request timed out after ${Math.round(timeoutMs / 1000)}s.`);
-    throw error;
-  } finally {
-    clearTimeout(timer);
+function aspectToVideoResolution(aspect) {
+  switch (aspect) {
+    case '21:9': return [1280, 544];
+    case '2:1': return [1280, 640];
+    case '16:9': return [1280, 720];
+    case '4:3': return [1152, 864];
+    case '1:1': return [1024, 1024];
+    case '3:4': return [864, 1152];
+    case '9:16': return [720, 1280];
+    case '4:5': return [896, 1120];
+    case '2:3': return [768, 1152];
+    case '3:2': return [1152, 768];
+    default: return [1280, 720];
   }
 }
 
-async function safeReadJSON(response) {
-  const raw = await response.text();
-  let data;
-  try {
-    data = JSON.parse(raw);
-  } catch {
-    data = { raw: raw.slice(0, 5000) };
+function ltxFrameCount(duration, fps) {
+  // LTX documents the 8k+1 frame pattern.
+  const wanted = Math.max(9, Math.round(duration * fps));
+  const k = Math.max(1, Math.round((wanted - 1) / 8));
+  return Math.min(241, 1 + 8 * k);
+}
+
+function readStatus(data) {
+  return String(data?.status ?? data?.state ?? '').toUpperCase();
+}
+
+function extractProviderProgress(data) {
+  const values = [
+    data?.progress,
+    data?.percentage,
+    data?.percent,
+    data?.progress_percent,
+    data?.output?.progress,
+  ];
+
+  for (const value of values) {
+    if (value === null || value === undefined || value === '') continue;
+    const n = Number(value);
+    if (!Number.isFinite(n)) continue;
+    const normalized = n <= 1 ? n * 100 : n;
+    return Math.max(0, Math.min(100, Math.round(normalized)));
   }
-  return data;
-}
 
-function collectStrings(value, out = []) {
-  if (value == null) return out;
-  if (typeof value === 'string') out.push(value);
-  else if (Array.isArray(value)) value.forEach((v) => collectStrings(v, out));
-  else if (typeof value === 'object') Object.values(value).forEach((v) => collectStrings(v, out));
-  return out;
-}
-
-function findFirstURL(data, type) {
-  const strings = collectStrings(data);
-  const url = strings.find((s) => {
-    if (!/^https?:\/\//i.test(s)) return false;
-    if (type === 'image') return /\.(png|jpe?g|webp|avif)(\?|#|$)/i.test(s) || /image/i.test(s);
-    return /\.(mp4|webm|mov)(\?|#|$)/i.test(s) || /video/i.test(s);
-  });
-  return url || null;
-}
-
-function findBase64(data, type) {
-  const candidates = [];
-  const visit = (value) => {
-    if (!value) return;
-    if (typeof value === 'object') {
-      const keys = Object.keys(value);
-      for (const key of keys) {
-        const v = value[key];
-        if (typeof v === 'string') {
-          const lower = key.toLowerCase();
-          if (/base64|b64|bytes/.test(lower)) candidates.push(v);
-          if (/dataurl|data_uri/.test(lower) && /^data:/i.test(v)) candidates.push(v);
-        } else visit(v);
-      }
-    } else if (Array.isArray(value)) value.forEach(visit);
-  };
-  visit(data);
-  for (const item of candidates) {
-    if (/^data:/i.test(item)) {
-      if (type === 'image' && /^data:image\//i.test(item)) return item;
-      if (type === 'video' && /^data:video\//i.test(item)) return item;
-    } else if (/^[A-Za-z0-9+/=]+$/.test(item) && item.length > 500) {
-      return item;
-    }
-  }
   return null;
 }
 
-function findJobId(data) {
-  const keys = ['job_id', 'jobId', 'request_id', 'requestId', 'id'];
-  for (const key of keys) {
+function isDone(status) {
+  return ['COMPLETED', 'COMPLETE', 'SUCCEEDED', 'SUCCESS', 'DONE', 'FINISHED'].includes(status);
+}
+
+function isFailure(status) {
+  return ['FAILED', 'FAILURE', 'ERROR', 'CANCELLED', 'CANCELED', 'REJECTED'].includes(status);
+}
+
+function collectStrings(value, output = []) {
+  if (value == null) return output;
+  if (typeof value === 'string') output.push(value);
+  else if (Array.isArray(value)) value.forEach((item) => collectStrings(item, output));
+  else if (typeof value === 'object') Object.values(value).forEach((item) => collectStrings(item, output));
+  return output;
+}
+
+function findMediaURL(data, kind) {
+  const candidates = collectStrings(data);
+  const looksLikeVideo = /\.(mp4|webm|mov)(?:\?|#|$)/i;
+  const looksLikeImage = /\.(png|jpe?g|webp|avif)(?:\?|#|$)/i;
+
+  for (const item of candidates) {
+    if (!/^https?:\/\//i.test(item)) continue;
+    if (kind === 'image' && (looksLikeImage.test(item) || /image/i.test(item))) return item;
+    if (kind === 'video' && (looksLikeVideo.test(item) || /video/i.test(item))) return item;
+  }
+
+  return null;
+}
+
+function findPollingURL(data) {
+  const direct = [
+    data?.polling_url,
+    data?.pollingUrl,
+    data?.poll_url,
+    data?.pollUrl,
+    data?.status_url,
+    data?.statusUrl,
+  ].find((value) => typeof value === 'string' && /^https?:\/\//i.test(value));
+
+  if (direct) return direct;
+
+  return collectStrings(data).find(
+    (item) => /^https?:\/\//i.test(item) && /(requests\/status|jobs|status)/i.test(item)
+  ) || null;
+}
+
+function findRequestId(data) {
+  for (const key of ['request_id', 'requestId', 'job_id', 'jobId', 'id']) {
     const value = data?.[key];
     if (typeof value === 'string' && value.trim()) return value.trim();
   }
   return null;
 }
 
-function findPollURL(data) {
-  const keys = ['poll_url', 'pollUrl', 'polling_url', 'pollingUrl', 'status_url', 'statusUrl'];
-  for (const key of keys) {
-    const value = data?.[key];
-    if (typeof value === 'string' && /^https?:\/\//i.test(value)) return value;
-  }
-  const strings = collectStrings(data);
-  return strings.find((s) => /^https?:\/\//i.test(s) && /(jobs|requests\/status|status)/i.test(s)) || null;
-}
+function extractOutputURL(data, kind) {
+  const direct = findMediaURL(data, kind);
+  if (direct) return direct;
 
-function readStatus(data) {
-  return String(data?.status ?? data?.state ?? data?.phase ?? '').toUpperCase();
-}
-
-function findProgressValue(data) {
-  const candidates = [data?.progress, data?.percentage, data?.percent, data?.progress_percent, data?.output?.progress];
-  for (const value of candidates) {
-    const n = Number(value);
-    if (Number.isFinite(n)) {
-      if (n <= 1) return Math.round(n * 100);
-      return Math.round(Math.min(100, Math.max(0, n)));
-    }
+  const media = data?.output?.media_url;
+  if (Array.isArray(media)) {
+    const first = media.find((value) => typeof value === 'string' && /^https?:\/\//i.test(value));
+    if (first) return first;
   }
+
+  if (typeof media === 'string' && /^https?:\/\//i.test(media)) return media;
+
+  const preview = data?.output?.preview_video?.url;
+  if (kind === 'video' && typeof preview === 'string' && /^https?:\/\//i.test(preview)) return preview;
+
+  if (typeof data?.output === 'string' && /^https?:\/\//i.test(data.output)) return data.output;
+  if (typeof data?.output?.url === 'string' && /^https?:\/\//i.test(data.output.url)) return data.output.url;
+
   return null;
 }
 
-function isComplete(status) {
-  return ['COMPLETED', 'COMPLETE', 'SUCCEEDED', 'SUCCESS', 'DONE', 'FINISHED'].includes(status);
-}
-
-function isFailed(status) {
-  return ['FAILED', 'FAILURE', 'ERROR', 'CANCELLED', 'CANCELED', 'REJECTED'].includes(status);
-}
-
-function extractErrorMessage(data, fallback) {
-  const values = [
+function providerErrorMessage(data, fallback) {
+  const possible = [
     data?.error?.message,
-    data?.error?.detail,
-    data?.error,
+    typeof data?.error === 'string' ? data.error : null,
     data?.message,
     data?.detail,
   ];
-  const value = values.find((v) => typeof v === 'string' && v.trim());
-  return cleanText(value || fallback || 'Pixazo returned an unknown error.', 1200);
+
+  return cleanText(possible.find((value) => typeof value === 'string' && value.trim()) || fallback || 'Pixazo returned an unspecified error.', 1500);
 }
 
-async function requestPixazo({ url, body, apiKey, retries = 1 }) {
-  const schemes = ['bearer', 'subscription'];
-  let lastError = null;
-
-  for (let attempt = 0; attempt <= retries; attempt += 1) {
-    for (const scheme of schemes) {
-      const response = await fetchWithTimeout(url, {
-        method: 'POST',
-        headers: authHeaders(apiKey, scheme),
-        body: JSON.stringify(body),
-      });
-
-      const data = await safeReadJSON(response);
-      if (response.ok) return { response, data, authScheme: scheme };
-
-      lastError = new Error(`Pixazo ${response.status}: ${extractErrorMessage(data, response.statusText)}`);
-      lastError.status = response.status;
-
-      // Retry with the alternate documented auth convention on auth failures only.
-      if (![401, 403].includes(response.status)) break;
-    }
-
-    if (lastError?.status === 429 || (lastError?.status >= 500 && lastError?.status <= 599)) {
-      await sleep(900 * (attempt + 1));
-      continue;
-    }
-
-    throw lastError;
-  }
-
-  throw lastError || new Error('Pixazo request failed.');
+function makeError(message, code, stage, extra = {}) {
+  const error = new Error(message);
+  error.code = code;
+  error.stage = stage;
+  Object.assign(error, extra);
+  return error;
 }
 
-async function retryMinimalRequest({ url, richBody, coreBody, apiKey }) {
+async function fetchJSON(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
   try {
-    return await requestPixazo({ url, body: richBody, apiKey, retries: 1 });
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+
+    const raw = await response.text();
+    let data = null;
+
+    try {
+      data = JSON.parse(raw || '{}');
+    } catch {
+      data = { raw: raw.slice(0, 5000) };
+    }
+
+    return { response, data };
   } catch (error) {
-    const status = Number(error?.status);
-    if (![400, 404, 409, 422].includes(status)) throw error;
-    return requestPixazo({ url, body: coreBody, apiKey, retries: 1 });
+    if (error?.name === 'AbortError') {
+      throw makeError(
+        `Network request timed out after ${Math.round(timeoutMs / 1000)} seconds.`,
+        'PIXAZO_NETWORK_TIMEOUT',
+        'network',
+        { url }
+      );
+    }
+
+    throw makeError(
+      `Network error while contacting Pixazo: ${error?.message || 'unknown fetch error'}`,
+      'PIXAZO_NETWORK_ERROR',
+      'network',
+      { url }
+    );
+  } finally {
+    clearTimeout(timer);
   }
 }
 
-async function pollStatus(pollURL, apiKey) {
-  const schemes = ['bearer', 'subscription'];
-  let lastResponse = null;
-  let lastData = null;
-
-  for (const scheme of schemes) {
-    const response = await fetchWithTimeout(pollURL, {
-      method: 'GET',
-      headers: authHeaders(apiKey, scheme),
-    }, 30000);
-    const data = await safeReadJSON(response);
-    lastResponse = response;
-    lastData = data;
-    if (response.ok) return { response, data };
-    if (![401, 403].includes(response.status)) return { response, data };
-  }
-
-  return { response: lastResponse, data: lastData };
+function pixazoHeaders(apiKey) {
+  return {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache',
+    'Ocp-Apim-Subscription-Key': apiKey,
+  };
 }
 
-async function pollJob({ initialData, type, apiKey, sendProgress }) {
-  const directURL = findFirstURL(initialData, type);
-  const directBase64 = findBase64(initialData, type);
-  if (directURL || directBase64) {
-    return { data: initialData, mediaURL: directURL, base64: directBase64 };
+function classifyProviderError(status, data, endpoint, model) {
+  let code = 'PIXAZO_API_ERROR';
+  let stage = 'provider_request';
+
+  if (status === 400) code = 'PIXAZO_BAD_REQUEST';
+  else if (status === 401) code = 'PIXAZO_AUTH_INVALID';
+  else if (status === 402) code = 'PIXAZO_BALANCE';
+  else if (status === 403) code = 'PIXAZO_FORBIDDEN';
+  else if (status === 404) code = 'PIXAZO_ENDPOINT_OR_MODEL_NOT_FOUND';
+  else if (status === 408) code = 'PIXAZO_REQUEST_TIMEOUT';
+  else if (status === 429) code = 'PIXAZO_RATE_LIMITED';
+  else if (status >= 500) code = 'PIXAZO_SERVER_ERROR';
+
+  return makeError(
+    `Pixazo HTTP ${status}: ${providerErrorMessage(data, 'No provider message returned.')}`,
+    code,
+    stage,
+    { status, endpoint, model, providerResponse: data }
+  );
+}
+
+async function submitImage({ apiKey, prompt, settings }) {
+  const endpoint = PIXAZO.image.endpoint;
+
+  const body = {
+    prompt: prompt.slice(0, MAX_PROMPT),
+    num_steps: settings.steps,
+    seed: settings.seed,
+    width: settings.width,
+    height: settings.height,
+  };
+
+  const { response, data } = await fetchJSON(endpoint, {
+    method: 'POST',
+    headers: pixazoHeaders(apiKey),
+    body: JSON.stringify(body),
+  }, REQUEST_TIMEOUT_MS);
+
+  if (!response.ok) {
+    throw classifyProviderError(response.status, data, endpoint, PIXAZO.image.model);
   }
 
-  const jobId = findJobId(initialData);
-  let pollURL = findPollURL(initialData);
-  if (!pollURL && jobId) {
-    pollURL = `${PIXAZO_BASE}/jobs/${encodeURIComponent(jobId)}`;
+  const outputURL = findMediaURL(data, 'image') || extractOutputURL(data, 'image');
+
+  if (!outputURL) {
+    throw makeError(
+      'Pixazo returned HTTP success, but no image output URL was found in the response.',
+      'PIXAZO_IMAGE_OUTPUT_MISSING',
+      'provider_response',
+      { status: response.status, endpoint, model: PIXAZO.image.model, providerResponse: data }
+    );
   }
-  if (!pollURL) {
-    throw new Error('Pixazo accepted the request but did not return media, a job ID, or a polling URL.');
+
+  return {
+    outputURL,
+    providerResponse: data,
+  };
+}
+
+async function submitVideo({ apiKey, prompt, settings }) {
+  const endpoint = PIXAZO.video.endpoint;
+  const [width, height] = aspectToVideoResolution(settings.aspect);
+  const frames = ltxFrameCount(settings.duration, settings.fps);
+
+  // Only parameters documented for the current free ltx-video endpoint are forwarded.
+  // Unsupported generic knobs are deliberately NOT sent because doing so causes avoidable 400s.
+  const body = {
+    prompt: prompt.slice(0, 4000),
+    aspect: settings.aspect,
+    width: settings.aspect === 'auto' ? undefined : width,
+    height: settings.aspect === 'auto' ? undefined : height,
+    num_frames: frames,
+    frame_rate: settings.fps,
+    seed: settings.seed,
+    enhance_prompt: settings.enhancePrompt,
+  };
+
+  Object.keys(body).forEach((key) => body[key] === undefined && delete body[key]);
+
+  // This model derives audio from the prompt but the current documented free endpoint
+  // does not expose a generate_audio request field. We therefore keep the UI setting
+  // as metadata and do not send an undocumented parameter.
+
+  const { response, data } = await fetchJSON(endpoint, {
+    method: 'POST',
+    headers: pixazoHeaders(apiKey),
+    body: JSON.stringify(body),
+  }, REQUEST_TIMEOUT_MS);
+
+  if (!response.ok) {
+    throw classifyProviderError(response.status, data, endpoint, PIXAZO.video.model);
+  }
+
+  return {
+    requestId: findRequestId(data),
+    pollingURL: findPollingURL(data),
+    providerResponse: data,
+  };
+}
+
+async function pollVideo({ apiKey, requestId, pollingURL, emitProgress }) {
+  let statusURL = pollingURL;
+
+  if (!statusURL && requestId) {
+    statusURL = `https://gateway.pixazo.ai/v2/requests/status/${encodeURIComponent(requestId)}`;
+  }
+
+  if (!statusURL) {
+    throw makeError(
+      'Pixazo accepted the video request but returned neither request_id nor polling_url.',
+      'PIXAZO_VIDEO_POLL_TARGET_MISSING',
+      'queue',
+      { model: PIXAZO.video.model, endpoint: PIXAZO.video.endpoint }
+    );
   }
 
   const started = Date.now();
-  let lastProgress = 8;
-  let lastStage = 'queued';
+  let lastStatus = '';
+  let lastExactProgress = null;
 
-  while (Date.now() - started < MAX_POLL_MS) {
-    const elapsed = Date.now() - started;
-    const boundedEstimate = type === 'video' ? 7 + Math.min(82, Math.round((elapsed / 90000) * 82)) : 10 + Math.min(80, Math.round((elapsed / 30000) * 80));
-
-    const { response, data } = await pollStatus(pollURL, apiKey);
+  while (Date.now() - started < VIDEO_MAX_POLL_MS) {
+    const { response, data } = await fetchJSON(statusURL, {
+      method: 'GET',
+      headers: pixazoHeaders(apiKey),
+    }, STATUS_TIMEOUT_MS);
 
     if (!response.ok) {
       const retryable = [408, 425, 429, 500, 502, 503, 504].includes(response.status);
-      if (!retryable) throw new Error(`Pixazo status error ${response.status}: ${extractErrorMessage(data, response.statusText)}`);
+      if (!retryable) {
+        throw classifyProviderError(response.status, data, statusURL, PIXAZO.video.model);
+      }
+
+      emitProgress(null, 'polling', `Provider status temporarily unavailable (HTTP ${response.status}); retrying.`);
+      await sleep(VIDEO_POLL_INTERVAL_MS);
+      continue;
     }
 
     const status = readStatus(data);
-    const providerProgress = findProgressValue(data);
+    const exactProgress = extractProviderProgress(data);
 
-    const progress = providerProgress == null
-        ? null
-        : Math.max(
-            lastProgress,
-            Math.min(99, providerProgress)
+    if (exactProgress !== null) lastExactProgress = exactProgress;
+
+    if (status !== lastStatus || exactProgress !== null) {
+      lastStatus = status;
+      let detail = 'Waiting for Pixazo...';
+      if (status === 'QUEUED') detail = 'Pixazo queued the generation.';
+      else if (status === 'PROCESSING') detail = 'Pixazo is rendering the video.';
+      else if (status) detail = `Pixazo status: ${status}`;
+
+      emitProgress(exactProgress, status === 'PROCESSING' ? 'rendering' : 'polling', detail);
+    } else {
+      emitProgress(lastExactProgress, 'polling', status ? `Pixazo status: ${status}` : 'Pixazo is still processing.');
+    }
+
+    if (isFailure(status)) {
+      throw makeError(
+        `Pixazo video job failed: ${providerErrorMessage(data, status)}`,
+        'PIXAZO_VIDEO_GENERATION_FAILED',
+        'generation',
+        { status, requestId, pollingURL: statusURL, model: PIXAZO.video.model, providerResponse: data }
+      );
+    }
+
+    const outputURL = extractOutputURL(data, 'video');
+    if (outputURL || isDone(status)) {
+      if (!outputURL) {
+        throw makeError(
+          'Pixazo marked the video job complete, but no output media URL was returned.',
+          'PIXAZO_VIDEO_OUTPUT_MISSING',
+          'provider_response',
+          { status, requestId, pollingURL: statusURL, model: PIXAZO.video.model, providerResponse: data }
         );
-
-    if (status === 'PROCESSING') lastStage = 'rendering';
-    else if (status === 'QUEUED') lastStage = 'queued';
-    else if (status) lastStage = status.toLowerCase();
-
-    if (progress != null) {
-        lastProgress = progress;
-    }
-
-    sendProgress(
-        progress,
-        lastStage,
-        progress == null
-            ? `${lastStage === 'rendering' ? 'Rendering' : 'Waiting'} • provider percentage unavailable`
-            : `${lastStage === 'rendering' ? 'Rendering' : 'Waiting'} • provider-reported ${progress}%`
-    );
-
-    const mediaURL = findFirstURL(data, type);
-    const base64 = findBase64(data, type);
-    if (mediaURL || base64 || isComplete(status)) {
-      if (!mediaURL && !base64) {
-        // Some APIs nest the final output under `output.media_url` but hide the URL from generic recursion.
-        const nested = data?.output?.media_url;
-        const url = Array.isArray(nested) ? nested.find((x) => typeof x === 'string') : nested;
-        if (typeof url === 'string') return { data, mediaURL: url, base64: null };
-        throw new Error('Pixazo marked the job complete but no output media URL was returned.');
       }
-      return { data, mediaURL, base64 };
+
+      return {
+        outputURL,
+        providerResponse: data,
+        exactProgress: exactProgress ?? lastExactProgress,
+        requestId,
+      };
     }
 
-    if (isFailed(status)) {
-      throw new Error(`Pixazo generation failed: ${extractErrorMessage(data, status)}`);
-    }
-
-    await sleep(POLL_INTERVAL_MS);
+    await sleep(VIDEO_POLL_INTERVAL_MS);
   }
 
-  throw new Error('Pixazo generation exceeded the Edge route polling window.');
+  throw makeError(
+    `Video generation exceeded the ${Math.round(VIDEO_MAX_POLL_MS / 1000)} second server polling window. The Pixazo job may still be running; request_id=${requestId || 'unknown'}.`,
+    'PIXAZO_VIDEO_POLL_TIMEOUT',
+    'polling',
+    { requestId, pollingURL: statusURL, model: PIXAZO.video.model }
+  );
 }
 
-function bytesToBase64(bytes) {
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+async function readBody(req) {
+  const declared = Number(req.headers.get('content-length') || 0);
+  if (declared && declared > MAX_BODY_BYTES) {
+    throw makeError('Request body is too large.', 'REQUEST_TOO_LARGE', 'request');
   }
-  return btoa(binary);
-}
 
-function dataURLFromBytes(bytes, mime) {
-  return `data:${mime};base64,${bytesToBase64(bytes)}`;
-}
-
-async function ensureImageDataURL(mediaURL, base64) {
-  if (base64) {
-    return /^data:/i.test(base64)
-      ? base64
-      : `data:image/png;base64,${base64}`;
+  const raw = await req.text();
+  const bytes = new TextEncoder().encode(raw).byteLength;
+  if (bytes > MAX_BODY_BYTES) {
+    throw makeError('Request body is too large.', 'REQUEST_TOO_LARGE', 'request');
   }
-  if (!mediaURL) throw new Error('Image output URL is missing.');
-  if (/^data:image\//i.test(mediaURL)) return mediaURL;
 
-  const response = await fetchWithTimeout(mediaURL, { method: 'GET' }, 40000);
-  if (!response.ok) throw new Error(`Could not fetch Pixazo image output (${response.status}).`);
-  const contentType = response.headers.get('content-type') || 'image/png';
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.byteLength > 25 * 1024 * 1024) throw new Error('Image output is too large to watermark safely in the Edge runtime.');
-  return dataURLFromBytes(bytes, contentType.split(';')[0] || 'image/png');
+  try {
+    return JSON.parse(raw || '{}');
+  } catch {
+    throw makeError('Request body is not valid JSON.', 'INVALID_JSON', 'request');
+  }
 }
 
-function svgWatermarkedImage({ sourceDataURL, aspectRatio, watermarkId }) {
-  const [w, h] = aspectToDimensions(aspectRatio);
-  const watermarkSize = Math.max(22, Math.round(Math.min(w, h) * 0.026));
-  const pad = Math.max(18, Math.round(Math.min(w, h) * 0.022));
+function makeWatermarkId(prompt) {
+  return hash32(`${prompt}|${Date.now()}|${Math.random()}`);
+}
+
+function makeWatermarkedImageURL(sourceURL, aspect, watermarkId) {
+  const [width, height] = aspectToImageDimensions(aspect);
+  const fontSize = Math.max(18, Math.round(Math.min(width, height) * 0.023));
+  const padding = Math.max(14, Math.round(Math.min(width, height) * 0.018));
   const label = `${WATERMARK_TEXT} • ${watermarkId}`;
-  const estimatedLabelWidth = Math.round(label.length * watermarkSize * 0.58);
-  const badgeW = estimatedLabelWidth + pad * 1.4;
-  const badgeH = watermarkSize * 1.65;
-  const badgeX = w - badgeW - pad;
-  const badgeY = h - badgeH - pad;
+  const estimatedWidth = Math.round(label.length * fontSize * 0.58) + padding * 2;
+  const badgeHeight = Math.round(fontSize * 1.7);
+  const x = width - estimatedWidth - padding;
+  const y = height - badgeHeight - padding;
 
   const svg = `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <rect width="100%" height="100%" fill="#111"/>
-  <image href="${sourceDataURL}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>
-  <g>
-    <rect x="${badgeX}" y="${badgeY}" width="${badgeW}" height="${badgeH}" rx="${Math.round(badgeH * 0.3)}" fill="rgba(0,0,0,0.62)" stroke="rgba(255,255,255,0.22)" stroke-width="1"/>
-    <text x="${w - pad}" y="${badgeY + badgeH * 0.69}" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="${watermarkSize}px" font-weight="700" letter-spacing="0.4" fill="#FFFFFF">${escapeHTML(label)}</text>
-  </g>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <rect width="100%" height="100%" fill="#111111"/>
+  <image href="${escapeHTML(sourceURL)}" x="0" y="0" width="${width}" height="${height}" preserveAspectRatio="xMidYMid meet"/>
+  <rect x="${x}" y="${y}" width="${estimatedWidth}" height="${badgeHeight}" rx="${Math.round(badgeHeight * 0.28)}" fill="#000000" fill-opacity="0.62" stroke="#ffffff" stroke-opacity="0.22"/>
+  <text x="${width - padding}" y="${y + Math.round(fontSize * 1.15)}" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="${fontSize}px" font-weight="700" letter-spacing="0.4" fill="#ffffff">${escapeHTML(label)}</text>
 </svg>`;
+
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function findVideoURL(mediaURL, base64) {
-  if (mediaURL) return mediaURL;
-  if (base64) return /^data:/i.test(base64) ? base64 : `data:video/mp4;base64,${base64}`;
-  return null;
-}
-
-function imageWidget({ imageDataURL, originalPrompt, settings, enhancedPrompt, watermarkId }) {
-  const safePrompt = escapeHTML(originalPrompt);
-  const safeEnhanced = escapeHTML(enhancedPrompt);
-  const size = escapeHTML(settings.size);
-  const aspect = escapeHTML(settings.aspectRatio);
-  const style = escapeHTML(settings.style);
-  const now = Date.now();
+function imageWidget({ sourceURL, watermarkedURL, prompt, settings, watermarkId }) {
+  const safePrompt = escapeHTML(prompt);
+  const safeSource = escapeHTML(sourceURL);
+  const safeWatermarked = escapeHTML(watermarkedURL);
+  const safeStyle = escapeHTML(settings.style || 'auto');
+  const fileName = `ArixAI_Flux_Schnell_${watermarkId}.svg`;
 
   return `<div class="mt-4 mb-2 flex flex-col bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl backdrop-blur-sm">
     <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40 gap-3">
       <div class="flex items-center gap-2 min-w-0">
-        <span class="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 text-white text-xs">✦</span>
+        <span class="flex items-center justify-center w-7 h-7 rounded-full bg-fuchsia-500 text-white text-xs">✦</span>
         <div class="min-w-0">
           <div class="text-sm font-semibold text-gray-200 truncate">ArixAI Image Studio</div>
-          <div class="text-[10px] text-gray-500 font-mono">Pixazo • ${IMAGE_MODEL}</div>
+          <div class="text-[10px] text-gray-500 font-mono">Pixazo • flux-schnell</div>
         </div>
       </div>
-      <div class="flex gap-2 items-center shrink-0">
-        <span class="text-[10px] font-medium text-gray-500 bg-black/50 px-2 py-1 rounded-md">${aspect}</span>
-        <a href="${imageDataURL}" download="ArixAI_${IMAGE_MODEL}_${now}.svg" class="text-xs font-medium text-blue-300 bg-blue-400/10 hover:bg-blue-400/20 px-3 py-1.5 rounded-md transition-colors cursor-pointer">HD Export</a>
-      </div>
+      <a href="${safeWatermarked}" download="${fileName}" class="text-xs font-semibold text-fuchsia-300 bg-fuchsia-400/10 hover:bg-fuchsia-400/20 px-3 py-1.5 rounded-md transition-colors shrink-0">Download Watermarked Image</a>
     </div>
-    <div class="relative bg-black flex items-center justify-center">
-      <img src="${imageDataURL}" alt="ArixAI generated image" class="w-full h-auto object-contain max-h-[72vh]" loading="lazy" />
+
+    <div class="relative bg-black flex items-center justify-center overflow-hidden">
+      <img src="${safeWatermarked}" alt="ArixAI generated image" class="w-full h-auto object-contain max-h-[72vh]" loading="eager" />
     </div>
+
     <div class="p-4 bg-black/40">
-      <p class="text-sm text-gray-300 font-medium leading-relaxed"><span class="text-blue-400/80 mr-1">“</span>${safePrompt}<span class="text-blue-400/80 ml-1">”</span></p>
-      <details class="mt-2 text-xs text-gray-600 cursor-pointer">
-        <summary class="hover:text-gray-400">Generation settings</summary>
-        <div class="mt-2 p-3 bg-black/50 rounded border border-white/5 font-mono leading-relaxed">
-          <span class="text-indigo-400">Model:</span> ${IMAGE_MODEL}<br/>
-          <span class="text-indigo-400">Style:</span> ${style || 'auto'}<br/>
-          <span class="text-indigo-400">Aspect:</span> ${aspect}<br/>
-          <span class="text-indigo-400">Size:</span> ${size}<br/>
-          <span class="text-indigo-400">Steps:</span> ${settings.steps}<br/>
-          <span class="text-indigo-400">Guidance:</span> ${settings.guidance}<br/>
-          <span class="text-indigo-400">Watermark:</span> ${escapeHTML(WATERMARK_TEXT)} • ${escapeHTML(watermarkId)}<br/>
-          <span class="text-indigo-400">Prompt optimizer:</span> ${settings.enhancePrompt ? 'ON' : 'OFF'}<br/>
-          <span class="text-indigo-400">Optimized prompt:</span> ${safeEnhanced}
+      <p class="text-sm text-gray-300 font-medium leading-relaxed">“${safePrompt}”</p>
+      <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono text-gray-500">
+        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Aspect</span><br/>${escapeHTML(settings.aspect)}</div>
+        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Steps</span><br/>${settings.steps}</div>
+        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Size</span><br/>${settings.width}×${settings.height}</div>
+        <div class="bg-black/40 rounded-md p-2"><span class="text-fuchsia-300">Watermark</span><br/>ArixAI • ${escapeHTML(watermarkId)}</div>
+      </div>
+      <details class="mt-3 text-[10px] text-gray-500">
+        <summary class="cursor-pointer hover:text-gray-300">Generation details</summary>
+        <div class="mt-2 bg-black/40 rounded-md p-3 font-mono leading-relaxed">
+          Model: flux-schnell<br/>
+          Style: ${safeStyle}<br/>
+          Provider output: <a href="${safeSource}" target="_blank" rel="noopener noreferrer" class="text-fuchsia-300 underline">Open original provider file</a><br/>
+          Watermark: algorithmic ArixAI SVG export
         </div>
       </details>
     </div>
   </div>`;
 }
 
-function videoWidget({ videoURL, originalPrompt, settings, watermarkId }) {
-  const safePrompt = escapeHTML(originalPrompt);
-  const id = escapeHTML(watermarkId);
-  const nonce = shortHash(`${watermarkId}:${videoURL || ''}`);
-  const downloadName = `ArixAI_${VIDEO_MODEL}_${nonce}.mp4`;
+function videoWidget({ sourceURL, prompt, settings, watermarkId, exactProgress }) {
+  const safeURL = escapeHTML(sourceURL);
+  const safePrompt = escapeHTML(prompt);
+  const safeId = escapeHTML(watermarkId);
+  const accurateProgress = exactProgress == null ? 'Provider did not report an exact percentage' : `${exactProgress}% provider-reported`;
 
-  // IMPORTANT: Edge JS cannot reliably re-encode arbitrary MP4 bytes with a burned-in
-  // text layer without shipping a large video codec/FFmpeg runtime. The preview below
-  // therefore makes the watermark compulsory at presentation level. The generation
-  // prompt also requests an ArixAI mark, and the API response carries watermark=true.
-  // A client-side export/record step can burn the same overlay into the final MP4.
   return `<div class="mt-4 mb-2 flex flex-col bg-gray-900/60 border border-white/10 rounded-2xl overflow-hidden shadow-2xl w-full max-w-4xl backdrop-blur-sm">
     <div class="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-black/40 gap-3">
       <div class="flex items-center gap-2 min-w-0">
-        <span class="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-tr from-fuchsia-500 to-indigo-500 text-white text-xs">▶</span>
+        <span class="flex items-center justify-center w-7 h-7 rounded-full bg-violet-500 text-white text-xs">▶</span>
         <div class="min-w-0">
           <div class="text-sm font-semibold text-gray-200 truncate">ArixAI Video Studio</div>
-          <div class="text-[10px] text-gray-500 font-mono">Pixazo • ${VIDEO_MODEL}</div>
+          <div class="text-[10px] text-gray-500 font-mono">Pixazo • ltx-video</div>
         </div>
       </div>
-      <div class="flex gap-2 items-center shrink-0">
-        <span class="text-[10px] font-medium text-gray-500 bg-black/50 px-2 py-1 rounded-md">${escapeHTML(settings.aspectRatio)}</span>
-        <a href="${escapeHTML(videoURL || '#')}" target="_blank" rel="noopener noreferrer" download="${downloadName}" class="text-xs font-medium text-fuchsia-300 bg-fuchsia-400/10 hover:bg-fuchsia-400/20 px-3 py-1.5 rounded-md transition-colors cursor-pointer">Open MP4</a>
-      </div>
+      <a href="${safeURL}" target="_blank" rel="noopener noreferrer" download="ArixAI_ltx-video_${safeId}.mp4" class="text-xs font-semibold text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 px-3 py-1.5 rounded-md transition-colors shrink-0">Download / Open MP4</a>
     </div>
+
     <div class="relative bg-black overflow-hidden">
       <video controls playsinline preload="metadata" class="w-full max-h-[72vh] block">
-        <source src="${escapeHTML(videoURL || '')}" type="video/mp4" />
+        <source src="${safeURL}" type="video/mp4" />
       </video>
-      <div aria-hidden="true" class="pointer-events-none absolute right-3 bottom-3 rounded-lg border border-white/20 bg-black/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-white shadow-lg backdrop-blur-sm">ArixAI • ${id}</div>
-      <div aria-hidden="true" class="absolute left-3 top-3 rounded-md bg-black/40 px-2 py-1 text-[9px] font-semibold tracking-wide text-white/70">WATERMARK REQUIRED</div>
+      <div aria-hidden="true" class="pointer-events-none absolute right-3 bottom-3 rounded-lg border border-white/20 bg-black/60 px-2.5 py-1.5 text-[11px] font-bold tracking-wide text-white shadow-lg backdrop-blur-sm">ArixAI • ${safeId}</div>
     </div>
+
     <div class="p-4 bg-black/40">
-      <p class="text-sm text-gray-300 font-medium leading-relaxed"><span class="text-fuchsia-400/80 mr-1">“</span>${safePrompt}<span class="text-fuchsia-400/80 ml-1">”</span></p>
+      <p class="text-sm text-gray-300 font-medium leading-relaxed">“${safePrompt}”</p>
       <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono text-gray-500">
-        <div class="bg-black/40 rounded-md p-2"><span class="text-indigo-400">Duration</span><br/>${settings.duration}s</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-indigo-400">FPS</span><br/>${settings.fps}</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-indigo-400">Steps</span><br/>${settings.steps}</div>
-        <div class="bg-black/40 rounded-md p-2"><span class="text-indigo-400">Audio</span><br/>${settings.generateAudio ? 'ON' : 'OFF'}</div>
+        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">Aspect</span><br/>${escapeHTML(settings.aspect)}</div>
+        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">Duration</span><br/>${settings.duration}s</div>
+        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">FPS</span><br/>${settings.fps}</div>
+        <div class="bg-black/40 rounded-md p-2"><span class="text-violet-300">Progress</span><br/>${accurateProgress}</div>
       </div>
-      <div class="mt-3 text-[10px] text-gray-600 leading-relaxed">Watermark ID: ${id} • Overlay nonce: ${nonce}. The displayed preview always carries the ArixAI watermark.</div>
+      <div class="mt-3 text-[10px] text-gray-500 leading-relaxed">
+        ArixAI watermark is enforced on the visible player overlay and requested in the generation prompt. The raw Pixazo MP4 is not falsely claimed to be pixel-burned when the provider does not expose server-side watermarking.
+      </div>
     </div>
   </div>`;
 }
 
-function makeImageBodies({ optimizedPrompt, optimizedNegative, settings }) {
-  const rich = {
-    model: IMAGE_MODEL,
-    prompt: optimizedPrompt,
-    negative_prompt: optimizedNegative || undefined,
-    size: settings.size,
-    aspect_ratio: settings.aspectRatio,
-    steps: settings.steps,
-    guidance_scale: settings.guidance,
-    seed: settings.seed,
-    n: 1,
-    output_format: settings.format,
-  };
+function errorWidget(error) {
+  const code = escapeHTML(error?.code || 'ARIXAI_VISUAL_ERROR');
+  const stage = escapeHTML(error?.stage || 'unknown');
+  const message = escapeHTML(error?.message || 'Unknown visual generation error.');
+  const status = Number.isFinite(Number(error?.status)) ? String(error.status) : '—';
+  const endpoint = escapeHTML(error?.endpoint || '—');
+  const model = escapeHTML(error?.model || '—');
+  const requestId = escapeHTML(error?.requestId || '—');
+  const env = error?.env || null;
 
-  const core = {
-    model: IMAGE_MODEL,
-    prompt: optimizedPrompt,
-    size: settings.size,
-  };
-
-  return { rich, core };
-}
-
-function makeVideoBodies({ optimizedPrompt, settings, watermarkId }) {
-  const [defaultWidth, defaultHeight] = aspectToDimensions(settings.aspectRatio);
-  const width = settings.width || defaultWidth;
-  const height = settings.height || defaultHeight;
-  const frames = snapLTXFrames(settings.duration * settings.fps);
-
-  const rich = {
-    model: VIDEO_MODEL,
-    prompt: `${optimizedPrompt.prompt}, include a small clean readable “ArixAI” watermark at the bottom-right corner, unobtrusive and legible`,
-    negative: optimizedPrompt.negative || undefined,
-    negative_prompt: optimizedPrompt.negative || undefined,
-    aspect: settings.aspectRatio,
-    aspect_ratio: settings.aspectRatio,
-    width,
-    height,
-    num_frames: frames,
-    frame_rate: settings.fps,
-    fps: settings.fps,
-    steps: settings.steps,
-    num_inference_steps: settings.steps,
-    cfg: settings.guidance,
-    guidance_scale: settings.guidance,
-    generate_audio: settings.generateAudio,
-    duration: settings.duration,
-    watermark: true,
-    watermark_text: WATERMARK_TEXT,
-    watermark_position: 'bottom-right',
-    watermark_id: watermarkId,
-  };
-
-  const core = {
-    model: VIDEO_MODEL,
-    prompt: `${optimizedPrompt.prompt}, small readable “ArixAI” watermark at bottom-right`,
-    duration: settings.duration,
-    aspect_ratio: settings.aspectRatio,
-  };
-
-  return { rich, core };
-}
-
-function progressText(progress, stage, detail) {
-  return `> ${progress.toString().padStart(3, ' ')}% • ${stage} • ${detail}\n`;
-}
-
-async function handleGeneration({ body, sendProgress, sendText }) {
-  const requestedModality = String(body.modality ?? body.type ?? body.mode ?? 'image').toLowerCase();
-  const modality = ['video', 'text-to-video', 'vid'].includes(requestedModality) ? 'video' : 'image';
-  const { prompt: strippedPrompt, flags } = parseInlineFlags(body.prompt ?? '');
-  const prompt = validatePrompt(strippedPrompt);
-  const settings = normalizeSettings(body.settings ?? body, modality, flags);
-  const mergedNegative = cleanText(body.negativePrompt ?? body.negative ?? settings.negativePrompt, MAX_NEGATIVE_CHARS);
-
-  const optimized = optimizePrompt({
-    prompt,
-    modality,
-    style: settings.style,
-    negativePrompt: mergedNegative,
-    settings,
-  });
-
-  const watermarkId = shortHash(`${prompt}|${Date.now()}|${Math.random()}`);
-  const apiKey = getApiKey();
-  const endpoint = modality === 'video' ? VIDEO_ENDPOINT : IMAGE_ENDPOINT;
-
-  sendProgress(4, 'preflight', `${modality === 'video' ? 'Video' : 'Image'} request validated`);
-  sendProgress(8, 'optimizing', `Prompt optimizer ${settings.enhancePrompt ? 'enabled' : 'disabled'}`);
-
-  const bodies = modality === 'video'
-    ? makeVideoBodies({ optimizedPrompt: optimized, settings, watermarkId })
-    : makeImageBodies({ optimizedPrompt: optimized.prompt, optimizedNegative: optimized.negative, settings });
-
-  sendProgress(12, 'dispatching', `Pixazo • ${modality === 'video' ? VIDEO_MODEL : IMAGE_MODEL}`);
-
-  const { data: initialData } = await retryMinimalRequest({
-    url: endpoint,
-    richBody: bodies.rich,
-    coreBody: bodies.core,
-    apiKey,
-  });
-
-  sendProgress(24, 'accepted', 'Pixazo accepted the generation request');
-
-  const final = await pollJob({
-    initialData,
-    type: modality,
-    apiKey,
-    sendProgress,
-  });
-
-  sendProgress(86, 'assembling', 'Final media received');
-
-  if (modality === 'image') {
-    const rawImageData = await ensureImageDataURL(final.mediaURL, final.base64);
-    const watermarked = svgWatermarkedImage({
-      sourceDataURL: rawImageData,
-      aspectRatio: settings.aspectRatio,
-      watermarkId,
-    });
-
-    const widget = imageWidget({
-      imageDataURL: watermarked,
-      originalPrompt: prompt,
-      settings,
-      enhancedPrompt: optimized.prompt,
-      watermarkId,
-    });
-
-    sendProgress(100, 'complete', 'Watermark baked into exported image container');
-    sendText(widget);
-    return { modality, watermarkId, mediaURL: final.mediaURL || null, watermarkedPreview: watermarked };
+  let envLine = '';
+  if (env) {
+    envLine = `
+      <div class="mt-3 rounded-lg bg-black/30 p-3 font-mono text-[10px] leading-relaxed">
+        <div><span class="text-red-300">PIZAXO_KEY visible to deployed function:</span> ${env.configured ? 'YES' : 'NO'}</div>
+        <div><span class="text-red-300">Resolved variable:</span> ${escapeHTML(env.source || 'none')}</div>
+        <div><span class="text-red-300">VERCEL_ENV:</span> ${escapeHTML(env.vercelEnv)}</div>
+      </div>`;
   }
 
-  const videoURL = findVideoURL(final.mediaURL, final.base64);
-  if (!videoURL) throw new Error('Video output URL is missing from Pixazo response.');
+  return `<div class="mt-4 bg-red-500/10 border border-red-500/40 text-red-300 p-4 rounded-xl text-sm leading-relaxed">
+    <div class="flex items-center gap-2 font-bold mb-2"><i class="ph-bold ph-warning-circle"></i>ArixAI Visual Engine Error</div>
+    <div>${message}</div>
+    <div class="mt-3 rounded-lg bg-black/25 p-3 font-mono text-[10px] leading-relaxed">
+      <div><span class="text-red-300">Code:</span> ${code}</div>
+      <div><span class="text-red-300">Stage:</span> ${stage}</div>
+      <div><span class="text-red-300">HTTP:</span> ${status}</div>
+      <div><span class="text-red-300">Model:</span> ${model}</div>
+      <div><span class="text-red-300">Request ID:</span> ${requestId}</div>
+      <div class="break-all"><span class="text-red-300">Endpoint:</span> ${endpoint}</div>
+    </div>
+    ${envLine}
+  </div>`;
+}
 
-  const widget = videoWidget({
-    videoURL,
-    originalPrompt: prompt,
-    settings,
-    watermarkId,
+function corsHeaders() {
+  return {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  };
+}
+
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload, null, 2), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      ...corsHeaders(),
+    },
   });
-
-  sendProgress(100, 'complete', 'Video ready • ArixAI watermark overlay enabled');
-  sendText(widget);
-  return { modality, watermarkId, mediaURL: videoURL };
 }
 
 export default async function handler(req) {
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      },
+      headers: corsHeaders(),
     });
   }
 
-  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+
+    if (url.searchParams.get('health') === '1') {
+      const env = getEnvSnapshot();
+      return jsonResponse({
+        ok: true,
+        version: VERSION,
+        route: '/api/image',
+        environment: env.vercelEnv,
+        pixazoKey: {
+          configured: env.configured,
+          resolvedFrom: env.source,
+          preferredPIZAXO_KEYPresent: env.preferredPresent,
+        },
+        endpoints: {
+          image: PIXAZO.image.endpoint,
+          video: PIXAZO.video.endpoint,
+        },
+        models: {
+          image: PIXAZO.image.model,
+          video: PIXAZO.video.model,
+        },
+        serverTime: nowISO(),
+      });
+    }
+
+    return jsonResponse({
+      ok: true,
+      service: 'ArixAI Unified Visual Engine',
+      version: VERSION,
+      hint: 'Use GET /api/image?health=1 for non-secret deployment diagnostics.',
+    });
+  }
+
+  if (req.method !== 'POST') {
+    return jsonResponse({
+      ok: false,
+      error: 'Method not allowed. Use POST for generation.',
+      code: 'METHOD_NOT_ALLOWED',
+      version: VERSION,
+    }, 405);
+  }
 
   const encoder = new TextEncoder();
+
   const stream = new ReadableStream({
     async start(controller) {
       let closed = false;
+
       const send = (payload) => {
         if (closed) return;
         try {
@@ -943,28 +930,122 @@ export default async function handler(req) {
         }
       };
 
-      const sendProgress = (progress, stage, detail) => {
-        const safeProgress = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)));
+      const sendProgress = (progress, stage, detail, extra = {}) => {
+        let safeProgress = null;
+        if (progress !== null && progress !== undefined && Number.isFinite(Number(progress))) {
+          safeProgress = Math.max(0, Math.min(100, Math.round(Number(progress))));
+        }
+
         send({
           event: 'progress',
           progress: safeProgress,
+          progressSource: safeProgress === null ? 'indeterminate' : 'pixazo',
           stage,
           detail,
-          text: progressText(safeProgress, stage, detail),
+          timestamp: Date.now(),
+          ...extra,
+        });
+      };
+
+      const sendContent = (html) => {
+        send({
+          event: 'content',
+          text: html,
           timestamp: Date.now(),
         });
       };
 
-      const sendText = (textValue) => send({ event: 'content', text: String(textValue ?? '') });
-
       try {
+        sendProgress(null, 'starting', 'ArixAI Visual Engine initialized');
+
         const body = await readBody(req);
-        sendProgress(1, 'starting', 'ArixAI Visual Engine initialized');
-        await handleGeneration({ body, sendProgress, sendText });
+        const requested = String(body.modality ?? body.type ?? body.mode ?? 'image').toLowerCase();
+        const modality = ['video', 'vid', 'text-to-video'].includes(requested) ? 'video' : 'image';
+
+        const parsed = parseInlineFlags(body.prompt ?? '');
+        if (!parsed.prompt) {
+          throw makeError('A prompt is required.', 'PROMPT_EMPTY', 'request');
+        }
+
+        const settings = normalizeSettings(body.settings ?? body, modality, parsed.flags);
+        const basePrompt = parsed.prompt;
+        const optimizedPrompt = stylePrompt(basePrompt, modality, settings);
+        const watermarkId = makeWatermarkId(basePrompt);
+
+        sendProgress(null, 'configuration', `${modality === 'video' ? 'Video' : 'Image'} request validated`);
+        sendProgress(null, 'prompt', settings.enhancePrompt ? 'Prompt enhancement applied' : 'Using prompt without enhancement');
+        sendProgress(null, 'authentication', 'Checking server-side Pixazo credential');
+
+        const apiKey = getApiKey();
+
+        sendProgress(null, 'dispatching', `Calling Pixazo ${modality === 'video' ? PIXAZO.video.model : PIXAZO.image.model}`);
+
+        if (modality === 'image') {
+          const result = await submitImage({
+            apiKey,
+            prompt: optimizedPrompt,
+            settings,
+          });
+
+          sendProgress(null, 'assembling', 'Pixazo returned the image file');
+
+          const watermarkedURL = makeWatermarkedImageURL(
+            result.outputURL,
+            settings.aspect,
+            watermarkId
+          );
+
+          sendProgress(null, 'complete', 'Watermarked image ready');
+
+          sendContent(imageWidget({
+            sourceURL: result.outputURL,
+            watermarkedURL,
+            prompt: basePrompt,
+            settings,
+            watermarkId,
+          }));
+        } else {
+          const submitted = await submitVideo({
+            apiKey,
+            prompt: optimizedPrompt,
+            settings,
+          });
+
+          sendProgress(null, 'queued', 'Pixazo accepted the video job; waiting for provider status.', {
+            requestId: submitted.requestId || null,
+          });
+
+          const result = await pollVideo({
+            apiKey,
+            requestId: submitted.requestId,
+            pollingURL: submitted.pollingURL,
+            emitProgress: (progress, stage, detail) => sendProgress(progress, stage, detail, {
+              requestId: submitted.requestId || null,
+            }),
+          });
+
+          sendProgress(result.exactProgress ?? null, 'complete', 'Video ready', {
+            requestId: result.requestId || submitted.requestId || null,
+          });
+
+          sendContent(videoWidget({
+            sourceURL: result.outputURL,
+            prompt: basePrompt,
+            settings,
+            watermarkId,
+            exactProgress: result.exactProgress,
+          }));
+        }
       } catch (error) {
-        const message = escapeHTML(error?.message || 'Unknown visual generation error.');
-        sendProgress(100, 'error', 'Generation stopped safely');
-        sendText(`<div class="mt-4 bg-red-500/10 border border-red-500/40 text-red-300 p-4 rounded-xl text-sm leading-relaxed"><strong>ArixAI Visual Engine Error</strong><br/>${message}</div>`);
+        if (error?.env) {
+          error.endpoint = error.endpoint || '—';
+        }
+
+        sendProgress(null, 'error', 'Generation stopped safely', {
+          code: error?.code || 'ARIXAI_VISUAL_ERROR',
+        });
+
+        sendContent(errorWidget(error));
       } finally {
         if (!closed) {
           closed = true;
@@ -981,9 +1062,7 @@ export default async function handler(req) {
       'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      ...corsHeaders(),
     },
   });
 }
