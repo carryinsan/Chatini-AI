@@ -3191,6 +3191,11 @@ function updateUIState() {
 
 // ====== DYNAMIC MESSAGE PARSING & FORMATTING ======
 function parseRichText(content, isStreaming = false, msgId = null) {
+    // Bypass Markdown parsing for Pixazo Visual Engine HTML widgets
+    if (typeof content === 'string' && content.includes('bg-gray-900/60 border border-white/10')) {
+        return content;
+    }
+
     let extractedHtml = ""; 
     let markdownContent = content;
 
