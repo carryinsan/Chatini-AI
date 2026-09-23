@@ -87,10 +87,44 @@ window.requestMoreLimits = async function() {
             btn.disabled = false;
         }, 2500);
     } catch(e) {
-        btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error. Try Again.';
-        btn.disabled = false;
-    }
-};
+            btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error. Try Again.';
+            btn.disabled = false;
+        }
+    };
+
+    window.downloadArixImage = async function(url, id, format) {
+        try {
+            // Attempt to fetch the raw image blob natively
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const img = new Image();
+            const imgUrl = URL.createObjectURL(blob);
+            
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; 
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL(mime, 0.95);
+                a.download = 'ArixAI_' + id + '.' + format;
+                
+                // Append, click, and remove to support Firefox/Safari
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(imgUrl);
+            };
+            img.src = imgUrl;
+        } catch(e) { 
+            // Fallback if the remote provider blocks CORS fetching
+            console.warn("CORS block or fetch error, opening in new tab", e);
+            window.open(url, '_blank'); 
+        }
+    };
 </script>
 
 <!-- Tailwind Config Integration -->
