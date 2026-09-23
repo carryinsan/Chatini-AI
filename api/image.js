@@ -863,57 +863,49 @@ function jsonResponse(payload, status = 200) {
   });
 }
 
-export default async function handler(req) {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: corsHeaders(),
-    });
-  }
+export async function OPTIONS(req) {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders(),
+  });
+}
 
-  if (req.method === 'GET') {
-    const url = new URL(req.url);
+export async function GET(req) {
+  const url = new URL(req.url);
 
-    if (url.searchParams.get('health') === '1') {
-      const env = getEnvSnapshot();
-      return jsonResponse({
-        ok: true,
-        version: VERSION,
-        route: '/api/image',
-        environment: env.vercelEnv,
-        pixazoKey: {
-          configured: env.configured,
-          resolvedFrom: env.source,
-          preferredPIZAXO_KEYPresent: env.preferredPresent,
-        },
-        endpoints: {
-          image: PIXAZO.image.endpoint,
-          video: PIXAZO.video.endpoint,
-        },
-        models: {
-          image: PIXAZO.image.model,
-          video: PIXAZO.video.model,
-        },
-        serverTime: nowISO(),
-      });
-    }
-
+  if (url.searchParams.get('health') === '1') {
+    const env = getEnvSnapshot();
     return jsonResponse({
       ok: true,
-      service: 'ArixAI Unified Visual Engine',
       version: VERSION,
-      hint: 'Use GET /api/image?health=1 for non-secret deployment diagnostics.',
+      route: '/api/image',
+      environment: env.vercelEnv,
+      pixazoKey: {
+        configured: env.configured,
+        resolvedFrom: env.source,
+        preferredPIZAXO_KEYPresent: env.preferredPresent,
+      },
+      endpoints: {
+        image: PIXAZO.image.endpoint,
+        video: PIXAZO.video.endpoint,
+      },
+      models: {
+        image: PIXAZO.image.model,
+        video: PIXAZO.video.model,
+      },
+      serverTime: nowISO(),
     });
   }
 
-  if (req.method !== 'POST') {
-    return jsonResponse({
-      ok: false,
-      error: 'Method not allowed. Use POST for generation.',
-      code: 'METHOD_NOT_ALLOWED',
-      version: VERSION,
-    }, 405);
-  }
+  return jsonResponse({
+    ok: true,
+    service: 'ArixAI Unified Visual Engine',
+    version: VERSION,
+    hint: 'Use GET /api/image?health=1 for non-secret deployment diagnostics.',
+  });
+}
+
+export async function POST(req) {
 
   const encoder = new TextEncoder();
 
