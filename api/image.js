@@ -617,7 +617,7 @@ async function pollVideo({ apiKey, requestId, pollingURL, emitProgress }) {
       let detail = 'Waiting for ARIX STUDIO...';
       if (status === 'QUEUED') detail = 'ARIX STUDIO queued the generation.';
       else if (status === 'PROCESSING') detail = 'ARIX STUDIO is rendering the video.';
-      else if (status) detail = `Pixazo status: ${status}`;
+      else if (status) detail = `Studio status: ${status}`;
 
       emitProgress(exactProgress, status === 'PROCESSING' ? 'rendering' : 'polling', detail);
     } else {
