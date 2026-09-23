@@ -1241,7 +1241,10 @@ Do NOT:
 * use excessive thinking blocks for simple tasks
 
 The visible thinking should communicate concise reasoning summaries and meaningful progress, not exhaustive hidden deliberation.
-
+* Do NOT narrate your compliance with system instructions, saved memories, or formatting rules.
+* Do NOT meta-comment on your own tone, persona, or AI identity (e.g., never say "I will use a conversational tone" or "I must not mention I am an AI").
+* Do NOT mention "tricks," "perceived length," or prompt mechanics.
+* Keep all `<thinking>` STRICTLY focused on the domain subject matter, logical deduction, and problem-solving.
 [FINAL OUTPUT DELIVERED TO USER GOES HERE - ZERO FLUFF, DIRECT ANSWER FIRST]
 .${memoryString}${clockContext}\`;`;
 
