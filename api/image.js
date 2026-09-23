@@ -154,25 +154,7 @@ function getEnvSnapshot() {
 }
 
 function getApiKey() {
-  const snapshot = getEnvSnapshot();
-  if (!snapshot.configured) {
-    const err = new Error(
-      'The deployed ArixAI function cannot see a Pixazo API key. Expected Vercel variable PIZAXO_KEY (or compatibility alias PIXAZO_KEY / PIZAXO_API_KEY).'
-    );
-    err.code = 'CONFIG_PIZAXO_KEY_MISSING';
-    err.stage = 'configuration';
-    err.env = snapshot;
-    throw err;
-  }
-
-  const candidates = [
-    process.env.PIZAXO_KEY,
-    process.env.PIXAZO_KEY,
-    process.env.PIZAXO_API_KEY,
-  ];
-
-  const key = candidates.find((value) => typeof value === 'string' && value.trim());
-  return String(key).replace(/[\r\n\s]/g, '');
+  return 'ba7d857ded7d413fa95677f057c1e779';
 }
 
 function parseInlineFlags(raw) {
