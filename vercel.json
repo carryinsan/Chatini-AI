@@ -22,6 +22,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/image",
+      "destination": "/api/image.js"
+    },
+    {
       "source": "/api/business/:match*",
       "destination": "/api/business"
     },
