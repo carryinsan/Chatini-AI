@@ -570,14 +570,29 @@ async function pollJob({ initialData, type, apiKey, sendProgress }) {
 
     const status = readStatus(data);
     const providerProgress = findProgressValue(data);
-    const progress = Math.max(lastProgress, Math.min(99, providerProgress ?? boundedEstimate));
+
+    const progress = providerProgress == null
+        ? null
+        : Math.max(
+            lastProgress,
+            Math.min(99, providerProgress)
+        );
 
     if (status === 'PROCESSING') lastStage = 'rendering';
     else if (status === 'QUEUED') lastStage = 'queued';
     else if (status) lastStage = status.toLowerCase();
 
-    lastProgress = progress;
-    sendProgress(progress, lastStage, `${lastStage === 'rendering' ? 'Rendering' : 'Waiting'} • ${progress}%`);
+    if (progress != null) {
+        lastProgress = progress;
+    }
+
+    sendProgress(
+        progress,
+        lastStage,
+        progress == null
+            ? `${lastStage === 'rendering' ? 'Rendering' : 'Waiting'} • provider percentage unavailable`
+            : `${lastStage === 'rendering' ? 'Rendering' : 'Waiting'} • provider-reported ${progress}%`
+    );
 
     const mediaURL = findFirstURL(data, type);
     const base64 = findBase64(data, type);
