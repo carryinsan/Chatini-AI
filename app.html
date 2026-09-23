@@ -613,11 +613,18 @@ body {
                     Audio
                 </button>
                 <button id="image-btn" onclick="toggleImageMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-fuchsia-50">
-                        <i id="image-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
-                    </div>
-                    Image(Testing)
-                </button>
+    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-fuchsia-50">
+        <i id="image-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
+    </div>
+    Images
+</button>
+
+<button id="video-btn" onclick="toggleVideoMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
+    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-violet-50">
+        <i id="video-icon" class="ph-bold ph-film-strip text-violet-500"></i>
+    </div>
+    Video
+</button>
                 <button id="app-btn" onclick="toggleAppMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
                     <div class="w-6 h-6 rounded-md flex items-center justify-center bg-orange-50">
                         <i id="app-icon" class="ph-bold ph-code text-orange-500"></i>
@@ -825,11 +832,127 @@ body {
 
                 <!-- Main Textarea -->
                 <textarea 
-                    id="chat-input"
-                    placeholder="Ask anything, type @Arix in Co-Op..."
-                    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
-                    rows="1"
-                ></textarea>
+    id="chat-input"
+    placeholder="Ask anything, type @Arix in Co-Op..."
+    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
+    rows="1"
+></textarea>
+
+<!-- Dedicated Image / Video Controls -->
+<div id="visual-controls" class="hidden border-t border-gray-100 pt-2 px-2">
+    <div class="flex items-center gap-2 mb-2">
+        <i id="visual-controls-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
+        <span id="visual-controls-title" class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Image Controls</span>
+        <span class="ml-auto text-[9px] text-gray-400">Pixazo</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+
+        <select id="visual-style"
+            class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="auto">Style: Auto</option>
+            <option value="photorealistic">Photorealistic</option>
+            <option value="cinematic">Cinematic</option>
+            <option value="anime">Anime</option>
+            <option value="3d">3D</option>
+            <option value="illustration">Illustration</option>
+            <option value="digital-art">Digital Art</option>
+            <option value="watercolor">Watercolor</option>
+            <option value="sketch">Sketch</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="vintage">Vintage</option>
+            <option value="product">Product</option>
+            <option value="portrait">Portrait</option>
+            <option value="architecture">Architecture</option>
+            <option value="minimalist">Minimalist</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="documentary">Documentary</option>
+            <option value="commercial">Commercial</option>
+        </select>
+
+        <select id="visual-aspect"
+            class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="1:1">Aspect: 1:1</option>
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+            <option value="21:9">21:9</option>
+            <option value="3:2">3:2</option>
+            <option value="2:3">2:3</option>
+            <option value="4:5">4:5</option>
+        </select>
+
+        <select id="visual-image-steps"
+            class="visual-image-only bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="4">Steps: 4 Fast</option>
+            <option value="6">Steps: 6</option>
+            <option value="10">Steps: 10</option>
+            <option value="15">Steps: 15</option>
+            <option value="20">Steps: 20 Max</option>
+        </select>
+
+        <select id="visual-image-guidance"
+            class="visual-image-only bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="3">Guidance: 3</option>
+            <option value="3.5" selected>Guidance: 3.5</option>
+            <option value="5">Guidance: 5</option>
+            <option value="7">Guidance: 7</option>
+            <option value="10">Guidance: 10</option>
+        </select>
+
+        <select id="visual-video-duration"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="2">Duration: 2s</option>
+            <option value="4">Duration: 4s</option>
+            <option value="6" selected>Duration: 6s</option>
+            <option value="8">Duration: 8s</option>
+            <option value="10">Duration: 10s</option>
+        </select>
+
+        <select id="visual-video-fps"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="24" selected>FPS: 24</option>
+            <option value="25">FPS: 25</option>
+            <option value="30">FPS: 30</option>
+            <option value="48">FPS: 48</option>
+            <option value="60">FPS: 60</option>
+        </select>
+
+        <select id="visual-video-steps"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="10">Steps: 10</option>
+            <option value="15" selected>Steps: 15</option>
+            <option value="20">Steps: 20</option>
+            <option value="25">Steps: 25</option>
+            <option value="30">Steps: 30</option>
+        </select>
+
+        <select id="visual-video-guidance"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="2">Guidance: 2</option>
+            <option value="3" selected>Guidance: 3</option>
+            <option value="5">Guidance: 5</option>
+            <option value="7">Guidance: 7</option>
+            <option value="10">Guidance: 10</option>
+        </select>
+
+    </div>
+
+    <div class="flex items-center justify-between mt-2 gap-3">
+        <label class="flex items-center gap-2 text-[10px] text-gray-500 cursor-pointer">
+            <input id="visual-enhance" type="checkbox" checked
+                class="accent-theme-600 w-3.5 h-3.5">
+            Enhance prompt
+        </label>
+
+        <label id="visual-audio-wrap" class="hidden items-center gap-2 text-[10px] text-gray-500 cursor-pointer">
+            <input id="visual-audio" type="checkbox" checked
+                class="accent-violet-600 w-3.5 h-3.5">
+            Generate audio
+        </label>
+    </div>
+</div>
 
                 <!-- Input Action Bar -->
                 <div class="flex items-center justify-between px-1 border-t border-gray-50 pt-2 mt-1">
@@ -1099,6 +1222,7 @@ let isAppMode = false;
 let isStudyMode = false;
 let isCanvasMaximized = false;
 let isImageMode = false;
+let isVideoMode = false;
 let currentChatId = Date.now().toString();
 let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
 let messages = [];
@@ -1148,7 +1272,9 @@ const els = {
     studyBtn: document.getElementById('study-btn'),
     studyIcon: document.getElementById('study-icon'),
     imageBtn: document.getElementById('image-btn'),
-    imageIcon: document.getElementById('image-icon')
+    imageIcon: document.getElementById('image-icon'),
+    videoBtn: document.getElementById('video-btn'),
+    videoIcon: document.getElementById('video-icon')
 };
 
 window.onload = async () => {
@@ -1594,7 +1720,9 @@ function resetAllModeUI() {
         { btn: els.podcastBtn, icon: els.podcastIcon, textClass: 'text-pink-600', bgClass: 'bg-pink-50', borderClass: 'border-pink-200' },
         { btn: els.appBtn, icon: els.appIcon, textClass: 'text-orange-600', bgClass: 'bg-orange-50', borderClass: 'border-orange-200' },
         { btn: els.studyBtn, icon: els.studyIcon, textClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-200' },
-        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' }
+        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' },
+        { btn: els.videoBtn, icon: els.videoIcon, textClass: 'text-violet-600', bgClass: 'bg-violet-50', borderClass: 'border-violet-200' }
+        
     ];
 
     modes.forEach(m => {
@@ -1607,7 +1735,7 @@ function resetAllModeUI() {
 
 function toggleDeepResearch() {
     const wasOn = isDeepResearchOn;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isDeepResearchOn = true;
@@ -1621,7 +1749,7 @@ function toggleDeepResearch() {
 
 function togglePresentationMode() {
     const wasOn = isPresentationMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isPresentationMode = true;
@@ -1635,7 +1763,7 @@ function togglePresentationMode() {
 
 function toggleMathMode() {
     const wasOn = isMathMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isMathMode = true;
@@ -1649,7 +1777,7 @@ function toggleMathMode() {
 
 function togglePodcastMode() {
     const wasOn = isPodcastMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isPodcastMode = true;
@@ -1663,7 +1791,7 @@ function togglePodcastMode() {
 
 function toggleAppMode() {
     const wasOn = isAppMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isAppMode = true;
@@ -1677,21 +1805,59 @@ function toggleAppMode() {
 
 function toggleImageMode() {
     const wasOn = isImageMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+
+    isDeepResearchOn = false;
+    isPresentationMode = false;
+    isMathMode = false;
+    isPodcastMode = false;
+    isAppMode = false;
+    isStudyMode = false;
+    isImageMode = false;
+    isVideoMode = false;
+
     resetAllModeUI();
+
     if (!wasOn) {
         isImageMode = true;
+
         els.imageBtn.classList.replace('text-gray-500', 'text-fuchsia-600');
         els.imageBtn.classList.replace('border-transparent', 'border-fuchsia-200');
         els.imageBtn.classList.add('bg-fuchsia-50');
         els.imageIcon.classList.add('animate-pulse');
-        showToast("Visual Engine Engaged");
+
+        showToast("Image Studio Engaged");
+    }
+}
+
+function toggleVideoMode() {
+    const wasOn = isVideoMode;
+
+    isDeepResearchOn = false;
+    isPresentationMode = false;
+    isMathMode = false;
+    isPodcastMode = false;
+    isAppMode = false;
+    isStudyMode = false;
+    isImageMode = false;
+    isVideoMode = false;
+
+    resetAllModeUI();
+
+    if (!wasOn) {
+        isVideoMode = true;
+
+        els.videoBtn.classList.replace('text-gray-500', 'text-violet-600');
+        els.videoBtn.classList.replace('border-transparent', 'border-violet-200');
+        els.videoBtn.classList.add('bg-violet-50');
+        els.videoIcon.classList.add('animate-pulse');
+
+        showToast("Video Studio Engaged");
     }
 }
 
 function toggleStudyMode() {
     const wasOn = isStudyMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isStudyMode = true;
@@ -2936,7 +3102,49 @@ function updateUIState() {
     else if (activeModelId === 'spark') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-amber-400`;
     else if (activeModelId === 'flux') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-cyan-400`;
 
+    if (isImageMode || isVideoMode) {
+    const visualControls = document.getElementById('visual-controls');
+    const controlsTitle = document.getElementById('visual-controls-title');
+    const controlsIcon = document.getElementById('visual-controls-icon');
+    const audioWrap = document.getElementById('visual-audio-wrap');
+
+    if (visualControls) visualControls.classList.remove('hidden');
+
+    if (isVideoMode) {
+        els.input.placeholder = 'Describe the video you want ArixAI to generate...';
+
+        if (controlsTitle) controlsTitle.textContent = 'Video Controls';
+        if (controlsIcon) {
+            controlsIcon.className = 'ph-bold ph-film-strip text-violet-500';
+        }
+
+        document.querySelectorAll('.visual-image-only').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.visual-video-only').forEach(el => el.classList.remove('hidden'));
+
+        if (audioWrap) {
+            audioWrap.classList.remove('hidden');
+            audioWrap.classList.add('flex');
+        }
+    } else {
+        els.input.placeholder = 'Describe the image you want ArixAI to generate...';
+
+        if (controlsTitle) controlsTitle.textContent = 'Image Controls';
+        if (controlsIcon) {
+            controlsIcon.className = 'ph-bold ph-aperture text-fuchsia-500';
+        }
+
+        document.querySelectorAll('.visual-image-only').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('.visual-video-only').forEach(el => el.classList.add('hidden'));
+
+        if (audioWrap) {
+            audioWrap.classList.add('hidden');
+            audioWrap.classList.remove('flex');
+        }
+    }
+} else {
+    document.getElementById('visual-controls')?.classList.add('hidden');
     els.input.placeholder = `Message ArixAI (${model.name})...`;
+}
     
     if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { 
         els.sendBtn.className = 'bg-theme-600 text-white p-2.5 sm:p-3 rounded-full shadow-md shadow-theme-200 transition-all duration-300 flex items-center justify-center cursor-pointer hover:bg-theme-700 transform hover:scale-105';
@@ -3507,53 +3715,499 @@ async function handleSend() {
         isProcessing = false; updateUIState(); return;
     }
     
-    // 5E. IMAGE ENGINE
-    if (isImageMode || text.toLowerCase().startsWith('/imagine')) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Initializing Neural Visual Engine...', 'presentation');
-        
-        const aiMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
-        
-        try {
-            const res = await fetch('/api/image', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ prompt: text }) 
-            });
-            
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let htmlWidget = "";
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunks = decoder.decode(value, { stream: true }).split('\n\n').filter(Boolean);
-                for (let chunk of chunks) {
-                    if (chunk.startsWith('data: ')) {
-                        const data = JSON.parse(chunk.substring(6));
-                        if(data.text.trim().startsWith('<div') || htmlWidget.length > 0) {
-                             htmlWidget += data.text; 
-                        } else {
-                             logContainer.innerHTML += `<div class="flex items-center gap-2"><i class="ph-bold ph-check text-fuchsia-500"></i><span class="text-sm font-medium">${data.text}</span></div>`;
-                             els.canvas.scrollTop = els.canvas.scrollHeight;
-                        }
+    // 5E. UNIFIED PIXAZO IMAGE + VIDEO ENGINE
+if (
+    isImageMode ||
+    isVideoMode ||
+    /^\/imagine\b/i.test(text) ||
+    /^\/video\b/i.test(text)
+) {
+    els.indicator.classList.add('hidden');
+
+    const detectedVideo = isVideoMode || /^\/video\b/i.test(text);
+    const modality = detectedVideo ? 'video' : 'image';
+
+    let cleanPrompt = text.trim();
+
+    if (detectedVideo) {
+        cleanPrompt = cleanPrompt.replace(/^\/video\b/i, '').trim();
+    } else {
+        cleanPrompt = cleanPrompt.replace(/^\/imagine\b/i, '').trim();
+    }
+
+    if (!cleanPrompt) {
+        appendMessage(
+            'assistant',
+            `<span class="text-red-500 font-medium">Please describe the ${detectedVideo ? 'video' : 'image'} you want to generate.</span>`,
+            activeModelId
+        );
+        isProcessing = false;
+        updateUIState();
+        return;
+    }
+
+    const aiMsgObj = appendMessage(
+        'assistant',
+        "",
+        activeModelId,
+        null,
+        [],
+        currentMultiplayerRoom ? 'ArixAI' : null
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * REAL-TIME VISUAL PROGRESS
+     * ---------------------------------------------------------
+     * Never invent a percentage in the frontend.
+     * The frontend displays provider-reported progress when the
+     * API supplies it.
+     *
+     * When the provider does not expose an exact percentage,
+     * we show an animated "working" state + elapsed time instead
+     * of pretending that 47% / 83% etc. is real.
+     */
+
+    let latestProgress = null;
+    let latestStage = 'starting';
+    let latestDetail = 'Connecting to Pixazo...';
+    const generationStartedAt = Date.now();
+
+    const progressShell = document.createElement('div');
+    progressShell.className =
+        'mt-4 w-full rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden';
+
+    progressShell.innerHTML = `
+        <div class="p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-8 h-8 rounded-xl ${detectedVideo ? 'bg-violet-50 text-violet-600' : 'bg-fuchsia-50 text-fuchsia-600'} flex items-center justify-center">
+                        <i class="ph-bold ${detectedVideo ? 'ph-film-strip' : 'ph-aperture'}"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <div class="text-sm font-bold text-gray-800">
+                            ${detectedVideo ? 'Generating Video' : 'Generating Image'}
+                        </div>
+                        <div id="visual-stage-text" class="text-[10px] text-gray-400 truncate">
+                            Connecting to Pixazo...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right shrink-0">
+                    <div id="visual-progress-number"
+                         class="text-lg font-black ${detectedVideo ? 'text-violet-600' : 'text-fuchsia-600'}">
+                        —
+                    </div>
+                    <div id="visual-progress-label"
+                         class="text-[9px] uppercase tracking-wider text-gray-400">
+                        provider %
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div id="visual-progress-bar"
+                     class="h-full rounded-full transition-all duration-500 w-0 relative overflow-hidden ${detectedVideo ? 'bg-violet-500' : 'bg-fuchsia-500'}">
+                    <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-2 gap-3">
+                <div id="visual-progress-detail"
+                     class="text-[10px] text-gray-500 truncate">
+                    Waiting for provider status...
+                </div>
+
+                <div id="visual-elapsed"
+                     class="text-[10px] text-gray-400 font-mono shrink-0">
+                    0s
+                </div>
+            </div>
+
+            <div id="visual-indeterminate"
+                 class="hidden mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-[10px] text-gray-500 flex items-center gap-2">
+                <i class="ph-bold ph-spinner-gap animate-spin"></i>
+                <span>Pixazo has not supplied an exact percentage yet. Generation is still active.</span>
+            </div>
+        </div>
+    `;
+
+    aiMsgObj.container.appendChild(progressShell);
+
+    const progressNumber = progressShell.querySelector('#visual-progress-number');
+    const progressLabel = progressShell.querySelector('#visual-progress-label');
+    const progressBar = progressShell.querySelector('#visual-progress-bar');
+    const stageText = progressShell.querySelector('#visual-stage-text');
+    const detailText = progressShell.querySelector('#visual-progress-detail');
+    const elapsedText = progressShell.querySelector('#visual-elapsed');
+    const indeterminate = progressShell.querySelector('#visual-indeterminate');
+
+    let elapsedTimer = setInterval(() => {
+        const seconds = Math.floor((Date.now() - generationStartedAt) / 1000);
+
+        if (elapsedText) {
+            elapsedText.textContent = `${seconds}s`;
+        }
+    }, 250);
+
+    const setProgress = (progress, stage, detail) => {
+        const numeric = Number(progress);
+
+        if (Number.isFinite(numeric)) {
+            const bounded = Math.max(0, Math.min(100, Math.round(numeric)));
+            latestProgress = bounded;
+
+            if (progressNumber) progressNumber.textContent = `${bounded}%`;
+            if (progressBar) progressBar.style.width = `${bounded}%`;
+
+            if (progressLabel) progressLabel.textContent = 'provider %';
+
+            if (indeterminate) indeterminate.classList.add('hidden');
+        } else {
+            if (progressNumber) progressNumber.textContent = '—';
+            if (progressLabel) progressLabel.textContent = 'status';
+
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                progressBar.classList.add('animate-pulse');
+            }
+
+            if (indeterminate) indeterminate.classList.remove('hidden');
+        }
+
+        latestStage = stage || latestStage;
+        latestDetail = detail || latestDetail;
+
+        if (stageText) {
+            stageText.textContent = latestStage || 'working';
+        }
+
+        if (detailText) {
+            detailText.textContent = latestDetail || 'Working...';
+        }
+    };
+
+    /*
+     * Keep UI visibly alive even if the network/provider pauses.
+     */
+    let heartbeat = setInterval(() => {
+        if (!detailText) return;
+
+        const dots =
+            '.'.repeat((Math.floor(Date.now() / 500) % 4));
+
+        if (latestProgress === null) {
+            detailText.textContent =
+                `${latestStage || 'working'}${dots}`;
+        }
+    }, 250);
+
+    try {
+        const style = document.getElementById('visual-style')?.value || 'auto';
+        const aspectRatio = document.getElementById('visual-aspect')?.value ||
+            (detectedVideo ? '16:9' : '1:1');
+
+        const enhancePrompt =
+            document.getElementById('visual-enhance')?.checked !== false;
+
+        const settings = {
+            style,
+            aspectRatio,
+            enhancePrompt
+        };
+
+        if (detectedVideo) {
+            settings.duration = Number(
+                document.getElementById('visual-video-duration')?.value || 6
+            );
+
+            settings.fps = Number(
+                document.getElementById('visual-video-fps')?.value || 24
+            );
+
+            settings.steps = Number(
+                document.getElementById('visual-video-steps')?.value || 15
+            );
+
+            settings.guidance = Number(
+                document.getElementById('visual-video-guidance')?.value || 3
+            );
+
+            settings.generateAudio =
+                document.getElementById('visual-audio')?.checked !== false;
+        } else {
+            settings.steps = Number(
+                document.getElementById('visual-image-steps')?.value || 4
+            );
+
+            settings.guidance = Number(
+                document.getElementById('visual-image-guidance')?.value || 3.5
+            );
+
+            settings.format = 'png';
+        }
+
+        const res = await fetch('/api/image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                modality,
+                prompt: cleanPrompt,
+                settings
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`Visual API returned HTTP ${res.status}`);
+        }
+
+        if (!res.body) {
+            throw new Error('Visual API returned no streaming body.');
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        let buffer = '';
+        let htmlWidget = '';
+        let streamEnded = false;
+        let finalContentReceived = false;
+
+        while (!streamEnded) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                streamEnded = true;
+                break;
+            }
+
+            if (!value) continue;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const events = buffer.split('\n\n');
+            buffer = events.pop() || '';
+
+            for (const eventBlock of events) {
+                const dataLine = eventBlock
+                    .split('\n')
+                    .find(line => line.startsWith('data: '));
+
+                if (!dataLine) continue;
+
+                const payloadText = dataLine.slice(6).trim();
+                if (!payloadText) continue;
+
+                let data;
+
+                try {
+                    data = JSON.parse(payloadText);
+                } catch {
+                    continue;
+                }
+
+                /*
+                 * New API protocol:
+                 * event=progress
+                 */
+                if (data.event === 'progress') {
+                    setProgress(
+                        Number.isFinite(Number(data.progress))
+                            ? Number(data.progress)
+                            : null,
+                        data.stage || 'working',
+                        data.detail || data.text || 'Working...'
+                    );
+
+                    continue;
+                }
+
+                /*
+                 * Final widget:
+                 * event=content
+                 */
+                if (data.event === 'content') {
+                    htmlWidget += String(data.text || '');
+                    finalContentReceived = true;
+
+                    setProgress(
+                        100,
+                        'complete',
+                        detectedVideo
+                            ? 'Video received successfully.'
+                            : 'Image received successfully.'
+                    );
+
+                    continue;
+                }
+
+                /*
+                 * Backwards compatibility with your older API response.
+                 */
+                if (typeof data.text === 'string') {
+                    const incoming = data.text;
+
+                    if (
+                        incoming.includes('<div') ||
+                        incoming.includes('</div>') ||
+                        htmlWidget.length > 0
+                    ) {
+                        htmlWidget += incoming;
+                    } else {
+                        setProgress(
+                            null,
+                            'working',
+                            incoming.replace(/^>\s*/, '').trim()
+                        );
                     }
                 }
             }
-            
-            setTimeout(() => logContainer.parentElement.parentElement.remove(), 1000);
-            aiMsgObj.container.innerHTML = htmlWidget;
-            messages.push({ role: 'assistant', content: htmlWidget, id: aiMsgObj.id, modelId: activeModelId });
-            saveCurrentChat();
-            
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            aiMsgObj.container.innerHTML = `<span class="text-red-500 font-medium">Visual Engine Error: ${err.message}</span>`;
+
+            els.canvas.scrollTop = els.canvas.scrollHeight;
         }
-        isProcessing = false; updateUIState(); return;
+
+        /*
+         * Flush a final partial SSE buffer.
+         */
+        if (buffer.trim().startsWith('data: ')) {
+            try {
+                const finalData = JSON.parse(buffer.trim().slice(6));
+
+                if (finalData.event === 'content') {
+                    htmlWidget += String(finalData.text || '');
+                    finalContentReceived = true;
+                }
+            } catch {}
+        }
+
+        clearInterval(elapsedTimer);
+        clearInterval(heartbeat);
+
+        if (!htmlWidget || !finalContentReceived) {
+            throw new Error(
+                'Generation stream ended before the final media widget was received.'
+            );
+        }
+
+        /*
+         * Replace progress card with final media.
+         */
+        progressShell.remove();
+
+        aiMsgObj.container.innerHTML = htmlWidget;
+
+        /*
+         * Improve generated-media download UX.
+         */
+        const mediaLinks = aiMsgObj.container.querySelectorAll('a');
+
+        mediaLinks.forEach(link => {
+            const href = link.getAttribute('href') || '';
+
+            if (!/^https?:\/\//i.test(href) && !href.startsWith('data:')) {
+                return;
+            }
+
+            if (detectedVideo) {
+                link.textContent = 'Download MP4';
+                link.title = 'Download generated video';
+
+                link.addEventListener('click', async (ev) => {
+                    /*
+                     * Try a real browser download first.
+                     * If the remote host blocks CORS, fall back to
+                     * opening the media directly instead of pretending
+                     * the download succeeded.
+                     */
+                    if (!href.startsWith('data:')) {
+                        ev.preventDefault();
+
+                        try {
+                            const mediaRes = await fetch(href, {
+                                method: 'GET',
+                                mode: 'cors'
+                            });
+
+                            if (!mediaRes.ok) {
+                                throw new Error('Remote media download failed');
+                            }
+
+                            const blob = await mediaRes.blob();
+                            const blobURL = URL.createObjectURL(blob);
+
+                            const a = document.createElement('a');
+                            a.href = blobURL;
+                            a.download =
+                                `ArixAI_${modality}_${Date.now()}.mp4`;
+
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+
+                            setTimeout(() => URL.revokeObjectURL(blobURL), 5000);
+
+                            return;
+                        } catch {
+                            window.open(
+                                href,
+                                '_blank',
+                                'noopener,noreferrer'
+                            );
+                        }
+                    }
+                });
+            }
+        });
+
+        messages.push({
+            role: 'assistant',
+            content: htmlWidget,
+            id: aiMsgObj.id,
+            modelId: activeModelId
+        });
+
+        saveCurrentChat();
+
+        sendTelemetry(
+            modality === 'video' ? 'video_generation' : 'image_generation',
+            activeModelId,
+            'success'
+        );
+
+    } catch (err) {
+        clearInterval(elapsedTimer);
+        clearInterval(heartbeat);
+
+        progressShell.remove();
+
+        aiMsgObj.container.innerHTML = `
+            <div class="mt-4 bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm leading-relaxed">
+                <div class="flex items-center gap-2 font-bold mb-1">
+                    <i class="ph-bold ph-warning-circle"></i>
+                    ${detectedVideo ? 'Video Generation Failed' : 'Image Generation Failed'}
+                </div>
+                <div>${String(err.message || 'Unknown visual generation error.')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')}</div>
+            </div>
+        `;
+
+        sendTelemetry(
+            detectedVideo ? 'video_generation' : 'image_generation',
+            activeModelId,
+            'error',
+            err.message
+        );
     }
+
+    isProcessing = false;
+    updateUIState();
+    return;
+}
     
     // 5F. STUDY DECK ENGINE
     if (isStudyMode) {
