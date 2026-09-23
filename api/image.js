@@ -614,14 +614,14 @@ async function pollVideo({ apiKey, requestId, pollingURL, emitProgress }) {
 
     if (status !== lastStatus || exactProgress !== null) {
       lastStatus = status;
-      let detail = 'Waiting for Pixazo...';
-      if (status === 'QUEUED') detail = 'Pixazo queued the generation.';
-      else if (status === 'PROCESSING') detail = 'Pixazo is rendering the video.';
+      let detail = 'Waiting for ARIX STUDIO...';
+      if (status === 'QUEUED') detail = 'ARIX STUDIO queued the generation.';
+      else if (status === 'PROCESSING') detail = 'ARIX STUDIO is rendering the video.';
       else if (status) detail = `Pixazo status: ${status}`;
 
       emitProgress(exactProgress, status === 'PROCESSING' ? 'rendering' : 'polling', detail);
     } else {
-      emitProgress(lastExactProgress, 'polling', status ? `Pixazo status: ${status}` : 'Pixazo is still processing.');
+      emitProgress(lastExactProgress, 'polling', status ? `Pixazo status: ${status}` : 'ARIX STUDIO is still processing.');
     }
 
     if (isFailure(status)) {
@@ -718,7 +718,7 @@ function imageWidget({ sourceURL, watermarkedURL, prompt, settings, watermarkId 
         <span class="flex items-center justify-center w-7 h-7 rounded-full bg-fuchsia-500 text-white text-xs">✦</span>
         <div class="min-w-0">
           <div class="text-sm font-semibold text-gray-200 truncate">ArixAI Image Studio</div>
-          <div class="text-[10px] text-gray-500 font-mono">Pixazo • flux-schnell</div>
+          <div class="text-[10px] text-gray-500 font-mono">ARIX STUDIO Image</div>
         </div>
       </div>
       <div class="flex items-center gap-2 shrink-0">
@@ -736,34 +736,6 @@ function imageWidget({ sourceURL, watermarkedURL, prompt, settings, watermarkId 
     <div class="p-4 bg-black/40">
       <p class="text-sm text-gray-300 font-medium leading-relaxed">“${safePrompt}”</p>
     </div>
-    
-    <script>
-      if (!window.downloadArixImage) {
-        window.downloadArixImage = async (url, id, format) => {
-          try {
-            const res = await fetch(url, { mode: 'cors' });
-            const blob = await res.blob();
-            const img = new Image();
-            const imgUrl = URL.createObjectURL(blob);
-            img.onload = () => {
-              const canvas = document.createElement('canvas');
-              canvas.width = img.width; canvas.height = img.height;
-              const ctx = canvas.getContext('2d');
-              ctx.drawImage(img, 0, 0);
-              const mime = format === 'png' ? 'image/png' : 'image/jpeg';
-              const a = document.createElement('a');
-              a.href = canvas.toDataURL(mime, 0.95);
-              a.download = 'ArixAI_' + id + '.' + format;
-              a.click();
-              URL.revokeObjectURL(imgUrl);
-            };
-            img.src = imgUrl;
-          } catch(e) { 
-            window.open(url, '_blank'); 
-          }
-        };
-      }
-    </script>
   </div>`;
 }
 
@@ -778,7 +750,7 @@ function videoWidget({ sourceURL, prompt, settings, watermarkId, exactProgress }
         <span class="flex items-center justify-center w-7 h-7 rounded-full bg-violet-500 text-white text-xs">▶</span>
         <div class="min-w-0">
           <div class="text-sm font-semibold text-gray-200 truncate">ArixAI Video Studio</div>
-          <div class="text-[10px] text-gray-500 font-mono">Pixazo • ltx-video</div>
+          <div class="text-[10px] text-gray-500 font-mono">ARIX STUDIO video</div>
         </div>
       </div>
       <a href="${safeURL}" target="_blank" rel="noopener noreferrer" download="ArixAI_ltx-video_${safeId}.mp4" class="text-xs font-semibold text-violet-300 bg-violet-400/10 hover:bg-violet-400/20 px-3 py-1.5 rounded-md transition-colors shrink-0">Download MP4</a>
