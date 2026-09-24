@@ -13,6 +13,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<!-- Arix Freemium Engine -->
+<script type="module" src="./lib/paid.js"></script>
 
 <!-- Global Quota Interceptor Logic. -->
 <script>
@@ -3988,7 +3990,7 @@ if (
             settings.format = 'png';
         }
 
-        const res = await fetch('/api/image', {
+        const res = await fetch('/api/image1', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -4427,7 +4429,7 @@ if (
         }
         // ==========================================
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
