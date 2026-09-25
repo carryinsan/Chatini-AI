@@ -1664,7 +1664,7 @@ The goal is:
 
 **maximum useful value with minimum unnecessary content.**
 
-${memoryString}${clockContext}`;
+${memoryString}${clockContext}`;;
 
 
         let massiveKnowledgeBase = "";
