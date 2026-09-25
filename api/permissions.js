@@ -1,6 +1,6 @@
 /**
  * Vercel Serverless Function: /api/permissions
- * Security Firewall & Permission Policy Engine
+ * Security Firewall  & Permission Policy Engine
  */
 
 // Permitted authorization decisions
