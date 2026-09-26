@@ -42,6 +42,7 @@ const ENV = {
 const APP_ORIGINS = new Set([
     'https://lexis-ai-chatini.vercel.app',
     'https://lexis-ai-chatini.vercel.app/app.html',
+    'https://lexis-ai-chatini.vercel.app/app123.html',
     'https://chatini-ai.vercel.app',
     'http://localhost:3000',
     'http://localhost:5173',
