@@ -64,7 +64,7 @@ const LIMITS = Object.freeze({
     loginStartsPerAccountHour: 10,
     otpSendsPerEmailDay: 8,
     otpSendsPerIpHour: 20,
-    sessionTtlSeconds: 30 * 24 * 60 * 60,
+    sessionTtlSeconds: 7 * 24 * 60 * 60,
     pendingTtlSeconds: 15 * 60,
     reservationTtlSeconds: 15 * 60,
     sessionRefreshWindowSeconds: 7 * 24 * 60 * 60,
@@ -401,13 +401,17 @@ function unixDay() {
 
 function sessionCookie(token, maxAgeSeconds) {
     return [
-        `__Host-arix_session=${token}`,
+        `arix_session=${token}`,
         'Path=/',
         'HttpOnly',
         'Secure',
-        'SameSite=Lax',
-        `Max-Age=${maxAgeSeconds}`,
+        'SameSite=None',
+        `Max-Age=31536000`, // Browser holds token for 1 year, backend enforces 7-day rolling window
     ].join('; ');
+}
+
+function clearSessionCookie() {
+    return 'arix_session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0';
 }
 
 function clearSessionCookie() {
@@ -448,13 +452,23 @@ async function issueSession(email, arixName) {
 }
 
 async function readSession(req) {
-    const token = parseCookies(req.headers.get('cookie'))['__Host-arix_session'];
+    const token = parseCookies(req.headers.get('cookie'))['arix_session'];
     if (!token || token.length < 40 || token.length > 300) return null;
     const tokenHash = await sha256Hex(`${ENV.authSecret}|session|${token}`);
     const raw = await redisGet(`arix:session:${tokenHash}`);
     const session = parseJsonSafely(raw, null);
     if (!session || session.revoked || !session.email || !session.exp) return null;
-    if (Number(session.exp) <= nowSeconds()) return null;
+    
+    const now = nowSeconds();
+    if (Number(session.exp) <= now) return null;
+    
+    // Sliding 7-day expiration: if less than 6.5 days remaining, refresh the Redis TTL
+    const remaining = Number(session.exp) - now;
+    if (remaining < LIMITS.sessionTtlSeconds - 43200) {
+        session.exp = now + LIMITS.sessionTtlSeconds;
+        await redisSet(`arix:session:${tokenHash}`, JSON.stringify(session), LIMITS.sessionTtlSeconds);
+    }
+    
     return { token, tokenHash, session };
 }
 
