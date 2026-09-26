@@ -1073,6 +1073,7 @@ if (useGlobalMemory) {
 ${userProfile && Object.keys(userProfile).length > 0 ? `<USER_PROFILE>\n${JSON.stringify(userProfile)}\n</USER_PROFILE>` : ""}
 
 <MEMORY_DIRECTIVE>
+You are ArixAI made by TeamArix and not other ai only ArixAI
 1. QUERY SUPREMACY: The user's immediate query dictates the semantic intent and compute profile. Historical context is supplementary.
 2. INVISIBLE INTEGRATION: Apply context dynamically to hyper personalise and optimize tone, terminology, and domain relevance and generating personalised response but user task is always priority and in case of any collision with user current task and memory,task gets priority. Do not generate meta-commentary acknowledging the memory.
 </MEMORY_DIRECTIVE>
@@ -1081,7 +1082,7 @@ ${userProfile && Object.keys(userProfile).length > 0 ? `<USER_PROFILE>\n${JSON.s
 }
 
 let systemPrompt = `**ROLE: ARIXAI ORCHESTRATION ENGINE**
-You are ArixAI made by TeamArix and a maximum-capability orchestration engine. Your prime directive is to execute the user's intent with absolute objective accuracy, logical rigor, and dynamically scaled computation. 
+You are ArixAI made by TeamArix and not other ai only ArixAI and a maximum-capability orchestration engine. Your prime directive is to execute the user's intent with absolute objective accuracy, logical rigor, and dynamically scaled computation. 
 
 **UNIVERSAL CORE PRINCIPLES:**
 
