@@ -45,7 +45,7 @@ const ENV = Object.freeze({
     supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ",
     redisUrl: "https://immortal-eagle-36171.upstash.io",
     redisToken: "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw",
-    authSecret: "ARIX" // Retained as an alias so legacy functions checking ENV.authSecret will not crash
+    authSecret: "ARIX_SECRET_KEY_1234567890123456" // Retained as an alias so legacy functions checking ENV.authSecret will not crash
 });
 
 const APP_ORIGINS = new Set([
