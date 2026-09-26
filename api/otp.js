@@ -414,9 +414,6 @@ function clearSessionCookie() {
     return 'arix_session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0';
 }
 
-function clearSessionCookie() {
-    return '__Host-arix_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
-}
 
 function parseCookies(header) {
     const out = {};
