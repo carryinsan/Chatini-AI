@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -342,7 +341,7 @@ body {
         <h2 class="text-2xl font-bold text-gray-900 mb-2 tracking-tight">Welcome to ArixAI</h2>
         <p class="text-gray-500 text-sm mb-6">Enter a nickname to begin your session.</p>
         <input type="text" id="nickname-input" placeholder="Your Name..." class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-gray-900 text-center focus:outline-none focus:border-theme-300 focus:bg-white transition-all mb-4" onkeypress="if(event.key === 'Enter') saveNickname()">
-        <div class="flex items-start mb-4 text-left px-2">
+        <div id="tc-wrapper" class="flex items-start mb-4 text-left px-2">
             <input type="checkbox" id="tc-checkbox" class="w-4 h-4 mt-0.5 border-gray-300 rounded cursor-pointer accent-theme-600">
             <label for="tc-checkbox" class="ml-2 text-[11px] text-gray-500 leading-tight select-none cursor-pointer">
                 I have read and agree to the <a href="https://lexis-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="text-theme-600 font-semibold hover:underline">Terms & Conditions</a>
@@ -1224,13 +1223,16 @@ function checkNickname() {
 function saveNickname() {
     const val = document.getElementById('nickname-input').value.trim();
     const tcCheckbox = document.getElementById('tc-checkbox');
+    const hasAgreed = localStorage.getItem('Arix_tc_agreed');
     
-    if (tcCheckbox && !tcCheckbox.checked) {
+    if (!hasAgreed && tcCheckbox && !tcCheckbox.checked) {
         return showToast("Please agree to the Terms & Conditions.");
     }
     
     if(val) {
         localStorage.setItem('Arix_nickname', val);
+        localStorage.setItem('Arix_tc_agreed', '1');
+        document.getElementById('tc-wrapper')?.classList.add('hidden');
         document.getElementById('username-modal').classList.add('hidden');
         updateSidebarName(val);
         showToast("Nickname Saved!");
@@ -1245,6 +1247,11 @@ function updateSidebarName(name) {
 
 function changeNickname() {
     document.getElementById('nickname-input').value = localStorage.getItem('Arix_nickname') || "";
+    if (localStorage.getItem('Arix_tc_agreed')) {
+        document.getElementById('tc-wrapper')?.classList.add('hidden');
+    } else {
+        document.getElementById('tc-wrapper')?.classList.remove('hidden');
+    }
     document.getElementById('username-modal').classList.remove('hidden');
 }
 
@@ -2349,6 +2356,7 @@ async function saveExtension() {
     closeExtForm(); 
     renderExtList(); 
     showToast("Extension Saved!"); 
+    if (window.ArixStorage && window.ArixStorage.sync) window.ArixStorage.sync();
 }
 
 async function refreshExtSelectors() { 
@@ -2668,6 +2676,7 @@ function createProject() {
 function saveProjects() {
     localStorage.setItem('Arix_custom_projects', JSON.stringify(customProjects));
     renderProjectsList();
+    if (window.ArixStorage && window.ArixStorage.sync) window.ArixStorage.sync();
 }
 
 function importCurrentChatToProject(projId) {
@@ -3011,7 +3020,8 @@ function saveCurrentChat() {
     if (chatIndex > -1) chats[chatIndex] = chatData; 
     else chats.unshift(chatData);
     try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (e) {}
-    renderHistoryList(); // Refresh the UI immediately after saving
+    renderHistoryList(); 
+    if (window.ArixStorage && window.ArixStorage.syncCurrentChat) window.ArixStorage.syncCurrentChat();
 }
 
 function createNewChat() { 
@@ -4558,6 +4568,7 @@ let isAccessProcessing = false;
 
 function saveAccessChats() {
     localStorage.setItem('arix_access_tool_chats', JSON.stringify(accessToolChats));
+    if (window.ArixStorage && window.ArixStorage.sync) window.ArixStorage.sync();
 }
 
 function openAccessScreen() {
@@ -6501,6 +6512,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!ok) {
             bridge.authenticated = false;
             setModeLocal('device');
+            updateStorageBadge();
             showAuthModal('login');
             return false;
         }
@@ -6508,10 +6520,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             await apiJson('/api/storage', { action: 'mode_set', mode: 'cloud' }, 15_000);
             await loadCloudBootstrap({ migrateLocal: shouldMigrate });
+            updateStorageBadge();
             return true;
         } catch (error) {
             bridge.authenticated = false;
             setModeLocal('device');
+            updateStorageBadge();
             if (error?.status === 401) showAuthModal('login');
             else showToast(error?.message || 'Cloud storage is currently unavailable.');
             return false;
@@ -6601,6 +6615,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="pt-2 flex gap-2">
                 <button onclick="window.ArixStorage.login()" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Sign in</button>
                 <button onclick="window.ArixStorage.register()" class="flex-1 py-2.5 rounded-xl bg-theme-600 text-white text-sm font-bold hover:bg-theme-700">Create account</button>
+                <button id="arix-sync-btn" onclick="window.ArixStorage.syncWithUI()" class="hidden px-4 py-2.5 rounded-xl bg-theme-50 text-theme-600 border border-theme-100 text-sm font-bold hover:bg-theme-100"><i class="ph-bold ph-arrows-clockwise"></i> Sync Now</button>
                 <button id="arix-logout-btn" onclick="window.ArixStorage.logout()" class="hidden px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100">Sign out</button>
               </div>
               <p class="text-[11px] text-gray-400 leading-relaxed">Cloud mode stores full prompt/response text but only media/file references and metadata, not generated media bytes or uploaded library binaries.</p>
@@ -6658,6 +6673,16 @@ document.addEventListener('DOMContentLoaded', () => {
         if (badge) badge.textContent = bridge.mode === 'cloud' ? `Secure Cloud${bridge.authenticated ? ' • Signed in' : ''}` : 'Device only';
         const logout = qs('arix-logout-btn');
         if (logout) logout.classList.toggle('hidden', !bridge.authenticated);
+        const syncBtn = qs('arix-sync-btn');
+        if (syncBtn) syncBtn.classList.toggle('hidden', !bridge.authenticated || bridge.mode !== 'cloud');
+        
+        // Hide every Sign In and Create Account button across all modals when authenticated
+        document.querySelectorAll('button[onclick="window.ArixStorage.login()"]').forEach((btn) => {
+            btn.classList.toggle('hidden', bridge.authenticated);
+        });
+        document.querySelectorAll('button[onclick="window.ArixStorage.register()"]').forEach((btn) => {
+            btn.classList.toggle('hidden', bridge.authenticated);
+        });
     }
 
     function syncMemorySettings() {
@@ -6780,6 +6805,50 @@ document.addEventListener('DOMContentLoaded', () => {
         window.loadChat = wrappedLoadChat;
     }
 
+    async function syncWithUI() {
+        if (!cloudEnabled()) return showToast('Cloud sync is not active.');
+        if (bridge.busy) return showToast('Sync is already running...');
+        
+        const btn = qs('arix-sync-btn');
+        if (btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> 0%';
+        
+        bridge.busy = true;
+        try {
+            const snapshot = await buildSnapshot();
+            snapshot.storageMode = 'cloud';
+            const source = { ...emptyChanges(), ...(snapshot || {}) };
+            const chunks = chunkSyncChanges(source);
+            if (!chunks.length && source.storageMode) chunks.push({ ...emptyChanges(), storageMode: source.storageMode });
+            
+            let totalOps = chunks.reduce((n, c) => n + opCount(c), 0);
+            let completedOps = 0;
+            
+            for (let i = 0; i < chunks.length; i++) {
+                await apiJson('/api/storage', { action: 'sync', changes: chunks[i] }, 25_000);
+                completedOps += opCount(chunks[i]);
+                let pct = totalOps > 0 ? Math.round((completedOps / totalOps) * 100) : 100;
+                if (btn) btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> ${pct}%`;
+            }
+            
+            localStorage.setItem('Arix_cloud_sync_ok', String(Date.now()));
+            localStorage.removeItem('Arix_cloud_dirty');
+            
+            if (btn) btn.innerHTML = '<i class="ph-bold ph-check"></i> 100%';
+            showToast('All local data successfully synced to the cloud!');
+            setTimeout(() => { if (btn) btn.innerHTML = '<i class="ph-bold ph-arrows-clockwise"></i> Sync Now'; }, 3000);
+            
+            await loadCloudBootstrap({ migrateLocal: false });
+            updateStorageBadge();
+        } catch (error) {
+            console.error('[ArixAI] UI sync failed:', error);
+            if (btn) btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error';
+            showToast('Sync failed. Please try again.');
+            setTimeout(() => { if (btn) btn.innerHTML = '<i class="ph-bold ph-arrows-clockwise"></i> Sync Now'; }, 3000);
+        } finally {
+            bridge.busy = false;
+        }
+    }
+
     window.ArixStorage = Object.freeze({
         open: () => { updateStorageBadge(); showStorageModal(); },
         close: hideStorageModal,
@@ -6794,6 +6863,8 @@ document.addEventListener('DOMContentLoaded', () => {
         resend: resendAuthCode,
         logout: logoutArix,
         sync: syncEverything,
+        syncCurrentChat: syncCurrentChat,
+        syncWithUI: syncWithUI,
     });
 
     // Initialize the storage/auth UI independently of the app's heavy window.onload.
