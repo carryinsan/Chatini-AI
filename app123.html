@@ -6250,7 +6250,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { chats: [], messages: [], projects: [], projectChats: [], pinned: [], tasks: [], artifacts: [], libraryRefs: [], memory: [], settings: [], events: [], deletes: [] };
     }
 
-    function chunkSyncChanges(changes, maxBytes = 850_000, maxOps = 160) {
+    function chunkSyncChanges(changes, maxBytes = 3_500_000, maxOps = 300) {
         const source = { ...emptyChanges(), ...(changes || {}) };
         const keys = ['chats', 'messages', 'projects', 'projectChats', 'pinned', 'tasks', 'artifacts', 'libraryRefs', 'memory', 'settings', 'events', 'deletes'];
         const chunks = [];
@@ -6281,7 +6281,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const source = { ...emptyChanges(), ...(changes || {}) };
         const chunks = chunkSyncChanges(source);
         if (!chunks.length && source.storageMode) chunks.push({ ...emptyChanges(), storageMode: source.storageMode });
-        for (const chunk of chunks) await apiJson('/api/storage', { action: 'sync', changes: chunk }, 25_000);
+        for (const chunk of chunks) await apiJson('/api/storage', { action: 'sync', changes: chunk }, 45_000);
         return { synced: chunks.reduce((n, c) => n + opCount(c), 0) };
     }
 
@@ -6342,13 +6342,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const localSnapshot = migrateLocal ? await buildSnapshot({ idsPrefix: `migr_${shortHash(String(Date.now()))}_` }) : null;
         const data = await apiJson('/api/storage', {
             action: 'bootstrap',
-            chatLimit: 60,
-            projectLimit: 60,
-            taskLimit: 80,
-            pinLimit: 120,
-            artifactLimit: 50,
-            libraryLimit: 50
-        }, 25_000);
+            chatLimit: 100,
+            projectLimit: 100,
+            taskLimit: 150,
+            pinLimit: 200,
+            artifactLimit: 100,
+            libraryLimit: 100
+        }, 45_000);
         bridge.authenticated = true;
         localStorage.setItem(CLOUD_ACCOUNT_KEY, '1');
         const cloud = data?.data || {};
@@ -6477,7 +6477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             do {
                 const payload = { action: 'chat', chatId: String(id), limit: 100 };
                 if (before) payload.before = before;
-                const response = await apiJson('/api/storage', payload, 25_000);
+                const response = await apiJson('/api/storage', payload, 45_000);
                 const page = response?.data || {};
                 if (page.chat) {
                     chat.title = page.chat.title || chat.title;
@@ -6548,7 +6548,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const shouldMigrate = fromFreshLogin || await migrateToCloud();
         try {
-            await apiJson('/api/storage', { action: 'mode_set', mode: 'cloud' }, 15_000);
+            await apiJson('/api/storage', { action: 'mode_set', mode: 'cloud' }, 25_000);
             await loadCloudBootstrap({ migrateLocal: shouldMigrate });
             updateStorageBadge();
             return true;
@@ -6556,9 +6556,11 @@ document.addEventListener('DOMContentLoaded', () => {
             bridge.authenticated = false;
             setModeLocal('device');
             updateStorageBadge();
-            if (error?.status === 401) showAuthModal('login');
-            else showToast(error?.message || 'Cloud storage is currently unavailable.');
-            return false;
+            if (error?.status === 401) {
+                showAuthModal('login');
+                throw new Error("Session expired. Please sign in again.");
+            }
+            throw error; // Propagate the real error to the UI
         }
     }
 
@@ -6754,9 +6756,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof window.saveMemorySettings !== 'function') window.saveMemorySettings = syncMemorySettings;
 
         const wantedCloud = localStorage.getItem(MODE_KEY) === 'cloud' || localStorage.getItem(CLOUD_ACCOUNT_KEY) === '1';
-        if (wantedCloud) {
-            try {
-                await loadCloudBootstrap({ migrateLocal: false });
+        const data = await apiJson('/api/storage', {
+            action: 'bootstrap',
+            chatLimit: 100,
+            projectLimit: 100,
+            taskLimit: 150,
+            pinLimit: 200,
+            artifactLimit: 100,
+            libraryLimit: 100
+        }, 45_000);
                 bridge.authenticated = true;
                 updateStorageBadge();
                 return;
@@ -6886,7 +6894,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('[ArixAI] UI sync failed:', error);
             if (btn) btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error';
-            showToast('Sync failed. Please try again.');
+            showToast(error?.message || 'Sync failed. Please try again.');
             setTimeout(() => { if (btn) btn.innerHTML = '<i class="ph-bold ph-arrows-clockwise"></i> Sync Now'; }, 3000);
         } finally {
             bridge.busy = false;
