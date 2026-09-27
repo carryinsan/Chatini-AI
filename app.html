@@ -3201,8 +3201,8 @@ function parseRichText(content, isStreaming = false, msgId = null) {
     let extractedHtml = ""; 
     let markdownContent = content;
 
-    // Process completed <thinking> tags into collapsible light-grey menus
-    markdownContent = markdownContent.replace(/<thinking(?: title="([^"]*)")?>([\s\S]*?)<\/thinking>/g, (match, title, innerContent) => {
+    // Process completed think_start tags into collapsible light-grey menus
+    markdownContent = markdownContent.replace(/(?:<thinking(?: title="([^"]*)")?>|think_start)([\s\S]*?)(?:<\/thinking>|think_end)/g, (match, title, innerContent) => {
         const displayTitle = title ? title : "Thinking";
         return `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
@@ -3218,9 +3218,9 @@ ${marked.parse(innerContent.trim())}
 </details>\n\n`;
     });
 
-    // Process active/streaming <thinking> tags (no closing tag yet)
+    // Process active/streaming think_start tags (no closing tag yet)
     if (isStreaming) {
-        markdownContent = markdownContent.replace(/<thinking(?: title="([^"]*)")?>([\s\S]*)$/g, (match, title, innerContent) => {
+        markdownContent = markdownContent.replace(/(?:<thinking(?: title="([^"]*)")?>|think_start)([\s\S]*)$/g, (match, title, innerContent) => {
             const displayTitle = title ? title : "Thinking";
             return `\n\n<div class="my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse">
 <div class="flex items-center justify-between p-3 px-4 select-none">
