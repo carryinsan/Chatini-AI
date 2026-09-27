@@ -6634,101 +6634,132 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function installUi() {
-        if (qs('arix-storage-modal')) return;
-        document.body.insertAdjacentHTML('beforeend', `
-        <div id="arix-storage-modal" class="fixed inset-0 z-[230] hidden items-center justify-center bg-gray-900/45 backdrop-blur-md px-4">
-          <div class="w-full max-w-xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
-            <div class="p-6 sm:p-7 border-b border-gray-100 bg-gradient-to-br from-white to-gray-50">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-theme-600"><i class="ph-fill ph-shield-check"></i> ArixAI Data Storage</div>
-                  <h2 class="text-2xl font-extrabold text-gray-900 mt-2">Choose where your ArixAI data lives</h2>
-                  <p id="arix-storage-status" class="text-sm text-gray-500 mt-2"></p>
+        if (!qs('arix-storage-modal')) {
+            document.body.insertAdjacentHTML('beforeend', `
+            <div id="arix-storage-modal" class="fixed inset-0 z-[230] hidden items-center justify-center bg-gray-900/45 backdrop-blur-md px-4">
+              <div class="w-full max-w-xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
+                <div class="p-6 sm:p-7 border-b border-gray-100 bg-gradient-to-br from-white to-gray-50">
+                  <div class="flex items-start justify-between gap-4">
+                    <div>
+                      <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-theme-600"><i class="ph-fill ph-shield-check"></i> ArixAI Data Storage</div>
+                      <h2 class="text-2xl font-extrabold text-gray-900 mt-2">Choose where your ArixAI data lives</h2>
+                      <p id="arix-storage-status" class="text-sm text-gray-500 mt-2"></p>
+                    </div>
+                    <button onclick="window.ArixStorage.close()" class="text-gray-400 hover:text-gray-900 p-2 rounded-xl hover:bg-white"><i class="ph-bold ph-x"></i></button>
+                  </div>
                 </div>
-                <button onclick="window.ArixStorage.close()" class="text-gray-400 hover:text-gray-900 p-2 rounded-xl hover:bg-white"><i class="ph-bold ph-x"></i></button>
-              </div>
-            </div>
-            <div class="p-5 sm:p-7 grid gap-3">
-              <button id="arix-device-btn" onclick="window.ArixStorage.device()" class="w-full text-left p-4 rounded-2xl border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all flex items-center gap-4">
-                <span class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="ph-bold ph-device-mobile text-xl"></i></span>
-                <span class="flex-1"><b class="block text-sm text-gray-900">This device only</b><small class="block text-xs text-gray-500 mt-1">Chats stay in this browser. No email, OTP, or cloud request is needed.</small></span>
-                <i class="ph-bold ph-check text-emerald-600"></i>
-              </button>
-              <button id="arix-cloud-btn" onclick="window.ArixStorage.cloud()" class="w-full text-left p-4 rounded-2xl border border-gray-200 hover:border-theme-300 hover:bg-theme-50 transition-all flex items-center gap-4">
-                <span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center"><i class="ph-bold ph-cloud-arrow-up text-xl"></i></span>
-                <span class="flex-1"><b>Use Secure Cloud</b><small>Cross-device history with your ArixAI account.</small></span>
-              </button>
-              <div class="pt-2 flex gap-2">
-                <button onclick="window.ArixStorage.login()" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Sign in</button>
-                <button onclick="window.ArixStorage.register()" class="flex-1 py-2.5 rounded-xl bg-theme-600 text-white text-sm font-bold hover:bg-theme-700">Create account</button>
-                <button id="arix-sync-btn" onclick="window.ArixStorage.syncWithUI()" class="hidden px-4 py-2.5 rounded-xl bg-theme-50 text-theme-600 border border-theme-100 text-sm font-bold hover:bg-theme-100"><i class="ph-bold ph-arrows-clockwise"></i> Sync Now</button>
-                <button id="arix-logout-btn" onclick="window.ArixStorage.logout()" class="hidden px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100">Sign out</button>
-              </div>
-              <p class="text-[11px] text-gray-400 leading-relaxed">Cloud mode stores full prompt/response text but only media/file references and metadata, not generated media bytes or uploaded library binaries.</p>
-            </div>
-          </div>
-        </div>
-        <div id="arix-auth-modal" class="fixed inset-0 z-[240] hidden items-center justify-center bg-gray-900/45 backdrop-blur-md px-4">
-          <div class="w-full max-w-lg bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
-            <div class="p-6 sm:p-7 border-b border-gray-100">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <div class="text-xs font-bold uppercase tracking-[0.18em] text-theme-600">ArixAI Account</div>
-                  <h2 id="arix-auth-title" class="text-2xl font-extrabold text-gray-900 mt-2"></h2>
-                  <p id="arix-auth-desc" class="text-sm text-gray-500 mt-2 leading-relaxed"></p>
+                <div class="p-5 sm:p-7 grid gap-3">
+                  <button id="arix-device-btn" onclick="window.ArixStorage.device()" class="w-full text-left p-4 rounded-2xl border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="ph-bold ph-device-mobile text-xl"></i></span>
+                    <span class="flex-1"><b class="block text-sm text-gray-900">This device only</b><small class="block text-xs text-gray-500 mt-1">Chats stay in this browser. No email, OTP, or cloud request is needed.</small></span>
+                    <i class="ph-bold ph-check text-emerald-600"></i>
+                  </button>
+                  <button id="arix-cloud-btn" onclick="window.ArixStorage.cloud()" class="w-full text-left p-4 rounded-2xl border border-gray-200 hover:border-theme-300 hover:bg-theme-50 transition-all flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center"><i class="ph-bold ph-cloud-arrow-up text-xl"></i></span>
+                    <span class="flex-1"><b class="block text-sm text-gray-900">Use Secure Cloud</b><small class="block text-xs text-gray-500 mt-1">Cross-device history with your ArixAI account.</small></span>
+                  </button>
+                  <div class="pt-2 flex gap-2">
+                    <button id="arix-storage-login-btn" onclick="window.ArixStorage.login()" class="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">Sign in</button>
+                    <button id="arix-storage-register-btn" onclick="window.ArixStorage.register()" class="flex-1 py-2.5 rounded-xl bg-theme-600 text-white text-sm font-bold hover:bg-theme-700">Create account</button>
+                    <button id="arix-sync-btn" onclick="window.ArixStorage.syncWithUI()" class="hidden px-4 py-2.5 rounded-xl bg-theme-50 text-theme-600 border border-theme-100 text-sm font-bold hover:bg-theme-100"><i class="ph-bold ph-arrows-clockwise"></i> Sync Now</button>
+                    <button id="arix-logout-btn" onclick="window.ArixStorage.logout()" class="hidden px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100">Sign out</button>
+                  </div>
+                  <p class="text-[11px] text-gray-400 leading-relaxed">Cloud mode stores full prompt/response text but only media/file references and metadata, not generated media bytes or uploaded library binaries.</p>
                 </div>
-                <button onclick="window.ArixStorage.closeAuth()" class="text-gray-400 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-50"><i class="ph-bold ph-x"></i></button>
-              </div>
-              <div class="flex gap-2 mt-5 p-1 bg-gray-50 rounded-xl border border-gray-100">
-                <button onclick="window.ArixStorage.login()" class="flex-1 py-2 text-xs font-bold rounded-lg hover:bg-white">Sign in</button>
-                <button onclick="window.ArixStorage.register()" class="flex-1 py-2 text-xs font-bold rounded-lg hover:bg-white">Create account</button>
               </div>
             </div>
-            <div class="p-6 sm:p-7 space-y-3">
-              <div id="arix-auth-register-fields" class="hidden space-y-3">
-                <input id="arix-auth-nickname" readonly class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500" placeholder="Existing nickname">
-                <input id="arix-auth-arixname" maxlength="32" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Choose a different ArixName">
+            <div id="arix-auth-modal" class="fixed inset-0 z-[240] hidden items-center justify-center bg-gray-900/45 backdrop-blur-md px-4">
+              <div class="w-full max-w-lg bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
+                <div class="p-6 sm:p-7 border-b border-gray-100">
+                  <div class="flex items-start justify-between gap-4">
+                    <div>
+                      <div class="text-xs font-bold uppercase tracking-[0.18em] text-theme-600">ArixAI Account</div>
+                      <h2 id="arix-auth-title" class="text-2xl font-extrabold text-gray-900 mt-2"></h2>
+                      <p id="arix-auth-desc" class="text-sm text-gray-500 mt-2 leading-relaxed"></p>
+                    </div>
+                    <button onclick="window.ArixStorage.closeAuth()" class="text-gray-400 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-50"><i class="ph-bold ph-x"></i></button>
+                  </div>
+                  <div class="flex gap-2 mt-5 p-1 bg-gray-50 rounded-xl border border-gray-100">
+                    <button id="arix-auth-tab-login" onclick="window.ArixStorage.login()" class="flex-1 py-2 text-xs font-bold rounded-lg hover:bg-white transition-all">Sign in</button>
+                    <button id="arix-auth-tab-register" onclick="window.ArixStorage.register()" class="flex-1 py-2 text-xs font-bold rounded-lg hover:bg-white transition-all">Create account</button>
+                  </div>
+                </div>
+                <div class="p-6 sm:p-7 space-y-3">
+                  <div id="arix-auth-register-fields" class="hidden space-y-3">
+                    <input id="arix-auth-nickname" readonly class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500" placeholder="Existing nickname">
+                    <input id="arix-auth-arixname" maxlength="32" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Choose a different ArixName">
+                  </div>
+                  <div id="arix-auth-login-fields" class="space-y-3">
+                    <input id="arix-auth-identifier" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="ArixName or email">
+                  </div>
+                  <input id="arix-auth-email" type="email" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Email address (required for account verification)">
+                  <input id="arix-auth-password" type="password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Strong password">
+                  <div id="arix-auth-otp-wrap" class="space-y-2">
+                    <input id="arix-auth-otp" inputmode="numeric" maxlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm tracking-[0.5em] text-center font-mono outline-none focus:bg-white" placeholder="6-digit OTP">
+                  </div>
+                  <div class="flex gap-2 pt-2">
+                    <button id="arix-auth-submit" class="flex-1 bg-theme-600 hover:bg-theme-700 text-white font-bold py-3 rounded-xl"></button>
+                    <button id="arix-auth-verify" class="hidden flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl"><i class="ph-bold ph-shield-check"></i> Verify Code</button>
+                  </div>
+                  <button id="arix-auth-resend" class="hidden w-full py-2 text-xs font-bold text-theme-600 hover:underline">Resend code</button>
+                  <button onclick="window.ArixStorage.back()" class="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-800">Back to storage choices</button>
+                  <p class="text-[11px] text-gray-400">Email/OTP is not needed for device-only storage. It is used here only because this cloud account endpoint currently verifies ownership by OTP.</p>
+                </div>
               </div>
-              <div id="arix-auth-login-fields" class="space-y-3">
-                <input id="arix-auth-identifier" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="ArixName or email">
-              </div>
-              <input id="arix-auth-email" type="email" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Email address (required for account verification)">
-              <input id="arix-auth-password" type="password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Strong password">
-              <div id="arix-auth-otp-wrap" class="space-y-2">
-                <input id="arix-auth-otp" inputmode="numeric" maxlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm tracking-[0.5em] text-center font-mono outline-none focus:bg-white" placeholder="6-digit OTP">
-              </div>
-              <div class="flex gap-2 pt-2">
-                <button id="arix-auth-submit" class="flex-1 bg-theme-600 hover:bg-theme-700 text-white font-bold py-3 rounded-xl"></button>
-                <button id="arix-auth-verify" class="hidden flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl"><i class="ph-bold ph-shield-check"></i> Verify Code</button>
-              </div>
-              <button id="arix-auth-resend" class="hidden w-full py-2 text-xs font-bold text-theme-600 hover:underline">Resend code</button>
-              <button onclick="window.ArixStorage.back()" class="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-800">Back to storage choices</button>
-              <p class="text-[11px] text-gray-400">Email/OTP is not needed for device-only storage. It is used here only because this cloud account endpoint currently verifies ownership by OTP.</p>
-            </div>
-          </div>
-        </div>`);
+            </div>`);
+        }
 
-        const footer = document.querySelector('#sidebar > div.p-4.border-t');
+        // 1. Sidebar Injection
+        const sidebar = qs('sidebar');
+        const footer = sidebar ? (sidebar.querySelector('div.p-4.border-t') || sidebar.querySelector('.border-t')) : null;
         if (footer && !qs('arix-storage-settings-btn')) {
-            footer.insertAdjacentHTML('afterbegin', `<button id="arix-storage-settings-btn" onclick="window.ArixStorage.open()" class="w-full mb-2 flex items-center justify-between p-2.5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors"><span class="flex items-center gap-2"><i class="ph-bold ph-database text-theme-600"></i><span class="text-left"><span class="block text-xs font-bold text-gray-800">Data & Account</span><span class="block text-[10px] text-gray-500" id="arix-storage-badge">Device only</span></span></span><i class="ph-bold ph-caret-right text-gray-400"></i></button>`);
+            footer.insertAdjacentHTML('afterbegin', `
+            <button id="arix-storage-settings-btn" onclick="window.ArixStorage.open()" class="w-full mb-2 flex items-center justify-between p-2.5 rounded-xl border border-gray-100 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+                <span class="flex items-center gap-2">
+                    <i class="ph-bold ph-database text-theme-600"></i>
+                    <span class="text-left">
+                        <span class="block text-xs font-bold text-gray-800">Data & Account</span>
+                        <span class="block text-[10px] text-gray-500" id="arix-storage-badge">Device only</span>
+                    </span>
+                </span>
+                <i class="ph-bold ph-caret-right text-gray-400"></i>
+            </button>`);
+        }
+
+        // 2. Header Injection (Guarantees visible storage selection on desktop and mobile)
+        const headerRight = document.querySelector('header .ml-auto') || document.querySelector('header');
+        if (headerRight && !qs('arix-header-storage-btn')) {
+            headerRight.insertAdjacentHTML('afterbegin', `
+            <button id="arix-header-storage-btn" onclick="window.ArixStorage.open()" class="flex items-center gap-1.5 bg-gray-50 text-gray-700 border border-gray-200 px-3 py-1.5 rounded-full text-xs font-semibold hover:bg-gray-100 transition-all shadow-sm flex-shrink-0 cursor-pointer mr-1" title="Storage & Cloud Account">
+                <i class="ph-bold ph-cloud-arrow-up text-theme-600 text-sm"></i>
+                <span id="arix-header-storage-text">Cloud Storage</span>
+            </button>`);
         }
     }
 
     function updateStorageBadge() {
         const badge = qs('arix-storage-badge');
         if (badge) badge.textContent = bridge.mode === 'cloud' ? `Secure Cloud${bridge.authenticated ? ' • Signed in' : ''}` : 'Device only';
+        
+        const headerText = qs('arix-header-storage-text');
+        if (headerText) {
+            headerText.textContent = bridge.mode === 'cloud'
+                ? (bridge.authenticated ? 'Cloud Active' : 'Cloud (Sign in)')
+                : 'Device Storage';
+        }
+
         const logout = qs('arix-logout-btn');
         if (logout) logout.classList.toggle('hidden', !bridge.authenticated);
+        
         const syncBtn = qs('arix-sync-btn');
         if (syncBtn) syncBtn.classList.toggle('hidden', !bridge.authenticated || bridge.mode !== 'cloud');
         
-        // Hide every Sign In and Create Account button across all modals when authenticated
-        document.querySelectorAll('button[onclick="window.ArixStorage.login()"]').forEach((btn) => {
-            btn.classList.toggle('hidden', bridge.authenticated);
-        });
-        document.querySelectorAll('button[onclick="window.ArixStorage.register()"]').forEach((btn) => {
-            btn.classList.toggle('hidden', bridge.authenticated);
-        });
+        // Hide sign in and create account in the storage selection modal only when authenticated
+        const storageLogin = qs('arix-storage-login-btn');
+        if (storageLogin) storageLogin.classList.toggle('hidden', bridge.authenticated);
+        
+        const storageRegister = qs('arix-storage-register-btn');
+        if (storageRegister) storageRegister.classList.toggle('hidden', bridge.authenticated);
     }
 
     function syncMemorySettings() {
@@ -6742,6 +6773,7 @@ document.addEventListener('DOMContentLoaded', () => {
     async function initAfterOriginalLoad() {
         installUi();
         updateStorageBadge();
+        
         const originalSaveNickname = window.saveNickname;
         if (typeof originalSaveNickname === 'function' && !originalSaveNickname.__arixWrapped) {
             const wrappedSaveNickname = function(...args) {
@@ -6752,32 +6784,31 @@ document.addEventListener('DOMContentLoaded', () => {
             wrappedSaveNickname.__arixWrapped = true;
             window.saveNickname = wrappedSaveNickname;
         }
-        // The current app has no implementation despite the UI calling it; install one now.
         if (typeof window.saveMemorySettings !== 'function') window.saveMemorySettings = syncMemorySettings;
 
         const wantedCloud = localStorage.getItem(MODE_KEY) === 'cloud' || localStorage.getItem(CLOUD_ACCOUNT_KEY) === '1';
-        const data = await apiJson('/api/storage', {
-            action: 'bootstrap',
-            chatLimit: 100,
-            projectLimit: 100,
-            taskLimit: 150,
-            pinLimit: 200,
-            artifactLimit: 100,
-            libraryLimit: 100
-        }, 45_000);
+        if (wantedCloud) {
+            try {
+                await loadCloudBootstrap({ migrateLocal: false });
                 bridge.authenticated = true;
                 updateStorageBadge();
                 return;
             } catch (error) {
                 bridge.authenticated = false;
                 setModeLocal('device');
-                if (error?.status === 401) setTimeout(() => showStorageModal(), 150);
-                else console.warn('[ArixAI] cloud bootstrap unavailable:', error);
+                updateStorageBadge();
+                console.warn('[ArixAI] cloud bootstrap unavailable:', error);
+                if (error?.status === 401) {
+                    setTimeout(() => showStorageModal(), 200);
+                }
             }
         }
 
-        if (localStorage.getItem(MODE_KEY) === 'device') return;
-        if (localStorage.getItem('Arix_nickname')) setTimeout(() => showStorageModal(), 150);
+        if (localStorage.getItem(MODE_KEY) === 'device') {
+            updateStorageBadge();
+            return;
+        }
+        if (localStorage.getItem('Arix_nickname')) setTimeout(() => showStorageModal(), 200);
     }
 
     function wrapFunction(name, after) {
@@ -6952,7 +6983,13 @@ document.addEventListener('DOMContentLoaded', () => {
             bindAuthUi();
             installCloudHooks();
             updateStorageBadge();
-            // Run the account/session bootstrap without blocking the auth UI.
+            
+            // Re-check after 300ms in case the DOM elements were still rendering
+            setTimeout(() => {
+                installUi();
+                updateStorageBadge();
+            }, 300);
+
             Promise.resolve(initAfterOriginalLoad()).catch((error) => {
                 console.warn('[ArixAI] storage integration initialization failed:', error);
                 updateStorageBadge();
