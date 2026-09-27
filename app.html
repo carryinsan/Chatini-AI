@@ -3203,43 +3203,57 @@ function parseRichText(content, isStreaming = false, msgId = null) {
 
     // 1. Normalize all tag variants into standard markers & absorb pre-thought bleed
     // 1. Normalize opening tags to <think_s>
-    // 1. Normalize opening tags to standard <think_s>
+    // 1. Normalize all opening and closing tag variations
     let cleanText = markdownContent
         .replace(/<(?:think_s|thinking)(?:\s+title="[^"]*")?>|think_start/gi, '<think_s>')
-        // Normalize all closing tag variants to standard <think_e>
         .replace(/<\/(?:think_s|think_e|thinking)>|<think_e>|<\/think>|think_end/gi, '<think_e>')
-        // Absorb pre-thought preamble leaks (Confidence Score, Strategizing, etc.)
+        // Strip pre-thought model preambles
         .replace(/(?:(?:^|\n)(?:Confidence Score:[^\n]*|Strategizing[^\n]*|` structure\.)\s*)+<think_s>/gi, '<think_s>');
 
-    // 2. SCRUB POST-THINK META-PLANNING BLEED:
-    // If the model writes "Core components of the response...", "Here's my plan:", etc.
-    // right before the actual response, absorb it inside the thinking block.
+    // 2. ABSORB PREMATURE CLOSURES AND "READY TO GENERATE" TRANSITIONS INTO THINKING
+    // Catches <think_e> placed before "Okay, I'm ready to generate..." and shifts <think_e> to after it
     cleanText = cleanText.replace(
-        /(?:<think_e>)?\s*(?:Core components of the response:|Here's my plan:|Refined Plan(?: for Continuation)?:|Plan:|I will structure (?:this|my) answer by:)[\s\S]*?(?:without fluff|tone with emojis|effective advice|actionable advice|preferred tone)[^\n]*\n*/gi,
-        '<think_e>\n\n'
+        /<think_e>\s*([\s\S]*?Okay,?\s*I(?:\'m| am)\s*ready to generate the response[^\n.]*[.]?\s*)/gi,
+        '$1<think_e>\n\n'
     );
 
-    // 3. FAIL-SAFE: If model completely forgot <think_e> when streaming completes
+    // Also absorb other trailing planning notes that precede conversational greetings or headers
+    cleanText = cleanText.replace(
+        /<think_e>\s*([\s\S]*?(?:\[SYSTEM CLOCK|I will formulate|I will structure|Core components|Latest News:|Today's Date:)[\s\S]*?)(?=(?:[.!?\n]|^)\s*(?:Hey\b|Hello\b|Hi\b|Greetings\b|Good\s+(?:morning|afternoon|evening)\b|#{1,6}\s))/gi,
+        '$1<think_e>\n\n'
+    );
+
+    // 3. FAIL-SAFE: If the model never closed <think_s> at all
     if (!isStreaming && cleanText.includes('<think_s>') && !cleanText.includes('<think_e>')) {
         const thinkStartIdx = cleanText.indexOf('<think_s>') + 9;
-        const bodyAfterThink = cleanText.substring(thinkStartIdx);
+        const body = cleanText.substring(thinkStartIdx);
 
-        // Find the actual conversation greeting or markdown header
-        const transitionMatch = bodyAfterThink.search(/\n\n(?=(?:#{1,6}\s|Hey\b|Hello\b|Hi\b|Okay\b|Sure\b|Ok\b|[A-Z][a-z]+!\s|1\.\s|\*\*))/i);
-        
-        if (transitionMatch !== -1) {
-            const splitIdx = thinkStartIdx + transitionMatch;
-            cleanText = cleanText.substring(0, splitIdx) + '\n<think_e>\n' + cleanText.substring(splitIdx + 2);
+        // Check if the "ready to generate" phrase exists in the unclosed thought
+        const readyPhraseRegex = /Okay,?\s*I(?:\'m| am)\s*ready to generate the response[^\n.]*[.]?\s*/i;
+        const readyPhraseMatch = body.search(readyPhraseRegex);
+
+        if (readyPhraseMatch !== -1) {
+            const matchedText = body.match(readyPhraseRegex)[0];
+            const splitIdx = thinkStartIdx + readyPhraseMatch + matchedText.length;
+            cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
         } else {
-            const firstDoubleBreak = bodyAfterThink.indexOf('\n\n');
-            if (firstDoubleBreak !== -1) {
-                const splitIdx = thinkStartIdx + firstDoubleBreak;
-                cleanText = cleanText.substring(0, splitIdx) + '\n<think_e>\n' + cleanText.substring(splitIdx + 2);
+            // Otherwise search for standard conversational greeting boundaries
+            const greetingMatch = body.search(/(?<=[.!?\n]|^)\s*(?=(?:Hey\b|Hello\b|Hi\b|Greetings\b|Good\s+(?:morning|afternoon|evening)\b|Dear\b|#{1,6}\s))/i);
+            if (greetingMatch !== -1) {
+                const splitIdx = thinkStartIdx + greetingMatch;
+                cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+            } else {
+                const planEndMatch = body.search(/(?:I will (?:formulate|structure|provide|now|generate|respond)[^\n.!?]*[.!?])\s*/i);
+                if (planEndMatch !== -1) {
+                    const matchedStr = body.match(/(?:I will (?:formulate|structure|provide|now|generate|respond)[^\n.!?]*[.!?])\s*/i)[0];
+                    const splitIdx = thinkStartIdx + planEndMatch + matchedStr.length;
+                    cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+                }
             }
         }
     }
 
-    // 4. Render all completed thinking blocks into collapsible menus
+    // 4. Render completed thinking blocks into collapsible details menus
     cleanText = cleanText.replace(/<think_s>([\s\S]*?)<think_e>/gi, (match, innerContent) => {
         return `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
@@ -3255,7 +3269,7 @@ ${marked.parse(innerContent.trim())}
 </details>\n\n`;
     });
 
-    // 5. Render active streaming block (pulsing UI)
+    // 5. Active streaming state
     if (isStreaming && cleanText.includes('<think_s>')) {
         const parts = cleanText.split('<think_s>');
         const beforeContent = parts[0];
