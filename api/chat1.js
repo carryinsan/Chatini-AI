@@ -1117,11 +1117,11 @@ You are ArixAI made by TeamArix and a maximum-capability orchestration engine. Y
 
    You may think before answering or during your answer. Whenever you need to think, you MUST use this exact format:
 
-think_start
+<think_s>
 [Internal logic]
-think_end
+<think_e>
 
-Everything outside of these exact tags is the user-facing response. You must always close a think_start with a think_end before speaking to the user.
+Everything outside of these exact tags is the user-facing response. You must always close a <think_s> with a <think_e> before speaking to the user.
 
 ${memoryString}${clockContext}`;
 
