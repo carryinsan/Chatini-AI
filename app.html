@@ -3202,8 +3202,11 @@ function parseRichText(content, isStreaming = false, msgId = null) {
     let markdownContent = content;
 
     // Process completed think_start tags into collapsible light-grey menus
-    markdownContent = markdownContent.replace(/(?:<thinking(?: title="([^"]*)")?>|think_start)([\s\S]*?)(?:<\/thinking>|think_end)/g, (match, title, innerContent) => {
+    markdownContent = markdownContent.replace(/(?:^([\s\S]*?)think_start|think_start|<thinking(?: title="([^"]*)")?>)([\s\S]*?)(?:think_end|<\/thinking>)/g, (match, preContent, title, innerContent) => {
         const displayTitle = title ? title : "Thinking";
+        // Absorb any text that "bled" before the think_start tag into the thinking block
+        const finalContent = preContent ? (preContent.trim() + "\n\n" + (innerContent || "").trim()) : (innerContent || "").trim();
+        
         return `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
 <div class="flex items-center gap-2.5">
@@ -3213,15 +3216,18 @@ function parseRichText(content, isStreaming = false, msgId = null) {
 <i class="ph-bold ph-caret-down text-gray-400 text-xs group-open:rotate-180 transition-transform"></i>
 </summary>
 <div class="p-4 pt-2 text-[13px] text-gray-500 font-mono leading-relaxed bg-white/50 border-t border-gray-100">
-${marked.parse(innerContent.trim())}
+${marked.parse(finalContent)}
 </div>
 </details>\n\n`;
     });
 
     // Process active/streaming think_start tags (no closing tag yet)
     if (isStreaming) {
-        markdownContent = markdownContent.replace(/(?:<thinking(?: title="([^"]*)")?>|think_start)([\s\S]*)$/g, (match, title, innerContent) => {
+        markdownContent = markdownContent.replace(/(?:^([\s\S]*?)think_start|think_start|<thinking(?: title="([^"]*)")?>)([\s\S]*)$/g, (match, preContent, title, innerContent) => {
             const displayTitle = title ? title : "Thinking";
+            // Absorb any text that "bled" before the think_start tag into the thinking block
+            const finalContent = preContent ? (preContent.trim() + "\n\n" + (innerContent || "").trim()) : (innerContent || "").trim();
+            
             return `\n\n<div class="my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse">
 <div class="flex items-center justify-between p-3 px-4 select-none">
 <div class="flex items-center gap-2.5">
@@ -3230,7 +3236,7 @@ ${marked.parse(innerContent.trim())}
 </div>
 </div>
 <div class="p-4 pt-2 text-[13px] text-gray-400 font-mono leading-relaxed bg-white/50 border-t border-gray-100">
-${marked.parse(innerContent.trim())}
+${marked.parse(finalContent)}
 </div>
 </div>\n\n`;
         });
