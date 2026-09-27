@@ -29,8 +29,9 @@ export const config = {
     maxDuration: 30,
 };
 
-const VERSION = 'arix-otp-1.0.0';
+const VERSION = 'arix-otp-1.1.0';
 
+const SERVER_ENV = globalThis.process?.env || {};
 const ENV = {
     redisUrl: "https://immortal-eagle-36171.upstash.io",
     redisToken: "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw",
@@ -43,7 +44,6 @@ const APP_ORIGINS = new Set([
     'https://lexis-ai-chatini.vercel.app',
     'https://lexis-ai-chatini.vercel.app/app.html',
     'https://lexis-ai-chatini.vercel.app/app123.html',
-    'https://chatini-ai.vercel.app',
     'http://localhost:3000',
     'http://localhost:5173',
     'http://127.0.0.1:3000',
