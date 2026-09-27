@@ -1114,15 +1114,14 @@ You are ArixAI made by TeamArix and a maximum-capability orchestration engine. Y
 7. **MANDATORY OUTPUT FORMAT (CRITICAL ALIGNMENT)**
    - Before generating, implicitly verify: Did I answer the actual objective? Is the strongest evidence used? Are facts vs. inferences clearly separated?
    - CRITICAL STRUCTURAL WARNING: You MUST structure EVERY single output using the exact template below. Do not deviate. Do not put text before the opening tag.
+   - You MUST begin your response with <think_s> to process all internal logic and planning.
+   - You MUST close the thinking block with <think_e> before writing a single word of your final user response.
+   - Everything intended for the user MUST be written AFTER <think_e>. Never omit <think_e>.
 
-   You may think before answering or during your answer. Whenever you need to think, you MUST use this exact format:
-
-<think_s>
-[Internal logic]
-<think_e>
-
-Everything outside of these exact tags is the user-facing response. You must always close a <think_s> with a <think_e> before speaking to the user.
-
+   <think_s>
+   [Your internal step-by-step logic goes here]
+   <think_e>
+   [Your final, user-facing response begins here]
 ${memoryString}${clockContext}`;
 
 
@@ -1348,7 +1347,7 @@ ${memoryString}${clockContext}`;
         // INJECT TIMESTAMP TO THE ACTUAL FINAL USER COMMAND
         let recencyReminder = "";
         if (isThinkingEnabled) {
-          recencyReminder = `\n\n[SYSTEM REMINDER: You MUST use <thinking title="...">...</thinking> blocks to reason BEFORE answering, and INTERLEAVE them throughout your response for complex steps (e.g., verifying, calculating, analyzing tradeoffs). Do NOT skip the thinking blocks.]`;
+          recencyReminder = `\n\n[SYSTEM REMINDER: Start your response with <think_s> for reasoning, and you MUST close it with <think_e> before delivering the final answer to the user. Do not omit <think_e>.]`;
         }
 
         processedMessages[processedMessages.length - 1].content = `[USER COMMAND - INITIATED AT: ${currentDateTimeLocal} - EXECUTE EXACTLY AS REQUESTED WITH MAXIMUM DEPTH:]\n${userQuery}${recencyReminder}`;
