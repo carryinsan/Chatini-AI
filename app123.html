@@ -5779,7 +5779,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
     }
 
-    async function apiJson(url, body, timeoutMs = 20_000) {
+    async function apiJson(url, body, timeoutMs = 80_000) {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), timeoutMs);
         try {
@@ -5819,8 +5819,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const cloudBtn = qs('arix-cloud-btn');
         if (cloudBtn) {
             cloudBtn.innerHTML = bridge.authenticated
-                ? '<i class="ph-bold ph-cloud-arrow-up"></i><span><b>Use Secure Cloud</b><small>Sync this account across devices</small></span>'
-                : '<i class="ph-bold ph-cloud-arrow-up"></i><span><b>Use Secure Cloud</b><small>Sign in or create an Arix account</small></span>';
+                ? '<span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center"><i class="ph-bold ph-cloud-arrow-up text-xl"></i></span><span class="flex-1"><b class="block text-sm text-gray-900">Use Secure Cloud</b><small class="block text-xs text-gray-500 mt-1">Sync this account across devices</small></span>'
+                : '<span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center"><i class="ph-bold ph-cloud-arrow-up text-xl"></i></span><span class="flex-1"><b class="block text-sm text-gray-900">Use Secure Cloud</b><small class="block text-xs text-gray-500 mt-1">Sign in or create an Arix account</small></span>';
         }
         const deviceBtn = qs('arix-device-btn');
         if (deviceBtn) deviceBtn.classList.toggle('ring-2', bridge.mode === 'device');
@@ -5881,7 +5881,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const email = qs('arix-auth-email').value.trim();
         const password = qs('arix-auth-password').value;
         const btn = qs('arix-auth-submit');
-        if (btn) btn.disabled = true;
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Requesting...';
+        }
 
         try {
             let data;
@@ -5916,7 +5920,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             showToast(error?.message || 'Account request failed.');
         } finally {
-            if (btn) btn.disabled = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         }
     }
 
@@ -5925,7 +5929,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const otp = qs('arix-auth-otp').value.trim();
         if (!/^\d{6}$/.test(otp)) return showToast('Enter the 6-digit verification code.');
         const btn = qs('arix-auth-verify');
-        if (btn) btn.disabled = true;
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Verifying & Syncing...';
+        }
         try {
             const data = await apiJson('/api/otp', {
                 action: 'verify_otp',
@@ -5938,13 +5946,33 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.arixName) localStorage.setItem('Arix_arixName', data.arixName);
             if (data.username) localStorage.setItem('Arix_nickname', data.username);
             updateSidebarName(data.username || data.arixName || localStorage.getItem('Arix_nickname') || 'ArixAI');
-            hideAuthModal();
-            await enterCloudMode(true);
-            showToast('ArixAI account connected. Cloud sync is active.');
+            
+            const titleEl = qs('arix-auth-title');
+            const descEl = qs('arix-auth-desc');
+            if(titleEl) titleEl.textContent = "Syncing Cloud Workspace...";
+            if(descEl) descEl.textContent = "Please wait while we sync your secure data.";
+            qs('arix-auth-login-fields')?.classList.add('hidden');
+            qs('arix-auth-register-fields')?.classList.add('hidden');
+            qs('arix-auth-otp-wrap')?.classList.add('hidden');
+            qs('arix-auth-resend')?.classList.add('hidden');
+            
+            const success = await enterCloudMode(true);
+            if (success) {
+                hideAuthModal();
+                showToast('ArixAI account connected. Cloud sync is active.');
+            } else {
+                throw new Error('Failed to load cloud data. Check your network.');
+            }
         } catch (error) {
             showToast(error?.message || 'Verification failed.');
+            const titleEl = qs('arix-auth-title');
+            const descEl = qs('arix-auth-desc');
+            if(titleEl) titleEl.textContent = "Sign in to ArixAI";
+            if(descEl) descEl.textContent = "Verification failed or sync interrupted.";
+            qs('arix-auth-otp-wrap')?.classList.remove('hidden');
+            qs('arix-auth-resend')?.classList.remove('hidden');
         } finally {
-            if (btn) btn.disabled = false;
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
         }
     }
 
@@ -6439,7 +6467,9 @@ document.addEventListener('DOMContentLoaded', () => {
         els.extSelector.value = currentChatExtId || '';
         messages = [];
         renderMessagesToUI();
-        if (!background) showToast('Loading conversation…');
+        if (!background) {
+            els.container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-500 font-medium w-full animate-pulse"><i class="ph-bold ph-spinner animate-spin text-4xl mb-3 text-theme-500"></i> Loading secure workspace...</div>';
+        }
         try {
             let before = null;
             const all = [];
@@ -6546,10 +6576,24 @@ document.addEventListener('DOMContentLoaded', () => {
             showAuthModal('login');
             return;
         }
+        const btn = qs('arix-cloud-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center"><i class="ph-bold ph-spinner animate-spin text-xl"></i></span><span class="flex-1"><b class="block text-sm text-gray-900">Connecting...</b><small class="block text-xs text-gray-500 mt-1">Syncing workspace</small></span>';
+        }
+        
         const success = await enterCloudMode(false);
+        
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
         if (success) {
             hideStorageModal();
             showToast('Secure cloud storage active.');
+        } else {
+            showToast('Cloud connection failed. Check network.');
         }
     }
 
