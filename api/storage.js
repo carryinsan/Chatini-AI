@@ -38,8 +38,9 @@ export const config = {
     maxDuration: 30,
 };
 
-const VERSION = 'arix-storage-1.0.0';
+const VERSION = 'arix-storage-1.1.0';
 
+const SERVER_ENV = globalThis.process?.env || {};
 const ENV = Object.freeze({
     supabaseUrl: "https://vvcpdfdofihdmzshglxr.supabase.co",
     supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ",
@@ -262,7 +263,11 @@ function safeIso(value, field = 'timestamp') {
     if (value == null || value === '') return null;
     const raw = String(value).trim();
     const date = /^\d{10,16}$/.test(raw)
-        ? (raw.length <= 13 ? new Date(Number(raw) * 1000) : new Date(Number(raw) / 1000))
+        ? (raw.length <= 10
+            ? new Date(Number(raw) * 1000)
+            : (raw.length <= 13
+                ? new Date(Number(raw))
+                : new Date(Number(raw) / 1000)))
         : new Date(raw);
     if (Number.isNaN(date.getTime())) throw new Error(`Invalid ${field}.`);
     return date.toISOString();
@@ -452,7 +457,7 @@ function storageRateBucket(action) {
     return action === 'sync' ? 'sync' : 'read';
 }
 
-async function supabaseRpc(functionName, body, { retry = true } = {}) {
+async function supabaseRpc(functionName, body, { retry = true, variants = [] } = {}) {
     const url = `${ENV.supabaseUrl}/rest/v1/rpc/${functionName}`;
     const headers = {
         apikey: ENV.supabaseKey,
@@ -462,49 +467,118 @@ async function supabaseRpc(functionName, body, { retry = true } = {}) {
         'X-Client-Info': `arixai-storage/${VERSION}`,
     };
 
-    let lastStatus = 0;
-    for (let attempt = 0; attempt < (retry ? 2 : 1); attempt++) {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 10_000);
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(body),
-                signal: controller.signal,
-            });
-            lastStatus = response.status;
-            const raw = await response.text();
-            let data = null;
-            try { data = raw ? JSON.parse(raw) : null; } catch {}
+    const bodies = [body, ...(Array.isArray(variants) ? variants : [])];
+    let lastError = null;
 
-            if (response.ok) return data;
+    for (let variantIndex = 0; variantIndex < bodies.length; variantIndex++) {
+        const candidate = bodies[variantIndex];
 
-            // Safe to retry one idempotent transaction only on transient gateway/server failures.
-            if (retry && attempt === 0 && [502, 503, 504].includes(response.status)) continue;
+        for (let attempt = 0; attempt < (retry ? 2 : 1); attempt++) {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10_000);
 
-            console.error('[ArixAI storage] Supabase RPC failed:', response.status, data?.message || 'provider error');
-            const error = new Error('Cloud storage is temporarily unavailable.');
-            error.code = response.status === 429 ? 'CLOUD_RATE_LIMITED' : 'CLOUD_STORAGE_FAILED';
-            throw error;
-        } catch (error) {
-            if (error?.name === 'AbortError') {
-                const timeoutError = new Error('Cloud storage timed out.');
-                timeoutError.code = 'CLOUD_TIMEOUT';
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(candidate),
+                    signal: controller.signal,
+                });
+
+                const raw = await response.text();
+                let data = null;
+                try { data = raw ? JSON.parse(raw) : null; } catch {}
+
+                if (response.ok) return data;
+
+                const providerCode = String(data?.code || '').trim();
+                const providerMessage = String(data?.message || '').trim();
+                const signatureMismatch =
+                    [400, 404].includes(response.status) &&
+                    ['PGRST202', 'PGRST203', '42883'].includes(providerCode);
+
+                console.error(
+                    '[ArixAI storage] Supabase RPC failed:',
+                    JSON.stringify({
+                        functionName,
+                        status: response.status,
+                        code: providerCode || null,
+                        message: providerMessage || null,
+                        variantIndex,
+                        attempt,
+                    }),
+                );
+
+                if (signatureMismatch && variantIndex < bodies.length - 1) {
+                    lastError = Object.assign(new Error('Cloud storage function signature mismatch.'), {
+                        code: 'CLOUD_STORAGE_FAILED',
+                        providerStatus: response.status,
+                        providerCode,
+                        providerMessage,
+                        functionName,
+                    });
+                    break;
+                }
+
+                if (retry && attempt === 0 && [502, 503, 504].includes(response.status)) continue;
+
+                const error = new Error('Cloud storage is temporarily unavailable.');
+                error.code = response.status === 429 ? 'CLOUD_RATE_LIMITED' : 'CLOUD_STORAGE_FAILED';
+                error.providerStatus = response.status;
+                error.providerCode = providerCode;
+                error.providerMessage = providerMessage;
+                error.functionName = functionName;
+                lastError = error;
+
+                // Some existing ArixAI SQL deployments use UUID user_id keys while
+                // otp.js intentionally uses an opaque Redis account id. Retry once
+                // with a deterministic UUID only when Postgres says the text cannot
+                // be cast to the function's expected type.
+                if (providerCode === '22P02' && candidate?.p_user_id) {
+                    const uuid = await supabaseCompatibleUserId(candidate.p_user_id);
+                    bodies.push({ ...candidate, p_user_id: uuid });
+                } else if (providerCode === '22P02' && candidate?.user_id) {
+                    const uuid = await supabaseCompatibleUserId(candidate.user_id);
+                    bodies.push({ ...candidate, user_id: uuid });
+                }
+
+                break;
+            } catch (error) {
+                if (error?.name === 'AbortError') {
+                    const timeoutError = new Error('Cloud storage timed out.');
+                    timeoutError.code = 'CLOUD_TIMEOUT';
+                    lastError = timeoutError;
+                    if (retry && attempt === 0) continue;
+                    break;
+                }
+
+                lastError = error;
                 if (retry && attempt === 0) continue;
-                throw timeoutError;
+                break;
+            } finally {
+                clearTimeout(timeout);
             }
-            if (error?.code === 'CLOUD_STORAGE_FAILED' || error?.code === 'CLOUD_RATE_LIMITED') throw error;
-            if (retry && attempt === 0 && !lastStatus) continue;
-            throw error;
-        } finally {
-            clearTimeout(timeout);
         }
+
+        if (lastError?.providerCode === '22P02' && variantIndex < bodies.length - 1) continue;
+        if (lastError?.providerCode && ['PGRST202', 'PGRST203', '42883'].includes(lastError.providerCode) && variantIndex < bodies.length - 1) continue;
+        if (lastError && variantIndex >= bodies.length - 1) break;
     }
 
-    const error = new Error('Cloud storage is temporarily unavailable.');
-    error.code = 'CLOUD_STORAGE_FAILED';
-    throw error;
+    if (lastError?.code === 'CLOUD_TIMEOUT') throw lastError;
+    if (lastError?.code === 'CLOUD_RATE_LIMITED') throw lastError;
+    throw lastError || Object.assign(new Error('Cloud storage is temporarily unavailable.'), { code: 'CLOUD_STORAGE_FAILED' });
+}
+
+async function supabaseCompatibleUserId(userId) {
+    const raw = String(userId ?? '').trim();
+    if (!raw) return null;
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(raw)) return raw;
+
+    const hex = await sha256Hex(`${ENV.authSecret}|supabase-user-id|${raw}`);
+    const b9 = parseInt(hex.slice(16, 18), 16);
+    const variantByte = ((b9 & 0x3f) | 0x80).toString(16).padStart(2, '0');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-5${hex.slice(13, 16)}-${variantByte}${hex.slice(18, 20)}-${hex.slice(20, 32)}`;
 }
 
 async function enforceLimits(req, action, uid) {
@@ -548,7 +622,7 @@ async function handleBootstrap(req, uid, body) {
     const artifacts = Math.max(1, Math.min(Number(body.artifactLimit) || LIMITS.maxBootstrapArtifacts, LIMITS.maxBootstrapArtifacts));
     const libraryRefs = Math.max(1, Math.min(Number(body.libraryLimit) || LIMITS.maxBootstrapLibraryRefs, LIMITS.maxBootstrapLibraryRefs));
 
-    const result = await supabaseRpc('arix_storage_bootstrap', {
+    const primary = {
         p_user_id: uid,
         p_chat_limit: chats,
         p_project_limit: projects,
@@ -556,6 +630,17 @@ async function handleBootstrap(req, uid, body) {
         p_pin_limit: pins,
         p_artifact_limit: artifacts,
         p_library_limit: libraryRefs,
+    };
+    const result = await supabaseRpc('arix_storage_bootstrap', primary, {
+        variants: [{
+            user_id: uid,
+            chat_limit: chats,
+            project_limit: projects,
+            task_limit: tasks,
+            pin_limit: pins,
+            artifact_limit: artifacts,
+            library_limit: libraryRefs,
+        }],
     });
 
     return reply(req, { success: true, version: VERSION, data: result || {} });
@@ -569,12 +654,21 @@ async function handleChat(req, uid, body) {
     const beforeCreatedAt = before?.createdAt ? safeIso(before.createdAt, 'before.createdAt') : null;
     const beforeId = before?.id ? validateId(before.id, 'before.id') : null;
 
-    const result = await supabaseRpc('arix_storage_chat_page', {
+    const primary = {
         p_user_id: uid,
         p_chat_id: chatId,
         p_before_created_at: beforeCreatedAt,
         p_before_id: beforeId,
         p_limit: limit,
+    };
+    const result = await supabaseRpc('arix_storage_chat_page', primary, {
+        variants: [{
+            user_id: uid,
+            chat_id: chatId,
+            before_created_at: beforeCreatedAt,
+            before_id: beforeId,
+            limit,
+        }],
     });
 
     return reply(req, { success: true, version: VERSION, data: result || {} });
@@ -586,9 +680,15 @@ async function handleSync(req, uid, body) {
 
     // The endpoint deliberately ignores any user_id fields in the payload.
     // PostgreSQL receives only the authenticated session's uid as p_user_id.
-    const result = await supabaseRpc('arix_storage_sync', {
+    const primary = {
         p_user_id: uid,
         p_changes: changes,
+    };
+    const result = await supabaseRpc('arix_storage_sync', primary, {
+        variants: [{
+            user_id: uid,
+            changes,
+        }],
     });
 
     return reply(req, { success: true, version: VERSION, result: result || { saved: 0, deleted: 0 } });
@@ -598,17 +698,27 @@ async function handleModeSet(req, uid, body) {
     await enforceLimits(req, 'mode_set', uid);
     const mode = validateMode(body.mode);
 
-    const result = await supabaseRpc('arix_storage_set_mode', {
+    const primary = {
         p_user_id: uid,
         p_mode: mode,
-    }, { retry: false });
+    };
+    const result = await supabaseRpc('arix_storage_set_mode', primary, {
+        retry: false,
+        variants: [{
+            user_id: uid,
+            mode,
+        }],
+    });
 
     return reply(req, { success: true, version: VERSION, mode, data: result || {} });
 }
 
 async function handlePurge(req, uid) {
     await enforceLimits(req, 'purge_cloud', uid);
-    const result = await supabaseRpc('arix_storage_purge', { p_user_id: uid }, { retry: false });
+    const result = await supabaseRpc('arix_storage_purge', { p_user_id: uid }, {
+        retry: false,
+        variants: [{ user_id: uid }],
+    });
     return reply(req, { success: true, version: VERSION, purged: true, data: result || {} });
 }
 
@@ -667,7 +777,18 @@ export default async function handler(req) {
         if (error?.code === 'INVALID_JSON') return fail(req, 400, error.code, error.message);
         if (error?.code === 'CLOUD_TIMEOUT') return fail(req, 504, error.code, 'Cloud storage timed out. Please retry.');
         if (error?.code === 'CLOUD_RATE_LIMITED') return fail(req, 429, error.code, 'Cloud storage provider is rate-limiting requests. Please retry.');
-        if (error?.code === 'CLOUD_STORAGE_FAILED') return fail(req, 503, error.code, 'Cloud storage is temporarily unavailable.');
+        if (error?.code === 'CLOUD_STORAGE_FAILED') {
+            if (['PGRST202', 'PGRST203', '42883'].includes(error?.providerCode)) {
+                return fail(req, 503, 'CLOUD_RPC_SIGNATURE_MISMATCH', 'Cloud storage database function signature does not match this API.');
+            }
+            if (error?.providerCode === '22P02') {
+                return fail(req, 503, 'CLOUD_USER_ID_TYPE_MISMATCH', 'Cloud storage rejected the account identifier type.');
+            }
+            if (error?.providerStatus === 401 || error?.providerStatus === 403) {
+                return fail(req, 503, 'CLOUD_CREDENTIALS_REJECTED', 'Cloud storage credentials were rejected by Supabase.');
+            }
+            return fail(req, 503, error.code, 'Cloud storage is temporarily unavailable.');
+        }
 
         const safeMessages = new Set([
             'Authentication required.',
