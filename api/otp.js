@@ -405,13 +405,13 @@ function sessionCookie(token, maxAgeSeconds) {
         'Path=/',
         'HttpOnly',
         'Secure',
-        'SameSite=None',
+        'SameSite=Lax',
         `Max-Age=31536000`, // Browser holds token for 1 year, backend enforces 7-day rolling window
     ].join('; ');
 }
 
 function clearSessionCookie() {
-    return 'arix_session=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0';
+    return 'arix_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
 }
 
 
