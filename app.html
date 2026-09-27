@@ -3202,14 +3202,36 @@ function parseRichText(content, isStreaming = false, msgId = null) {
     let markdownContent = content;
 
     // 1. Normalize all tag variants into standard markers & absorb pre-thought bleed
-    let cleanedContent = markdownContent
-        .replace(/<(?:think_s|thinking)(?:\s+title="([^"]*)")?>|think_start/gi, '<think_s>')
-        .replace(/<\/(?:think_e|thinking)>|<think_e>|think_end/gi, '<think_e>')
+    // 1. Normalize opening tags to <think_s>
+    let cleanText = markdownContent
+        .replace(/<(?:think_s|thinking)(?:\s+title="[^"]*")?>|think_start/gi, '<think_s>')
+        // Normalize all closing tag variations to <think_e>
+        .replace(/<\/(?:think_s|think_e|thinking)>|<think_e>|<\/think>|think_end/gi, '<think_e>')
         // Absorb pre-thought model preambles (e.g., Confidence Score, Strategizing, etc.)
         .replace(/(?:(?:^|\n)(?:Confidence Score:[^\n]*|Strategizing[^\n]*|` structure\.)\s*)+<think_s>/gi, '<think_s>');
 
-    // 2. Process all completed thinking blocks (supports multiple interleaved blocks)
-    cleanedContent = cleanedContent.replace(/<think_s>([\s\S]*?)<think_e>/gi, (match, innerContent) => {
+    // 2. FAIL-SAFE: If model completely forgot <think_e> after stream finishes, auto-detect where response begins
+    if (!isStreaming && cleanText.includes('<think_s>') && !cleanText.includes('<think_e>')) {
+        // Look for the start of the response (Markdown headers, greetings, lists, or paragraph breaks)
+        const thinkStartIdx = cleanText.indexOf('<think_s>') + 9;
+        const bodyAfterThink = cleanText.substring(thinkStartIdx);
+        const transitionMatch = bodyAfterThink.search(/\n\n(?=(?:#{1,6}\s|[A-Z][a-z]+[,!:]|Hey|Hello|Hi|Sure|Okay|Ok|Here|This|To|1\.\s|\*\*))/i);
+        
+        if (transitionMatch !== -1) {
+            const splitIdx = thinkStartIdx + transitionMatch;
+            cleanText = cleanText.substring(0, splitIdx) + '\n<think_e>\n' + cleanText.substring(splitIdx + 2);
+        } else {
+            // Fallback: If no greeting/header, close after the first double-newline
+            const firstDoubleBreak = bodyAfterThink.indexOf('\n\n');
+            if (firstDoubleBreak !== -1) {
+                const splitIdx = thinkStartIdx + firstDoubleBreak;
+                cleanText = cleanText.substring(0, splitIdx) + '\n<think_e>\n' + cleanText.substring(splitIdx + 2);
+            }
+        }
+    }
+
+    // 3. Process all completed thinking blocks (handles multiple interleaved blocks cleanly)
+    cleanText = cleanText.replace(/<think_s>([\s\S]*?)<think_e>/gi, (match, innerContent) => {
         return `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
 <div class="flex items-center gap-2.5">
@@ -3224,16 +3246,13 @@ ${marked.parse(innerContent.trim())}
 </details>\n\n`;
     });
 
-    // 3. Fail-safe for unclosed blocks (streaming in progress OR model omitted <think_e>)
-    if (cleanedContent.includes('<think_s>')) {
-        const parts = cleanedContent.split('<think_s>');
+    // 4. Handle active unclosed block during live streaming
+    if (isStreaming && cleanText.includes('<think_s>')) {
+        const parts = cleanText.split('<think_s>');
         const beforeContent = parts[0];
-        // Capture everything after the unclosed opening tag
         const unclosedContent = parts.slice(1).join('<think_s>');
 
-        if (isStreaming) {
-            // Actively streaming: render the unclosed tail as an animated pulse container
-            cleanedContent = beforeContent + `\n\n<div class="my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse">
+        cleanText = beforeContent + `\n\n<div class="my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse">
 <div class="flex items-center justify-between p-3 px-4 select-none">
 <div class="flex items-center gap-2.5">
 <i class="ph-bold ph-brain text-gray-400 animate-pulse"></i>
@@ -3244,24 +3263,9 @@ ${marked.parse(innerContent.trim())}
 ${marked.parse(unclosedContent.trim())}
 </div>
 </div>\n\n`;
-        } else {
-            // Stream ended but model failed to output <think_e>: auto-close into details block
-            cleanedContent = beforeContent + `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-<summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
-<div class="flex items-center gap-2.5">
-<i class="ph-bold ph-brain text-gray-400"></i>
-<span class="text-[13px] font-semibold text-gray-500">Thinking...</span>
-</div>
-<i class="ph-bold ph-caret-down text-gray-400 text-xs group-open:rotate-180 transition-transform"></i>
-</summary>
-<div class="p-4 pt-2 text-[13px] text-gray-500 font-mono leading-relaxed bg-white/50 border-t border-gray-100">
-${marked.parse(unclosedContent.trim())}
-</div>
-</details>\n\n`;
-        }
     }
 
-    markdownContent = cleanedContent;
+    markdownContent = cleanText;
 
     if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) { 
         markdownContent += '\n</artifact>'; 
