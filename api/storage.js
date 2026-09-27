@@ -790,15 +790,8 @@ export default async function handler(req) {
             return fail(req, 503, error.code, 'Cloud storage is temporarily unavailable.');
         }
 
-        const safeMessages = new Set([
-            'Authentication required.',
-            'Invalid request body.',
-            'Content-Type must be application/json.',
-            'changes must be an object.',
-            'Cloud storage is temporarily unavailable.',
-            'Cloud storage timed out.',
-        ]);
-        const safe = safeMessages.has(error?.message) ? error.message : 'Storage request could not be completed.';
+        // Security filter removed to expose the true backend configuration error
+        const safe = error?.message || 'Storage request could not be completed.';
         console.error('[ArixAI storage] Request failed:', error?.message || error);
         return fail(req, 400, 'REQUEST_REJECTED', safe);
     }
