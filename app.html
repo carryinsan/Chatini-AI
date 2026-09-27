@@ -3203,25 +3203,34 @@ function parseRichText(content, isStreaming = false, msgId = null) {
 
     // 1. Normalize all tag variants into standard markers & absorb pre-thought bleed
     // 1. Normalize opening tags to <think_s>
+    // 1. Normalize opening tags to standard <think_s>
     let cleanText = markdownContent
         .replace(/<(?:think_s|thinking)(?:\s+title="[^"]*")?>|think_start/gi, '<think_s>')
-        // Normalize all closing tag variations to <think_e>
+        // Normalize all closing tag variants to standard <think_e>
         .replace(/<\/(?:think_s|think_e|thinking)>|<think_e>|<\/think>|think_end/gi, '<think_e>')
-        // Absorb pre-thought model preambles (e.g., Confidence Score, Strategizing, etc.)
+        // Absorb pre-thought preamble leaks (Confidence Score, Strategizing, etc.)
         .replace(/(?:(?:^|\n)(?:Confidence Score:[^\n]*|Strategizing[^\n]*|` structure\.)\s*)+<think_s>/gi, '<think_s>');
 
-    // 2. FAIL-SAFE: If model completely forgot <think_e> after stream finishes, auto-detect where response begins
+    // 2. SCRUB POST-THINK META-PLANNING BLEED:
+    // If the model writes "Core components of the response...", "Here's my plan:", etc.
+    // right before the actual response, absorb it inside the thinking block.
+    cleanText = cleanText.replace(
+        /(?:<think_e>)?\s*(?:Core components of the response:|Here's my plan:|Refined Plan(?: for Continuation)?:|Plan:|I will structure (?:this|my) answer by:)[\s\S]*?(?:without fluff|tone with emojis|effective advice|actionable advice|preferred tone)[^\n]*\n*/gi,
+        '<think_e>\n\n'
+    );
+
+    // 3. FAIL-SAFE: If model completely forgot <think_e> when streaming completes
     if (!isStreaming && cleanText.includes('<think_s>') && !cleanText.includes('<think_e>')) {
-        // Look for the start of the response (Markdown headers, greetings, lists, or paragraph breaks)
         const thinkStartIdx = cleanText.indexOf('<think_s>') + 9;
         const bodyAfterThink = cleanText.substring(thinkStartIdx);
-        const transitionMatch = bodyAfterThink.search(/\n\n(?=(?:#{1,6}\s|[A-Z][a-z]+[,!:]|Hey|Hello|Hi|Sure|Okay|Ok|Here|This|To|1\.\s|\*\*))/i);
+
+        // Find the actual conversation greeting or markdown header
+        const transitionMatch = bodyAfterThink.search(/\n\n(?=(?:#{1,6}\s|Hey\b|Hello\b|Hi\b|Okay\b|Sure\b|Ok\b|[A-Z][a-z]+!\s|1\.\s|\*\*))/i);
         
         if (transitionMatch !== -1) {
             const splitIdx = thinkStartIdx + transitionMatch;
             cleanText = cleanText.substring(0, splitIdx) + '\n<think_e>\n' + cleanText.substring(splitIdx + 2);
         } else {
-            // Fallback: If no greeting/header, close after the first double-newline
             const firstDoubleBreak = bodyAfterThink.indexOf('\n\n');
             if (firstDoubleBreak !== -1) {
                 const splitIdx = thinkStartIdx + firstDoubleBreak;
@@ -3230,7 +3239,7 @@ function parseRichText(content, isStreaming = false, msgId = null) {
         }
     }
 
-    // 3. Process all completed thinking blocks (handles multiple interleaved blocks cleanly)
+    // 4. Render all completed thinking blocks into collapsible menus
     cleanText = cleanText.replace(/<think_s>([\s\S]*?)<think_e>/gi, (match, innerContent) => {
         return `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
@@ -3246,7 +3255,7 @@ ${marked.parse(innerContent.trim())}
 </details>\n\n`;
     });
 
-    // 4. Handle active unclosed block during live streaming
+    // 5. Render active streaming block (pulsing UI)
     if (isStreaming && cleanText.includes('<think_s>')) {
         const parts = cleanText.split('<think_s>');
         const beforeContent = parts[0];
