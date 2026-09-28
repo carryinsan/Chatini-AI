@@ -6251,7 +6251,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { chats: [], messages: [], projects: [], projectChats: [], pinned: [], tasks: [], artifacts: [], libraryRefs: [], memory: [], settings: [], events: [], deletes: [] };
     }
 
-    function chunkSyncChanges(changes, maxBytes = 3_500_000, maxOps = 300) {
+    function chunkSyncChanges(changes, maxBytes = 800_000, maxOps = 50) {
         const source = { ...emptyChanges(), ...(changes || {}) };
         const keys = ['chats', 'messages', 'projects', 'projectChats', 'pinned', 'tasks', 'artifacts', 'libraryRefs', 'memory', 'settings', 'events', 'deletes'];
         const chunks = [];
