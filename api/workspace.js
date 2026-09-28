@@ -998,14 +998,6 @@ async function createOrGetWorkflow(req, body) {
 }
 
 async function runAction(req, body) {
-  const workflow = await createOrGetWorkflow(req, body);
-  await ensureAccess(req, workflow, body.workspaceKey);
-  if (workflow.status === 'completed' || workflow.status === 'completed_with_errors') return jsonResponse({ ok: true, workflow: sanitizeForClient(workflow), summary: workflowSummary(workflow) });
-  if (workflow.status === 'cancelled') return jsonResponse({ ok: false, error: 'WORKSPACE_CANCELLED', workflow: sanitizeForClient(workflow) }, 409);
-
-  const lockToken = await acquireWorkspaceLock(workflow.workspaceId);
-  if (lockToken) workflow.persistence = 'durable-redis';
-
   const stream = new ReadableStream({
     async start(controller) {
       let closed = false;
@@ -1013,21 +1005,51 @@ async function runAction(req, body) {
         if (closed) return false;
         return emit(controller, payload);
       };
+      
+      let lockToken = null;
+      let workflow = body.workflow;
+
       try {
+        // Initial heartbeat instantly bypasses Cloud/Serverless TTFB limits
+        safeEmit({ type: 'task_progress', taskId: null, message: 'Waking orchestrator and compiling DAG plan...' });
+
+        if (!workflow) {
+          workflow = await createOrGetWorkflow(req, body);
+        }
+        await ensureAccess(req, workflow, body.workspaceKey);
+
+        if (workflow.status === 'completed' || workflow.status === 'completed_with_errors') {
+          safeEmit({ type: 'workspace_state', workspaceId: workflow.workspaceId, summary: workflowSummary(workflow), workflow: sanitizeForClient(workflow) });
+          return;
+        }
+        if (workflow.status === 'cancelled') {
+          safeEmit({ type: 'workspace_error', workspaceId: workflow.workspaceId, error: 'WORKSPACE_CANCELLED' });
+          return;
+        }
+
+        lockToken = await acquireWorkspaceLock(workflow.workspaceId);
+        if (lockToken) workflow.persistence = 'durable-redis';
+
         const lockMarker = Boolean(lockToken);
         if (lockMarker) await maybePersist(workflow);
+        
         if (workflow.workspaceKey) safeEmit({ type: 'workspace_access', workspaceId: workflow.workspaceId, workspaceKey: workflow.workspaceKey });
         safeEmit({ type: 'workspace_plan', workspaceId: workflow.workspaceId, planner: workflow.planner, tasks: workflow.tasks.map(t => ({ id: t.id, type: t.type, title: t.title, dependsOn: t.dependsOn })) });
+        
         const finished = await executeWorkflow(workflow, req, controller, body.budgetMs);
         safeEmit({ type: 'workspace_state', workspaceId: workflow.workspaceId, summary: workflowSummary(finished), workflow: sanitizeForClient(finished) });
+
       } catch (error) {
-        workflow.status = 'failed';
-        workflow.error = shortError(error);
-        logEvent(workflow, 'workspace_error', null, workflow.error);
-        await maybePersist(workflow);
-        safeEmit({ type: 'workspace_error', workspaceId: workflow.workspaceId, error: workflow.error, summary: workflowSummary(workflow) });
+        const message = shortError(error);
+        if (workflow) {
+          workflow.status = 'failed';
+          workflow.error = message;
+          logEvent(workflow, 'workspace_error', null, workflow.error);
+          await maybePersist(workflow);
+        }
+        safeEmit({ type: 'workspace_error', workspaceId: workflow?.workspaceId, error: message, summary: workflow ? workflowSummary(workflow) : null });
       } finally {
-        if (lockToken) await releaseWorkspaceLock(workflow.workspaceId, lockToken);
+        if (lockToken && workflow) await releaseWorkspaceLock(workflow.workspaceId, lockToken);
         if (!closed) { closed = true; try { controller.close(); } catch {} }
       }
     },
