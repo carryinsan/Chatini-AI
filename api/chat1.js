@@ -536,11 +536,10 @@ telemetry.model = modelId || 'unknown';
 
         // 1. STRICT KEY SANITIZATION & AGGREGATION
         const GROQ_KEYS = [
-          process.env.GROQ_API_KEY,
-          process.env.GROQ_KEY_2, process.env.GROQ_API_KEY_2,
-          process.env.GROQ_KEY_3, process.env.GROQ_API_KEY_3,
-          process.env.GROQ_KEY_4, process.env.GROQ_API_KEY_4,
-          process.env.GROQ_KEY_5, process.env.GROQ_API_KEY_5
+          "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",
+          "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",
+          "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",
+          "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"
         ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
         const TAVILY_KEYS = [
@@ -556,16 +555,12 @@ telemetry.model = modelId || 'unknown';
         const MISTRAL_KEY = process.env.MISTRAL_API_KEY ? process.env.MISTRAL_API_KEY.replace(/[\r\n\s]/g, '') : null;
 
         const GEMINI_KEYS = [
-          process.env.GEMINI_API_KEY_1,
-          process.env.GEMINI_API_KEY_2,
-          process.env.GEMINI_API_KEY_3,
-          process.env.GEMINI_API_KEY_4,
-          process.env.GEMINI_API_KEY_5,
-          process.env.GEMINI_API_KEY_6,
-          process.env.GEMINI_API_KEY_7,
-          process.env.GEMINI_API_KEY_8,
-          process.env.GEMINI_API_KEY_9,
-          process.env.GEMINI_API_KEY
+          "AQ.Ab8RN61148vyDtjKYu7Y3gvOc_as6XN2IGWIW3ObY613HxBkYA",
+          "AQ.Ab8RN6IT321rn3MuBgXAq8s7UHcX1KndViEQ7afNRNa3eWQZeQ",
+          "AQ.Ab8RN6IsClWpuw3thPRo4Zc80och5Kkw2UPviht9__bgaS4qlA",
+          "AQ.Ab8RN6LP6Vaa_Z_kKeckLOJk9M_gxiQI1BrFca1o9cHPTJqa3Q",
+          "AQ.Ab8RN6JUXU4dzFxv2J-5mZFIurd3gGSncwKgF9aJIz-GOj2BNg",
+          "AQ.Ab8RN6LIlhuc8H-89cKEqouigfCnoxna-f3u4HoRd2X-d7FAUA"
         ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
         if (GEMINI_KEYS.length === 0) throw new Error("CRITICAL: No Gemini Keys Configured on Server.");
