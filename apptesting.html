@@ -5513,8 +5513,13 @@ async function launchWorkspacePipeline(goal) {
         });
 
         if(!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Pipeline Auth/Creation Error');
+            const errText = await res.text();
+            try {
+                const err = JSON.parse(errText);
+                throw new Error(err.error || 'Pipeline Auth/Creation Error');
+            } catch(e) {
+                throw new Error(`Server Timeout / HTTP ${res.status}: ${errText.slice(0, 80).replace(/<[^>]+>/g, '')}...`);
+            }
         }
 
         const reader = res.body.getReader();
