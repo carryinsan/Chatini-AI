@@ -5584,6 +5584,10 @@ function handleOrchEvent(ev) {
         if(ev.workflow && ev.workflow.artifacts) {
             workspaceArtifactsDb = ev.workflow.artifacts;
         }
+        if(workspaceArtifactsDb.length > 0 && ev.workflow && ['completed', 'completed_with_errors', 'cancelled'].includes(ev.workflow.status)) {
+            document.getElementById('orch-download-zip-btn').classList.remove('hidden');
+            bindArtifactsToTasks();
+        }
     }
     else if (type === 'workspace_complete' || type === 'workspace_complete_with_errors') {
         const hasErrors = type === 'workspace_complete_with_errors';
