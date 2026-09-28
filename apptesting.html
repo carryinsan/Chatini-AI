@@ -569,7 +569,7 @@ body {
             
             <!-- Live Logs / Console -->
             <div class="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col">
-                <div class="bg-[#0B1120] rounded-2xl flex-1 shadow-2xl p-5 font-mono text-[13px] overflow-y-auto custom-scrollbar flex flex-col gap-2.5 relative border border-slate-800/60" id="orch-logs-container">
+                <div class="bg-[#0B1120] rounded-2xl flex-1 shadow-2xl p-5 font-mono text-[13px] overflow-y-auto custom-scrollbar flex flex-col gap-2.5 relative border border-slate-800/60 max-h-[400px] min-h-[250px]" id="orch-logs-container">
                     <div class="text-slate-500 font-bold text-xs uppercase tracking-widest mb-2 pb-2 border-b border-slate-800/60 flex items-center gap-2"><i class="ph-bold ph-terminal-window text-base"></i> Workspace Terminal</div>
                 </div>
             </div>
@@ -5748,6 +5748,7 @@ window.downloadWorkspaceZip = async function() {
         return showToast("JSZip library not loaded. Ensure script is active.");
     }
     const btn = document.getElementById('orch-download-zip-btn');
+    if (!btn) return;
     const origHtml = btn.innerHTML;
     btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Zipping...';
     btn.disabled = true;
@@ -5755,43 +5756,54 @@ window.downloadWorkspaceZip = async function() {
     try {
         const zip = new JSZip();
         const root = zip.folder(`ArixAI_Workspace_${Date.now()}`);
+        const safeArtifacts = Array.isArray(workspaceArtifactsDb) ? workspaceArtifactsDb : [];
         
-        for(const art of workspaceArtifactsDb) {
-            if(art.type === 'bundle') continue;
+        for(const art of safeArtifacts) {
+            if(!art || art.type === 'bundle') continue;
             
             let filename = `${art.type}_${art.id}`;
             
             if (art.type === 'slides') {
                 filename += '.json';
-                root.file(filename, art.text || JSON.stringify(art.data, null, 2));
+                let content = "{}";
+                try { content = art.text || JSON.stringify(art.data || {}, null, 2); } catch(e){}
+                root.file(filename, String(content));
             } 
             else if (art.type === 'image' || art.type === 'video') {
                 const ext = art.type === 'video' ? 'mp4' : 'png';
                 filename += `.${ext}`;
                 const url = (art.download && art.download.url) ? art.download.url : art.url;
-                if(url && !url.startsWith('data:')) {
+                if(url && !String(url).startsWith('data:')) {
                     try {
-                        const res = await fetch(url, { mode: 'cors' });
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 10000);
+                        const res = await fetch(url, { mode: 'cors', signal: controller.signal });
+                        clearTimeout(timeoutId);
                         if(res.ok) root.file(filename, await res.blob());
                         else root.file(`${filename}_URL.txt`, `Media Link: ${url}`);
                     } catch(e) { root.file(`${filename}_URL.txt`, `Media Link: ${url}`); }
-                } else if (url && url.startsWith('data:')) {
-                    root.file(filename, url.split(',')[1], {base64: true});
+                } else if (url && String(url).startsWith('data:')) {
+                    root.file(filename, String(url).split(',')[1], {base64: true});
+                } else {
+                    root.file(`${filename}.txt`, "Media generation failed or URL missing.");
                 }
             } 
             else if (art.type === 'research') {
                 filename += '.json';
-                root.file(filename, art.text || JSON.stringify(art.data, null, 2));
+                let content = "{}";
+                try { content = art.text || JSON.stringify(art.data || {}, null, 2); } catch(e){}
+                root.file(filename, String(content));
             }
             else {
                 filename += '.txt';
-                let plainText = art.text || "Empty content";
-                plainText = plainText.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' '); // Strip basic HTML for zip friendliness
+                let plainText = String(art.text || "Empty content");
+                plainText = plainText.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
                 root.file(filename, plainText);
             }
         }
 
-        const manifest = JSON.stringify(workspaceArtifactsDb, null, 2);
+        let manifest = "[]";
+        try { manifest = JSON.stringify(safeArtifacts, null, 2); } catch(e){}
         root.file('manifest.json', manifest);
 
         const content = await zip.generateAsync({type:"blob"});
