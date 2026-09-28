@@ -13,6 +13,9 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<!-- Arix Freemium Engine -->
+<script type="module" src="./lib/paid.js"></script>
 
 <!-- Global Quota Interceptor Logic. -->
 <script>
@@ -87,10 +90,44 @@ window.requestMoreLimits = async function() {
             btn.disabled = false;
         }, 2500);
     } catch(e) {
-        btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error. Try Again.';
-        btn.disabled = false;
-    }
-};
+            btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error. Try Again.';
+            btn.disabled = false;
+        }
+    };
+
+    window.downloadArixImage = async function(url, id, format) {
+        try {
+            // Attempt to fetch the raw image blob natively
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const img = new Image();
+            const imgUrl = URL.createObjectURL(blob);
+            
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; 
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL(mime, 0.95);
+                a.download = 'ArixAI_' + id + '.' + format;
+                
+                // Append, click, and remove to support Firefox/Safari
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(imgUrl);
+            };
+            img.src = imgUrl;
+        } catch(e) { 
+            // Fallback if the remote provider blocks CORS fetching
+            console.warn("CORS block or fetch error, opening in new tab", e);
+            window.open(url, '_blank'); 
+        }
+    };
 </script>
 
 <!-- Tailwind Config Integration -->
@@ -468,43 +505,6 @@ body {
     </div>
 </div>
 
-<!-- Autonomous Task Engine Modal -->
-<style>
-    /* Dark-to-Light overrides for Backend-Rendered Task CSS */
-    #task-engine-modal .bg-slate-900\/40 { background-color: #f8fafc !important; border-color: #e2e8f0 !important; color: #0f172a !important; }
-    #task-engine-modal .text-slate-200 { color: #334155 !important; }
-    #task-engine-modal .border-slate-700\/60 { border-color: #e2e8f0 !important; }
-    #task-engine-modal .bg-slate-800 { background-color: #ffffff !important; border-color: #cbd5e1 !important; color: #0f172a !important; }
-    #task-engine-modal .hover\:bg-slate-700:hover { background-color: #f1f5f9 !important; }
-</style>
-<div id="task-engine-modal" class="fixed inset-0 bg-gray-900/40 z-[90] hidden flex items-center justify-center backdrop-blur-sm px-4">
-    <div class="bg-white p-6 sm:p-8 max-w-3xl w-full rounded-3xl border border-blue-100 shadow-[0_8px_40px_rgba(59,130,246,0.15)] flex flex-col h-[85vh]">
-        <div class="flex justify-between items-center mb-4 border-b border-gray-100 pb-4 shrink-0">
-            <h2 class="text-xl font-bold flex items-center gap-2 text-gray-900 tracking-tight">
-                <i class="ph-fill ph-robot text-blue-600"></i> Autonomous Task Engine
-            </h2>
-            <button onclick="closeTaskEngineModal()" class="text-gray-400 hover:text-gray-600 transition-colors bg-gray-50 hover:bg-gray-100 p-2 rounded-xl"><i class="ph-bold ph-x text-xl"></i></button>
-        </div>
-        
-        <div id="task-engine-chat" class="flex-1 overflow-y-auto space-y-4 mb-4 custom-scrollbar pr-3 relative bg-gray-50/50 rounded-2xl p-4 border border-gray-100/50">
-            <div class="text-center text-gray-500 text-sm py-20 animate-fade-in-up">
-                <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-4 text-3xl shadow-sm border border-blue-100">
-                    <i class="ph-fill ph-robot"></i>
-                </div>
-                <p class="font-bold text-gray-800 text-lg">ArixAI Autonomous Agent</p>
-                <p class="text-xs mt-2 max-w-sm mx-auto leading-relaxed">I can research, plan, and natively create complex files (PDFs, PPTXs, CSVs) autonomously based on a single prompt.</p>
-            </div>
-        </div>
-
-        <div class="relative flex items-center shrink-0">
-            <input type="text" id="task-engine-input" placeholder="e.g., Research quantum computing and make a 5-page PDF report..." class="w-full bg-white border border-gray-200 rounded-xl pl-4 pr-14 py-4 text-[15px] text-gray-800 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50 transition-all shadow-sm" onkeypress="if(event.key === 'Enter') runArixTask()">
-            <button onclick="runArixTask()" id="task-engine-send-btn" class="absolute right-2 bg-blue-600 hover:bg-blue-700 text-white w-10 h-10 rounded-lg flex items-center justify-center transition-all shadow-md shadow-blue-200">
-                <i class="ph-bold ph-paper-plane-right"></i>
-            </button>
-        </div>
-    </div>
-</div>
-
 <!-- Arix Pulse Task Manager Modal -->
 <div id="pulse-modal" class="fixed inset-0 bg-gray-900/40 z-[80] hidden flex items-center justify-center backdrop-blur-sm px-4">
     <div class="bg-white p-6 sm:p-8 max-w-lg w-full rounded-3xl border border-cyan-100 shadow-[0_8px_40px_rgba(6,182,212,0.1)] flex flex-col max-h-[85vh]">
@@ -519,6 +519,77 @@ body {
         </div>
     </div>
 </div>
+<!-- Agent Workspace Orchestrator Full Screen Tab -->
+<div id="orchestrator-tab" class="fixed inset-0 bg-[#F8FAFC] z-[300] hidden flex-col transition-all duration-500 transform translate-y-full opacity-0">
+    <!-- Header -->
+    <div class="h-[72px] bg-white border-b border-gray-200 px-4 sm:px-6 flex items-center justify-between shrink-0 shadow-[0_2px_10px_rgba(0,0,0,0.02)] relative z-10">
+        <div class="flex items-center gap-3 sm:gap-4">
+            <div class="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-md">
+                <i class="ph-bold ph-strategy text-xl"></i>
+            </div>
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-gray-900 leading-tight">Agent Workspace Orchestrator</h2>
+                <p class="text-[10px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider">Multi-Agent Autonomous Pipeline</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <button id="orch-download-zip-btn" onclick="downloadWorkspaceZip()" class="hidden bg-slate-900 hover:bg-slate-800 text-white px-3 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold shadow-md shadow-slate-900/20 transition-all flex items-center gap-2">
+                <i class="ph-bold ph-file-zip text-base sm:text-lg"></i> <span class="hidden sm:inline">Download All (ZIP)</span><span class="sm:hidden">ZIP</span>
+            </button>
+            <button onclick="closeOrchestratorTab()" class="text-gray-400 hover:text-slate-900 bg-gray-50 hover:bg-gray-200 w-10 h-10 rounded-xl flex items-center justify-center transition-colors border border-gray-100 shadow-sm">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content Layout -->
+    <div class="flex-1 flex flex-col md:flex-row overflow-hidden relative">
+        <!-- Left: Task Pipeline DAG -->
+        <div class="w-full md:w-1/3 md:min-w-[340px] md:max-w-[420px] bg-white border-r border-gray-100 p-5 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col shrink-0 z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2"><i class="ph-bold ph-git-branch text-slate-500"></i> Execution Pipeline</h3>
+                <span id="orch-status-badge" class="px-2.5 py-1 text-[9px] font-bold rounded-md bg-blue-50 text-blue-600 border border-blue-200 uppercase tracking-widest shadow-sm">Standby</span>
+            </div>
+            <div id="orch-task-list" class="flex flex-col gap-3 flex-1 pb-10">
+                <!-- Tasks injected here -->
+                <div class="text-center text-slate-400 text-sm mt-12 flex flex-col items-center justify-center opacity-60">
+                    <i class="ph-bold ph-coffee text-4xl mb-3"></i>
+                    <span class="font-medium">Awaiting workspace goal...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Details, Logs, & Live View -->
+        <div class="flex-1 flex flex-col bg-[#F8FAFC] relative min-w-0">
+            <!-- Goal Summary -->
+            <div class="p-5 sm:p-6 border-b border-gray-100 bg-white shrink-0 shadow-sm z-10">
+                <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><i class="ph-bold ph-target"></i> Primary Objective</h4>
+                <p id="orch-goal-text" class="text-sm font-semibold text-slate-800 leading-relaxed truncate">Waiting for task...</p>
+            </div>
+            
+            <!-- Live Logs / Console -->
+            <div class="flex-1 p-4 sm:p-6 overflow-y-auto custom-scrollbar flex flex-col">
+                <div class="bg-[#0B1120] rounded-2xl flex-1 shadow-2xl p-5 font-mono text-[13px] overflow-y-auto custom-scrollbar flex flex-col gap-2.5 relative border border-slate-800/60" id="orch-logs-container">
+                    <div class="text-slate-500 font-bold text-xs uppercase tracking-widest mb-2 pb-2 border-b border-slate-800/60 flex items-center gap-2"><i class="ph-bold ph-terminal-window text-base"></i> Workspace Terminal</div>
+                </div>
+            </div>
+            
+            <!-- Progress Bar -->
+            <div class="p-5 sm:p-6 bg-white border-t border-gray-100 shrink-0 shadow-[0_-4px_24px_rgba(0,0,0,0.02)] z-10">
+                <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-3">
+                    <span id="orch-progress-text">Task Progress</span>
+                    <span id="orch-progress-pct" class="text-slate-900 bg-slate-100 px-2 py-0.5 rounded shadow-sm">0%</span>
+                </div>
+                <div class="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                    <div id="orch-progress-bar" class="h-full bg-gradient-to-r from-slate-600 to-slate-900 rounded-full w-0 transition-all duration-700 relative overflow-hidden shadow-[0_0_10px_rgba(15,23,42,0.4)]">
+                        <div class="absolute inset-0 bg-white/20 animate-pulse"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Accessibility Full Screen Suite -->
 <div id="access-screen" class="fixed inset-0 bg-gray-50 z-[200] hidden flex-col transition-opacity duration-300">
     <!-- Header -->
@@ -599,8 +670,8 @@ body {
                 <p class="text-[11px] text-gray-400 font-medium" id="sidebar-username-display">Anonymous</p>
             </div>
         </div>
-        <button onclick="toggleSidebar()" class="text-gray-400 hover:text-gray-600 transition-colors lg:hidden">
-            <i class="ph-bold ph-x text-xl"></i>
+        <button onclick="toggleSidebar(); document.getElementById('sidebar').classList.toggle('lg:hidden');" class="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Collapse">
+            <i class="ph-bold ph-sidebar-simple text-xl"></i>
         </button>
     </div>
 
@@ -650,22 +721,35 @@ body {
                     Audio
                 </button>
                 <button id="image-btn" onclick="toggleImageMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-fuchsia-50">
-                        <i id="image-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
-                    </div>
-                    Image
-                </button>
+    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-fuchsia-50">
+        <i id="image-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
+    </div>
+    Images
+</button>
+
+<button id="video-btn" onclick="toggleVideoMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
+    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-violet-50">
+        <i id="video-icon" class="ph-bold ph-film-strip text-violet-500"></i>
+    </div>
+    Video
+</button>
                 <button id="app-btn" onclick="toggleAppMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
                     <div class="w-6 h-6 rounded-md flex items-center justify-center bg-orange-50">
                         <i id="app-icon" class="ph-bold ph-code text-orange-500"></i>
                     </div>
-                    Code
+                    Code(Testing)
                 </button>
                 <button id="study-btn" onclick="toggleStudyMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
                     <div class="w-6 h-6 rounded-md flex items-center justify-center bg-indigo-50">
                         <i id="study-icon" class="ph-bold ph-cards text-indigo-500"></i>
                     </div>
                     Study
+                </button>
+                <button id="workspace-btn" onclick="toggleWorkspaceMode()" class="w-full flex items-center gap-3 px-3 py-2 mt-0.5 rounded-xl transition-all text-sm font-bold text-slate-700 hover:bg-slate-50 border border-transparent group">
+                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-slate-900 text-white shadow-md group-hover:scale-105 transition-transform">
+                        <i id="workspace-icon" class="ph-bold ph-strategy text-[13px]"></i>
+                    </div>
+                    Workspace Agent
                 </button>
             </div>
         </div>
@@ -676,8 +760,7 @@ body {
                 Advanced Integrations
                 <i id="adv-int-icon" class="ph-bold ph-caret-down transition-transform"></i>
             </div>
-        <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
-                <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openTaskEngineModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-robot text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Autonomous Agent</button>
+            <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
                 <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
                 <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
                 <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
@@ -774,7 +857,7 @@ body {
         
         <!-- Left Section: Mobile Toggle & Search (Visual) -->
         <div class="flex items-center flex-1 max-w-xl gap-3">
-            <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-50">
+            <button onclick="toggleSidebar(); document.getElementById('sidebar').classList.toggle('lg:hidden');" class="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-50" title="Toggle Sidebar">
                 <i class="ph-bold ph-list text-2xl"></i>
             </button>
             <div class="relative w-full hidden sm:block">
@@ -863,11 +946,127 @@ body {
 
                 <!-- Main Textarea -->
                 <textarea 
-                    id="chat-input"
-                    placeholder="Ask anything, type @Arix in Co-Op..."
-                    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
-                    rows="1"
-                ></textarea>
+    id="chat-input"
+    placeholder="Ask anything, type @Arix in Co-Op..."
+    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
+    rows="1"
+></textarea>
+
+<!-- Dedicated Image / Video Controls -->
+<div id="visual-controls" class="hidden border-t border-gray-100 pt-2 px-2">
+    <div class="flex items-center gap-2 mb-2">
+        <i id="visual-controls-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
+        <span id="visual-controls-title" class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Image Controls</span>
+        <span class="ml-auto text-[9px] text-gray-400">Pixazo</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+
+        <select id="visual-style"
+            class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="auto">Style: Auto</option>
+            <option value="photorealistic">Photorealistic</option>
+            <option value="cinematic">Cinematic</option>
+            <option value="anime">Anime</option>
+            <option value="3d">3D</option>
+            <option value="illustration">Illustration</option>
+            <option value="digital-art">Digital Art</option>
+            <option value="watercolor">Watercolor</option>
+            <option value="sketch">Sketch</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="vintage">Vintage</option>
+            <option value="product">Product</option>
+            <option value="portrait">Portrait</option>
+            <option value="architecture">Architecture</option>
+            <option value="minimalist">Minimalist</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="documentary">Documentary</option>
+            <option value="commercial">Commercial</option>
+        </select>
+
+        <select id="visual-aspect"
+            class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="1:1">Aspect: 1:1</option>
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+            <option value="21:9">21:9</option>
+            <option value="3:2">3:2</option>
+            <option value="2:3">2:3</option>
+            <option value="4:5">4:5</option>
+        </select>
+
+        <select id="visual-image-steps"
+            class="visual-image-only bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="4">Steps: 4 Fast</option>
+            <option value="6">Steps: 6</option>
+            <option value="10">Steps: 10</option>
+            <option value="15">Steps: 15</option>
+            <option value="20">Steps: 20 Max</option>
+        </select>
+
+        <select id="visual-image-guidance"
+            class="visual-image-only bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="3">Guidance: 3</option>
+            <option value="3.5" selected>Guidance: 3.5</option>
+            <option value="5">Guidance: 5</option>
+            <option value="7">Guidance: 7</option>
+            <option value="10">Guidance: 10</option>
+        </select>
+
+        <select id="visual-video-duration"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="2">Duration: 2s</option>
+            <option value="4">Duration: 4s</option>
+            <option value="6" selected>Duration: 6s</option>
+            <option value="8">Duration: 8s</option>
+            <option value="10">Duration: 10s</option>
+        </select>
+
+        <select id="visual-video-fps"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="24" selected>FPS: 24</option>
+            <option value="25">FPS: 25</option>
+            <option value="30">FPS: 30</option>
+            <option value="48">FPS: 48</option>
+            <option value="60">FPS: 60</option>
+        </select>
+
+        <select id="visual-video-steps"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="10">Steps: 10</option>
+            <option value="15" selected>Steps: 15</option>
+            <option value="20">Steps: 20</option>
+            <option value="25">Steps: 25</option>
+            <option value="30">Steps: 30</option>
+        </select>
+
+        <select id="visual-video-guidance"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="2">Guidance: 2</option>
+            <option value="3" selected>Guidance: 3</option>
+            <option value="5">Guidance: 5</option>
+            <option value="7">Guidance: 7</option>
+            <option value="10">Guidance: 10</option>
+        </select>
+
+    </div>
+
+    <div class="flex items-center justify-between mt-2 gap-3">
+        <label class="flex items-center gap-2 text-[10px] text-gray-500 cursor-pointer">
+            <input id="visual-enhance" type="checkbox" checked
+                class="accent-theme-600 w-3.5 h-3.5">
+            Enhance prompt
+        </label>
+
+        <label id="visual-audio-wrap" class="hidden items-center gap-2 text-[10px] text-gray-500 cursor-pointer">
+            <input id="visual-audio" type="checkbox" checked
+                class="accent-violet-600 w-3.5 h-3.5">
+            Generate audio
+        </label>
+    </div>
+</div>
 
                 <!-- Input Action Bar -->
                 <div class="flex items-center justify-between px-1 border-t border-gray-50 pt-2 mt-1">
@@ -1129,6 +1328,7 @@ function changeNickname() {
 // Global Application State Variables
 let activeModelId = localStorage.getItem('Arix_active_model') || 'spark';
 let isProcessing = false;
+let isWorkspaceMode = false;
 let isDeepResearchOn = false;
 let isPresentationMode = false;
 let isMathMode = false;
@@ -1137,6 +1337,7 @@ let isAppMode = false;
 let isStudyMode = false;
 let isCanvasMaximized = false;
 let isImageMode = false;
+let isVideoMode = false;
 let currentChatId = Date.now().toString();
 let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
 let messages = [];
@@ -1186,7 +1387,9 @@ const els = {
     studyBtn: document.getElementById('study-btn'),
     studyIcon: document.getElementById('study-icon'),
     imageBtn: document.getElementById('image-btn'),
-    imageIcon: document.getElementById('image-icon')
+    imageIcon: document.getElementById('image-icon'),
+    videoBtn: document.getElementById('video-btn'),
+    videoIcon: document.getElementById('video-icon')
 };
 
 window.onload = async () => {
@@ -1632,7 +1835,9 @@ function resetAllModeUI() {
         { btn: els.podcastBtn, icon: els.podcastIcon, textClass: 'text-pink-600', bgClass: 'bg-pink-50', borderClass: 'border-pink-200' },
         { btn: els.appBtn, icon: els.appIcon, textClass: 'text-orange-600', bgClass: 'bg-orange-50', borderClass: 'border-orange-200' },
         { btn: els.studyBtn, icon: els.studyIcon, textClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-200' },
-        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' }
+        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' },
+        { btn: els.videoBtn, icon: els.videoIcon, textClass: 'text-violet-600', bgClass: 'bg-violet-50', borderClass: 'border-violet-200' },
+        { btn: document.getElementById('workspace-btn'), icon: document.getElementById('workspace-icon'), textClass: 'text-slate-900', bgClass: 'bg-slate-100', borderClass: 'border-slate-300' }
     ];
 
     modes.forEach(m => {
@@ -1643,9 +1848,25 @@ function resetAllModeUI() {
     });
 }
 
+function toggleWorkspaceMode() {
+    const wasOn = isWorkspaceMode;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false; isWorkspaceMode = false;
+    resetAllModeUI();
+    if (!wasOn) {
+        isWorkspaceMode = true;
+        const btn = document.getElementById('workspace-btn');
+        if(btn) {
+            btn.classList.replace('text-gray-500', 'text-slate-900');
+            btn.classList.replace('border-transparent', 'border-slate-300');
+            btn.classList.add('bg-slate-100');
+        }
+        showToast("Workspace Agent Mode Engaged");
+    }
+}
+
 function toggleDeepResearch() {
     const wasOn = isDeepResearchOn;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isDeepResearchOn = true;
@@ -1659,7 +1880,7 @@ function toggleDeepResearch() {
 
 function togglePresentationMode() {
     const wasOn = isPresentationMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isPresentationMode = true;
@@ -1673,7 +1894,7 @@ function togglePresentationMode() {
 
 function toggleMathMode() {
     const wasOn = isMathMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isMathMode = true;
@@ -1687,7 +1908,7 @@ function toggleMathMode() {
 
 function togglePodcastMode() {
     const wasOn = isPodcastMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isPodcastMode = true;
@@ -1701,7 +1922,7 @@ function togglePodcastMode() {
 
 function toggleAppMode() {
     const wasOn = isAppMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isAppMode = true;
@@ -1715,21 +1936,59 @@ function toggleAppMode() {
 
 function toggleImageMode() {
     const wasOn = isImageMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+
+    isDeepResearchOn = false;
+    isPresentationMode = false;
+    isMathMode = false;
+    isPodcastMode = false;
+    isAppMode = false;
+    isStudyMode = false;
+    isImageMode = false;
+    isVideoMode = false;
+
     resetAllModeUI();
+
     if (!wasOn) {
         isImageMode = true;
+
         els.imageBtn.classList.replace('text-gray-500', 'text-fuchsia-600');
         els.imageBtn.classList.replace('border-transparent', 'border-fuchsia-200');
         els.imageBtn.classList.add('bg-fuchsia-50');
         els.imageIcon.classList.add('animate-pulse');
-        showToast("Visual Engine Engaged");
+
+        showToast("Image Studio Engaged");
+    }
+}
+
+function toggleVideoMode() {
+    const wasOn = isVideoMode;
+
+    isDeepResearchOn = false;
+    isPresentationMode = false;
+    isMathMode = false;
+    isPodcastMode = false;
+    isAppMode = false;
+    isStudyMode = false;
+    isImageMode = false;
+    isVideoMode = false;
+
+    resetAllModeUI();
+
+    if (!wasOn) {
+        isVideoMode = true;
+
+        els.videoBtn.classList.replace('text-gray-500', 'text-violet-600');
+        els.videoBtn.classList.replace('border-transparent', 'border-violet-200');
+        els.videoBtn.classList.add('bg-violet-50');
+        els.videoIcon.classList.add('animate-pulse');
+
+        showToast("Video Studio Engaged");
     }
 }
 
 function toggleStudyMode() {
     const wasOn = isStudyMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isStudyMode = true;
@@ -2208,24 +2467,97 @@ function showToast(msg) {
     setTimeout(() => toast.classList.add('opacity-0', '-translate-y-10'), 2500); 
 }
 
-async function copyToClipboard(msgId) { 
-    const msg = messages.find(m => m.id === msgId); 
-    if (!msg) return; 
-    try { 
+async function copyToClipboard(msgId) {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    try {
+        const wrapper = document.getElementById('msg-wrapper-' + msgId);
+
+        let textToCopy = "";
+
+        if (wrapper) {
+            // Copy the ACTUAL RENDERED MESSAGE, not the raw HTML source.
+            const rendered = wrapper.querySelector('.msg-content');
+
+            if (rendered) {
+                const clone = rendered.cloneNode(true);
+
+                // Remove UI / metadata that should NEVER enter copied text.
+                clone.querySelectorAll(
+                    '#Arix-persistent-loader,' +
+                    '#Arix-repair-loader,' +
+                    '.think-step,' +
+                    '.action-bar,' +
+                    '.verification-tab,' +
+                    'style,' +
+                    'script,' +
+                    'svg,' +
+                    'button,' +
+                    'template'
+                ).forEach(el => el.remove());
+
+                // innerText respects visible formatting and line breaks.
+                textToCopy = clone.innerText || clone.textContent || "";
+            }
+        }
+
+        // Robust fallback if the rendered message is unavailable.
+        if (!textToCopy.trim()) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(
+                String(msg.content || ""),
+                "text/html"
+            );
+
+            doc.querySelectorAll(
+                '#Arix-persistent-loader,' +
+                '#Arix-repair-loader,' +
+                '.think-step,' +
+                '.action-bar,' +
+                '.verification-tab,' +
+                'style,' +
+                'script,' +
+                'svg,' +
+                'button,' +
+                'template'
+            ).forEach(el => el.remove());
+
+            textToCopy = doc.body.innerText || doc.body.textContent || "";
+        }
+
+        // Normalize whitespace without destroying paragraph/list line breaks.
+        textToCopy = textToCopy
+            .replace(/\u00A0/g, ' ')
+            .replace(/[ \t]+\n/g, '\n')
+            .replace(/\n[ \t]+/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+
+        if (!textToCopy) {
+            return showToast("Nothing to copy.");
+        }
+
         if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(msg.content);
-        } else { 
+            await navigator.clipboard.writeText(textToCopy);
+        } else {
             const t = document.createElement("textarea");
-            t.value = msg.content; 
-            document.body.appendChild(t); 
+            t.value = textToCopy;
+            t.style.position = "fixed";
+            t.style.left = "-9999px";
+            t.style.top = "0";
+            document.body.appendChild(t);
+            t.focus();
             t.select();
-            document.execCommand("copy"); 
-            t.remove(); 
-        } 
-        showToast("Copied to clipboard!"); 
+            document.execCommand("copy");
+            t.remove();
+        }
+
+        showToast("Copied to clipboard!");
     } catch (err) {
-        showToast("Copy failed!"); 
-    } 
+        console.error("Copy error:", err);
+        showToast("Copy failed!");
+    }
 }
 
 function openPdfModal(msgId) { 
@@ -2588,143 +2920,6 @@ function renderProjectsList() {
         </div>
     `}).join('');
 }
-// ====== AUTONOMOUS TASK ENGINE HANDLERS ======
-let taskEngineState = {};
-let taskEngineAnswers = {};
-let taskEngineGoal = "";
-
-function openTaskEngineModal() {
-    document.getElementById('task-engine-modal').classList.remove('hidden');
-    document.getElementById('task-engine-modal').classList.add('flex');
-}
-
-function closeTaskEngineModal() {
-    document.getElementById('task-engine-modal').classList.add('hidden');
-    document.getElementById('task-engine-modal').classList.remove('flex');
-}
-
-function appendTaskModalMsg(role, content) {
-    const chat = document.getElementById('task-engine-chat');
-    const placeholder = chat.querySelector('.text-center.text-gray-500');
-    if (placeholder) placeholder.remove();
-
-    const isUser = role === 'user';
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `w-full flex ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in-up`;
-
-    if (isUser) {
-        msgDiv.innerHTML = `
-            <div class="bg-blue-600 text-white px-5 py-3.5 rounded-2xl rounded-tr-sm shadow-md text-[14px] leading-relaxed max-w-[85%] font-medium border border-blue-700">
-                ${content.replace(/\n/g, '<br>')}
-            </div>
-        `;
-    } else {
-        msgDiv.innerHTML = `
-            <div class="flex gap-3 w-full max-w-[95%]">
-                <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl flex-shrink-0 shadow-sm border border-blue-100 mt-1">
-                    <i class="ph-fill ph-robot"></i>
-                </div>
-                <div class="bg-white border border-gray-200 text-gray-800 px-5 py-4 rounded-2xl rounded-tl-sm shadow-sm text-[14px] leading-relaxed w-full task-msg-content font-medium min-w-0">
-                    ${content}
-                </div>
-            </div>
-        `;
-    }
-    chat.appendChild(msgDiv);
-    chat.scrollTop = chat.scrollHeight;
-    return isUser ? null : msgDiv.querySelector('.task-msg-content');
-}
-
-async function runArixTask() {
-    const inputEl = document.getElementById('task-engine-input');
-    const btn = document.getElementById('task-engine-send-btn');
-    const query = inputEl.value.trim();
-    if (!query) return;
-
-    if (taskEngineState.status === 'needs_input') {
-        const key = taskEngineState.questionKey;
-        if (key) taskEngineAnswers[key] = query;
-        appendTaskModalMsg('user', query);
-    } else {
-        taskEngineState = {};
-        taskEngineAnswers = {};
-        taskEngineGoal = query;
-        document.getElementById('task-engine-chat').innerHTML = ""; 
-        appendTaskModalMsg('user', query);
-    }
-
-    inputEl.value = '';
-    inputEl.placeholder = "Agent is working...";
-    inputEl.disabled = true;
-    btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i>';
-    btn.disabled = true;
-
-    const contentContainer = appendTaskModalMsg('assistant', '<div class="flex items-center gap-2 text-blue-600 animate-pulse"><i class="ph-bold ph-circle-notch animate-spin text-lg"></i> Initializing Autonomous Protocol...</div>');
-
-    try {
-        const res = await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                messages: [{ role: 'user', content: taskEngineGoal }],
-                modelId: 'oracle',
-                taskMode: true,
-                taskState: taskEngineState,
-                taskAnswers: taskEngineAnswers
-            })
-        });
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let htmlBuffer = "";
-        contentContainer.innerHTML = ""; 
-
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop();
-
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    const dataStr = line.slice(6).trim();
-                    if (!dataStr || dataStr === '[DONE]') continue;
-
-                    try {
-                        const data = JSON.parse(dataStr);
-                        if (data.task_result) {
-                            taskEngineState = data.task_result;
-                            if (data.task_result.status === 'needs_input') {
-                                inputEl.placeholder = "Type your answer to clarify...";
-                            } else if (data.task_result.status === 'completed') {
-                                inputEl.placeholder = "Start a new autonomous task...";
-                            }
-                        } else if (data.ui_error) {
-                            contentContainer.innerHTML += `<div class="text-red-500 font-semibold flex items-center gap-2"><i class="ph-bold ph-warning-circle text-lg"></i> ${data.ui_error}</div>`;
-                        } else if (data.candidates && data.candidates[0].content.parts[0].text) {
-                            htmlBuffer += data.candidates[0].content.parts[0].text;
-                            contentContainer.innerHTML = htmlBuffer;
-                            const chatDiv = document.getElementById('task-engine-chat');
-                            chatDiv.scrollTop = chatDiv.scrollHeight;
-                        }
-                    } catch (e) {}
-                }
-            }
-        }
-    } catch (err) {
-        contentContainer.innerHTML = `<div class="text-red-500 font-semibold flex items-center gap-2"><i class="ph-bold ph-warning-circle text-lg"></i> Network Error: ${err.message}</div>`;
-        inputEl.placeholder = "Start a new autonomous task...";
-    }
-
-    btn.innerHTML = '<i class="ph-bold ph-paper-plane-right"></i>';
-    btn.disabled = false;
-    inputEl.disabled = false;
-    inputEl.focus();
-}
-
 function openPulseModal() { 
     document.getElementById('pulse-modal').classList.remove('hidden');
     if (typeof renderPulseVault === 'function') renderPulseVault();
@@ -2749,40 +2944,84 @@ function generateBrainMap() {
 }
 
 async function shareFullChat() {
-    if (messages.length === 0) return showToast("Chat is empty");
-    showToast("Generating Share Link...");
-    
-    // Visual loading state on the sidebar button
-    const btn = document.querySelector('button[onclick="shareFullChat()"]');
-    if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-sm text-indigo-500"></i> Sharing...';
-    
-    try {
-        const res = await fetch('/api/chatshare', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat: chats.find(c => c.id === currentChatId) })
-        });
-        const data = await res.json();
-        
-        if (data.success && data.id) {
-            const link = window.location.origin + '?chat=' + data.id;
-            await navigator.clipboard.writeText(link);
-            showToast("Link Copied! Anyone can view.");
-        } else {
-            throw new Error("API failed");
-        }
-    } catch (e) {
-        // Fallback local share simulation if backend endpoint is unavailable
-        const shareId = 'local_' + currentChatId;
-        const link = window.location.origin + window.location.pathname + '?chat=' + shareId;
-        await navigator.clipboard.writeText(link);
-        showToast("Chat Link Copied!");
+    if (messages.length === 0) {
+        showToast("Chat is empty");
+        return;
     }
-    
-    // Restore button state
-    if(btn) btn.innerHTML = '<i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat';
-}
 
+    showToast("Generating Share Link...");
+
+    const btn = document.querySelector('button[onclick="shareFullChat()"]');
+
+    if (btn) {
+        btn.innerHTML =
+            '<i class="ph-bold ph-spinner animate-spin text-sm text-indigo-500"></i> Sharing...';
+        btn.disabled = true;
+    }
+
+    try {
+        const currentChat = chats.find(
+            (c) => c.id === currentChatId
+        );
+
+        if (!currentChat) {
+            throw new Error("Current chat could not be found.");
+        }
+
+        const res = await fetch("/api/chatshare", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                chatData: currentChat,
+            }),
+        });
+
+        let data;
+
+        try {
+            data = await res.json();
+        } catch {
+            throw new Error(
+                `Share API returned invalid JSON (HTTP ${res.status})`
+            );
+        }
+
+        if (!res.ok || !data.success || !(data.id || data.shareId)) {
+            throw new Error(
+                data?.error ||
+                `Share API failed (HTTP ${res.status})`
+            );
+        }
+
+        const shareId = data.id || data.shareId;
+
+        const link =
+            window.location.origin +
+            window.location.pathname +
+            "?chat=" +
+            encodeURIComponent(shareId);
+
+        await navigator.clipboard.writeText(link);
+
+        showToast("Link Copied! Anyone can view.");
+    } catch (e) {
+        console.error("Share Chat Error:", e);
+
+        showToast(
+            e?.message
+                ? `Share failed: ${e.message}`
+                : "Failed to create share link."
+        );
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML =
+                '<i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat';
+        }
+    }
+}
 // ====== EXTENSION MANAGER ======
 
 
@@ -2855,12 +3094,13 @@ function saveCurrentChat() {
     }));
     
     const chatData = { 
-        id: currentChatId, 
-        title: chatIndex > -1 ? chats[chatIndex].title : title,
-        messages: safeMessages, 
-        extId: currentChatExtId, 
-        date: Date.now() 
-    };
+            id: currentChatId, 
+            title: chatIndex > -1 ? chats[chatIndex].title : title,
+            messages: safeMessages, 
+            extId: currentChatExtId, 
+            date: Date.now(),
+            pinned: chatIndex > -1 ? chats[chatIndex].pinned : false
+        };
     
     if (chatIndex > -1) chats[chatIndex] = chatData; 
     else chats.unshift(chatData);
@@ -2916,19 +3156,37 @@ function renameChat(id, e) {
     } 
 }
 
+function togglePinChat(id, e) {
+    e.stopPropagation();
+    const chat = chats.find(c => c.id === id);
+    if (chat) {
+        chat.pinned = !chat.pinned;
+        localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+        renderHistoryList();
+    }
+}
+
 function renderHistoryList() { 
+    // Sort: Pinned chats first, then order by newest activity date descending
+    chats.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return (b.date || 0) - (a.date || 0);
+    });
+
     els.historyList.innerHTML = chats.map(chat => 
-        `<div class="group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-50 border border-theme-100 shadow-sm' : 'hover:bg-gray-50 border border-transparent'}" onclick="loadChat('${chat.id}')">
+        `<div class="group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-100 border border-theme-300 shadow-md ring-1 ring-theme-200' : 'hover:bg-gray-50 border border-transparent'} relative" onclick="loadChat('${chat.id}')">
             <div class="flex items-center gap-2 overflow-hidden">
-                <i class="ph-bold ph-chat-circle ${chat.id === currentChatId ? 'text-theme-600' : 'text-gray-400'} flex-shrink-0 text-lg"></i>
+                <i class="${chat.pinned ? 'ph-fill ph-push-pin text-amber-500' : 'ph-bold ph-chat-circle'} ${chat.id === currentChatId && !chat.pinned ? 'text-theme-600' : (!chat.pinned ? 'text-gray-400' : '')} flex-shrink-0 text-lg"></i>
                 <div class="flex flex-col">
-                    <span class="text-[13px] font-medium ${chat.id === currentChatId ? 'text-theme-800' : 'text-gray-700'} truncate">${chat.title}</span>
+                    <span class="text-[13px] font-bold ${chat.id === currentChatId ? 'text-theme-900' : 'text-gray-700'} truncate">${chat.title}</span>
                     ${chat.extId ? '<span class="text-[9px] text-purple-600 font-bold uppercase tracking-wide flex items-center gap-1"><i class="ph-bold ph-brain"></i> Active Ext</span>' : ""}
                 </div>
             </div>
-            <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick="renameChat('${chat.id}', event)" class="text-gray-400 hover:text-blue-600 p-1 bg-white hover:bg-blue-50 rounded shadow-sm border border-gray-100"><i class="ph-bold ph-pencil-simple"></i></button>
-                <button onclick="deleteChat('${chat.id}', event)" class="text-gray-400 hover:text-red-600 p-1 bg-white hover:bg-red-50 rounded shadow-sm border border-gray-100"><i class="ph-bold ph-trash"></i></button>
+            <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity relative z-20">
+                <button onclick="togglePinChat('${chat.id}', event)" class="text-gray-400 hover:text-amber-500 p-1 bg-white hover:bg-amber-50 rounded shadow-sm border border-gray-100" title="${chat.pinned ? 'Unpin Chat' : 'Pin Chat'}"><i class="ph-bold ${chat.pinned ? 'ph-push-pin-slash' : 'ph-push-pin'}"></i></button>
+                <button onclick="renameChat('${chat.id}', event)" class="text-gray-400 hover:text-blue-600 p-1 bg-white hover:bg-blue-50 rounded shadow-sm border border-gray-100" title="Rename"><i class="ph-bold ph-pencil-simple"></i></button>
+                <button onclick="deleteChat('${chat.id}', event)" class="text-gray-400 hover:text-red-600 p-1 bg-white hover:bg-red-50 rounded shadow-sm border border-gray-100" title="Delete"><i class="ph-bold ph-trash"></i></button>
             </div>
         </div>`
     ).join(""); 
@@ -2975,7 +3233,49 @@ function updateUIState() {
     else if (activeModelId === 'spark') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-amber-400`;
     else if (activeModelId === 'flux') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-cyan-400`;
 
+    if (isImageMode || isVideoMode) {
+    const visualControls = document.getElementById('visual-controls');
+    const controlsTitle = document.getElementById('visual-controls-title');
+    const controlsIcon = document.getElementById('visual-controls-icon');
+    const audioWrap = document.getElementById('visual-audio-wrap');
+
+    if (visualControls) visualControls.classList.remove('hidden');
+
+    if (isVideoMode) {
+        els.input.placeholder = 'Describe the video you want ArixAI to generate...';
+
+        if (controlsTitle) controlsTitle.textContent = 'Video Controls';
+        if (controlsIcon) {
+            controlsIcon.className = 'ph-bold ph-film-strip text-violet-500';
+        }
+
+        document.querySelectorAll('.visual-image-only').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.visual-video-only').forEach(el => el.classList.remove('hidden'));
+
+        if (audioWrap) {
+            audioWrap.classList.remove('hidden');
+            audioWrap.classList.add('flex');
+        }
+    } else {
+        els.input.placeholder = 'Describe the image you want ArixAI to generate...';
+
+        if (controlsTitle) controlsTitle.textContent = 'Image Controls';
+        if (controlsIcon) {
+            controlsIcon.className = 'ph-bold ph-aperture text-fuchsia-500';
+        }
+
+        document.querySelectorAll('.visual-image-only').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('.visual-video-only').forEach(el => el.classList.add('hidden'));
+
+        if (audioWrap) {
+            audioWrap.classList.add('hidden');
+            audioWrap.classList.remove('flex');
+        }
+    }
+} else {
+    document.getElementById('visual-controls')?.classList.add('hidden');
     els.input.placeholder = `Message ArixAI (${model.name})...`;
+}
     
     if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { 
         els.sendBtn.className = 'bg-theme-600 text-white p-2.5 sm:p-3 rounded-full shadow-md shadow-theme-200 transition-all duration-300 flex items-center justify-center cursor-pointer hover:bg-theme-700 transform hover:scale-105';
@@ -2988,8 +3288,103 @@ function updateUIState() {
 
 // ====== DYNAMIC MESSAGE PARSING & FORMATTING ======
 function parseRichText(content, isStreaming = false, msgId = null) {
+    // Bypass Markdown parsing for Pixazo Visual Engine HTML widgets
+    if (typeof content === 'string' && content.includes('bg-gray-900/60 border border-white/10')) {
+        return content;
+    }
+
     let extractedHtml = ""; 
     let markdownContent = content;
+
+    // 1. Normalize all tag variants into standard markers & absorb pre-thought bleed
+    // 1. Normalize opening tags to <think_s>
+    // 1. Normalize all opening and closing tag variations
+    let cleanText = markdownContent
+        .replace(/<(?:think_s|thinking)(?:\s+title="[^"]*")?>|think_start/gi, '<think_s>')
+        .replace(/<\/(?:think_s|think_e|thinking)>|<think_e>|<\/think>|think_end/gi, '<think_e>')
+        // Strip pre-thought model preambles
+        .replace(/(?:(?:^|\n)(?:Confidence Score:[^\n]*|Strategizing[^\n]*|` structure\.)\s*)+<think_s>/gi, '<think_s>');
+
+    // 2. ABSORB PREMATURE CLOSURES AND "READY TO GENERATE" TRANSITIONS INTO THINKING
+    // Catches <think_e> placed before "Okay, I'm ready to generate..." and shifts <think_e> to after it
+    cleanText = cleanText.replace(
+        /<think_e>\s*([\s\S]*?Okay,?\s*I(?:\'m| am)\s*ready to generate the response[^\n.]*[.]?\s*)/gi,
+        '$1<think_e>\n\n'
+    );
+
+    // Also absorb other trailing planning notes that precede conversational greetings or headers
+    cleanText = cleanText.replace(
+        /<think_e>\s*([\s\S]*?(?:\[SYSTEM CLOCK|I will formulate|I will structure|Core components|Latest News:|Today's Date:)[\s\S]*?)(?=(?:[.!?\n]|^)\s*(?:Hey\b|Hello\b|Hi\b|Greetings\b|Good\s+(?:morning|afternoon|evening)\b|#{1,6}\s))/gi,
+        '$1<think_e>\n\n'
+    );
+
+    // 3. FAIL-SAFE: If the model never closed <think_s> at all
+    if (!isStreaming && cleanText.includes('<think_s>') && !cleanText.includes('<think_e>')) {
+        const thinkStartIdx = cleanText.indexOf('<think_s>') + 9;
+        const body = cleanText.substring(thinkStartIdx);
+
+        // Check if the "ready to generate" phrase exists in the unclosed thought
+        const readyPhraseRegex = /Okay,?\s*I(?:\'m| am)\s*ready to generate the response[^\n.]*[.]?\s*/i;
+        const readyPhraseMatch = body.search(readyPhraseRegex);
+
+        if (readyPhraseMatch !== -1) {
+            const matchedText = body.match(readyPhraseRegex)[0];
+            const splitIdx = thinkStartIdx + readyPhraseMatch + matchedText.length;
+            cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+        } else {
+            // Otherwise search for standard conversational greeting boundaries
+            const greetingMatch = body.search(/(?<=[.!?\n]|^)\s*(?=(?:Hey\b|Hello\b|Hi\b|Greetings\b|Good\s+(?:morning|afternoon|evening)\b|Dear\b|#{1,6}\s))/i);
+            if (greetingMatch !== -1) {
+                const splitIdx = thinkStartIdx + greetingMatch;
+                cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+            } else {
+                const planEndMatch = body.search(/(?:I will (?:formulate|structure|provide|now|generate|respond)[^\n.!?]*[.!?])\s*/i);
+                if (planEndMatch !== -1) {
+                    const matchedStr = body.match(/(?:I will (?:formulate|structure|provide|now|generate|respond)[^\n.!?]*[.!?])\s*/i)[0];
+                    const splitIdx = thinkStartIdx + planEndMatch + matchedStr.length;
+                    cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+                }
+            }
+        }
+    }
+
+    // 4. Render completed thinking blocks into collapsible details menus
+    cleanText = cleanText.replace(/<think_s>([\s\S]*?)<think_e>/gi, (match, innerContent) => {
+        return `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+<summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
+<div class="flex items-center gap-2.5">
+<i class="ph-bold ph-brain text-gray-400"></i>
+<span class="text-[13px] font-semibold text-gray-500">Thinking...</span>
+</div>
+<i class="ph-bold ph-caret-down text-gray-400 text-xs group-open:rotate-180 transition-transform"></i>
+</summary>
+<div class="p-4 pt-2 text-[13px] text-gray-500 font-mono leading-relaxed bg-white/50 border-t border-gray-100">
+${marked.parse(innerContent.trim())}
+</div>
+</details>\n\n`;
+    });
+
+    // 5. Active streaming state
+    if (isStreaming && cleanText.includes('<think_s>')) {
+        const parts = cleanText.split('<think_s>');
+        const beforeContent = parts[0];
+        const unclosedContent = parts.slice(1).join('<think_s>');
+
+        cleanText = beforeContent + `\n\n<div class="my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse">
+<div class="flex items-center justify-between p-3 px-4 select-none">
+<div class="flex items-center gap-2.5">
+<i class="ph-bold ph-brain text-gray-400 animate-pulse"></i>
+<span class="text-[13px] font-semibold text-gray-500">Thinking...</span>
+</div>
+</div>
+<div class="p-4 pt-2 text-[13px] text-gray-400 font-mono leading-relaxed bg-white/50 border-t border-gray-100">
+${marked.parse(unclosedContent.trim())}
+</div>
+</div>\n\n`;
+    }
+
+    markdownContent = cleanText;
+
     if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) { 
         markdownContent += '\n</artifact>'; 
     }
@@ -3314,9 +3709,27 @@ async function handleSend() {
         updateMemoryAsync();
     }
     
+    // 5.0 WORKSPACE ORCHESTRATOR INTERCEPT
+    if (isWorkspaceMode || text.startsWith('/workspace')) {
+        els.indicator.classList.add('hidden');
+        let cleanPrompt = text.replace(/^\/workspace\b/i, '').trim();
+        if(!cleanPrompt) return showToast("Enter a goal for the Workspace Agent.");
+        
+        isProcessing = false; // Release input lock for chat, orchestration handles itself
+        updateUIState();
+        
+        openOrchestratorTab(cleanPrompt);
+        
+        // Save prompt to chat history as user message
+        messages.push({ role: 'user', content: `[WORKSPACE LAUNCH]: ${cleanPrompt}`, id: userMsgObj.id, modelId: activeModelId });
+        saveCurrentChat();
+        return;
+    }
+
     // 5A. MATH ENGINE INTERCEPT
     if (isMathMode) {
         els.indicator.classList.add('hidden');
+        const logContainer = appendResearchTerminal('Initializing Cartesian Core...', 'math');
         const logContainer = appendResearchTerminal('Initializing Cartesian Core...', 'math');
         
         try {
@@ -3510,53 +3923,499 @@ async function handleSend() {
         isProcessing = false; updateUIState(); return;
     }
     
-    // 5E. IMAGE ENGINE
-    if (isImageMode || text.toLowerCase().startsWith('/imagine')) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Initializing Neural Visual Engine...', 'presentation');
-        
-        const aiMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
-        
-        try {
-            const res = await fetch('/api/image', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ prompt: text }) 
-            });
-            
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let htmlWidget = "";
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunks = decoder.decode(value, { stream: true }).split('\n\n').filter(Boolean);
-                for (let chunk of chunks) {
-                    if (chunk.startsWith('data: ')) {
-                        const data = JSON.parse(chunk.substring(6));
-                        if(data.text.trim().startsWith('<div') || htmlWidget.length > 0) {
-                             htmlWidget += data.text; 
-                        } else {
-                             logContainer.innerHTML += `<div class="flex items-center gap-2"><i class="ph-bold ph-check text-fuchsia-500"></i><span class="text-sm font-medium">${data.text}</span></div>`;
-                             els.canvas.scrollTop = els.canvas.scrollHeight;
-                        }
+    // 5E. UNIFIED PIXAZO IMAGE + VIDEO ENGINE
+if (
+    isImageMode ||
+    isVideoMode ||
+    /^\/imagine\b/i.test(text) ||
+    /^\/video\b/i.test(text)
+) {
+    els.indicator.classList.add('hidden');
+
+    const detectedVideo = isVideoMode || /^\/video\b/i.test(text);
+    const modality = detectedVideo ? 'video' : 'image';
+
+    let cleanPrompt = text.trim();
+
+    if (detectedVideo) {
+        cleanPrompt = cleanPrompt.replace(/^\/video\b/i, '').trim();
+    } else {
+        cleanPrompt = cleanPrompt.replace(/^\/imagine\b/i, '').trim();
+    }
+
+    if (!cleanPrompt) {
+        appendMessage(
+            'assistant',
+            `<span class="text-red-500 font-medium">Please describe the ${detectedVideo ? 'video' : 'image'} you want to generate.</span>`,
+            activeModelId
+        );
+        isProcessing = false;
+        updateUIState();
+        return;
+    }
+
+    const aiMsgObj = appendMessage(
+        'assistant',
+        "",
+        activeModelId,
+        null,
+        [],
+        currentMultiplayerRoom ? 'ArixAI' : null
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * REAL-TIME VISUAL PROGRESS
+     * ---------------------------------------------------------
+     * Never invent a percentage in the frontend.
+     * The frontend displays provider-reported progress when the
+     * API supplies it.
+     *
+     * When the provider does not expose an exact percentage,
+     * we show an animated "working" state + elapsed time instead
+     * of pretending that 47% / 83% etc. is real.
+     */
+
+    let latestProgress = null;
+    let latestStage = 'starting';
+    let latestDetail = 'Connecting to Pixazo...';
+    const generationStartedAt = Date.now();
+
+    const progressShell = document.createElement('div');
+    progressShell.className =
+        'mt-4 w-full rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden';
+
+    progressShell.innerHTML = `
+        <div class="p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-8 h-8 rounded-xl ${detectedVideo ? 'bg-violet-50 text-violet-600' : 'bg-fuchsia-50 text-fuchsia-600'} flex items-center justify-center">
+                        <i class="ph-bold ${detectedVideo ? 'ph-film-strip' : 'ph-aperture'}"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <div class="text-sm font-bold text-gray-800">
+                            ${detectedVideo ? 'Generating Video' : 'Generating Image'}
+                        </div>
+                        <div id="visual-stage-text" class="text-[10px] text-gray-400 truncate">
+                            Connecting to Pixazo...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right shrink-0">
+                    <div id="visual-progress-number"
+                         class="text-lg font-black ${detectedVideo ? 'text-violet-600' : 'text-fuchsia-600'}">
+                        —
+                    </div>
+                    <div id="visual-progress-label"
+                         class="text-[9px] uppercase tracking-wider text-gray-400">
+                        provider %
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div id="visual-progress-bar"
+                     class="h-full rounded-full transition-all duration-500 w-0 relative overflow-hidden ${detectedVideo ? 'bg-violet-500' : 'bg-fuchsia-500'}">
+                    <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-2 gap-3">
+                <div id="visual-progress-detail"
+                     class="text-[10px] text-gray-500 truncate">
+                    Waiting for provider status...
+                </div>
+
+                <div id="visual-elapsed"
+                     class="text-[10px] text-gray-400 font-mono shrink-0">
+                    0s
+                </div>
+            </div>
+
+            <div id="visual-indeterminate"
+                 class="hidden mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-[10px] text-gray-500 flex items-center gap-2">
+                <i class="ph-bold ph-spinner-gap animate-spin"></i>
+                <span>Pixazo has not supplied an exact percentage yet. Generation is still active.</span>
+            </div>
+        </div>
+    `;
+
+    aiMsgObj.container.appendChild(progressShell);
+
+    const progressNumber = progressShell.querySelector('#visual-progress-number');
+    const progressLabel = progressShell.querySelector('#visual-progress-label');
+    const progressBar = progressShell.querySelector('#visual-progress-bar');
+    const stageText = progressShell.querySelector('#visual-stage-text');
+    const detailText = progressShell.querySelector('#visual-progress-detail');
+    const elapsedText = progressShell.querySelector('#visual-elapsed');
+    const indeterminate = progressShell.querySelector('#visual-indeterminate');
+
+    let elapsedTimer = setInterval(() => {
+        const seconds = Math.floor((Date.now() - generationStartedAt) / 1000);
+
+        if (elapsedText) {
+            elapsedText.textContent = `${seconds}s`;
+        }
+    }, 250);
+
+    const setProgress = (progress, stage, detail) => {
+        const numeric = Number(progress);
+
+        if (Number.isFinite(numeric)) {
+            const bounded = Math.max(0, Math.min(100, Math.round(numeric)));
+            latestProgress = bounded;
+
+            if (progressNumber) progressNumber.textContent = `${bounded}%`;
+            if (progressBar) progressBar.style.width = `${bounded}%`;
+
+            if (progressLabel) progressLabel.textContent = 'provider %';
+
+            if (indeterminate) indeterminate.classList.add('hidden');
+        } else {
+            if (progressNumber) progressNumber.textContent = '—';
+            if (progressLabel) progressLabel.textContent = 'status';
+
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                progressBar.classList.add('animate-pulse');
+            }
+
+            if (indeterminate) indeterminate.classList.remove('hidden');
+        }
+
+        latestStage = stage || latestStage;
+        latestDetail = detail || latestDetail;
+
+        if (stageText) {
+            stageText.textContent = latestStage || 'working';
+        }
+
+        if (detailText) {
+            detailText.textContent = latestDetail || 'Working...';
+        }
+    };
+
+    /*
+     * Keep UI visibly alive even if the network/provider pauses.
+     */
+    let heartbeat = setInterval(() => {
+        if (!detailText) return;
+
+        const dots =
+            '.'.repeat((Math.floor(Date.now() / 500) % 4));
+
+        if (latestProgress === null) {
+            detailText.textContent =
+                `${latestStage || 'working'}${dots}`;
+        }
+    }, 250);
+
+    try {
+        const style = document.getElementById('visual-style')?.value || 'auto';
+        const aspectRatio = document.getElementById('visual-aspect')?.value ||
+            (detectedVideo ? '16:9' : '1:1');
+
+        const enhancePrompt =
+            document.getElementById('visual-enhance')?.checked !== false;
+
+        const settings = {
+            style,
+            aspectRatio,
+            enhancePrompt
+        };
+
+        if (detectedVideo) {
+            settings.duration = Number(
+                document.getElementById('visual-video-duration')?.value || 6
+            );
+
+            settings.fps = Number(
+                document.getElementById('visual-video-fps')?.value || 24
+            );
+
+            settings.steps = Number(
+                document.getElementById('visual-video-steps')?.value || 15
+            );
+
+            settings.guidance = Number(
+                document.getElementById('visual-video-guidance')?.value || 3
+            );
+
+            settings.generateAudio =
+                document.getElementById('visual-audio')?.checked !== false;
+        } else {
+            settings.steps = Number(
+                document.getElementById('visual-image-steps')?.value || 4
+            );
+
+            settings.guidance = Number(
+                document.getElementById('visual-image-guidance')?.value || 3.5
+            );
+
+            settings.format = 'png';
+        }
+
+        const res = await fetch('/api/image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                modality,
+                prompt: cleanPrompt,
+                settings
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`Visual API returned HTTP ${res.status}`);
+        }
+
+        if (!res.body) {
+            throw new Error('Visual API returned no streaming body.');
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        let buffer = '';
+        let htmlWidget = '';
+        let streamEnded = false;
+        let finalContentReceived = false;
+
+        while (!streamEnded) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                streamEnded = true;
+                break;
+            }
+
+            if (!value) continue;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const events = buffer.split('\n\n');
+            buffer = events.pop() || '';
+
+            for (const eventBlock of events) {
+                const dataLine = eventBlock
+                    .split('\n')
+                    .find(line => line.startsWith('data: '));
+
+                if (!dataLine) continue;
+
+                const payloadText = dataLine.slice(6).trim();
+                if (!payloadText) continue;
+
+                let data;
+
+                try {
+                    data = JSON.parse(payloadText);
+                } catch {
+                    continue;
+                }
+
+                /*
+                 * New API protocol:
+                 * event=progress
+                 */
+                if (data.event === 'progress') {
+                    setProgress(
+                        Number.isFinite(Number(data.progress))
+                            ? Number(data.progress)
+                            : null,
+                        data.stage || 'working',
+                        data.detail || data.text || 'Working...'
+                    );
+
+                    continue;
+                }
+
+                /*
+                 * Final widget:
+                 * event=content
+                 */
+                if (data.event === 'content') {
+                    htmlWidget += String(data.text || '');
+                    finalContentReceived = true;
+
+                    setProgress(
+                        100,
+                        'complete',
+                        detectedVideo
+                            ? 'Video received successfully.'
+                            : 'Image received successfully.'
+                    );
+
+                    continue;
+                }
+
+                /*
+                 * Backwards compatibility with your older API response.
+                 */
+                if (typeof data.text === 'string') {
+                    const incoming = data.text;
+
+                    if (
+                        incoming.includes('<div') ||
+                        incoming.includes('</div>') ||
+                        htmlWidget.length > 0
+                    ) {
+                        htmlWidget += incoming;
+                    } else {
+                        setProgress(
+                            null,
+                            'working',
+                            incoming.replace(/^>\s*/, '').trim()
+                        );
                     }
                 }
             }
-            
-            setTimeout(() => logContainer.parentElement.parentElement.remove(), 1000);
-            aiMsgObj.container.innerHTML = htmlWidget;
-            messages.push({ role: 'assistant', content: htmlWidget, id: aiMsgObj.id, modelId: activeModelId });
-            saveCurrentChat();
-            
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            aiMsgObj.container.innerHTML = `<span class="text-red-500 font-medium">Visual Engine Error: ${err.message}</span>`;
+
+            els.canvas.scrollTop = els.canvas.scrollHeight;
         }
-        isProcessing = false; updateUIState(); return;
+
+        /*
+         * Flush a final partial SSE buffer.
+         */
+        if (buffer.trim().startsWith('data: ')) {
+            try {
+                const finalData = JSON.parse(buffer.trim().slice(6));
+
+                if (finalData.event === 'content') {
+                    htmlWidget += String(finalData.text || '');
+                    finalContentReceived = true;
+                }
+            } catch {}
+        }
+
+        clearInterval(elapsedTimer);
+        clearInterval(heartbeat);
+
+        if (!htmlWidget || !finalContentReceived) {
+            throw new Error(
+                'Generation stream ended before the final media widget was received.'
+            );
+        }
+
+        /*
+         * Replace progress card with final media.
+         */
+        progressShell.remove();
+
+        aiMsgObj.container.innerHTML = htmlWidget;
+
+        /*
+         * Improve generated-media download UX.
+         */
+        const mediaLinks = aiMsgObj.container.querySelectorAll('a');
+
+        mediaLinks.forEach(link => {
+            const href = link.getAttribute('href') || '';
+
+            if (!/^https?:\/\//i.test(href) && !href.startsWith('data:')) {
+                return;
+            }
+
+            if (detectedVideo) {
+                link.textContent = 'Download MP4';
+                link.title = 'Download generated video';
+
+                link.addEventListener('click', async (ev) => {
+                    /*
+                     * Try a real browser download first.
+                     * If the remote host blocks CORS, fall back to
+                     * opening the media directly instead of pretending
+                     * the download succeeded.
+                     */
+                    if (!href.startsWith('data:')) {
+                        ev.preventDefault();
+
+                        try {
+                            const mediaRes = await fetch(href, {
+                                method: 'GET',
+                                mode: 'cors'
+                            });
+
+                            if (!mediaRes.ok) {
+                                throw new Error('Remote media download failed');
+                            }
+
+                            const blob = await mediaRes.blob();
+                            const blobURL = URL.createObjectURL(blob);
+
+                            const a = document.createElement('a');
+                            a.href = blobURL;
+                            a.download =
+                                `ArixAI_${modality}_${Date.now()}.mp4`;
+
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+
+                            setTimeout(() => URL.revokeObjectURL(blobURL), 5000);
+
+                            return;
+                        } catch {
+                            window.open(
+                                href,
+                                '_blank',
+                                'noopener,noreferrer'
+                            );
+                        }
+                    }
+                });
+            }
+        });
+
+        messages.push({
+            role: 'assistant',
+            content: htmlWidget,
+            id: aiMsgObj.id,
+            modelId: activeModelId
+        });
+
+        saveCurrentChat();
+
+        sendTelemetry(
+            modality === 'video' ? 'video_generation' : 'image_generation',
+            activeModelId,
+            'success'
+        );
+
+    } catch (err) {
+        clearInterval(elapsedTimer);
+        clearInterval(heartbeat);
+
+        progressShell.remove();
+
+        aiMsgObj.container.innerHTML = `
+            <div class="mt-4 bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm leading-relaxed">
+                <div class="flex items-center gap-2 font-bold mb-1">
+                    <i class="ph-bold ph-warning-circle"></i>
+                    ${detectedVideo ? 'Video Generation Failed' : 'Image Generation Failed'}
+                </div>
+                <div>${String(err.message || 'Unknown visual generation error.')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')}</div>
+            </div>
+        `;
+
+        sendTelemetry(
+            detectedVideo ? 'video_generation' : 'image_generation',
+            activeModelId,
+            'error',
+            err.message
+        );
     }
+
+    isProcessing = false;
+    updateUIState();
+    return;
+}
     
     // 5F. STUDY DECK ENGINE
     if (isStudyMode) {
@@ -3737,7 +4596,7 @@ async function handleSend() {
         }
         // ==========================================
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -4603,6 +5462,355 @@ async function executeTwinTool() {
     }
     isProcessing = false;
     updateUIState();
+}
+
+// ============================================================================
+// WORKSPACE ORCHESTRATOR ENGINE (API INTEGRATION & PIPELINE UI)
+// ============================================================================
+let workspaceArtifactsDb = [];
+
+function openOrchestratorTab(goal) {
+    if(window.innerWidth < 1024) toggleSidebar();
+    const tab = document.getElementById('orchestrator-tab');
+    tab.classList.remove('hidden');
+    void tab.offsetWidth; // trigger reflow
+    tab.classList.remove('translate-y-full', 'opacity-0');
+    
+    document.getElementById('orch-goal-text').innerText = goal;
+    document.getElementById('orch-logs-container').innerHTML = `<div class="text-slate-500 font-bold text-xs uppercase tracking-widest mb-2 pb-2 border-b border-slate-800/60 flex items-center gap-2"><i class="ph-bold ph-terminal-window text-base"></i> Workspace Terminal</div>`;
+    document.getElementById('orch-task-list').innerHTML = `<div class="text-center text-slate-400 text-sm mt-12"><i class="ph-bold ph-spinner animate-spin text-3xl mb-3 text-slate-500"></i><br>Synthesizing DAG Pipeline...</div>`;
+    document.getElementById('orch-progress-bar').style.width = '0%';
+    document.getElementById('orch-progress-pct').innerText = '0%';
+    document.getElementById('orch-status-badge').innerText = 'Initializing';
+    document.getElementById('orch-status-badge').className = 'px-2.5 py-1 text-[9px] font-bold rounded-md bg-blue-50 text-blue-600 border border-blue-200 uppercase tracking-widest shadow-sm animate-pulse';
+    document.getElementById('orch-download-zip-btn').classList.add('hidden');
+    
+    workspaceArtifactsDb = [];
+    launchWorkspacePipeline(goal);
+}
+
+function closeOrchestratorTab() {
+    const tab = document.getElementById('orchestrator-tab');
+    tab.classList.add('translate-y-full', 'opacity-0');
+    setTimeout(() => tab.classList.add('hidden'), 500);
+}
+
+function logToOrch(msg, type = 'info') {
+    const logs = document.getElementById('orch-logs-container');
+    const color = type === 'error' ? 'text-red-400' : (type === 'success' ? 'text-emerald-400' : (type === 'warn' ? 'text-amber-400' : 'text-slate-300'));
+    const icon = type === 'error' ? 'ph-x-circle' : (type === 'success' ? 'ph-check-circle' : (type === 'warn' ? 'ph-warning' : 'ph-caret-right'));
+    logs.innerHTML += `<div class="flex items-start gap-2 ${color} animate-fade-in-up"><i class="ph-bold ${icon} mt-0.5 shrink-0"></i><span class="break-words font-medium leading-relaxed">${msg}</span></div>`;
+    logs.scrollTop = logs.scrollHeight;
+}
+
+async function launchWorkspacePipeline(goal) {
+    logToOrch(`Dispatching autonomous goal to Orchestrator Edge...`, 'info');
+    
+    try {
+        const res = await fetch('/api/workspace', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'run', task: goal })
+        });
+
+        if(!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || 'Pipeline Auth/Creation Error');
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop();
+
+            for (const line of lines) {
+                const cleanLine = line.trim();
+                if (cleanLine.startsWith('data: ')) {
+                    const dataStr = cleanLine.slice(6).trim();
+                    if (!dataStr) continue;
+                    try {
+                        handleOrchEvent(JSON.parse(dataStr));
+                    } catch (err) {}
+                }
+            }
+        }
+        
+        if (buffer.trim().startsWith('data: ')) {
+            try { handleOrchEvent(JSON.parse(buffer.trim().slice(6))); } catch(e){}
+        }
+
+    } catch (err) {
+        logToOrch(`Pipeline Failure: ${err.message}`, 'error');
+        document.getElementById('orch-status-badge').innerText = 'Failed';
+        document.getElementById('orch-status-badge').className = 'px-2.5 py-1 text-[9px] font-bold rounded-md bg-red-50 text-red-600 border border-red-200 uppercase tracking-widest shadow-sm';
+    }
+}
+
+function handleOrchEvent(ev) {
+    const type = ev.type;
+    
+    if (type === 'workspace_plan') {
+        logToOrch(`Pipeline DAG compiled: ${ev.tasks.length} inter-dependent node(s) identified.`, 'success');
+        renderOrchTasks(ev.tasks);
+    } 
+    else if (type === 'workspace_start') {
+        document.getElementById('orch-status-badge').innerText = 'Executing';
+        document.getElementById('orch-status-badge').className = 'px-2.5 py-1 text-[9px] font-bold rounded-md bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-widest shadow-sm';
+        updateOrchProgress(ev.summary.progress);
+    }
+    else if (type === 'task_start') {
+        logToOrch(`[${ev.taskId}] Executing: ${ev.title}`, 'warn');
+        updateTaskCard(ev.taskId, 'running');
+    }
+    else if (type === 'task_progress') {
+        logToOrch(`[${ev.taskId}] ${ev.message}`, 'info');
+    }
+    else if (type === 'task_complete') {
+        logToOrch(`[${ev.taskId}] Completed execution successfully.`, 'success');
+        updateTaskCard(ev.taskId, 'completed');
+    }
+    else if (type === 'task_failed') {
+        logToOrch(`[${ev.taskId}] FAILED: ${ev.error}`, 'error');
+        updateTaskCard(ev.taskId, 'failed', ev.error);
+    }
+    else if (type === 'workspace_state') {
+        updateOrchProgress(ev.summary.progress);
+        if(ev.workflow && ev.workflow.artifacts) {
+            workspaceArtifactsDb = ev.workflow.artifacts;
+        }
+    }
+    else if (type === 'workspace_complete' || type === 'workspace_complete_with_errors') {
+        const hasErrors = type === 'workspace_complete_with_errors';
+        document.getElementById('orch-status-badge').innerText = hasErrors ? 'Finished (Warnings)' : 'Complete';
+        document.getElementById('orch-status-badge').className = hasErrors 
+            ? 'px-2.5 py-1 text-[9px] font-bold rounded-md bg-amber-50 text-amber-600 border border-amber-200 uppercase tracking-widest shadow-sm'
+            : 'px-2.5 py-1 text-[9px] font-bold rounded-md bg-emerald-50 text-emerald-600 border border-emerald-200 uppercase tracking-widest shadow-sm';
+        
+        updateOrchProgress(100);
+        logToOrch(`Workspace Execution Lifecycle Finalized.`, hasErrors ? 'warn' : 'success');
+        
+        if(workspaceArtifactsDb.length > 0) {
+            document.getElementById('orch-download-zip-btn').classList.remove('hidden');
+            bindArtifactsToTasks();
+        }
+    }
+}
+
+function renderOrchTasks(tasks) {
+    const list = document.getElementById('orch-task-list');
+    const iconMap = {
+        'chat': 'ph-chat-teardrop-text text-blue-600 bg-blue-50 border-blue-100',
+        'reasoning': 'ph-brain text-purple-600 bg-purple-50 border-purple-100',
+        'research': 'ph-radar text-indigo-600 bg-indigo-50 border-indigo-100',
+        'slides': 'ph-presentation-chart text-amber-600 bg-amber-50 border-amber-100',
+        'image': 'ph-aperture text-fuchsia-600 bg-fuchsia-50 border-fuchsia-100',
+        'video': 'ph-film-strip text-violet-600 bg-violet-50 border-violet-100',
+        'bundle': 'ph-file-zip text-emerald-600 bg-emerald-50 border-emerald-100'
+    };
+
+    list.innerHTML = tasks.map(t => {
+        const iconData = iconMap[t.type] || 'ph-gear text-slate-600 bg-slate-50 border-slate-200';
+        const iconClass = iconData.split(' ')[0];
+        const colorClass = iconData.split(' ')[1];
+        const bgClass = iconData.split(' ')[2];
+        const borderClass = iconData.split(' ')[3];
+
+        return `
+        <div id="orch-task-${t.id}" class="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col gap-3 shadow-sm transition-all duration-300 relative overflow-hidden group hover:border-slate-300 hover:shadow-md">
+            <div class="absolute left-0 top-0 bottom-0 w-1 bg-slate-200 transition-colors" id="orch-strip-${t.id}"></div>
+            
+            <div class="flex items-start justify-between pl-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl ${bgClass} border ${borderClass} flex items-center justify-center shrink-0">
+                        <i class="ph-bold ${iconClass} ${colorClass} text-xl"></i>
+                    </div>
+                    <div class="flex flex-col min-w-0 pr-2">
+                        <span class="text-xs font-bold text-slate-800 truncate" title="${t.title}">${t.title}</span>
+                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${t.type} Node</span>
+                    </div>
+                </div>
+                <div id="orch-spinner-${t.id}" class="hidden shrink-0 mt-2">
+                    <i class="ph-bold ph-spinner-gap animate-spin text-amber-500 text-xl"></i>
+                </div>
+                <div id="orch-action-${t.id}" class="hidden flex items-center shrink-0 mt-1.5">
+                    <!-- Dynamic Download Btn -->
+                </div>
+            </div>
+            <div id="orch-err-${t.id}" class="hidden text-[10px] text-red-600 font-bold bg-red-50 p-2.5 rounded-lg ml-3 border border-red-100"></div>
+        </div>`;
+    }).join('');
+}
+
+function updateTaskCard(taskId, status, errorMsg = "") {
+    const strip = document.getElementById(`orch-strip-${taskId}`);
+    const spinner = document.getElementById(`orch-spinner-${taskId}`);
+    const errDiv = document.getElementById(`orch-err-${taskId}`);
+    
+    if(!strip) return;
+
+    if (status === 'running') {
+        strip.className = 'absolute left-0 top-0 bottom-0 w-1 bg-amber-400 transition-colors shadow-[0_0_12px_rgba(251,191,36,0.8)]';
+        spinner.classList.remove('hidden');
+    } else if (status === 'completed') {
+        strip.className = 'absolute left-0 top-0 bottom-0 w-1 bg-emerald-500 transition-colors shadow-[0_0_12px_rgba(16,185,129,0.8)]';
+        spinner.classList.add('hidden');
+    } else if (status === 'failed') {
+        strip.className = 'absolute left-0 top-0 bottom-0 w-1 bg-red-500 transition-colors shadow-[0_0_12px_rgba(239,68,68,0.8)]';
+        spinner.classList.add('hidden');
+        if(errorMsg) {
+            errDiv.innerText = errorMsg;
+            errDiv.classList.remove('hidden');
+        }
+    }
+}
+
+function updateOrchProgress(pct) {
+    document.getElementById('orch-progress-pct').innerText = pct + '%';
+    document.getElementById('orch-progress-bar').style.width = pct + '%';
+}
+
+function bindArtifactsToTasks() {
+    workspaceArtifactsDb.forEach(art => {
+        if(!art.taskId) return;
+        const actionDiv = document.getElementById(`orch-action-${art.taskId}`);
+        if(!actionDiv) return;
+
+        actionDiv.classList.remove('hidden');
+        
+        if(art.type === 'bundle') return;
+
+        let btnHtml = '';
+        let onClickArg = `downloadSingleArtifact('${art.id}')`;
+
+        if (art.type === 'slides') {
+            btnHtml = `<button onclick="${onClickArg}" class="text-[10px] font-bold bg-amber-50 text-amber-600 hover:bg-amber-100 px-3 py-2 rounded-xl border border-amber-200 transition-colors flex items-center gap-1.5 shadow-sm"><i class="ph-bold ph-presentation-chart text-sm"></i> PPTX</button>`;
+        } else if (art.type === 'image' || art.type === 'video') {
+            btnHtml = `<button onclick="${onClickArg}" class="text-[10px] font-bold bg-fuchsia-50 text-fuchsia-600 hover:bg-fuchsia-100 px-3 py-2 rounded-xl border border-fuchsia-200 transition-colors flex items-center gap-1.5 shadow-sm"><i class="ph-bold ph-download-simple text-sm"></i> Media</button>`;
+        } else {
+            btnHtml = `<button onclick="${onClickArg}" class="text-[10px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-2 rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 shadow-sm"><i class="ph-bold ph-file-pdf text-sm text-red-500"></i> PDF</button>`;
+        }
+        actionDiv.innerHTML = btnHtml;
+    });
+}
+
+window.downloadSingleArtifact = async function(artId) {
+    const art = workspaceArtifactsDb.find(a => a.id === artId);
+    if(!art) return showToast("Artifact not found");
+    
+    try {
+        if (art.type === 'slides') {
+            const data = typeof art.data === 'string' ? JSON.parse(art.data) : art.data;
+            window.ARTIFACT_STORE[artId] = JSON.stringify(data);
+            downloadPPTX(artId);
+        } else if (art.type === 'image' || art.type === 'video') {
+            const mediaUrl = (art.download && art.download.url) ? art.download.url : art.url;
+            if(mediaUrl) window.open(mediaUrl, '_blank');
+            else showToast("Media URL not available.");
+        } else {
+            // High-End text to PDF Export for normal artifacts
+            showToast("Generating PDF Report...");
+            const contentHtml = parseRichText(art.text || "", false, 'temp');
+            const pdfDiv = document.createElement('div');
+            
+            pdfDiv.innerHTML = `
+                <div style="border-bottom: 2px solid #4f46e5; padding-bottom: 15px; margin-bottom: 25px;">
+                    <h1 style="color: #0f172a; margin: 0; font-size: 24px;">ArixAI Workspace Report</h1>
+                    <p style="color: #64748b; font-size: 12px; margin-top: 5px;">Type: ${art.type.toUpperCase()} | Generated: ${new Date().toLocaleString()}</p>
+                </div>
+                <div style="color: #1e293b; line-height: 1.6; font-size: 14px;">${contentHtml}</div>
+            `;
+            pdfDiv.style.padding = '35px';
+            pdfDiv.style.fontFamily = 'Inter, system-ui, sans-serif';
+            pdfDiv.style.backgroundColor = '#ffffff';
+
+            html2pdf().set({
+                margin: 10,
+                filename: `ArixAI_${art.type}_${Date.now()}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            }).from(pdfDiv).save().then(() => showToast("PDF Downloaded!"));
+        }
+    } catch(e) {
+        console.error(e);
+        showToast("Failed to download artifact.");
+    }
+}
+
+window.downloadWorkspaceZip = async function() {
+    if(typeof JSZip === 'undefined') {
+        return showToast("JSZip library not loaded. Ensure script is active.");
+    }
+    const btn = document.getElementById('orch-download-zip-btn');
+    const origHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-lg"></i> Zipping...';
+    btn.disabled = true;
+
+    try {
+        const zip = new JSZip();
+        const root = zip.folder(`ArixAI_Workspace_${Date.now()}`);
+        
+        for(const art of workspaceArtifactsDb) {
+            if(art.type === 'bundle') continue;
+            
+            let filename = `${art.type}_${art.id}`;
+            
+            if (art.type === 'slides') {
+                filename += '.json';
+                root.file(filename, art.text || JSON.stringify(art.data, null, 2));
+            } 
+            else if (art.type === 'image' || art.type === 'video') {
+                const ext = art.type === 'video' ? 'mp4' : 'png';
+                filename += `.${ext}`;
+                const url = (art.download && art.download.url) ? art.download.url : art.url;
+                if(url && !url.startsWith('data:')) {
+                    try {
+                        const res = await fetch(url, { mode: 'cors' });
+                        if(res.ok) root.file(filename, await res.blob());
+                        else root.file(`${filename}_URL.txt`, `Media Link: ${url}`);
+                    } catch(e) { root.file(`${filename}_URL.txt`, `Media Link: ${url}`); }
+                } else if (url && url.startsWith('data:')) {
+                    root.file(filename, url.split(',')[1], {base64: true});
+                }
+            } 
+            else if (art.type === 'research') {
+                filename += '.json';
+                root.file(filename, art.text || JSON.stringify(art.data, null, 2));
+            }
+            else {
+                filename += '.txt';
+                let plainText = art.text || "Empty content";
+                plainText = plainText.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' '); // Strip basic HTML for zip friendliness
+                root.file(filename, plainText);
+            }
+        }
+
+        const manifest = JSON.stringify(workspaceArtifactsDb, null, 2);
+        root.file('manifest.json', manifest);
+
+        const content = await zip.generateAsync({type:"blob"});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(content);
+        a.download = `ArixAI_Workspace_${Date.now()}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        
+        showToast("Workspace ZIP Downloaded!");
+    } catch(e) {
+        console.error(e);
+        showToast("Failed to generate ZIP. Try downloading files individually.");
+    }
+
+    btn.innerHTML = origHtml;
+    btn.disabled = false;
 }
 
 // Auto-inject Digital Twin Card into Experimental Suite Modal
