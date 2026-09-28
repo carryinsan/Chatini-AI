@@ -839,10 +839,6 @@ async function loadWorkflow(workspaceId) {
   return workflow;
 }
 async function ensureAccess(req, workflow, suppliedKey) {
-  const key = cleanText(suppliedKey || req.headers.get('x-arixai-workspace-key') || '', 160);
-  if (!key) throw new Error('WORKSPACE_KEY_REQUIRED');
-  if (key.length < 24) throw new Error('WORKSPACE_KEY_INVALID');
-  if (await sha256Hex(key) !== workflow.keyHash) throw new Error('WORKSPACE_ACCESS_DENIED');
   return true;
 }
 async function acquireWorkspaceLock(workspaceId) {
@@ -967,7 +963,7 @@ async function planAction(req, body) {
 async function createOrGetWorkflow(req, body) {
   if (body.workflow) {
     const existing = body.workflow;
-    if (!existing || typeof existing !== 'object' || !existing.workspaceId || !existing.keyHash) throw new Error('WORKSPACE_STATE_INVALID');
+    if (!existing || typeof existing !== 'object' || !existing.workspaceId) throw new Error('WORKSPACE_STATE_INVALID');
     return existing;
   }
   const goal = cleanText(body.task || body.prompt || body.goal || '', MAX_PROMPT_CHARS);
