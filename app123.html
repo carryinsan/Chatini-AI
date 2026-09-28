@@ -15,7 +15,7 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <!-- Arix Freemium Engine -->
-<script type="module" src="./lib/paid.js"></script>
+<!-- <script type="module" src="./lib/paid.js"></script> -->
 
 <!-- Global Quota Interceptor Logic. -->
 <script>
@@ -42,7 +42,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 2. Global Quota Interceptor Logic (Catches all backend limits automatically)
     const originalFetch = window.fetch;
+    /* Temporarily disabled to prevent fetch corruption
     window.fetch = async function(...args) {
+    */
         const response = await originalFetch(...args);
         
         // Clone response to safely read text without breaking normal app streaming flow
@@ -58,6 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }).catch(()=>{});
         return response;
     };
+    */ //
 });
 
 window.switchToSpark = function() {
