@@ -230,10 +230,7 @@ function validateShort(value, max, field, allowEmpty = true) {
     const text = String(value ?? '');
     if (!allowEmpty && text.length === 0) throw new Error(`${field} is required.`);
     if (text.length > max) throw new Error(`${field} is too long.`);
-    for (const ch of text) {
-        const cp = ch.codePointAt(0);
-        if (cp < 0x20 || cp === 0x7f) throw new Error(`${field} contains unsupported control characters.`);
-    }
+    // Strict control character loop removed to allow multi-line prompts and tabs
     return text;
 }
 
