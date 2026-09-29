@@ -1,7 +1,5 @@
 import { verifyAndLimit } from './auth.js';
 import { PrivacyEngine } from '../lib/privacyEngine.js';
-import { FactExtractor, IntegrityVerifier, HardFailEvaluator, DecisionEngine, VerificationScorer } from './algorithm.js';
-import { MasterRepairPipeline } from './repair.js';
 import { processTask } from '../features/tasks.js';
 
 export const config = {
@@ -1514,79 +1512,10 @@ ${memoryString}${clockContext}`;
               }
             } catch (e) {}
           }
-        }
+        } // <-- End of while(true) loop
 
-        // Show a repair spinner while the algorithm runs in the background
-        sendUIChunk(`<div id="Arix-repair-loader" class="flex items-center gap-2 text-[11px] text-sky-400 font-mono mt-2"><svg class="animate-spin h-3 w-3 text-sky-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span class="animate-pulse">Verifying facts & calculations...</span></div>`);
-
-        // =========================================================================
-        // ALGORITHM & REPAIR ENGINE PASS (REAL UNMASKED PROMPT & RESPONSE)
-        // =========================================================================
-        let repairedFinalText = completeRawResponse;
-        let editItems = [];
-        let verificationStatus = "VERIFIED";
-        let verificationScore = "100/100";
-
-        try {
-          // 1. Extract raw unmasked user facts from original prompt
-          const rawUserClaims = FactExtractor.splitIntoClaims(rawUserQuery);
-          const rawUserFacts = [];
-          rawUserClaims.forEach(c => rawUserFacts.push(...FactExtractor.buildFactObjects(c)));
-
-          // 2. Extract facts from initial AI response
-          const initialAiClaims = FactExtractor.splitIntoClaims(completeRawResponse);
-          const initialAiFacts = [];
-          initialAiClaims.forEach(c => initialAiFacts.push(...FactExtractor.buildFactObjects(c)));
-
-          // 3. User Data Integrity Check
-          const integrityReport = IntegrityVerifier.verifyUserFacts(rawUserFacts, initialAiFacts);
-
-          // 4. Run Master Repair Pipeline
-          const repairResult = await MasterRepairPipeline.execute(completeRawResponse, {
-            domain: 'general',
-            userFacts: rawUserFacts
-          });
-
-          if (repairResult && repairResult.text) {
-            repairedFinalText = repairResult.text;
-          }
-
-          // 5. Track deterministic edits made by the algorithm
-          if (integrityReport.mutations.length > 0) {
-            integrityReport.mutations.forEach(m => {
-              editItems.push(`Corrected mutated number: Changed **${m.received}** back to your specified **${m.expected}**.`);
-            });
-          }
-          if (integrityReport.contradictions.length > 0) {
-            integrityReport.contradictions.forEach(c => {
-              editItems.push(`Resolved contradiction: Replaced conflicting claim **${c.received}** with **${c.expected}**.`);
-            });
-          }
-          if (repairResult.passes && repairResult.passes > 0) {
-            editItems.push(`Deterministic Auto-Repair executed: Fixed formatting, math expressions, and normalized values across ${repairResult.passes} pass(es).`);
-          }
-
-          // 6. Verification Scoring
-          const scoring = VerificationScorer.calculateFinalScore({
-            user_data_integrity: integrityReport.score,
-            internal_consistency: 100,
-            numeric_correctness: 100
-          });
-          verificationScore = scoring.VERIFICATION_SCORE;
-          verificationStatus = scoring.STATUS;
-        } catch (algoErr) {
-          console.warn("[Algorithm & Repair Warning]:", algoErr.message);
-        }
-
-        // 7. Format Simple and Concise Verification Dropdown
-        const changesSummary = editItems.length > 0
-          ? editItems.map(item => `* ${item}`).join('\n')
-          : " **No corrections needed:** The output passed mathematical, date, unit, and user-fact verification with 0 discrepancies.";
-
-        const verificationDropdown = `\n\n---\n\n<style>#Arix-repair-loader { display: none !important; }</style><details class="verification-tab text-xs bg-slate-900/50 border border-slate-700/60 rounded-xl p-3 my-2 text-slate-300">\n<summary class="cursor-pointer font-semibold text-sky-400 select-none flex items-center justify-between">\n  <span>🛡️ Verification & Fact-Check Details (${verificationStatus} • Score: ${verificationScore})</span>\n  <span class="text-[10px] text-slate-400">▼ View Edits</span>\n</summary>\n\n<div class="mt-3 pt-2 border-t border-slate-700/50 space-y-2 text-slate-300 leading-relaxed">\n  <p class="font-medium text-slate-200">Summary of Algorithmic Checks & Edits:</p>\n${changesSummary}\n</div>\n</details>`;
-
-        // Stream the verification tab at the end (avoiding duplication of repairedFinalText since we live-streamed)
-        streamTextBuffer = KaTeXFailSafe.sanitizeStreamChunk(verificationDropdown);
+        // Force flush the remaining buffer to prevent truncated responses.
+        // This replaces the removed repair engine and verification UI block.
         flushStreamBuffer(true);
 
       } catch (err) {
