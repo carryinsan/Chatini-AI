@@ -1078,10 +1078,20 @@ Do not omit required top-level keys from the schema.`;
       });
 
       const parsed = parseJsonLoose(lastRaw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        return normalizeSynthesis(parsed, input.plan);
-      }
-      lastError = new Error('STUDY_SYNTHESIS_INVALID_JSON');
+let finalParsed = null;
+
+if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+    finalParsed = parsed;
+} else if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === 'object' && !Array.isArray(parsed[0])) {
+    // If the LLM returned an array with a single object, extract the first object.
+    // This is a common failure mode for LLMs when asked for a single JSON object.
+    finalParsed = parsed[0];
+}
+
+if (finalParsed) {
+    return normalizeSynthesis(finalParsed, input.plan);
+}
+lastError = new Error('STUDY_SYNTHESIS_INVALID_JSON');
     } catch (error) {
       lastError = error;
       if (attempt < MAX_RETRIES && !retryableError(error) && !/STUDY_(?:SYNTHESIS|LESSON|WORKSHEET|ASSESSMENT)/.test(shortError(error))) {
