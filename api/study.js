@@ -1780,22 +1780,24 @@ async function executeAction(req, body) {
     budgetMs: body.budgetMs,
   };
 
-  const plan = body.plan && typeof body.plan === 'object'
-    ? normalizePlan(body.plan, preferences)
-    : await buildPlan(req, base);
-
-  if (plan.needsClarification && plan.questions.length) {
-    return jsonResponse({
-      ok: true,
-      status: 'needs_input',
-      plan,
-      message: 'A few details are required before ArixAI can execute this study task safely.',
-    });
-  }
-
   const stream = new ReadableStream({
     async start(controller) {
       try {
+        let plan = body.plan && typeof body.plan === 'object'
+          ? normalizePlan(body.plan, preferences)
+          : null;
+
+        if (!plan) {
+          emit(controller, { type: 'stage', name: 'planning', status: 'running', message: 'Analyzing task requirements...', timestamp: nowIso() });
+          plan = await buildPlan(req, base);
+          if (plan.needsClarification && plan.questions.length) {
+            emit(controller, { type: 'clarify', plan });
+            controller.close();
+            return;
+          }
+          emit(controller, { type: 'stage', name: 'planning', status: 'complete', message: 'Task plan formulated.', timestamp: nowIso() });
+        }
+
         await executeStudy(req, { ...base, plan }, controller);
       } catch (error) {
         emit(controller, {
@@ -1811,7 +1813,6 @@ async function executeAction(req, body) {
 
   return sseResponse(stream);
 }
-
 async function assetAction(req, body) {
   const rawUrl = cleanText(body.url || '', 2_000);
   if (!/^https:\/\//i.test(rawUrl)) return jsonResponse({ ok: false, error: 'STUDY_ASSET_URL_INVALID' }, 400);
