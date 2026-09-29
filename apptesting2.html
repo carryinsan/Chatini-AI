@@ -6427,6 +6427,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     appendStudyStage(event.name, event.status, event.message);
                 } else if (event.type === 'complete') {
                     final = event.result || null;
+                } else if (event.type === 'clarify') {
+                    final = { status: 'needs_input', plan: event.plan };
                 } else if (event.type === 'error') {
                     throw new Error(event.error || 'Study workflow failed.');
                 }
@@ -6645,6 +6647,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const result = await consumeStudyStream(response);
+            
+            if (result && result.status === 'needs_input') {
+                state.plan = result.plan;
+                state.current = null;
+                state.answers = state.answers || {};
+                buildClarificationScreen(state.plan);
+                return;
+            }
+
             if (!result || !['complete', 'complete_with_warnings'].includes(result.status)) {
                 throw new Error('Study workflow did not reach a real completed state.');
             }
