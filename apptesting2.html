@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -13,6 +14,9 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- Arix Freemium Engine -->
+<script type="module" src="./lib/paid.js"></script>
 
 <!-- Global Quota Interceptor Logic. -->
 <script>
@@ -87,10 +91,44 @@ window.requestMoreLimits = async function() {
             btn.disabled = false;
         }, 2500);
     } catch(e) {
-        btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error. Try Again.';
-        btn.disabled = false;
-    }
-};
+            btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error. Try Again.';
+            btn.disabled = false;
+        }
+    };
+
+    window.downloadArixImage = async function(url, id, format) {
+        try {
+            // Attempt to fetch the raw image blob natively
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const img = new Image();
+            const imgUrl = URL.createObjectURL(blob);
+            
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width; 
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                
+                const mime = format === 'png' ? 'image/png' : 'image/jpeg';
+                const a = document.createElement('a');
+                a.href = canvas.toDataURL(mime, 0.95);
+                a.download = 'ArixAI_' + id + '.' + format;
+                
+                // Append, click, and remove to support Firefox/Safari
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(imgUrl);
+            };
+            img.src = imgUrl;
+        } catch(e) { 
+            // Fallback if the remote provider blocks CORS fetching
+            console.warn("CORS block or fetch error, opening in new tab", e);
+            window.open(url, '_blank'); 
+        }
+    };
 </script>
 
 <!-- Tailwind Config Integration -->
@@ -235,6 +273,134 @@ body {
 .access-custom-table tr:hover td {
     background-color: #f8fafc;
 }
+
+/* ArixAI Study Workspace */
+.study-starter {
+    padding: 10px 8px;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 11px;
+    font-weight: 700;
+    transition: all .2s ease;
+}
+.study-starter:hover {
+    border-color: #c7d2fe;
+    background: #eef2ff;
+    color: #4338ca;
+    transform: translateY(-1px);
+}
+.study-field {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    border-radius: 10px;
+    padding: 9px 10px;
+    font-size: 11px;
+    color: #111827;
+    outline: none;
+}
+.study-field:focus {
+    border-color: #818cf8;
+    background: #fff;
+}
+.study-output-option {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px 11px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    transition: all .2s ease;
+    cursor: pointer;
+}
+.study-output-option.active {
+    border-color: #c7d2fe;
+    background: #eef2ff;
+}
+.study-output-option .study-output-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 10px;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+}
+.study-output-option.active .study-output-icon {
+    background: #e0e7ff;
+    color: #4f46e5;
+}
+.study-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    font-size: 10px;
+    font-weight: 700;
+    color: #4b5563;
+}
+.study-stage {
+    border-left: 2px solid #e0e7ff;
+    padding-left: 12px;
+}
+.study-section-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    box-shadow: 0 5px 20px rgba(15,23,42,.035);
+}
+.study-scroll-table {
+    overflow-x: auto;
+}
+.study-scroll-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+.study-scroll-table th {
+    text-align: left;
+    padding: 9px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e5e7eb;
+}
+.study-scroll-table td {
+    padding: 9px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+.study-export-report {
+    width: 794px;
+    box-sizing: border-box;
+}
+
+
+.study-export-btn {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:7px;
+    border:1px solid #e5e7eb;
+    background:#fff;
+    color:#374151;
+    border-radius:12px;
+    padding:9px 11px;
+    font-size:11px;
+    font-weight:800;
+    transition:all .2s ease;
+}
+.study-export-btn:hover{background:#f9fafb;border-color:#c7d2fe;color:#4338ca}
+.study-export-btn.primary{background:#4f46e5;color:#fff;border-color:#4f46e5;box-shadow:0 5px 18px rgba(79,70,229,.18)}
+.study-export-btn.primary:hover{background:#4338ca;color:#fff}
+
 </style>
 </head>
 <body class="bg-gray-50 text-gray-800 font-sans h-[100dvh] w-full flex flex-col overflow-hidden selection:bg-theme-200 relative">
@@ -308,7 +474,7 @@ body {
         <div class="flex items-start mb-4 text-left px-2">
             <input type="checkbox" id="tc-checkbox" class="w-4 h-4 mt-0.5 border-gray-300 rounded cursor-pointer accent-theme-600">
             <label for="tc-checkbox" class="ml-2 text-[11px] text-gray-500 leading-tight select-none cursor-pointer">
-                I have read and agree to the <a href="https://Arix-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="text-theme-600 font-semibold hover:underline">Terms & Conditions</a>
+                I have read and agree to the <a href="https://lexis-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="text-theme-600 font-semibold hover:underline">Terms & Conditions</a>
             </label>
         </div>
         <button onclick="saveNickname()" class="w-full bg-theme-600 text-white font-medium py-3 rounded-xl hover:bg-theme-700 transition-all flex items-center justify-center gap-2 shadow-md shadow-theme-200">
@@ -484,74 +650,59 @@ body {
 </div>
 <!-- Accessibility Full Screen Suite -->
 <div id="access-screen" class="fixed inset-0 bg-gray-50 z-[200] hidden flex-col transition-opacity duration-300">
-    <style>
-        #access-output > div { min-width: var(--access-w, 100%); transition: min-width 0.2s ease; }
-    </style>
     <!-- Header -->
-    <div class="bg-white border-b border-gray-100 p-3 sm:p-4 px-3 sm:px-6 flex items-center justify-between shadow-sm shrink-0 overflow-x-auto no-scrollbar gap-2">
-        <div class="flex items-center gap-2 sm:gap-3 shrink-0">
-            <button onclick="document.getElementById('access-tool-list').classList.toggle('-translate-x-full'); document.getElementById('access-sidebar-overlay').classList.toggle('hidden');" class="md:hidden text-gray-500 hover:text-gray-900 p-1.5 sm:p-2 bg-gray-50 hover:bg-gray-200 rounded-xl transition-colors shrink-0">
-                <i class="ph-bold ph-list text-lg"></i>
-            </button>
-            <div id="access-header-icon" class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xl shadow-sm transition-colors shrink-0">
+    <div class="bg-white border-b border-gray-100 p-4 px-6 flex items-center justify-between shadow-sm shrink-0">
+        <div class="flex items-center gap-3">
+            <div id="access-header-icon" class="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center font-bold text-xl shadow-sm transition-colors">
                 <i class="ph-fill ph-wheelchair"></i>
             </div>
-            <div class="shrink-0 mr-2 sm:mr-4">
-                <h2 class="text-sm sm:text-lg font-bold text-gray-900 leading-tight flex items-center gap-1 sm:gap-2">
-                    Access Suite
-                    <span class="text-[9px] sm:text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-1.5 sm:px-2 py-0.5 rounded-full font-bold uppercase tracking-wider hidden sm:inline-block">Dedicated</span>
+            <div>
+                <h2 class="text-base sm:text-lg font-bold text-gray-900 leading-tight flex items-center gap-2">
+                    Accessibility Workspace
+                    <span class="text-[10px] bg-teal-50 text-teal-700 border border-teal-200 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Dedicated Mode</span>
                 </h2>
-                <p id="access-active-tool-title" class="text-[10px] sm:text-xs text-teal-600 font-semibold truncate max-w-[120px] sm:max-w-none">Select Tool</p>
+                <p id="access-active-tool-title" class="text-xs text-teal-600 font-semibold">Select Tool</p>
             </div>
         </div>
-        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            <button onclick="exportCurrentToolFullPdf()" class="text-[10px] sm:text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm whitespace-nowrap" title="Export conversation to PDF">
-                <i class="ph-bold ph-file-pdf"></i> <span class="hidden sm:inline">Export PDF</span><span class="sm:hidden">PDF</span>
+        <div class="flex items-center gap-2">
+            <button onclick="exportCurrentToolFullPdf()" class="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm" title="Export conversation to PDF">
+                <i class="ph-bold ph-file-pdf"></i> Export Chat PDF
             </button>
-            <button onclick="resetCurrentToolChat()" class="text-[10px] sm:text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 sm:px-3.5 py-1.5 sm:py-2 rounded-xl font-bold transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm whitespace-nowrap">
-                <i class="ph-bold ph-plus"></i> <span class="hidden sm:inline">New Chat</span><span class="sm:hidden">New</span>
+            <button onclick="resetCurrentToolChat()" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3.5 py-2 rounded-xl font-bold transition-all flex items-center gap-1.5 shadow-sm">
+                <i class="ph-bold ph-plus"></i> New Chat
             </button>
-            <button onclick="closeAccessScreen()" class="text-gray-400 hover:text-gray-900 transition-colors p-1.5 sm:p-2 bg-gray-50 hover:bg-gray-200 rounded-xl shrink-0">
-                <i class="ph-bold ph-x text-base sm:text-lg"></i>
+            <button onclick="closeAccessScreen()" class="text-gray-400 hover:text-gray-900 transition-colors p-2 bg-gray-50 hover:bg-gray-200 rounded-xl">
+                <i class="ph-bold ph-x text-lg"></i>
             </button>
         </div>
     </div>
     
     <!-- Split Layout -->
-    <div class="flex-1 flex overflow-hidden relative">
-        <!-- Tools Sidebar Overlay (Mobile) -->
-        <div id="access-sidebar-overlay" class="fixed inset-0 bg-gray-900/40 z-40 hidden md:hidden backdrop-blur-sm" onclick="document.getElementById('access-tool-list').classList.add('-translate-x-full'); this.classList.add('hidden');"></div>
-        
+    <div class="flex-1 flex overflow-hidden">
         <!-- Tools Sidebar -->
-        <div class="absolute md:relative z-50 h-full w-[260px] md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-3 flex flex-col gap-2 custom-scrollbar shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300" id="access-tool-list"></div>
+        <div class="w-full md:w-80 bg-white border-r border-gray-100 overflow-y-auto p-3.5 flex flex-col gap-2 custom-scrollbar shrink-0" id="access-tool-list"></div>
         
         <!-- Action & Output Area -->
-        <div class="flex-1 flex flex-col relative bg-[#F8FAFC] min-w-0">
-            <!-- Width Slider for Responsive Formulas/Tables -->
-            <div class="flex items-center justify-between px-3 sm:px-4 py-2 bg-white border-b border-gray-100 shrink-0 shadow-sm z-10 w-full overflow-x-auto no-scrollbar gap-4">
-                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 whitespace-nowrap shrink-0"><i class="ph-bold ph-arrows-out-line-horizontal text-teal-500"></i> AI Width <span class="text-[9px] font-medium text-gray-400 normal-case ml-1 hidden sm:inline">(Slide to fit formula/table)</span></span>
-                <input type="range" min="100" max="300" value="100" oninput="document.getElementById('access-output').style.setProperty('--access-w', this.value + '%')" class="w-24 sm:w-48 h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-teal-600 shrink-0">
-            </div>
-
+        <div class="flex-1 flex flex-col relative bg-[#F8FAFC]">
             <!-- Results / Chat Canvas -->
-            <div id="access-output" class="flex-1 overflow-auto p-3 sm:p-8 space-y-6 custom-scrollbar" style="--access-w: 100%;"></div>
+            <div id="access-output" class="flex-1 overflow-y-auto p-4 sm:p-8 space-y-6 custom-scrollbar"></div>
             
             <!-- Input Console -->
-            <div class="p-3 sm:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.03)] shrink-0 w-full">
-                <div class="max-w-4xl mx-auto flex flex-col gap-2 sm:gap-3 relative">
+            <div class="p-4 sm:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_24px_rgba(0,0,0,0.03)] shrink-0">
+                <div class="max-w-4xl mx-auto flex flex-col gap-3 relative">
                     <!-- Staging Badge -->
-                    <div id="access-file-badge" class="hidden absolute -top-10 left-0 bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm flex items-center gap-2 max-w-full overflow-hidden whitespace-nowrap text-ellipsis"></div>
+                    <div id="access-file-badge" class="hidden absolute -top-10 left-0 bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1.5 rounded-lg border border-teal-100 shadow-sm flex items-center gap-2"></div>
                     
-                    <textarea id="access-input" placeholder="Type prompt or query for this tool..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-3 sm:p-4 text-[13px] sm:text-sm text-gray-800 outline-none focus:border-teal-400 focus:bg-white resize-none h-20 sm:h-24 custom-scrollbar transition-all leading-relaxed"></textarea>
+                    <textarea id="access-input" placeholder="Type prompt or query for this tool..." class="w-full bg-gray-50 border border-gray-200 rounded-2xl p-4 text-sm text-gray-800 outline-none focus:border-teal-400 focus:bg-white resize-none h-24 custom-scrollbar transition-all leading-relaxed"></textarea>
                     
-                    <div class="flex justify-between items-center gap-2">
+                    <div class="flex justify-between items-center">
                         <input type="file" id="access-file" class="hidden">
-                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-3 sm:px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-1.5 sm:gap-2 border border-gray-200 hover:border-teal-200 text-[11px] sm:text-sm whitespace-nowrap">
-                            <i class="ph-bold ph-paperclip text-base sm:text-lg"></i> <span class="hidden sm:inline">Attach Data</span><span class="sm:hidden">Attach</span>
+                        <button onclick="document.getElementById('access-file').click()" class="text-gray-500 hover:text-teal-600 bg-gray-50 hover:bg-teal-50 px-4 py-2 rounded-xl font-semibold transition-colors flex items-center gap-2 border border-gray-200 hover:border-teal-200 text-xs sm:text-sm">
+                            <i class="ph-bold ph-paperclip text-lg"></i> Attach Data
                         </button>
                         
-                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-4 sm:px-8 py-2 sm:py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-1.5 sm:gap-2 text-[11px] sm:text-sm cursor-pointer whitespace-nowrap">
-                            <i class="ph-bold ph-paper-plane-right text-base sm:text-lg"></i> <span class="hidden sm:inline">Send Message</span><span class="sm:hidden">Send</span>
+                        <button onclick="runAccessTool()" id="access-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl shadow-md shadow-teal-200 transition-all flex items-center gap-2 text-xs sm:text-sm cursor-pointer">
+                            <i class="ph-bold ph-paper-plane-right"></i> Send Message
                         </button>
                     </div>
                 </div>
@@ -577,8 +728,8 @@ body {
                 <p class="text-[11px] text-gray-400 font-medium" id="sidebar-username-display">Anonymous</p>
             </div>
         </div>
-        <button onclick="toggleSidebar()" class="text-gray-400 hover:text-gray-600 transition-colors lg:hidden">
-            <i class="ph-bold ph-x text-xl"></i>
+        <button onclick="toggleSidebar(); document.getElementById('sidebar').classList.toggle('lg:hidden');" class="text-gray-400 hover:text-gray-600 p-1.5 hover:bg-gray-100 rounded-lg transition-colors" title="Collapse">
+            <i class="ph-bold ph-sidebar-simple text-xl"></i>
         </button>
     </div>
 
@@ -628,16 +779,23 @@ body {
                     Audio
                 </button>
                 <button id="image-btn" onclick="toggleImageMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
-                    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-fuchsia-50">
-                        <i id="image-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
-                    </div>
-                    Image
-                </button>
+    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-fuchsia-50">
+        <i id="image-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
+    </div>
+    Images
+</button>
+
+<button id="video-btn" onclick="toggleVideoMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
+    <div class="w-6 h-6 rounded-md flex items-center justify-center bg-violet-50">
+        <i id="video-icon" class="ph-bold ph-film-strip text-violet-500"></i>
+    </div>
+    Video
+</button>
                 <button id="app-btn" onclick="toggleAppMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
                     <div class="w-6 h-6 rounded-md flex items-center justify-center bg-orange-50">
                         <i id="app-icon" class="ph-bold ph-code text-orange-500"></i>
                     </div>
-                    Code
+                    Code(Testing)
                 </button>
                 <button id="study-btn" onclick="toggleStudyMode()" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all text-sm font-medium text-gray-700 hover:bg-gray-50 border border-transparent">
                     <div class="w-6 h-6 rounded-md flex items-center justify-center bg-indigo-50">
@@ -751,7 +909,7 @@ body {
         
         <!-- Left Section: Mobile Toggle & Search (Visual) -->
         <div class="flex items-center flex-1 max-w-xl gap-3">
-            <button onclick="toggleSidebar()" class="lg:hidden text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-50">
+            <button onclick="toggleSidebar(); document.getElementById('sidebar').classList.toggle('lg:hidden');" class="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-50" title="Toggle Sidebar">
                 <i class="ph-bold ph-list text-2xl"></i>
             </button>
             <div class="relative w-full hidden sm:block">
@@ -840,11 +998,127 @@ body {
 
                 <!-- Main Textarea -->
                 <textarea 
-                    id="chat-input"
-                    placeholder="Ask anything, type @Arix in Co-Op..."
-                    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
-                    rows="1"
-                ></textarea>
+    id="chat-input"
+    placeholder="Ask anything, type @Arix in Co-Op..."
+    class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
+    rows="1"
+></textarea>
+
+<!-- Dedicated Image / Video Controls -->
+<div id="visual-controls" class="hidden border-t border-gray-100 pt-2 px-2">
+    <div class="flex items-center gap-2 mb-2">
+        <i id="visual-controls-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
+        <span id="visual-controls-title" class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Image Controls</span>
+        <span class="ml-auto text-[9px] text-gray-400">Pixazo</span>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+
+        <select id="visual-style"
+            class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="auto">Style: Auto</option>
+            <option value="photorealistic">Photorealistic</option>
+            <option value="cinematic">Cinematic</option>
+            <option value="anime">Anime</option>
+            <option value="3d">3D</option>
+            <option value="illustration">Illustration</option>
+            <option value="digital-art">Digital Art</option>
+            <option value="watercolor">Watercolor</option>
+            <option value="sketch">Sketch</option>
+            <option value="cyberpunk">Cyberpunk</option>
+            <option value="vintage">Vintage</option>
+            <option value="product">Product</option>
+            <option value="portrait">Portrait</option>
+            <option value="architecture">Architecture</option>
+            <option value="minimalist">Minimalist</option>
+            <option value="fantasy">Fantasy</option>
+            <option value="documentary">Documentary</option>
+            <option value="commercial">Commercial</option>
+        </select>
+
+        <select id="visual-aspect"
+            class="bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="1:1">Aspect: 1:1</option>
+            <option value="16:9">16:9</option>
+            <option value="9:16">9:16</option>
+            <option value="4:3">4:3</option>
+            <option value="3:4">3:4</option>
+            <option value="21:9">21:9</option>
+            <option value="3:2">3:2</option>
+            <option value="2:3">2:3</option>
+            <option value="4:5">4:5</option>
+        </select>
+
+        <select id="visual-image-steps"
+            class="visual-image-only bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="4">Steps: 4 Fast</option>
+            <option value="6">Steps: 6</option>
+            <option value="10">Steps: 10</option>
+            <option value="15">Steps: 15</option>
+            <option value="20">Steps: 20 Max</option>
+        </select>
+
+        <select id="visual-image-guidance"
+            class="visual-image-only bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="3">Guidance: 3</option>
+            <option value="3.5" selected>Guidance: 3.5</option>
+            <option value="5">Guidance: 5</option>
+            <option value="7">Guidance: 7</option>
+            <option value="10">Guidance: 10</option>
+        </select>
+
+        <select id="visual-video-duration"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="2">Duration: 2s</option>
+            <option value="4">Duration: 4s</option>
+            <option value="6" selected>Duration: 6s</option>
+            <option value="8">Duration: 8s</option>
+            <option value="10">Duration: 10s</option>
+        </select>
+
+        <select id="visual-video-fps"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="24" selected>FPS: 24</option>
+            <option value="25">FPS: 25</option>
+            <option value="30">FPS: 30</option>
+            <option value="48">FPS: 48</option>
+            <option value="60">FPS: 60</option>
+        </select>
+
+        <select id="visual-video-steps"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="10">Steps: 10</option>
+            <option value="15" selected>Steps: 15</option>
+            <option value="20">Steps: 20</option>
+            <option value="25">Steps: 25</option>
+            <option value="30">Steps: 30</option>
+        </select>
+
+        <select id="visual-video-guidance"
+            class="visual-video-only hidden bg-gray-50 border border-gray-200 rounded-lg px-2.5 py-2 text-[11px] text-gray-700 outline-none">
+            <option value="2">Guidance: 2</option>
+            <option value="3" selected>Guidance: 3</option>
+            <option value="5">Guidance: 5</option>
+            <option value="7">Guidance: 7</option>
+            <option value="10">Guidance: 10</option>
+        </select>
+
+    </div>
+
+    <div class="flex items-center justify-between mt-2 gap-3">
+        <label class="flex items-center gap-2 text-[10px] text-gray-500 cursor-pointer">
+            <input id="visual-enhance" type="checkbox" checked
+                class="accent-theme-600 w-3.5 h-3.5">
+            Enhance prompt
+        </label>
+
+        <label id="visual-audio-wrap" class="hidden items-center gap-2 text-[10px] text-gray-500 cursor-pointer">
+            <input id="visual-audio" type="checkbox" checked
+                class="accent-violet-600 w-3.5 h-3.5">
+            Generate audio
+        </label>
+    </div>
+</div>
 
                 <!-- Input Action Bar -->
                 <div class="flex items-center justify-between px-1 border-t border-gray-50 pt-2 mt-1">
@@ -1114,6 +1388,7 @@ let isAppMode = false;
 let isStudyMode = false;
 let isCanvasMaximized = false;
 let isImageMode = false;
+let isVideoMode = false;
 let currentChatId = Date.now().toString();
 let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
 let messages = [];
@@ -1163,7 +1438,9 @@ const els = {
     studyBtn: document.getElementById('study-btn'),
     studyIcon: document.getElementById('study-icon'),
     imageBtn: document.getElementById('image-btn'),
-    imageIcon: document.getElementById('image-icon')
+    imageIcon: document.getElementById('image-icon'),
+    videoBtn: document.getElementById('video-btn'),
+    videoIcon: document.getElementById('video-icon')
 };
 
 window.onload = async () => {
@@ -1609,7 +1886,9 @@ function resetAllModeUI() {
         { btn: els.podcastBtn, icon: els.podcastIcon, textClass: 'text-pink-600', bgClass: 'bg-pink-50', borderClass: 'border-pink-200' },
         { btn: els.appBtn, icon: els.appIcon, textClass: 'text-orange-600', bgClass: 'bg-orange-50', borderClass: 'border-orange-200' },
         { btn: els.studyBtn, icon: els.studyIcon, textClass: 'text-indigo-600', bgClass: 'bg-indigo-50', borderClass: 'border-indigo-200' },
-        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' }
+        { btn: els.imageBtn, icon: els.imageIcon, textClass: 'text-fuchsia-600', bgClass: 'bg-fuchsia-50', borderClass: 'border-fuchsia-200' },
+        { btn: els.videoBtn, icon: els.videoIcon, textClass: 'text-violet-600', bgClass: 'bg-violet-50', borderClass: 'border-violet-200' }
+        
     ];
 
     modes.forEach(m => {
@@ -1622,7 +1901,7 @@ function resetAllModeUI() {
 
 function toggleDeepResearch() {
     const wasOn = isDeepResearchOn;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isDeepResearchOn = true;
@@ -1636,7 +1915,7 @@ function toggleDeepResearch() {
 
 function togglePresentationMode() {
     const wasOn = isPresentationMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isPresentationMode = true;
@@ -1650,7 +1929,7 @@ function togglePresentationMode() {
 
 function toggleMathMode() {
     const wasOn = isMathMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isMathMode = true;
@@ -1664,7 +1943,7 @@ function toggleMathMode() {
 
 function togglePodcastMode() {
     const wasOn = isPodcastMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isPodcastMode = true;
@@ -1678,7 +1957,7 @@ function togglePodcastMode() {
 
 function toggleAppMode() {
     const wasOn = isAppMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isAppMode = true;
@@ -1692,21 +1971,59 @@ function toggleAppMode() {
 
 function toggleImageMode() {
     const wasOn = isImageMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+
+    isDeepResearchOn = false;
+    isPresentationMode = false;
+    isMathMode = false;
+    isPodcastMode = false;
+    isAppMode = false;
+    isStudyMode = false;
+    isImageMode = false;
+    isVideoMode = false;
+
     resetAllModeUI();
+
     if (!wasOn) {
         isImageMode = true;
+
         els.imageBtn.classList.replace('text-gray-500', 'text-fuchsia-600');
         els.imageBtn.classList.replace('border-transparent', 'border-fuchsia-200');
         els.imageBtn.classList.add('bg-fuchsia-50');
         els.imageIcon.classList.add('animate-pulse');
-        showToast("Visual Engine Engaged");
+
+        showToast("Image Studio Engaged");
+    }
+}
+
+function toggleVideoMode() {
+    const wasOn = isVideoMode;
+
+    isDeepResearchOn = false;
+    isPresentationMode = false;
+    isMathMode = false;
+    isPodcastMode = false;
+    isAppMode = false;
+    isStudyMode = false;
+    isImageMode = false;
+    isVideoMode = false;
+
+    resetAllModeUI();
+
+    if (!wasOn) {
+        isVideoMode = true;
+
+        els.videoBtn.classList.replace('text-gray-500', 'text-violet-600');
+        els.videoBtn.classList.replace('border-transparent', 'border-violet-200');
+        els.videoBtn.classList.add('bg-violet-50');
+        els.videoIcon.classList.add('animate-pulse');
+
+        showToast("Video Studio Engaged");
     }
 }
 
 function toggleStudyMode() {
     const wasOn = isStudyMode;
-    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false;
+    isDeepResearchOn = false; isPresentationMode = false; isMathMode = false; isPodcastMode = false; isAppMode = false; isStudyMode = false; isImageMode = false; isVideoMode = false;
     resetAllModeUI();
     if (!wasOn) {
         isStudyMode = true;
@@ -1714,7 +2031,10 @@ function toggleStudyMode() {
         els.studyBtn.classList.replace('border-transparent', 'border-indigo-200');
         els.studyBtn.classList.add('bg-indigo-50');
         els.studyIcon.classList.add('animate-pulse');
-        showToast("Study Deck Generator Engaged");
+        openStudyScreen();
+        showToast("ArixAI Study Workspace Engaged");
+    } else {
+        closeStudyScreen();
     }
 }
 
@@ -2185,24 +2505,97 @@ function showToast(msg) {
     setTimeout(() => toast.classList.add('opacity-0', '-translate-y-10'), 2500); 
 }
 
-async function copyToClipboard(msgId) { 
-    const msg = messages.find(m => m.id === msgId); 
-    if (!msg) return; 
-    try { 
+async function copyToClipboard(msgId) {
+    const msg = messages.find(m => m.id === msgId);
+    if (!msg) return;
+
+    try {
+        const wrapper = document.getElementById('msg-wrapper-' + msgId);
+
+        let textToCopy = "";
+
+        if (wrapper) {
+            // Copy the ACTUAL RENDERED MESSAGE, not the raw HTML source.
+            const rendered = wrapper.querySelector('.msg-content');
+
+            if (rendered) {
+                const clone = rendered.cloneNode(true);
+
+                // Remove UI / metadata that should NEVER enter copied text.
+                clone.querySelectorAll(
+                    '#Arix-persistent-loader,' +
+                    '#Arix-repair-loader,' +
+                    '.think-step,' +
+                    '.action-bar,' +
+                    '.verification-tab,' +
+                    'style,' +
+                    'script,' +
+                    'svg,' +
+                    'button,' +
+                    'template'
+                ).forEach(el => el.remove());
+
+                // innerText respects visible formatting and line breaks.
+                textToCopy = clone.innerText || clone.textContent || "";
+            }
+        }
+
+        // Robust fallback if the rendered message is unavailable.
+        if (!textToCopy.trim()) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(
+                String(msg.content || ""),
+                "text/html"
+            );
+
+            doc.querySelectorAll(
+                '#Arix-persistent-loader,' +
+                '#Arix-repair-loader,' +
+                '.think-step,' +
+                '.action-bar,' +
+                '.verification-tab,' +
+                'style,' +
+                'script,' +
+                'svg,' +
+                'button,' +
+                'template'
+            ).forEach(el => el.remove());
+
+            textToCopy = doc.body.innerText || doc.body.textContent || "";
+        }
+
+        // Normalize whitespace without destroying paragraph/list line breaks.
+        textToCopy = textToCopy
+            .replace(/\u00A0/g, ' ')
+            .replace(/[ \t]+\n/g, '\n')
+            .replace(/\n[ \t]+/g, '\n')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+
+        if (!textToCopy) {
+            return showToast("Nothing to copy.");
+        }
+
         if (navigator.clipboard && window.isSecureContext) {
-            await navigator.clipboard.writeText(msg.content);
-        } else { 
+            await navigator.clipboard.writeText(textToCopy);
+        } else {
             const t = document.createElement("textarea");
-            t.value = msg.content; 
-            document.body.appendChild(t); 
+            t.value = textToCopy;
+            t.style.position = "fixed";
+            t.style.left = "-9999px";
+            t.style.top = "0";
+            document.body.appendChild(t);
+            t.focus();
             t.select();
-            document.execCommand("copy"); 
-            t.remove(); 
-        } 
-        showToast("Copied to clipboard!"); 
+            document.execCommand("copy");
+            t.remove();
+        }
+
+        showToast("Copied to clipboard!");
     } catch (err) {
-        showToast("Copy failed!"); 
-    } 
+        console.error("Copy error:", err);
+        showToast("Copy failed!");
+    }
 }
 
 function openPdfModal(msgId) { 
@@ -2589,40 +2982,84 @@ function generateBrainMap() {
 }
 
 async function shareFullChat() {
-    if (messages.length === 0) return showToast("Chat is empty");
-    showToast("Generating Share Link...");
-    
-    // Visual loading state on the sidebar button
-    const btn = document.querySelector('button[onclick="shareFullChat()"]');
-    if(btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-sm text-indigo-500"></i> Sharing...';
-    
-    try {
-        const res = await fetch('/api/chatshare', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat: chats.find(c => c.id === currentChatId) })
-        });
-        const data = await res.json();
-        
-        if (data.success && data.id) {
-            const link = window.location.origin + '?chat=' + data.id;
-            await navigator.clipboard.writeText(link);
-            showToast("Link Copied! Anyone can view.");
-        } else {
-            throw new Error("API failed");
-        }
-    } catch (e) {
-        // Fallback local share simulation if backend endpoint is unavailable
-        const shareId = 'local_' + currentChatId;
-        const link = window.location.origin + window.location.pathname + '?chat=' + shareId;
-        await navigator.clipboard.writeText(link);
-        showToast("Chat Link Copied!");
+    if (messages.length === 0) {
+        showToast("Chat is empty");
+        return;
     }
-    
-    // Restore button state
-    if(btn) btn.innerHTML = '<i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat';
-}
 
+    showToast("Generating Share Link...");
+
+    const btn = document.querySelector('button[onclick="shareFullChat()"]');
+
+    if (btn) {
+        btn.innerHTML =
+            '<i class="ph-bold ph-spinner animate-spin text-sm text-indigo-500"></i> Sharing...';
+        btn.disabled = true;
+    }
+
+    try {
+        const currentChat = chats.find(
+            (c) => c.id === currentChatId
+        );
+
+        if (!currentChat) {
+            throw new Error("Current chat could not be found.");
+        }
+
+        const res = await fetch("/api/chatshare", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                chatData: currentChat,
+            }),
+        });
+
+        let data;
+
+        try {
+            data = await res.json();
+        } catch {
+            throw new Error(
+                `Share API returned invalid JSON (HTTP ${res.status})`
+            );
+        }
+
+        if (!res.ok || !data.success || !(data.id || data.shareId)) {
+            throw new Error(
+                data?.error ||
+                `Share API failed (HTTP ${res.status})`
+            );
+        }
+
+        const shareId = data.id || data.shareId;
+
+        const link =
+            window.location.origin +
+            window.location.pathname +
+            "?chat=" +
+            encodeURIComponent(shareId);
+
+        await navigator.clipboard.writeText(link);
+
+        showToast("Link Copied! Anyone can view.");
+    } catch (e) {
+        console.error("Share Chat Error:", e);
+
+        showToast(
+            e?.message
+                ? `Share failed: ${e.message}`
+                : "Failed to create share link."
+        );
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML =
+                '<i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat';
+        }
+    }
+}
 // ====== EXTENSION MANAGER ======
 
 
@@ -2695,12 +3132,13 @@ function saveCurrentChat() {
     }));
     
     const chatData = { 
-        id: currentChatId, 
-        title: chatIndex > -1 ? chats[chatIndex].title : title,
-        messages: safeMessages, 
-        extId: currentChatExtId, 
-        date: Date.now() 
-    };
+            id: currentChatId, 
+            title: chatIndex > -1 ? chats[chatIndex].title : title,
+            messages: safeMessages, 
+            extId: currentChatExtId, 
+            date: Date.now(),
+            pinned: chatIndex > -1 ? chats[chatIndex].pinned : false
+        };
     
     if (chatIndex > -1) chats[chatIndex] = chatData; 
     else chats.unshift(chatData);
@@ -2718,7 +3156,7 @@ function createNewChat() {
     renderMessagesToUI(); 
     if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
     renderHistoryList(); // Reset sidebar active states
-    appendMessage('assistant', 'New chat created. How may I assist you today?', activeModelId, 'init', [], 'ArixAI'); 
+    appendMessage('assistant', '<p>Have a business or want to start? Visit <a href="https://lexis-ai-chatini.vercel.app/business.html">Business</a>.</p>', activeModelId, 'init', [], 'ArixAI'); 
     closeCanvas(); 
     renderPulseTodayWidget();
 }
@@ -2756,19 +3194,37 @@ function renameChat(id, e) {
     } 
 }
 
+function togglePinChat(id, e) {
+    e.stopPropagation();
+    const chat = chats.find(c => c.id === id);
+    if (chat) {
+        chat.pinned = !chat.pinned;
+        localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+        renderHistoryList();
+    }
+}
+
 function renderHistoryList() { 
+    // Sort: Pinned chats first, then order by newest activity date descending
+    chats.sort((a, b) => {
+        if (a.pinned && !b.pinned) return -1;
+        if (!a.pinned && b.pinned) return 1;
+        return (b.date || 0) - (a.date || 0);
+    });
+
     els.historyList.innerHTML = chats.map(chat => 
-        `<div class="group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-50 border border-theme-100 shadow-sm' : 'hover:bg-gray-50 border border-transparent'}" onclick="loadChat('${chat.id}')">
+        `<div class="group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-100 border border-theme-300 shadow-md ring-1 ring-theme-200' : 'hover:bg-gray-50 border border-transparent'} relative" onclick="loadChat('${chat.id}')">
             <div class="flex items-center gap-2 overflow-hidden">
-                <i class="ph-bold ph-chat-circle ${chat.id === currentChatId ? 'text-theme-600' : 'text-gray-400'} flex-shrink-0 text-lg"></i>
+                <i class="${chat.pinned ? 'ph-fill ph-push-pin text-amber-500' : 'ph-bold ph-chat-circle'} ${chat.id === currentChatId && !chat.pinned ? 'text-theme-600' : (!chat.pinned ? 'text-gray-400' : '')} flex-shrink-0 text-lg"></i>
                 <div class="flex flex-col">
-                    <span class="text-[13px] font-medium ${chat.id === currentChatId ? 'text-theme-800' : 'text-gray-700'} truncate">${chat.title}</span>
+                    <span class="text-[13px] font-bold ${chat.id === currentChatId ? 'text-theme-900' : 'text-gray-700'} truncate">${chat.title}</span>
                     ${chat.extId ? '<span class="text-[9px] text-purple-600 font-bold uppercase tracking-wide flex items-center gap-1"><i class="ph-bold ph-brain"></i> Active Ext</span>' : ""}
                 </div>
             </div>
-            <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onclick="renameChat('${chat.id}', event)" class="text-gray-400 hover:text-blue-600 p-1 bg-white hover:bg-blue-50 rounded shadow-sm border border-gray-100"><i class="ph-bold ph-pencil-simple"></i></button>
-                <button onclick="deleteChat('${chat.id}', event)" class="text-gray-400 hover:text-red-600 p-1 bg-white hover:bg-red-50 rounded shadow-sm border border-gray-100"><i class="ph-bold ph-trash"></i></button>
+            <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity relative z-20">
+                <button onclick="togglePinChat('${chat.id}', event)" class="text-gray-400 hover:text-amber-500 p-1 bg-white hover:bg-amber-50 rounded shadow-sm border border-gray-100" title="${chat.pinned ? 'Unpin Chat' : 'Pin Chat'}"><i class="ph-bold ${chat.pinned ? 'ph-push-pin-slash' : 'ph-push-pin'}"></i></button>
+                <button onclick="renameChat('${chat.id}', event)" class="text-gray-400 hover:text-blue-600 p-1 bg-white hover:bg-blue-50 rounded shadow-sm border border-gray-100" title="Rename"><i class="ph-bold ph-pencil-simple"></i></button>
+                <button onclick="deleteChat('${chat.id}', event)" class="text-gray-400 hover:text-red-600 p-1 bg-white hover:bg-red-50 rounded shadow-sm border border-gray-100" title="Delete"><i class="ph-bold ph-trash"></i></button>
             </div>
         </div>`
     ).join(""); 
@@ -2815,7 +3271,49 @@ function updateUIState() {
     else if (activeModelId === 'spark') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-amber-400`;
     else if (activeModelId === 'flux') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-cyan-400`;
 
+    if (isImageMode || isVideoMode) {
+    const visualControls = document.getElementById('visual-controls');
+    const controlsTitle = document.getElementById('visual-controls-title');
+    const controlsIcon = document.getElementById('visual-controls-icon');
+    const audioWrap = document.getElementById('visual-audio-wrap');
+
+    if (visualControls) visualControls.classList.remove('hidden');
+
+    if (isVideoMode) {
+        els.input.placeholder = 'Describe the video you want ArixAI to generate...';
+
+        if (controlsTitle) controlsTitle.textContent = 'Video Controls';
+        if (controlsIcon) {
+            controlsIcon.className = 'ph-bold ph-film-strip text-violet-500';
+        }
+
+        document.querySelectorAll('.visual-image-only').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.visual-video-only').forEach(el => el.classList.remove('hidden'));
+
+        if (audioWrap) {
+            audioWrap.classList.remove('hidden');
+            audioWrap.classList.add('flex');
+        }
+    } else {
+        els.input.placeholder = 'Describe the image you want ArixAI to generate...';
+
+        if (controlsTitle) controlsTitle.textContent = 'Image Controls';
+        if (controlsIcon) {
+            controlsIcon.className = 'ph-bold ph-aperture text-fuchsia-500';
+        }
+
+        document.querySelectorAll('.visual-image-only').forEach(el => el.classList.remove('hidden'));
+        document.querySelectorAll('.visual-video-only').forEach(el => el.classList.add('hidden'));
+
+        if (audioWrap) {
+            audioWrap.classList.add('hidden');
+            audioWrap.classList.remove('flex');
+        }
+    }
+} else {
+    document.getElementById('visual-controls')?.classList.add('hidden');
     els.input.placeholder = `Message ArixAI (${model.name})...`;
+}
     
     if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { 
         els.sendBtn.className = 'bg-theme-600 text-white p-2.5 sm:p-3 rounded-full shadow-md shadow-theme-200 transition-all duration-300 flex items-center justify-center cursor-pointer hover:bg-theme-700 transform hover:scale-105';
@@ -2828,8 +3326,103 @@ function updateUIState() {
 
 // ====== DYNAMIC MESSAGE PARSING & FORMATTING ======
 function parseRichText(content, isStreaming = false, msgId = null) {
+    // Bypass Markdown parsing for Pixazo Visual Engine HTML widgets
+    if (typeof content === 'string' && content.includes('bg-gray-900/60 border border-white/10')) {
+        return content;
+    }
+
     let extractedHtml = ""; 
     let markdownContent = content;
+
+    // 1. Normalize all tag variants into standard markers & absorb pre-thought bleed
+    // 1. Normalize opening tags to <think_s>
+    // 1. Normalize all opening and closing tag variations
+    let cleanText = markdownContent
+        .replace(/<(?:think_s|thinking)(?:\s+title="[^"]*")?>|think_start/gi, '<think_s>')
+        .replace(/<\/(?:think_s|think_e|thinking)>|<think_e>|<\/think>|think_end/gi, '<think_e>')
+        // Strip pre-thought model preambles
+        .replace(/(?:(?:^|\n)(?:Confidence Score:[^\n]*|Strategizing[^\n]*|` structure\.)\s*)+<think_s>/gi, '<think_s>');
+
+    // 2. ABSORB PREMATURE CLOSURES AND "READY TO GENERATE" TRANSITIONS INTO THINKING
+    // Catches <think_e> placed before "Okay, I'm ready to generate..." and shifts <think_e> to after it
+    cleanText = cleanText.replace(
+        /<think_e>\s*([\s\S]*?Okay,?\s*I(?:\'m| am)\s*ready to generate the response[^\n.]*[.]?\s*)/gi,
+        '$1<think_e>\n\n'
+    );
+
+    // Also absorb other trailing planning notes that precede conversational greetings or headers
+    cleanText = cleanText.replace(
+        /<think_e>\s*([\s\S]*?(?:\[SYSTEM CLOCK|I will formulate|I will structure|Core components|Latest News:|Today's Date:)[\s\S]*?)(?=(?:[.!?\n]|^)\s*(?:Hey\b|Hello\b|Hi\b|Greetings\b|Good\s+(?:morning|afternoon|evening)\b|#{1,6}\s))/gi,
+        '$1<think_e>\n\n'
+    );
+
+    // 3. FAIL-SAFE: If the model never closed <think_s> at all
+    if (!isStreaming && cleanText.includes('<think_s>') && !cleanText.includes('<think_e>')) {
+        const thinkStartIdx = cleanText.indexOf('<think_s>') + 9;
+        const body = cleanText.substring(thinkStartIdx);
+
+        // Check if the "ready to generate" phrase exists in the unclosed thought
+        const readyPhraseRegex = /Okay,?\s*I(?:\'m| am)\s*ready to generate the response[^\n.]*[.]?\s*/i;
+        const readyPhraseMatch = body.search(readyPhraseRegex);
+
+        if (readyPhraseMatch !== -1) {
+            const matchedText = body.match(readyPhraseRegex)[0];
+            const splitIdx = thinkStartIdx + readyPhraseMatch + matchedText.length;
+            cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+        } else {
+            // Otherwise search for standard conversational greeting boundaries
+            const greetingMatch = body.search(/(?<=[.!?\n]|^)\s*(?=(?:Hey\b|Hello\b|Hi\b|Greetings\b|Good\s+(?:morning|afternoon|evening)\b|Dear\b|#{1,6}\s))/i);
+            if (greetingMatch !== -1) {
+                const splitIdx = thinkStartIdx + greetingMatch;
+                cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+            } else {
+                const planEndMatch = body.search(/(?:I will (?:formulate|structure|provide|now|generate|respond)[^\n.!?]*[.!?])\s*/i);
+                if (planEndMatch !== -1) {
+                    const matchedStr = body.match(/(?:I will (?:formulate|structure|provide|now|generate|respond)[^\n.!?]*[.!?])\s*/i)[0];
+                    const splitIdx = thinkStartIdx + planEndMatch + matchedStr.length;
+                    cleanText = cleanText.substring(0, splitIdx).trimEnd() + '\n<think_e>\n\n' + cleanText.substring(splitIdx).trimStart();
+                }
+            }
+        }
+    }
+
+    // 4. Render completed thinking blocks into collapsible details menus
+    cleanText = cleanText.replace(/<think_s>([\s\S]*?)<think_e>/gi, (match, innerContent) => {
+        return `\n\n<details class="group my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+<summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3 px-4 hover:bg-gray-100 transition-colors select-none">
+<div class="flex items-center gap-2.5">
+<i class="ph-bold ph-brain text-gray-400"></i>
+<span class="text-[13px] font-semibold text-gray-500">Thinking...</span>
+</div>
+<i class="ph-bold ph-caret-down text-gray-400 text-xs group-open:rotate-180 transition-transform"></i>
+</summary>
+<div class="p-4 pt-2 text-[13px] text-gray-500 font-mono leading-relaxed bg-white/50 border-t border-gray-100">
+${marked.parse(innerContent.trim())}
+</div>
+</details>\n\n`;
+    });
+
+    // 5. Active streaming state
+    if (isStreaming && cleanText.includes('<think_s>')) {
+        const parts = cleanText.split('<think_s>');
+        const beforeContent = parts[0];
+        const unclosedContent = parts.slice(1).join('<think_s>');
+
+        cleanText = beforeContent + `\n\n<div class="my-3 w-full bg-gray-50/50 rounded-2xl border border-gray-200 shadow-sm overflow-hidden animate-pulse">
+<div class="flex items-center justify-between p-3 px-4 select-none">
+<div class="flex items-center gap-2.5">
+<i class="ph-bold ph-brain text-gray-400 animate-pulse"></i>
+<span class="text-[13px] font-semibold text-gray-500">Thinking...</span>
+</div>
+</div>
+<div class="p-4 pt-2 text-[13px] text-gray-400 font-mono leading-relaxed bg-white/50 border-t border-gray-100">
+${marked.parse(unclosedContent.trim())}
+</div>
+</div>\n\n`;
+    }
+
+    markdownContent = cleanText;
+
     if (!isStreaming && markdownContent.includes('<artifact') && !markdownContent.includes('</artifact>')) { 
         markdownContent += '\n</artifact>'; 
     }
@@ -3350,82 +3943,513 @@ async function handleSend() {
         isProcessing = false; updateUIState(); return;
     }
     
-    // 5E. IMAGE ENGINE
-    if (isImageMode || text.toLowerCase().startsWith('/imagine')) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Initializing Neural Visual Engine...', 'presentation');
-        
-        const aiMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
-        
-        try {
-            const res = await fetch('/api/image', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ prompt: text }) 
-            });
-            
-            const reader = res.body.getReader();
-            const decoder = new TextDecoder();
-            let htmlWidget = "";
-            
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                
-                const chunks = decoder.decode(value, { stream: true }).split('\n\n').filter(Boolean);
-                for (let chunk of chunks) {
-                    if (chunk.startsWith('data: ')) {
-                        const data = JSON.parse(chunk.substring(6));
-                        if(data.text.trim().startsWith('<div') || htmlWidget.length > 0) {
-                             htmlWidget += data.text; 
-                        } else {
-                             logContainer.innerHTML += `<div class="flex items-center gap-2"><i class="ph-bold ph-check text-fuchsia-500"></i><span class="text-sm font-medium">${data.text}</span></div>`;
-                             els.canvas.scrollTop = els.canvas.scrollHeight;
-                        }
+    // 5E. UNIFIED PIXAZO IMAGE + VIDEO ENGINE
+if (
+    isImageMode ||
+    isVideoMode ||
+    /^\/imagine\b/i.test(text) ||
+    /^\/video\b/i.test(text)
+) {
+    els.indicator.classList.add('hidden');
+
+    const detectedVideo = isVideoMode || /^\/video\b/i.test(text);
+    const modality = detectedVideo ? 'video' : 'image';
+
+    let cleanPrompt = text.trim();
+
+    if (detectedVideo) {
+        cleanPrompt = cleanPrompt.replace(/^\/video\b/i, '').trim();
+    } else {
+        cleanPrompt = cleanPrompt.replace(/^\/imagine\b/i, '').trim();
+    }
+
+    if (!cleanPrompt) {
+        appendMessage(
+            'assistant',
+            `<span class="text-red-500 font-medium">Please describe the ${detectedVideo ? 'video' : 'image'} you want to generate.</span>`,
+            activeModelId
+        );
+        isProcessing = false;
+        updateUIState();
+        return;
+    }
+
+    const aiMsgObj = appendMessage(
+        'assistant',
+        "",
+        activeModelId,
+        null,
+        [],
+        currentMultiplayerRoom ? 'ArixAI' : null
+    );
+
+    /*
+     * ---------------------------------------------------------
+     * REAL-TIME VISUAL PROGRESS
+     * ---------------------------------------------------------
+     * Never invent a percentage in the frontend.
+     * The frontend displays provider-reported progress when the
+     * API supplies it.
+     *
+     * When the provider does not expose an exact percentage,
+     * we show an animated "working" state + elapsed time instead
+     * of pretending that 47% / 83% etc. is real.
+     */
+
+    let latestProgress = null;
+    let latestStage = 'starting';
+    let latestDetail = 'Connecting to Pixazo...';
+    const generationStartedAt = Date.now();
+
+    const progressShell = document.createElement('div');
+    progressShell.className =
+        'mt-4 w-full rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden';
+
+    progressShell.innerHTML = `
+        <div class="p-4">
+            <div class="flex items-center justify-between gap-3 mb-3">
+                <div class="flex items-center gap-2 min-w-0">
+                    <div class="w-8 h-8 rounded-xl ${detectedVideo ? 'bg-violet-50 text-violet-600' : 'bg-fuchsia-50 text-fuchsia-600'} flex items-center justify-center">
+                        <i class="ph-bold ${detectedVideo ? 'ph-film-strip' : 'ph-aperture'}"></i>
+                    </div>
+
+                    <div class="min-w-0">
+                        <div class="text-sm font-bold text-gray-800">
+                            ${detectedVideo ? 'Generating Video' : 'Generating Image'}
+                        </div>
+                        <div id="visual-stage-text" class="text-[10px] text-gray-400 truncate">
+                            Connecting to Pixazo...
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-right shrink-0">
+                    <div id="visual-progress-number"
+                         class="text-lg font-black ${detectedVideo ? 'text-violet-600' : 'text-fuchsia-600'}">
+                        —
+                    </div>
+                    <div id="visual-progress-label"
+                         class="text-[9px] uppercase tracking-wider text-gray-400">
+                        provider %
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div id="visual-progress-bar"
+                     class="h-full rounded-full transition-all duration-500 w-0 relative overflow-hidden ${detectedVideo ? 'bg-violet-500' : 'bg-fuchsia-500'}">
+                    <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-between mt-2 gap-3">
+                <div id="visual-progress-detail"
+                     class="text-[10px] text-gray-500 truncate">
+                    Waiting for provider status...
+                </div>
+
+                <div id="visual-elapsed"
+                     class="text-[10px] text-gray-400 font-mono shrink-0">
+                    0s
+                </div>
+            </div>
+
+            <div id="visual-indeterminate"
+                 class="hidden mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-[10px] text-gray-500 flex items-center gap-2">
+                <i class="ph-bold ph-spinner-gap animate-spin"></i>
+                <span>Pixazo has not supplied an exact percentage yet. Generation is still active.</span>
+            </div>
+        </div>
+    `;
+
+    aiMsgObj.container.appendChild(progressShell);
+
+    const progressNumber = progressShell.querySelector('#visual-progress-number');
+    const progressLabel = progressShell.querySelector('#visual-progress-label');
+    const progressBar = progressShell.querySelector('#visual-progress-bar');
+    const stageText = progressShell.querySelector('#visual-stage-text');
+    const detailText = progressShell.querySelector('#visual-progress-detail');
+    const elapsedText = progressShell.querySelector('#visual-elapsed');
+    const indeterminate = progressShell.querySelector('#visual-indeterminate');
+
+    let elapsedTimer = setInterval(() => {
+        const seconds = Math.floor((Date.now() - generationStartedAt) / 1000);
+
+        if (elapsedText) {
+            elapsedText.textContent = `${seconds}s`;
+        }
+    }, 250);
+
+    const setProgress = (progress, stage, detail) => {
+        const numeric = Number(progress);
+
+        if (Number.isFinite(numeric)) {
+            const bounded = Math.max(0, Math.min(100, Math.round(numeric)));
+            latestProgress = bounded;
+
+            if (progressNumber) progressNumber.textContent = `${bounded}%`;
+            if (progressBar) progressBar.style.width = `${bounded}%`;
+
+            if (progressLabel) progressLabel.textContent = 'provider %';
+
+            if (indeterminate) indeterminate.classList.add('hidden');
+        } else {
+            if (progressNumber) progressNumber.textContent = '—';
+            if (progressLabel) progressLabel.textContent = 'status';
+
+            if (progressBar) {
+                progressBar.style.width = '100%';
+                progressBar.classList.add('animate-pulse');
+            }
+
+            if (indeterminate) indeterminate.classList.remove('hidden');
+        }
+
+        latestStage = stage || latestStage;
+        latestDetail = detail || latestDetail;
+
+        if (stageText) {
+            stageText.textContent = latestStage || 'working';
+        }
+
+        if (detailText) {
+            detailText.textContent = latestDetail || 'Working...';
+        }
+    };
+
+    /*
+     * Keep UI visibly alive even if the network/provider pauses.
+     */
+    let heartbeat = setInterval(() => {
+        if (!detailText) return;
+
+        const dots =
+            '.'.repeat((Math.floor(Date.now() / 500) % 4));
+
+        if (latestProgress === null) {
+            detailText.textContent =
+                `${latestStage || 'working'}${dots}`;
+        }
+    }, 250);
+
+    try {
+        const style = document.getElementById('visual-style')?.value || 'auto';
+        const aspectRatio = document.getElementById('visual-aspect')?.value ||
+            (detectedVideo ? '16:9' : '1:1');
+
+        const enhancePrompt =
+            document.getElementById('visual-enhance')?.checked !== false;
+
+        const settings = {
+            style,
+            aspectRatio,
+            enhancePrompt
+        };
+
+        if (detectedVideo) {
+            settings.duration = Number(
+                document.getElementById('visual-video-duration')?.value || 6
+            );
+
+            settings.fps = Number(
+                document.getElementById('visual-video-fps')?.value || 24
+            );
+
+            settings.steps = Number(
+                document.getElementById('visual-video-steps')?.value || 15
+            );
+
+            settings.guidance = Number(
+                document.getElementById('visual-video-guidance')?.value || 3
+            );
+
+            settings.generateAudio =
+                document.getElementById('visual-audio')?.checked !== false;
+        } else {
+            settings.steps = Number(
+                document.getElementById('visual-image-steps')?.value || 4
+            );
+
+            settings.guidance = Number(
+                document.getElementById('visual-image-guidance')?.value || 3.5
+            );
+
+            settings.format = 'png';
+        }
+
+        const res = await fetch('/api/image', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                modality,
+                prompt: cleanPrompt,
+                settings
+            })
+        });
+
+        if (!res.ok) {
+            throw new Error(`Visual API returned HTTP ${res.status}`);
+        }
+
+        if (!res.body) {
+            throw new Error('Visual API returned no streaming body.');
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+
+        let buffer = '';
+        let htmlWidget = '';
+        let streamEnded = false;
+        let finalContentReceived = false;
+
+        while (!streamEnded) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+                streamEnded = true;
+                break;
+            }
+
+            if (!value) continue;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const events = buffer.split('\n\n');
+            buffer = events.pop() || '';
+
+            for (const eventBlock of events) {
+                const dataLine = eventBlock
+                    .split('\n')
+                    .find(line => line.startsWith('data: '));
+
+                if (!dataLine) continue;
+
+                const payloadText = dataLine.slice(6).trim();
+                if (!payloadText) continue;
+
+                let data;
+
+                try {
+                    data = JSON.parse(payloadText);
+                } catch {
+                    continue;
+                }
+
+                /*
+                 * New API protocol:
+                 * event=progress
+                 */
+                if (data.event === 'progress') {
+                    setProgress(
+                        Number.isFinite(Number(data.progress))
+                            ? Number(data.progress)
+                            : null,
+                        data.stage || 'working',
+                        data.detail || data.text || 'Working...'
+                    );
+
+                    continue;
+                }
+
+                /*
+                 * Final widget:
+                 * event=content
+                 */
+                if (data.event === 'content') {
+                    htmlWidget += String(data.text || '');
+                    finalContentReceived = true;
+
+                    setProgress(
+                        100,
+                        'complete',
+                        detectedVideo
+                            ? 'Video received successfully.'
+                            : 'Image received successfully.'
+                    );
+
+                    continue;
+                }
+
+                /*
+                 * Backwards compatibility with your older API response.
+                 */
+                if (typeof data.text === 'string') {
+                    const incoming = data.text;
+
+                    if (
+                        incoming.includes('<div') ||
+                        incoming.includes('</div>') ||
+                        htmlWidget.length > 0
+                    ) {
+                        htmlWidget += incoming;
+                    } else {
+                        setProgress(
+                            null,
+                            'working',
+                            incoming.replace(/^>\s*/, '').trim()
+                        );
                     }
                 }
             }
-            
-            setTimeout(() => logContainer.parentElement.parentElement.remove(), 1000);
-            aiMsgObj.container.innerHTML = htmlWidget;
-            messages.push({ role: 'assistant', content: htmlWidget, id: aiMsgObj.id, modelId: activeModelId });
-            saveCurrentChat();
-            
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            aiMsgObj.container.innerHTML = `<span class="text-red-500 font-medium">Visual Engine Error: ${err.message}</span>`;
+
+            els.canvas.scrollTop = els.canvas.scrollHeight;
         }
-        isProcessing = false; updateUIState(); return;
-    }
-    
-    // 5F. STUDY DECK ENGINE
-    if (isStudyMode) {
-        els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Extracting Flashcards...', 'research');
-        try {
-            const res = await fetch('/api/study-deck', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ textContext: text }) 
-            });
-            const data = await res.json();
-            logContainer.parentElement.parentElement.remove();
-            if (data.success && data.data) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
-                const artifactContent = `<artifact title="${data.data.deckName}" type="study_deck">\n${JSON.stringify(data.data)}\n</artifact>`;
-                assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
-            } else {
-                appendMessage('assistant', `<span class="text-red-500 font-medium">Failed to generate deck: ${data.error}</span>`, activeModelId);
+
+        /*
+         * Flush a final partial SSE buffer.
+         */
+        if (buffer.trim().startsWith('data: ')) {
+            try {
+                const finalData = JSON.parse(buffer.trim().slice(6));
+
+                if (finalData.event === 'content') {
+                    htmlWidget += String(finalData.text || '');
+                    finalContentReceived = true;
+                }
+            } catch {}
+        }
+
+        clearInterval(elapsedTimer);
+        clearInterval(heartbeat);
+
+        if (!htmlWidget || !finalContentReceived) {
+            throw new Error(
+                'Generation stream ended before the final media widget was received.'
+            );
+        }
+
+        /*
+         * Replace progress card with final media.
+         */
+        progressShell.remove();
+
+        aiMsgObj.container.innerHTML = htmlWidget;
+
+        /*
+         * Improve generated-media download UX.
+         */
+        const mediaLinks = aiMsgObj.container.querySelectorAll('a');
+
+        mediaLinks.forEach(link => {
+            const href = link.getAttribute('href') || '';
+
+            if (!/^https?:\/\//i.test(href) && !href.startsWith('data:')) {
+                return;
             }
-        } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            appendMessage('assistant', `<span class="text-red-500 font-medium">Network Error.</span>`, activeModelId);
-        }
-        isProcessing = false; updateUIState(); return;
+
+            if (detectedVideo) {
+                link.textContent = 'Download MP4';
+                link.title = 'Download generated video';
+
+                link.addEventListener('click', async (ev) => {
+                    /*
+                     * Try a real browser download first.
+                     * If the remote host blocks CORS, fall back to
+                     * opening the media directly instead of pretending
+                     * the download succeeded.
+                     */
+                    if (!href.startsWith('data:')) {
+                        ev.preventDefault();
+
+                        try {
+                            const mediaRes = await fetch(href, {
+                                method: 'GET',
+                                mode: 'cors'
+                            });
+
+                            if (!mediaRes.ok) {
+                                throw new Error('Remote media download failed');
+                            }
+
+                            const blob = await mediaRes.blob();
+                            const blobURL = URL.createObjectURL(blob);
+
+                            const a = document.createElement('a');
+                            a.href = blobURL;
+                            a.download =
+                                `ArixAI_${modality}_${Date.now()}.mp4`;
+
+                            document.body.appendChild(a);
+                            a.click();
+                            a.remove();
+
+                            setTimeout(() => URL.revokeObjectURL(blobURL), 5000);
+
+                            return;
+                        } catch {
+                            window.open(
+                                href,
+                                '_blank',
+                                'noopener,noreferrer'
+                            );
+                        }
+                    }
+                });
+            }
+        });
+
+        messages.push({
+            role: 'assistant',
+            content: htmlWidget,
+            id: aiMsgObj.id,
+            modelId: activeModelId
+        });
+
+        saveCurrentChat();
+
+        sendTelemetry(
+            modality === 'video' ? 'video_generation' : 'image_generation',
+            activeModelId,
+            'success'
+        );
+
+    } catch (err) {
+        clearInterval(elapsedTimer);
+        clearInterval(heartbeat);
+
+        progressShell.remove();
+
+        aiMsgObj.container.innerHTML = `
+            <div class="mt-4 bg-red-50 border border-red-200 text-red-700 p-4 rounded-2xl text-sm leading-relaxed">
+                <div class="flex items-center gap-2 font-bold mb-1">
+                    <i class="ph-bold ph-warning-circle"></i>
+                    ${detectedVideo ? 'Video Generation Failed' : 'Image Generation Failed'}
+                </div>
+                <div>${String(err.message || 'Unknown visual generation error.')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')}</div>
+            </div>
+        `;
+
+        sendTelemetry(
+            detectedVideo ? 'video_generation' : 'image_generation',
+            activeModelId,
+            'error',
+            err.message
+        );
     }
+
+    isProcessing = false;
+    updateUIState();
+    return;
+}
     
+    // 5F. TEACHER STUDY WORKSPACE ENGINE
+    if (isStudyMode) {
+        try {
+            await runStudyTask(text, payloadFiles);
+        } catch (error) {
+            showStudyError(error?.message || 'Study execution failed.');
+        } finally {
+            isProcessing = false;
+            updateUIState();
+        }
+        return;
+    }
+
     // 6. MAIN CHAT / RESEARCH ENGINE
     let compiledResearchContext = "";
     let contextMessages = messages.map(m => ({ 
@@ -3577,7 +4601,7 @@ async function handleSend() {
         }
         // ==========================================
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
@@ -3695,7 +4719,7 @@ const accessTools = [
     { id: "32", name: "Medical Terms", icon: "ph-heartbeat", desc: "Translate clinical jargon.", color: "sky", themeBg: "bg-sky-50", themeText: "text-sky-600", themeBorder: "border-sky-200" },
     { id: "35", name: "Telecom Cost", icon: "ph-phone", desc: "Expose true annual fees.", color: "amber", themeBg: "bg-amber-50", themeText: "text-amber-600", themeBorder: "border-amber-200" },
     { id: "41", name: "Price Scrape", icon: "ph-currency-dollar", desc: "Extract competitor matrices.", color: "blue", themeBg: "bg-blue-50", themeText: "text-blue-600", themeBorder: "border-blue-200" },
-    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "convert file formats.", color: "slate", themeBg: "bg-slate-50", themeText: "text-slate-700", themeBorder: "border-slate-300" }
+    { id: "57", name: "Data Convert", icon: "ph-arrows-left-right", desc: "Convert File Formats.", color: "slate", themeBg: "bg-slate-50", themeText: "text-slate-700", themeBorder: "border-slate-300" }
 ];
 
 let activeAccessTool = localStorage.getItem('arix_active_access_tool') || "57";
@@ -3728,11 +4752,6 @@ function selectAccessTool(id) {
     localStorage.setItem('arix_active_access_tool', id);
     renderAccessTools();
     renderAccessChat();
-    // Auto-close sidebar on mobile after tool selection
-    if (window.innerWidth < 768) {
-        document.getElementById('access-tool-list')?.classList.add('-translate-x-full');
-        document.getElementById('access-sidebar-overlay')?.classList.add('hidden');
-    }
 }
 
 function resetCurrentToolChat() {
@@ -3789,19 +4808,19 @@ function renderDedicatedToolOutput(toolId, content, msgId) {
     
     // Top Bar with Copy & PDF Export actions
     const toolbar = `
-    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-gray-100 pb-3 mb-4 no-pdf">
+    <div class="flex items-center justify-between border-b border-gray-100 pb-3 mb-4 no-pdf">
         <div class="flex items-center gap-2">
-            <span class="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider px-2 sm:px-2.5 py-1 rounded-lg ${tool.themeBg} ${tool.themeText} border ${tool.themeBorder} flex items-center gap-1.5 whitespace-nowrap">
+            <span class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg ${tool.themeBg} ${tool.themeText} border ${tool.themeBorder} flex items-center gap-1.5">
                 <i class="ph-bold ${tool.icon}"></i> ${tool.name}
             </span>
             <span class="text-[11px] text-gray-400 font-medium hidden sm:inline">• Output Model</span>
         </div>
         <div class="flex items-center gap-1.5">
-            <button onclick="copyAccessOutput('${msgId}')" class="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-2 sm:px-3 py-1.5 rounded-xl border border-gray-200 transition-colors shadow-sm cursor-pointer whitespace-nowrap" title="Copy raw text">
-                <i class="ph-bold ph-copy text-xs sm:text-sm text-gray-500"></i> <span class="hidden sm:inline">Copy</span>
+            <button onclick="copyAccessOutput('${msgId}')" class="flex items-center gap-1.5 text-xs font-semibold text-gray-600 hover:text-gray-900 bg-gray-50 hover:bg-gray-100 px-3 py-1.5 rounded-xl border border-gray-200 transition-colors shadow-sm cursor-pointer" title="Copy raw text">
+                <i class="ph-bold ph-copy text-sm text-gray-500"></i> <span>Copy</span>
             </button>
-            <button onclick="downloadAccessPdf('${msgId}')" class="flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 sm:px-3 py-1.5 rounded-xl border border-red-200 transition-colors shadow-sm cursor-pointer whitespace-nowrap" title="Export this report to PDF">
-                <i class="ph-bold ph-file-pdf text-xs sm:text-sm text-red-500"></i> <span class="hidden sm:inline">Download PDF</span><span class="sm:hidden">PDF</span>
+            <button onclick="downloadAccessPdf('${msgId}')" class="flex items-center gap-1.5 text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-xl border border-red-200 transition-colors shadow-sm cursor-pointer" title="Export this report to PDF">
+                <i class="ph-bold ph-file-pdf text-sm text-red-500"></i> <span>Download PDF</span>
             </button>
         </div>
     </div>`;
@@ -4003,7 +5022,7 @@ function renderDedicatedToolOutput(toolId, content, msgId) {
                 <pre class="font-mono text-xs text-teal-300 leading-relaxed">${formattedData}</pre>
             </div>
             <div class="text-[11px] text-gray-500 font-medium">
-                Need more advanced packers? Try <a href="https://code-packer-pro.vercel.app/" target="_blank" class="text-teal-600 font-bold hover:underline">CodePacker Pro</a> or <a href="https://file-packer-pro.vercel.app/" target="_blank" class="text-teal-600 font-bold hover:underline">FilePacker Pro</a>.
+                Need most advanced accuracy or have big file to convert? Try <a href="https://code-packer-pro.vercel.app/" target="_blank" class="text-teal-600 font-bold hover:underline">CodePacker Pro</a> or <a href="https://file-packer-pro.vercel.app/" target="_blank" class="text-teal-600 font-bold hover:underline">FilePacker Pro</a>.
             </div>
         </div>`;
     }
@@ -4145,7 +5164,7 @@ function renderAccessChat() {
                     <i class="ph-bold ${currentTool.icon}"></i>
                 </div>
                 <h3 class="text-base font-bold text-gray-900">${currentTool.name} Dedicated Engine</h3>
-                <p class="text-xs text-gray-500 max-w-sm text-center leading-relaxed font-medium">${currentTool.desc} Enter your parameters or attach a document below to execute, or convert files with <a href="https://code-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">CodePacker Pro</a> and <a href="https://file-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">FilePacker Pro</a>.</p>
+                <p class="text-xs text-gray-500 max-w-sm text-center leading-relaxed font-medium">${currentTool.desc} You can convert files at: <a href="https://code-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">CodePacker Pro</a> and <a href="https://file-packer-pro.vercel.app/" style="color:blue; cursor:pointer;">FilePacker Pro</a>.</p>
             </div>`;
         return;
     }
@@ -4835,5 +5854,1472 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 </script>
+
+<!-- ==================== ARIXAI STUDY WORKSPACE ==================== -->
+<div id="study-screen" class="fixed inset-0 z-[180] hidden flex-col bg-[#f8fafc] text-gray-900">
+    <div class="h-[72px] shrink-0 bg-white/95 backdrop-blur-xl border-b border-gray-200 flex items-center justify-between px-4 sm:px-6 shadow-sm">
+        <div class="flex items-center gap-3 min-w-0">
+            <div class="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0">
+                <i class="ph-fill ph-chalkboard-teacher text-2xl text-indigo-600"></i>
+            </div>
+            <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-base sm:text-lg font-bold tracking-tight truncate">ArixAI Study</h2>
+                    <span class="hidden sm:inline-flex px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 text-[9px] font-bold uppercase tracking-widest">Teacher OS</span>
+                </div>
+                <p class="text-[10px] sm:text-xs text-gray-500 truncate">Turn a teaching goal into ready-to-review classroom work.</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <div class="flex items-center rounded-xl bg-gray-100 border border-gray-200 p-1">
+                <button id="study-beginner-tab" onclick="setStudyUiMode('beginner')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-gray-900 shadow-sm">Simple</button>
+                <button id="study-expert-tab" onclick="setStudyUiMode('expert')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-900">Expert</button>
+            </div>
+            <button onclick="closeStudyScreen()" class="p-2 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors" title="Close Study">
+                <i class="ph-bold ph-x text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
+        <aside class="w-full lg:w-[360px] shrink-0 bg-white border-r border-gray-200 overflow-y-auto custom-scrollbar">
+            <div class="p-4 sm:p-5 space-y-5">
+                <div class="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-white p-4">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-600">One request</p>
+                    <h3 class="mt-1 text-lg font-bold leading-tight">Tell ArixAI what you need finished.</h3>
+                    <p class="mt-2 text-xs leading-relaxed text-gray-500">ArixAI will ask when something important is missing instead of guessing.</p>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Fast starts</h3>
+                            <p class="text-[10px] text-gray-400 mt-0.5">These are starting instructions, not fake templates.</p>
+                        </div>
+                        <i class="ph-bold ph-sparkle text-indigo-500"></i>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="setStudyStarter('Prepare tomorrow\\'s lesson')" class="study-starter">Lesson</button>
+                        <button onclick="setStudyStarter('Create a worksheet')" class="study-starter">Worksheet</button>
+                        <button onclick="setStudyStarter('Build a test')" class="study-starter">Test</button>
+                        <button onclick="setStudyStarter('Prepare a presentation')" class="study-starter">Slides</button>
+                        <button onclick="setStudyStarter('Create revision material')" class="study-starter">Revision</button>
+                        <button onclick="setStudyStarter('Analyze this teaching material')" class="study-starter">Analyze</button>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500">Teacher context</h3>
+                        <button onclick="toggleStudyContextPanel()" class="text-[10px] font-bold text-indigo-600 hover:underline" id="study-context-toggle">Edit</button>
+                    </div>
+                    <div id="study-context-summary" class="rounded-xl border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 leading-relaxed">
+                        <span class="font-semibold text-gray-800">ArixAI will use your existing profile/memory.</span>
+                        Add class, subject, curriculum or timing only when useful.
+                    </div>
+                    <div id="study-context-panel" class="hidden mt-2 rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                        <input id="study-profile-class" class="study-field" placeholder="Class / grade">
+                        <input id="study-profile-subject" class="study-field" placeholder="Subject">
+                        <input id="study-profile-curriculum" class="study-field" placeholder="Curriculum / board">
+                        <input id="study-profile-duration" class="study-field" placeholder="Lesson duration (e.g. 45 minutes)">
+                        <button onclick="saveStudyTeacherContext()" class="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold py-2.5">Save context</button>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-xs font-bold uppercase tracking-widest text-gray-500 mb-2">Outputs</h3>
+                    <div id="study-output-controls" class="space-y-2"></div>
+                </div>
+
+                <div id="study-expert-panel" class="hidden rounded-2xl border border-gray-200 bg-gray-50 p-3">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph-bold ph-sliders-horizontal text-indigo-500"></i>
+                        <div>
+                            <div class="text-xs font-bold text-gray-800">Expert controls</div>
+                            <div class="text-[10px] text-gray-500">Extra control without forcing beginners to use it.</div>
+                        </div>
+                    </div>
+                    <label class="flex items-center justify-between py-1.5 text-xs text-gray-700">
+                        <span>Live research when needed</span>
+                        <input type="checkbox" id="study-force-research" class="accent-indigo-600">
+                    </label>
+                    <label class="flex items-center justify-between py-1.5 text-xs text-gray-700">
+                        <span>Use saved memory</span>
+                        <input type="checkbox" id="study-use-memory" class="accent-indigo-600" checked>
+                    </label>
+                    <label class="flex items-center justify-between py-1.5 text-xs text-gray-700">
+                        <span>Save useful preferences</span>
+                        <input type="checkbox" id="study-save-memory" class="accent-indigo-600" checked>
+                    </label>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mt-3 mb-1">Execution budget</label>
+                    <select id="study-budget" class="study-field">
+                        <option value="180000">Balanced</option>
+                        <option value="240000" selected>Full</option>
+                        <option value="275000">Maximum</option>
+                    </select>
+                </div>
+            </div>
+        </aside>
+
+        <section class="flex-1 min-w-0 flex flex-col bg-[#f8fafc]">
+            <div id="study-results" class="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 lg:p-8">
+                <div id="study-empty-state" class="max-w-4xl mx-auto min-h-full flex items-center justify-center">
+                    <div class="w-full">
+                        <div class="max-w-3xl mx-auto text-center mb-8">
+                            <div class="w-16 h-16 mx-auto rounded-3xl bg-white border border-indigo-100 shadow-sm flex items-center justify-center mb-5">
+                                <i class="ph-fill ph-sparkle text-3xl text-indigo-600"></i>
+                            </div>
+                            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-gray-900">What should ArixAI finish for you?</h1>
+                            <p class="mt-3 text-sm sm:text-base text-gray-500 leading-relaxed">No prompt engineering required. Describe the outcome like you would describe it to a colleague.</p>
+                        </div>
+
+                        <div class="max-w-3xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
+                                <div class="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center"><i class="ph-bold ph-question text-indigo-600"></i></div>
+                                <h3 class="mt-3 text-sm font-bold">Clarifies gaps</h3>
+                                <p class="mt-1 text-[11px] leading-relaxed text-gray-500">It asks before guessing when an important detail is missing.</p>
+                            </div>
+                            <div class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
+                                <div class="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center"><i class="ph-bold ph-radar text-blue-600"></i></div>
+                                <h3 class="mt-3 text-sm font-bold">Uses real evidence</h3>
+                                <p class="mt-1 text-[11px] leading-relaxed text-gray-500">Live research is used only when the plan actually needs it.</p>
+                            </div>
+                            <div class="rounded-2xl bg-white border border-gray-200 p-4 shadow-sm">
+                                <div class="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center"><i class="ph-bold ph-stack text-emerald-600"></i></div>
+                                <h3 class="mt-3 text-sm font-bold">Builds the pack</h3>
+                                <p class="mt-1 text-[11px] leading-relaxed text-gray-500">Lesson, assessment, slides and visuals can be produced as one workflow.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="study-work-area" class="hidden max-w-5xl mx-auto"></div>
+            </div>
+
+            <div class="shrink-0 border-t border-gray-200 bg-white p-3 sm:p-4">
+                <div class="max-w-5xl mx-auto">
+                    <div id="study-file-staging" class="hidden flex flex-wrap gap-2 mb-2"></div>
+                    <div class="flex flex-col sm:flex-row gap-2">
+                        <div class="flex-1 min-w-0 relative">
+                            <textarea id="study-input" rows="3" onkeydown="handleStudyKeydown(event)" class="w-full resize-none rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-10 text-sm text-gray-900 outline-none focus:border-indigo-400 focus:bg-white shadow-sm leading-relaxed" placeholder="Example: Prepare tomorrow's Class 8 science lesson on photosynthesis, with a 45-minute plan and an exit ticket."></textarea>
+                            <div class="absolute right-3 bottom-3 text-[9px] text-gray-400">Enter to run • Shift+Enter for new line</div>
+                        </div>
+                        <div class="flex sm:flex-col gap-2 sm:w-36">
+                            <input id="study-file-input" type="file" multiple class="hidden" accept=".pdf,.doc,.docx,.txt,.csv,.html,.png,.jpg,.jpeg,.webp">
+                            <button onclick="document.getElementById('study-file-input').click()" class="flex-1 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold px-4 py-3 flex items-center justify-center gap-2">
+                                <i class="ph-bold ph-paperclip"></i> Attach
+                            </button>
+                            <button onclick="runStudyTask()" id="study-run-btn" class="flex-1 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-3 flex items-center justify-center gap-2 shadow-md shadow-indigo-200">
+                                <i class="ph-bold ph-sparkle"></i> Build
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
+
+
+<script>
+/* ==================== ARIXAI STUDY WORKSPACE CONTROLLER ==================== */
+(() => {
+    'use strict';
+
+    const STUDY_PREFS_KEY = 'Arix_study_preferences_v1';
+    const STUDY_PROFILE_KEY = 'Arix_teacher_study_profile_v1';
+    const STUDY_HISTORY_KEY = 'Arix_study_history_v1';
+
+    const DEFAULT_PREFS = {
+        lessonPlan: true,
+        worksheet: false,
+        assessment: false,
+        answerKey: false,
+        homework: false,
+        differentiation: false,
+        slides: false,
+        images: false,
+        video: false,
+        researchReport: false,
+        flashcards: false,
+        rubric: false,
+        exitTicket: false,
+        teachingScript: false,
+        exportPdf: true
+    };
+
+    const OUTPUTS = [
+        ['lessonPlan', 'Lesson plan', 'ph-chalkboard-teacher', 'Classroom sequence and teacher actions.'],
+        ['worksheet', 'Worksheet', 'ph-file-text', 'Student-ready questions and instructions.'],
+        ['assessment', 'Assessment / test', 'ph-exam', 'Assessment items with real answer keys.'],
+        ['homework', 'Homework', 'ph-notebook', 'Ready-to-assign follow-up work.'],
+        ['differentiation', 'Differentiation', 'ph-users-three', 'Support and extension pathways.'],
+        ['slides', 'Slides', 'ph-presentation-chart', 'Real slide deck from presentation.js.'],
+        ['images', 'Visuals', 'ph-image', 'Real generated educational images.'],
+        ['video', 'Video', 'ph-film-strip', 'Real generated educational video.'],
+        ['researchReport', 'Research report', 'ph-radar', 'Live-source research when needed.'],
+        ['flashcards', 'Flashcards', 'ph-cards', 'Quick revision cards.'],
+        ['rubric', 'Rubric', 'ph-list-checks', 'Simple marking rubric.'],
+        ['exitTicket', 'Exit ticket', 'ph-sign-out', 'End-of-class check for understanding.'],
+        ['teachingScript', 'Teaching phrasing', 'ph-microphone-stage', 'Useful teacher wording, not a rigid script.']
+    ];
+
+    const state = {
+        uiMode: localStorage.getItem('Arix_study_ui_mode') === 'expert' ? 'expert' : 'beginner',
+        prefs: loadJson(STUDY_PREFS_KEY, DEFAULT_PREFS),
+        profile: loadJson(STUDY_PROFILE_KEY, {}),
+        pendingFiles: [],
+        answers: {},
+        plan: null,
+        current: null,
+        running: false,
+        pdfBlob: null,
+        pptxBlob: null,
+        lastGoal: ''
+    };
+
+    state.prefs = { ...DEFAULT_PREFS, ...state.prefs };
+
+    function qs(id) { return document.getElementById(id); }
+
+    function loadJson(key, fallback) {
+        try {
+            const value = localStorage.getItem(key);
+            return value ? JSON.parse(value) : fallback;
+        } catch {
+            return fallback;
+        }
+    }
+
+    function saveJson(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function escapeAttr(value) {
+        return escapeHtml(value).replace(/\n/g, '&#10;');
+    }
+
+    function openStudyScreen() {
+        const screen = qs('study-screen');
+        if (!screen) return;
+
+        screen.classList.remove('hidden');
+        screen.classList.add('flex');
+
+        // Re-read persisted context every time Study opens so cloud/device profile
+        // changes made elsewhere in the app are not silently ignored.
+        state.profile = loadJson(STUDY_PROFILE_KEY, state.profile || {});
+        renderStudyContext();
+        renderStudyOutputs();
+        setStudyUiMode(state.uiMode, false);
+
+        setTimeout(() => qs('study-input')?.focus(), 80);
+    }
+
+    window.openStudyScreen = openStudyScreen;
+
+    function closeStudyScreen() {
+        const screen = qs('study-screen');
+        if (!screen) return;
+        screen.classList.add('hidden');
+        screen.classList.remove('flex');
+
+        if (typeof isStudyMode !== 'undefined') isStudyMode = false;
+
+        const btn = qs('study-btn');
+        const icon = qs('study-icon');
+        if (btn) {
+            btn.classList.remove('bg-indigo-50', 'border-indigo-200');
+            btn.classList.add('border-transparent');
+            btn.classList.remove('text-indigo-600');
+            btn.classList.add('text-gray-700');
+        }
+        if (icon) icon.classList.remove('animate-pulse');
+    }
+
+    window.closeStudyScreen = closeStudyScreen;
+
+    window.setStudyUiMode = function(mode, persist = true) {
+        state.uiMode = mode === 'expert' ? 'expert' : 'beginner';
+        if (persist) localStorage.setItem('Arix_study_ui_mode', state.uiMode);
+
+        const simple = qs('study-beginner-tab');
+        const expert = qs('study-expert-tab');
+        const panel = qs('study-expert-panel');
+
+        if (simple && expert) {
+            simple.className = state.uiMode === 'beginner'
+                ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-gray-900 shadow-sm'
+                : 'px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-900';
+            expert.className = state.uiMode === 'expert'
+                ? 'px-3 py-1.5 rounded-lg text-xs font-bold bg-white text-gray-900 shadow-sm'
+                : 'px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-900';
+        }
+
+        panel?.classList.toggle('hidden', state.uiMode !== 'expert');
+        renderStudyOutputs();
+    };
+
+    window.setStudyStarter = function(text) {
+        const input = qs('study-input');
+        if (!input) return;
+        const lower = String(text || '').toLowerCase();
+        if (lower.includes('lesson')) state.prefs.lessonPlan = true;
+        if (lower.includes('worksheet')) state.prefs.worksheet = true;
+        if (lower.includes('test')) state.prefs.assessment = true;
+        if (lower.includes('presentation')) state.prefs.slides = true;
+        if (lower.includes('revision')) state.prefs.flashcards = true;
+        if (lower.includes('analyze')) state.prefs.researchReport = true;
+        saveJson(STUDY_PREFS_KEY, state.prefs);
+        renderStudyOutputs();
+        input.value = text;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    };
+
+    window.toggleStudyContextPanel = function() {
+        const panel = qs('study-context-panel');
+        const toggle = qs('study-context-toggle');
+        if (!panel) return;
+        const hidden = panel.classList.toggle('hidden');
+        if (toggle) toggle.textContent = hidden ? 'Edit' : 'Done';
+    };
+
+    function saveStudyTeacherContext() {
+        const next = {
+            classLevel: qs('study-profile-class')?.value.trim() || '',
+            subject: qs('study-profile-subject')?.value.trim() || '',
+            curriculum: qs('study-profile-curriculum')?.value.trim() || '',
+            lessonDuration: qs('study-profile-duration')?.value.trim() || ''
+        };
+        state.profile = { ...state.profile, teacherStudyContext: next };
+        saveJson(STUDY_PROFILE_KEY, state.profile);
+
+        // Keep the existing ArixAI profile object as the memory payload sent to chat1.
+        if (typeof userProfile !== 'undefined') {
+            userProfile = {
+                ...userProfile,
+                teacherStudyContext: next
+            };
+            try { localStorage.setItem('Arix_user_profile', JSON.stringify(userProfile)); } catch {}
+        }
+
+        renderStudyContext();
+        toggleStudyContextPanel();
+        showToast('Teacher context saved.');
+    }
+
+    window.saveStudyTeacherContext = saveStudyTeacherContext;
+
+    function renderStudyContext() {
+        const ctx = state.profile?.teacherStudyContext || {};
+        const fields = [
+            ['study-profile-class', ctx.classLevel],
+            ['study-profile-subject', ctx.subject],
+            ['study-profile-curriculum', ctx.curriculum],
+            ['study-profile-duration', ctx.lessonDuration]
+        ];
+        fields.forEach(([id, value]) => {
+            const el = qs(id);
+            if (el && document.activeElement !== el) el.value = value || '';
+        });
+
+        const known = [
+            ctx.classLevel ? `Class ${ctx.classLevel}` : '',
+            ctx.subject || '',
+            ctx.curriculum || '',
+            ctx.lessonDuration || ''
+        ].filter(Boolean);
+
+        const summary = qs('study-context-summary');
+        if (summary) {
+            summary.innerHTML = known.length
+                ? `<span class="font-semibold text-gray-800">${escapeHtml(known.join(' • '))}</span><br><span class="text-gray-500">ArixAI will combine this with your existing profile/memory.</span>`
+                : `<span class="font-semibold text-gray-800">ArixAI will use your existing profile/memory.</span> Add class, subject, curriculum or timing only when useful.`;
+        }
+    }
+
+    function renderStudyOutputs() {
+        const root = qs('study-output-controls');
+        if (!root) return;
+
+        root.innerHTML = OUTPUTS.map(([key, label, icon, description]) => {
+            const active = state.prefs[key] ? 'active' : '';
+            const checked = state.prefs[key] ? 'checked' : '';
+            return `
+                <label class="study-output-option ${active}" title="${escapeAttr(description)}">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="study-output-icon"><i class="ph-bold ${icon} text-sm"></i></div>
+                        <div class="min-w-0">
+                            <div class="text-[11px] font-bold text-gray-800 truncate">${escapeHtml(label)}</div>
+                            <div class="text-[9px] text-gray-400 truncate">${escapeHtml(description)}</div>
+                        </div>
+                    </div>
+                    <input type="checkbox" data-study-pref="${key}" class="accent-indigo-600 shrink-0" ${checked}>
+                </label>`;
+        }).join('');
+
+        root.querySelectorAll('[data-study-pref]').forEach(input => {
+            input.addEventListener('change', () => {
+                const key = input.getAttribute('data-study-pref');
+                state.prefs[key] = input.checked;
+                saveJson(STUDY_PREFS_KEY, state.prefs);
+                input.closest('.study-output-option')?.classList.toggle('active', input.checked);
+            });
+        });
+    }
+
+    qs('study-file-input')?.addEventListener('change', async (event) => {
+        const files = Array.from(event.target.files || []);
+        for (const file of files.slice(0, 5)) {
+            if (state.pendingFiles.length >= 5) break;
+            if (file.size > 2 * 1024 * 1024 && !file.type.startsWith('image/')) {
+                showToast(`Skipped ${file.name}: documents are limited to 2 MB.`);
+                continue;
+            }
+
+            try {
+                const base64 = await readFileBase64(file);
+                state.pendingFiles.push({
+                    name: file.name,
+                    type: file.type || 'application/octet-stream',
+                    base64
+                });
+            } catch {
+                showToast(`Could not read ${file.name}.`);
+            }
+        }
+
+        event.target.value = '';
+        renderStudyFiles();
+    });
+
+    function readFileBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onerror = () => reject(reader.error || new Error('FILE_READ_FAILED'));
+            reader.onload = () => {
+                const result = String(reader.result || '');
+                resolve(result.includes(',') ? result.split(',')[1] : result);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function renderStudyFiles() {
+        const root = qs('study-file-staging');
+        if (!root) return;
+        if (!state.pendingFiles.length) {
+            root.classList.add('hidden');
+            root.innerHTML = '';
+            return;
+        }
+
+        root.classList.remove('hidden');
+        root.innerHTML = state.pendingFiles.map((file, index) => `
+            <span class="study-pill">
+                <i class="ph-bold ${file.type.startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-indigo-500"></i>
+                <span class="max-w-[160px] truncate">${escapeHtml(file.name)}</span>
+                <button onclick="removeStudyFile(${index})" class="text-gray-400 hover:text-red-500"><i class="ph-bold ph-x text-[10px]"></i></button>
+            </span>`).join('');
+    }
+
+    window.removeStudyFile = function(index) {
+        state.pendingFiles.splice(index, 1);
+        renderStudyFiles();
+    };
+
+    window.handleStudyKeydown = function(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            runStudyTask();
+        }
+    };
+
+    function getMergedProfile() {
+        const base = typeof userProfile !== 'undefined' && userProfile && typeof userProfile === 'object'
+            ? userProfile
+            : {};
+        const local = loadJson(STUDY_PROFILE_KEY, {});
+        return {
+            ...base,
+            ...(local || {})
+        };
+    }
+
+    function getMemoryFlags() {
+        const expertMemory = qs('study-use-memory');
+        const expertSave = qs('study-save-memory');
+
+        const existingUse = document.getElementById('toggle-use-memory');
+        const existingSave = document.getElementById('toggle-save-memory');
+
+        return {
+            useGlobalMemory: expertMemory ? expertMemory.checked : (existingUse ? existingUse.checked : true),
+            contributeToMemory: expertSave ? expertSave.checked : (existingSave ? existingSave.checked : true)
+        };
+    }
+
+    function selectedPreferences() {
+        const prefs = { ...state.prefs };
+        // Answer keys are automatically useful whenever a question set was requested.
+        if (prefs.worksheet || prefs.assessment) prefs.answerKey = true;
+        if (qs('study-force-research')?.checked) prefs.researchReport = true;
+        return prefs;
+    }
+
+    function currentHistory() {
+        try {
+            return typeof messages !== 'undefined'
+                ? messages.slice(-30).map(m => ({ role: m.role, content: m.content })).filter(m => m.content)
+                : [];
+        } catch {
+            return [];
+        }
+    }
+
+    function mergeSeedFiles(seedFiles) {
+        const known = new Set(state.pendingFiles.map(f => `${f.name}|${f.base64?.slice(0,24) || ''}`));
+        for (const file of (Array.isArray(seedFiles) ? seedFiles : [])) {
+            const key = `${file?.name || ''}|${file?.base64?.slice(0,24) || ''}`;
+            if (file?.base64 && !known.has(key) && state.pendingFiles.length < 5) {
+                state.pendingFiles.push({
+                    name: String(file.name || 'attachment').slice(0, 140),
+                    type: String(file.type || 'application/octet-stream').slice(0, 120),
+                    base64: String(file.base64)
+                });
+            }
+        }
+    }
+
+    async function parseJsonResponse(response) {
+        const text = await response.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch {}
+        if (!data) throw new Error(text || `STUDY_HTTP_${response.status}`);
+        return data;
+    }
+
+    async function consumeStudyStream(response) {
+        if (!response.body) throw new Error('Study engine returned no stream.');
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let final = null;
+
+        const processBlock = block => {
+            const lines = block.split(/\r?\n/);
+            for (const line of lines) {
+                if (!line.startsWith('data:')) continue;
+                const raw = line.slice(5).trim();
+                if (!raw || raw === '[DONE]') continue;
+
+                let event;
+                try { event = JSON.parse(raw); } catch { continue; }
+
+                if (event.type === 'stage') {
+                    appendStudyStage(event.name, event.status, event.message);
+                } else if (event.type === 'complete') {
+                    final = event.result || null;
+                } else if (event.type === 'error') {
+                    throw new Error(event.error || 'Study workflow failed.');
+                }
+            }
+        };
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const blocks = buffer.split(/\r?\n\r?\n/);
+            buffer = blocks.pop() || '';
+
+            for (const block of blocks) processBlock(block);
+        }
+
+        if (buffer.trim()) processBlock(buffer);
+        if (!final) throw new Error('Study engine ended without a completed result.');
+        return final;
+    }
+
+    function appendStudyStage(name, status, message) {
+        const list = qs('study-stage-list');
+        if (!list) return;
+
+        const id = `study-stage-${name.replace(/[^a-z0-9_-]/gi, '-')}`;
+        let row = document.getElementById(id);
+        if (!row) {
+            row = document.createElement('div');
+            row.id = id;
+            row.className = 'study-stage py-1.5';
+            list.appendChild(row);
+        }
+
+        const icon = status === 'complete' ? 'ph-check-circle text-emerald-500'
+            : status === 'failed' ? 'ph-warning-circle text-red-500'
+            : status === 'deferred' ? 'ph-clock text-amber-500'
+            : 'ph-spinner animate-spin text-indigo-500';
+
+        row.innerHTML = `<div class="flex items-start gap-2"><i class="ph-bold ${icon} text-sm mt-0.5"></i><div><div class="text-[11px] font-bold text-gray-700 capitalize">${escapeHtml(name.replace(/-/g, ' '))}</div><div class="text-[10px] leading-relaxed text-gray-500">${escapeHtml(message || '')}</div></div></div>`;
+        qs('study-results')?.scrollTo({ top: qs('study-results').scrollHeight, behavior: 'smooth' });
+    }
+
+    function renderStudyRunning(goal) {
+        const empty = qs('study-empty-state');
+        const work = qs('study-work-area');
+        if (empty) empty.classList.add('hidden');
+        if (work) {
+            work.classList.remove('hidden');
+            work.innerHTML = `
+                <div class="study-section-card p-5 sm:p-6">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <div class="text-[10px] font-bold uppercase tracking-widest text-indigo-600">ArixAI is working</div>
+                            <h2 class="mt-1 text-xl font-extrabold tracking-tight">${escapeHtml(goal)}</h2>
+                            <p class="mt-2 text-xs text-gray-500">The workflow will stop and ask you when an important detail is genuinely unclear.</p>
+                        </div>
+                        <div class="w-11 h-11 rounded-2xl bg-indigo-50 flex items-center justify-center shrink-0">
+                            <i class="ph-bold ph-spinner animate-spin text-indigo-600 text-lg"></i>
+                        </div>
+                    </div>
+                    <div id="study-stage-list" class="mt-6 space-y-1"></div>
+                </div>`;
+        }
+    }
+
+    function buildClarificationScreen(plan) {
+        const work = qs('study-work-area');
+        if (!work) return;
+
+        const questions = Array.isArray(plan?.questions) ? plan.questions : [];
+        work.classList.remove('hidden');
+
+        work.innerHTML = `
+            <div class="study-section-card overflow-hidden">
+                <div class="p-5 sm:p-6 bg-gradient-to-br from-indigo-50 to-white border-b border-indigo-100">
+                    <div class="text-[10px] font-bold uppercase tracking-widest text-indigo-600">ArixAI needs a few details</div>
+                    <h2 class="mt-1 text-xl sm:text-2xl font-extrabold tracking-tight">${escapeHtml(plan?.title || 'Before I build this')}</h2>
+                    <p class="mt-2 text-sm text-gray-600 leading-relaxed">${escapeHtml(plan?.summary || 'I could make a safer result by clarifying the missing details below.')}</p>
+                </div>
+                <div class="p-5 sm:p-6 space-y-5">
+                    ${questions.map((q, index) => {
+                        const value = state.answers[q.id] ?? '';
+                        const control = q.type === 'select' && q.options.length
+                            ? `<select data-study-answer="${escapeAttr(q.id)}" class="study-field"><option value="">Choose…</option>${q.options.map(option => `<option ${value === option ? 'selected' : ''} value="${escapeAttr(option)}">${escapeHtml(option)}</option>`).join('')}</select>`
+                            : q.type === 'number'
+                                ? `<input type="number" data-study-answer="${escapeAttr(q.id)}" class="study-field" value="${escapeAttr(value)}">`
+                                : `<input type="text" data-study-answer="${escapeAttr(q.id)}" class="study-field" value="${escapeAttr(value)}" placeholder="Your answer…">`;
+                        return `
+                            <div>
+                                <label class="block text-xs font-bold text-gray-800 mb-1.5">Q${index + 1}. ${escapeHtml(q.question)}${q.required ? ' <span class="text-red-500">*</span>' : ''}</label>
+                                <p class="text-[10px] text-gray-400 mb-2">${escapeHtml(q.reason || '')}</p>
+                                ${control}
+                            </div>`;
+                    }).join('')}
+
+                    <div class="flex flex-col sm:flex-row gap-2 pt-1">
+                        <button onclick="continueStudyAfterClarification()" class="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 text-xs flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-arrow-right"></i> Continue building
+                        </button>
+                        <button onclick="closeStudyScreen()" class="px-5 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 text-xs">Cancel</button>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    window.continueStudyAfterClarification = async function() {
+        qs('study-work-area')?.querySelectorAll('[data-study-answer]').forEach(el => {
+            state.answers[el.getAttribute('data-study-answer')] = el.value.trim();
+        });
+
+        const questions = Array.isArray(state.plan?.questions) ? state.plan.questions : [];
+        const missing = questions.filter(q => q.required && !state.answers[q.id]);
+        if (missing.length) {
+            showStudyError(`Please answer: ${missing[0].question}`);
+            return;
+        }
+
+        await runStudyTask(state.lastGoal, null, true);
+    };
+
+    function renderStudyError(message) {
+        const work = qs('study-work-area');
+        if (!work) return;
+        work.classList.remove('hidden');
+        work.innerHTML = `
+            <div class="study-section-card p-5 border-red-200">
+                <div class="flex gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-red-50 border border-red-100 flex items-center justify-center text-red-600 shrink-0">
+                        <i class="ph-bold ph-warning-circle"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">Study task could not be completed</h3>
+                        <p class="mt-1 text-xs leading-relaxed text-gray-600">${escapeHtml(message)}</p>
+                        <p class="mt-3 text-[10px] text-gray-400">No placeholder artifact was inserted.</p>
+                    </div>
+                </div>
+            </div>`;
+    }
+
+    window.showStudyError = renderStudyError;
+
+    async function runStudyTask(seedText = null, seedFiles = null, continuing = false) {
+        if (state.running) return;
+
+        const input = qs('study-input');
+        let goal = String(seedText ?? input?.value ?? '').trim();
+
+        if (!goal && !continuing) {
+            showStudyError('Describe the teaching outcome you want ArixAI to finish.');
+            input?.focus();
+            return;
+        }
+
+        if (seedFiles) mergeSeedFiles(seedFiles);
+        state.lastGoal = goal || state.lastGoal;
+        if (input && !continuing) input.value = goal;
+
+        state.running = true;
+        state.pdfBlob = null;
+        state.pptxBlob = null;
+
+        const runButton = qs('study-run-btn');
+        const originalButton = runButton?.innerHTML;
+        if (runButton) {
+            runButton.disabled = true;
+            runButton.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Working';
+        }
+
+        try {
+            renderStudyRunning(state.lastGoal);
+
+            const flags = getMemoryFlags();
+            const body = {
+                action: 'execute',
+                goal: state.lastGoal,
+                mode: state.uiMode,
+                answers: state.answers,
+                plan: continuing ? state.plan : null,
+                preferences: selectedPreferences(),
+                userProfile: getMergedProfile(),
+                history: currentHistory(),
+                attachments: state.pendingFiles,
+                useGlobalMemory: flags.useGlobalMemory,
+                contributeToMemory: flags.contributeToMemory,
+                budgetMs: Number(qs('study-budget')?.value || 240000)
+            };
+
+            const response = await fetch('/api/study', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                cache: 'no-store'
+            });
+
+            if (!response.ok && response.status !== 409) {
+                const errData = await parseJsonResponse(response);
+                throw new Error(errData.error || `STUDY_HTTP_${response.status}`);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const data = await parseJsonResponse(response);
+
+                if (data.status === 'needs_input' || data.plan?.needsClarification) {
+                    state.plan = data.plan;
+                    state.current = null;
+                    state.answers = state.answers || {};
+                    buildClarificationScreen(state.plan);
+                    return;
+                }
+
+                if (!data.ok) throw new Error(data.error || 'Study planning failed.');
+                throw new Error('Study engine returned an unexpected JSON response.');
+            }
+
+            const result = await consumeStudyStream(response);
+            if (!result || !['complete', 'complete_with_warnings'].includes(result.status)) {
+                throw new Error('Study workflow did not reach a real completed state.');
+            }
+
+            state.current = result;
+            state.plan = result.plan;
+            renderStudyResult(result);
+            persistStudyResult(result, flags);
+        } catch (error) {
+            renderStudyError(error?.message || 'Unknown study failure.');
+        } finally {
+            state.running = false;
+            if (runButton) {
+                runButton.disabled = false;
+                runButton.innerHTML = originalButton || '<i class="ph-bold ph-sparkle"></i> Build';
+            }
+        }
+    }
+
+    window.runStudyTask = runStudyTask;
+
+    function renderStudyResult(result) {
+        const work = qs('study-work-area');
+        const empty = qs('study-empty-state');
+        if (!work) return;
+
+        empty?.classList.add('hidden');
+        work.classList.remove('hidden');
+
+        const pack = result.pack || {};
+        const plan = result.plan || {};
+        const qa = result.qa || {};
+        const research = result.research;
+        const artifacts = Array.isArray(result.artifacts) ? result.artifacts : [];
+
+        work.innerHTML = `
+            <div class="space-y-4">
+                <div class="study-section-card p-5 sm:p-6">
+                    <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-4">
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="study-pill"><i class="ph-fill ph-check-circle ${result.status === 'complete' ? 'text-emerald-500' : 'text-amber-500'}"></i> ${result.status === 'complete' ? 'Real workflow complete' : 'Real workflow complete • review warnings'}</span>
+                                ${research ? `<span class="study-pill"><i class="ph-bold ph-radar text-blue-500"></i> ${research.sources?.length || 0} sources</span>` : ''}
+                                <span class="study-pill"><i class="ph-bold ph-shield-check text-indigo-500"></i> QA ${qa.passed ? 'passed' : 'review required'}</span>
+                            </div>
+                            <h2 class="mt-3 text-2xl sm:text-3xl font-extrabold tracking-tight text-gray-900">${escapeHtml(pack.title || plan.title)}</h2>
+                            <p class="mt-2 text-sm text-gray-600 leading-relaxed">${escapeHtml(pack.teacherSummary || plan.summary || result.goal)}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 shrink-0">
+                            ${result.reportHtml ? `<button onclick="downloadStudyPdf()" class="study-export-btn"><i class="ph-bold ph-file-pdf text-red-500"></i> PDF</button>` : ''}
+                            ${artifacts.some(a => a.type === 'slides') ? `<button onclick="downloadStudyPptx()" class="study-export-btn"><i class="ph-bold ph-presentation-chart text-amber-500"></i> PPTX</button>` : ''}
+                            <button onclick="downloadStudyZip()" class="study-export-btn primary"><i class="ph-bold ph-file-zip text-indigo-200"></i> ZIP</button>
+                        </div>
+                    </div>
+                </div>
+
+                ${renderStudyCore(pack)}
+                ${research ? renderStudyResearch(research) : ''}
+                ${renderStudyMedia(artifacts)}
+                ${renderStudyQA(qa)}
+                ${renderStudySources(research?.sources || [])}
+            </div>`;
+
+        const resultBox = qs('study-results');
+        if (resultBox) resultBox.scrollTop = 0;
+    }
+
+    function renderStudyCore(pack) {
+        let html = '';
+
+        if (pack.learningObjectives?.length) {
+            html += renderStudyListSection('Learning objectives', 'ph-target', 'indigo', pack.learningObjectives);
+        }
+
+        if (pack.prerequisites?.length) {
+            html += renderStudyListSection('Prerequisites', 'ph-list-bullets', 'slate', pack.prerequisites);
+        }
+
+        if (pack.lessonPlan?.length) {
+            html += `
+                <div class="study-section-card p-5">
+                    <div class="flex items-center gap-2 mb-4"><i class="ph-fill ph-chalkboard-teacher text-indigo-600"></i><h3 class="text-sm font-extrabold">Lesson plan</h3></div>
+                    <div class="study-scroll-table">
+                        <table>
+                            <thead><tr><th>Time</th><th>Phase</th><th>Teacher action</th><th>Student action</th></tr></thead>
+                            <tbody>${pack.lessonPlan.map(item => `
+                                <tr>
+                                    <td class="font-bold whitespace-nowrap">${Number(item.minutes) || 0} min</td>
+                                    <td class="font-bold">${escapeHtml(item.phase)}</td>
+                                    <td>${escapeHtml(item.teacherAction)}</td>
+                                    <td>${escapeHtml(item.studentAction)}</td>
+                                </tr>`).join('')}</tbody>
+                        </table>
+                    </div>
+                </div>`;
+        }
+
+        if (pack.teachingScript?.length) html += renderStudyListSection('Teaching phrasing', 'ph-microphone-stage', 'violet', pack.teachingScript);
+        if (pack.boardPlan?.length) html += renderStudyListSection('Board plan', 'ph-notepad', 'slate', pack.boardPlan);
+        if (pack.differentiation?.support?.length || pack.differentiation?.extension?.length) {
+            html += `
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${renderStudyListCard('Support', 'ph-handshake', 'emerald', pack.differentiation.support)}
+                    ${renderStudyListCard('Extension', 'ph-rocket-launch', 'amber', pack.differentiation.extension)}
+                </div>`;
+        }
+
+        if (pack.worksheet?.questions?.length) html += renderQuestionSet('Worksheet', pack.worksheet, 'indigo');
+        if (pack.assessment?.questions?.length) html += renderQuestionSet('Assessment', pack.assessment, 'blue');
+
+        if (pack.homework?.length) html += renderStudyListSection('Homework', 'ph-notebook', 'amber', pack.homework.map(x => `${x.question}${x.answer ? ` — Answer: ${x.answer}` : ''}`));
+        if (pack.exitTicket?.length) html += renderStudyListSection('Exit ticket', 'ph-sign-out', 'emerald', pack.exitTicket.map(x => `${x.question}${x.answer ? ` — Answer: ${x.answer}` : ''}`));
+        if (pack.flashcards?.length) html += renderStudyListSection('Flashcards', 'ph-cards', 'indigo', pack.flashcards.map(x => `${x.front} → ${x.back}${x.hint ? ` • Hint: ${x.hint}` : ''}`));
+        if (pack.rubric?.length) html += renderStudyListSection('Rubric', 'ph-list-checks', 'slate', pack.rubric.map(x => `${x.criterion}: ${(x.levels || []).join(' | ')}`));
+        if (pack.teacherNotes?.length) html += renderStudyListSection('Teacher notes', 'ph-note-pencil', 'slate', pack.teacherNotes);
+        if (pack.uncertainties?.length) html += renderStudyListSection('Uncertainties to review', 'ph-warning', 'amber', pack.uncertainties);
+
+        return html;
+    }
+
+    function renderStudyListSection(title, icon, tint, values) {
+        return `
+            <div class="study-section-card p-5">
+                <div class="flex items-center gap-2 mb-3"><i class="ph-fill ${icon} text-${tint}-600"></i><h3 class="text-sm font-extrabold">${escapeHtml(title)}</h3></div>
+                ${renderStudyList(values)}
+            </div>`;
+    }
+
+    function renderStudyListCard(title, icon, tint, values) {
+        return `
+            <div class="study-section-card p-5">
+                <div class="flex items-center gap-2 mb-3"><i class="ph-fill ${icon} text-${tint}-600"></i><h3 class="text-sm font-extrabold">${escapeHtml(title)}</h3></div>
+                ${renderStudyList(values)}
+            </div>`;
+    }
+
+    function renderStudyList(values) {
+        if (!Array.isArray(values) || !values.length) return '<p class="text-xs text-gray-400">None.</p>';
+        return `<ul class="space-y-2">${values.map(v => `<li class="flex gap-2 text-xs leading-relaxed text-gray-700"><span class="text-indigo-400 mt-1">•</span><span>${escapeHtml(v)}</span></li>`).join('')}</ul>`;
+    }
+
+    function renderQuestionSet(title, set, tint) {
+        return `
+            <div class="study-section-card p-5">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2"><i class="ph-fill ph-exam text-${tint}-600"></i><h3 class="text-sm font-extrabold">${escapeHtml(title)}</h3></div>
+                    <span class="study-pill">${set.questions.length} questions</span>
+                </div>
+                ${set.instructions ? `<p class="text-[11px] text-gray-500 mb-4">${escapeHtml(set.instructions)}</p>` : ''}
+                <div class="space-y-3">${set.questions.map(q => `
+                    <div class="rounded-xl bg-gray-50 border border-gray-100 p-3">
+                        <div class="text-xs font-semibold text-gray-800">Q${q.number}. ${escapeHtml(q.question)}</div>
+                        <div class="mt-1 text-[10px] text-gray-500">Marks: ${Number(q.marks) || 1} • Answer: ${escapeHtml(q.answer)}</div>
+                    </div>`).join('')}</div>
+            </div>`;
+    }
+
+    function renderStudyResearch(research) {
+        if (!research) return '';
+        return `
+            <div class="study-section-card p-5">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2"><i class="ph-fill ph-radar text-blue-600"></i><h3 class="text-sm font-extrabold">Live research report</h3></div>
+                    <span class="study-pill">${research.sources?.length || 0} retrieved sources</span>
+                </div>
+                <div class="rounded-xl bg-gray-50 border border-gray-100 p-4 text-xs leading-relaxed text-gray-700 whitespace-pre-wrap max-h-[420px] overflow-y-auto custom-scrollbar">${escapeHtml(research.report || research.context || 'No report text was returned.')}</div>
+            </div>`;
+    }
+
+    function renderStudyMedia(artifacts) {
+        const media = artifacts.filter(a => a.type === 'image' || a.type === 'video');
+        const slides = artifacts.find(a => a.type === 'slides');
+        if (!media.length && !slides) return '';
+
+        let html = `
+            <div class="study-section-card p-5">
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <div class="flex items-center gap-2"><i class="ph-fill ph-stack text-indigo-600"></i><h3 class="text-sm font-extrabold">Generated artifacts</h3></div>
+                    <span class="study-pill">${media.length + (slides ? 1 : 0)} real artifact${media.length + (slides ? 1 : 0) === 1 ? '' : 's'}</span>
+                </div>`;
+
+        if (slides) {
+            html += `
+                <div class="rounded-xl border border-amber-100 bg-amber-50/40 p-3 flex items-center justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2 min-w-0"><i class="ph-fill ph-presentation-chart text-amber-600"></i><span class="text-xs font-bold truncate">${escapeHtml(slides.title)}</span></div>
+                    <button onclick="downloadStudyPptx()" class="text-[10px] font-bold text-amber-700 hover:underline shrink-0">Export PPTX</button>
+                </div>`;
+        }
+
+        html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+
+        for (const artifact of media) {
+            if (artifact.type === 'image') {
+                html += `
+                    <div class="rounded-xl border border-gray-200 overflow-hidden bg-white">
+                        <div class="aspect-video bg-gray-100 flex items-center justify-center">
+                            <img src="${escapeAttr(artifact.url)}" alt="${escapeAttr(artifact.altText || artifact.title)}" class="w-full h-full object-cover" loading="lazy" referrerpolicy="no-referrer">
+                        </div>
+                        <div class="p-3"><div class="text-xs font-bold">${escapeHtml(artifact.title)}</div><p class="text-[10px] text-gray-500 mt-1">${escapeHtml(artifact.altText || 'Generated educational visual.')}</p></div>
+                    </div>`;
+            } else {
+                html += `
+                    <div class="rounded-xl border border-gray-200 overflow-hidden bg-black">
+                        <video controls playsinline preload="metadata" class="w-full aspect-video">
+                            <source src="${escapeAttr(artifact.url)}" type="video/mp4">
+                        </video>
+                        <div class="p-3 bg-white"><div class="text-xs font-bold">${escapeHtml(artifact.title)}</div><p class="text-[10px] text-gray-500 mt-1">${escapeHtml(artifact.altText || 'Generated educational video.')}</p></div>
+                    </div>`;
+            }
+        }
+
+        return html + '</div></div>';
+    }
+
+    function renderStudyQA(qa) {
+        return `
+            <div class="study-section-card p-5">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2"><i class="ph-fill ph-shield-check ${qa?.passed ? 'text-emerald-600' : 'text-amber-600'}"></i><h3 class="text-sm font-extrabold">Final quality audit</h3></div>
+                    <span class="study-pill">${qa?.passed ? 'PASS' : 'Review needed'}</span>
+                </div>
+                ${renderStudyList(qa?.verifiedChecks || [])}
+                ${qa?.criticalIssues?.length ? `<div class="mt-4 rounded-xl border border-red-100 bg-red-50 p-3"><div class="text-[10px] font-bold uppercase tracking-widest text-red-600 mb-2">Critical issues</div>${renderStudyList(qa.criticalIssues.map(x => `${x.issue}${x.where ? ` — ${x.where}` : ''}`))}</div>` : ''}
+                ${qa?.warnings?.length ? `<div class="mt-4 rounded-xl border border-amber-100 bg-amber-50 p-3"><div class="text-[10px] font-bold uppercase tracking-widest text-amber-600 mb-2">Warnings</div>${renderStudyList(qa.warnings)}</div>` : ''}
+            </div>`;
+    }
+
+    function renderStudySources(sources) {
+        if (!Array.isArray(sources) || !sources.length) return '';
+        return `
+            <div class="study-section-card p-5">
+                <div class="flex items-center gap-2 mb-3"><i class="ph-fill ph-link text-blue-600"></i><h3 class="text-sm font-extrabold">Source register</h3></div>
+                <ol class="space-y-2 list-decimal list-inside">
+                    ${sources.map((source, index) => `
+                        <li class="text-xs leading-relaxed text-gray-700">
+                            <strong>${escapeHtml(source.title || `Source ${index + 1}`)}</strong>
+                            ${source.publishedAt ? `<span class="text-gray-400"> • ${escapeHtml(source.publishedAt)}</span>` : ''}
+                            <div><a href="${escapeAttr(source.url)}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:underline break-all">${escapeHtml(source.url)}</a></div>
+                        </li>`).join('')}
+                </ol>
+            </div>`;
+    }
+
+    function persistStudyResult(result, flags) {
+        try {
+            const history = loadJson(STUDY_HISTORY_KEY, []);
+            const summary = {
+                id: result.studyId,
+                title: result.pack?.title || result.plan?.title || 'Study',
+                createdAt: result.finishedAt || new Date().toISOString(),
+                sourceCount: result.research?.sources?.length || 0,
+                artifactTypes: (result.artifacts || []).map(a => a.type),
+                qaPassed: Boolean(result.qa?.passed)
+            };
+            saveJson(STUDY_HISTORY_KEY, [summary, ...history].slice(0, 50));
+        } catch {}
+
+        try {
+            if (typeof messages !== 'undefined' && typeof appendMessage === 'function') {
+                const compact = {
+                    studyId: result.studyId,
+                    title: result.pack?.title || result.plan?.title,
+                    goal: result.goal,
+                    plan: result.plan,
+                    pack: result.pack,
+                    qa: result.qa,
+                    research: result.research ? {
+                        query: result.research.query,
+                        sources: result.research.sources,
+                        report: result.research.report
+                    } : null,
+                    artifacts: (result.artifacts || []).map(a => ({
+                        id: a.id,
+                        type: a.type,
+                        title: a.title,
+                        mimeType: a.mimeType,
+                        url: a.url || null,
+                        data: a.type === 'slides' ? a.data : undefined,
+                        altText: a.altText || null
+                    }))
+                };
+
+                const serialized = JSON.stringify(compact);
+                const assistant = appendMessage('assistant', '', activeModelId || 'study', null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+                const artifactContent = `<artifact title="${escapeHtml(compact.title || 'ArixAI Study Pack')}" type="study">\n${serialized}\n</artifact>`;
+                assistant.container.innerHTML = typeof parseRichText === 'function'
+                    ? parseRichText(artifactContent, false, assistant.id)
+                    : `<pre class="whitespace-pre-wrap">${escapeHtml(serialized)}</pre>`;
+
+                messages.push({
+                    role: 'assistant',
+                    content: artifactContent,
+                    id: assistant.id,
+                    modelId: activeModelId || 'study'
+                });
+                if (typeof saveCurrentChat === 'function') saveCurrentChat();
+            }
+        } catch {}
+
+        if (flags?.contributeToMemory) {
+            try {
+                const teacherContext = getMergedProfile()?.teacherStudyContext || {};
+                const savedPreferences = Object.entries(state.prefs || {})
+                    .filter(([, enabled]) => Boolean(enabled))
+                    .map(([key]) => key)
+                    .slice(0, 20)
+                    .join(', ');
+                const memoryLine = [
+                    `Completed a teacher Study workspace: ${result.pack?.title || result.plan?.title || 'study task'}.`,
+                    teacherContext.classLevel ? `Class/grade: ${teacherContext.classLevel}.` : '',
+                    teacherContext.subject ? `Subject: ${teacherContext.subject}.` : '',
+                    teacherContext.curriculum ? `Curriculum/board: ${teacherContext.curriculum}.` : '',
+                    teacherContext.lessonDuration ? `Typical lesson duration: ${teacherContext.lessonDuration}.` : '',
+                    savedPreferences ? `Preferred Study outputs used: ${savedPreferences}.` : ''
+                ].filter(Boolean).join(' ');
+                fetch('/api/memory', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chatHistory: memoryLine,
+                        currentProfile: getMergedProfile()
+                    }),
+                    keepalive: true
+                }).then(async response => {
+                    if (response.ok) {
+                        const data = await response.json().catch(() => null);
+                        if (data?.success && data.profile) {
+                            try {
+                                userProfile = data.profile;
+                                localStorage.setItem('Arix_user_profile', JSON.stringify(data.profile));
+                            } catch {}
+                        }
+                    }
+                }).catch(() => {});
+            } catch {}
+        }
+    }
+
+    async function generateStudyPdfBlob() {
+        if (!state.current?.reportHtml) throw new Error('No real study report is available for PDF export.');
+        if (state.pdfBlob) return state.pdfBlob;
+        if (typeof html2pdf !== 'function') throw new Error('PDF exporter library is unavailable.');
+
+        const host = document.createElement('div');
+        host.className = 'study-export-report';
+        host.style.position = 'fixed';
+        host.style.left = '-12000px';
+        host.style.top = '0';
+        host.style.zIndex = '-1';
+        host.innerHTML = state.current.reportHtml;
+        document.body.appendChild(host);
+
+        try {
+            state.pdfBlob = await html2pdf()
+                .set({
+                    margin: 0.25,
+                    filename: `${sanitizeFileName(state.current.pack?.title || 'ArixAI_Study_Report')}.pdf`,
+                    image: { type: 'jpeg', quality: 0.96 },
+                    html2canvas: { scale: 1.6, useCORS: true, backgroundColor: '#f8fafc' },
+                    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+                })
+                .from(host)
+                .outputPdf('blob');
+
+            return state.pdfBlob;
+        } finally {
+            host.remove();
+        }
+    }
+
+    async function buildStudyPptxBlob() {
+        if (state.pptxBlob) return state.pptxBlob;
+
+        const artifact = (state.current?.artifacts || []).find(a => a.type === 'slides');
+        const payload = artifact?.data;
+        if (!payload?.slides?.length) throw new Error('No real slide deck data is available for PPTX export.');
+        if (typeof pptxgen === 'undefined') throw new Error('PPTX exporter library is unavailable.');
+
+        const pptx = new pptxgen();
+        pptx.layout = 'LAYOUT_16x9';
+        pptx.author = 'ArixAI';
+        pptx.company = 'ArixAI';
+        pptx.subject = payload.metadata?.title || state.current.pack?.title || 'ArixAI Study';
+        pptx.title = payload.metadata?.title || state.current.pack?.title || 'ArixAI Study';
+        pptx.lang = 'en-US';
+
+        for (const s of payload.slides) {
+            const slide = pptx.addSlide();
+
+            const addImage = () => {
+                if (!s.imageUrl) return;
+                try {
+                    if (/^data:/i.test(s.imageUrl)) {
+                        slide.addImage({ data: s.imageUrl, x: 0, y: 0, w: 13.333, h: 7.5, transparency: 6 });
+                    } else if (/^https?:\/\//i.test(s.imageUrl)) {
+                        slide.addImage({ path: s.imageUrl, x: 0, y: 0, w: 13.333, h: 7.5, transparency: 6 });
+                    }
+                } catch {}
+            };
+
+            if (s.layout === 'title_slide') {
+                addImage();
+                slide.addShape(pptx.ShapeType.rect, {
+                    x: 0, y: 2.1, w: 13.333, h: 3.0,
+                    fill: { color: '111827', transparency: 48 }, line: { color: '111827', transparency: 100 }
+                });
+                slide.addText(String(s.title || ''), { x: 0.7, y: 2.55, w: 11.9, h: 0.8, fontSize: 28, bold: true, color: 'FFFFFF', align: 'center', fit: 'shrink' });
+                if (s.subtitle) slide.addText(String(s.subtitle), { x: 1.0, y: 3.55, w: 11.3, h: 0.6, fontSize: 17, color: 'F3F4F6', align: 'center', fit: 'shrink' });
+            } else if (s.layout === 'split_image_text') {
+                slide.addShape(pptx.ShapeType.rect, { x: 0, y: 0, w: 13.333, h: 7.5, fill: { color: 'FFFFFF' }, line: { color: 'FFFFFF', transparency: 100 } });
+                if (s.imageUrl) {
+                    try {
+                        if (/^data:/i.test(s.imageUrl)) slide.addImage({ data: s.imageUrl, x: 6.9, y: 0, w: 6.43, h: 7.5 });
+                        else slide.addImage({ path: s.imageUrl, x: 6.9, y: 0, w: 6.43, h: 7.5 });
+                    } catch {}
+                }
+                slide.addText(String(s.title || ''), { x: 0.7, y: 1.0, w: 5.5, h: 0.8, fontSize: 25, bold: true, color: '111827', fit: 'shrink' });
+                if (s.subtitle) slide.addText(String(s.subtitle), { x: 0.7, y: 2.0, w: 5.5, h: 1.0, fontSize: 16, color: '4B5563', fit: 'shrink' });
+                if (Array.isArray(s.bullets) && s.bullets.length) {
+                    slide.addText(s.bullets.map(b => ({ text: String(b), options: { bullet: { type: 'ul' } } })), {
+                        x: 0.7, y: 3.2, w: 5.4, h: 2.9, fontSize: 15, color: '374151', breakLine: true, fit: 'shrink', margin: 0.04
+                    });
+                }
+            } else if (s.layout === 'full_image_quote') {
+                addImage();
+                slide.addShape(pptx.ShapeType.rect, { x: 1.0, y: 4.6, w: 11.33, h: 1.8, fill: { color: '111827', transparency: 38 }, line: { color: '111827', transparency: 100 } });
+                slide.addText(`“${String(s.title || '')}”`, { x: 1.25, y: 4.95, w: 10.8, h: 0.7, fontSize: 24, italic: true, color: 'FFFFFF', align: 'center', fit: 'shrink' });
+                if (s.subtitle) slide.addText(`— ${String(s.subtitle)}`, { x: 1.25, y: 5.8, w: 10.8, h: 0.35, fontSize: 13, color: 'E5E7EB', align: 'center', fit: 'shrink' });
+            } else {
+                slide.background = { color: 'FFFFFF' };
+                slide.addText(String(s.title || ''), { x: 0.7, y: 0.75, w: 11.8, h: 0.75, fontSize: 26, bold: true, color: '111827', fit: 'shrink' });
+                if (s.subtitle) slide.addText(String(s.subtitle), { x: 0.7, y: 1.55, w: 11.8, h: 0.55, fontSize: 15, color: '4B5563', fit: 'shrink' });
+                if (Array.isArray(s.bullets) && s.bullets.length) {
+                    slide.addText(s.bullets.map(b => ({ text: String(b), options: { bullet: { type: 'ul' } } })), {
+                        x: 0.75, y: 2.45, w: 11.65, h: 3.9, fontSize: 16, color: '374151', fit: 'shrink', margin: 0.04
+                    });
+                }
+            }
+
+            slide.addText(payload.metadata?.watermark || 'ArixAI • Teacher Study', {
+                x: 0.5, y: 7.12, w: 12.3, h: 0.18, fontSize: 7, color: '9CA3AF', align: 'center', margin: 0
+            });
+        }
+
+        state.pptxBlob = await pptx.write({ outputType: 'blob' });
+        return state.pptxBlob;
+    }
+
+    function sanitizeFileName(value) {
+        return String(value || 'ArixAI_Study')
+            .replace(/[<>:"/\\|?*\x00-\x1F]/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 90)
+            .replace(/\s/g, '_') || 'ArixAI_Study';
+    }
+
+    function downloadBlob(blob, filename) {
+        if (!blob) throw new Error('Nothing to download.');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 15_000);
+    }
+
+    window.downloadStudyPdf = async function() {
+        if (!state.current) return showStudyError('There is no completed study workspace to export.');
+        try {
+            showToast('Building the real Study Report PDF…');
+            const blob = await generateStudyPdfBlob();
+            downloadBlob(blob, `${sanitizeFileName(state.current.pack?.title || 'ArixAI_Study_Report')}.pdf`);
+            showToast('Study Report PDF ready.');
+        } catch (error) {
+            showStudyError(error?.message || 'PDF export failed.');
+        }
+    };
+
+    window.downloadStudyPptx = async function() {
+        if (!state.current) return showStudyError('There is no completed study workspace to export.');
+        try {
+            showToast('Building the real PPTX…');
+            const blob = await buildStudyPptxBlob();
+            downloadBlob(blob, `${sanitizeFileName(state.current.pack?.title || 'ArixAI_Study')}.pptx`);
+            showToast('PPTX ready.');
+        } catch (error) {
+            showStudyError(error?.message || 'PPTX export failed.');
+        }
+    };
+
+    async function imageBlobAsPng(blob) {
+        if (!blob || !String(blob.type || '').startsWith('image/')) throw new Error('IMAGE_BLOB_INVALID');
+        if (blob.type === 'image/png') return blob;
+        const objectUrl = URL.createObjectURL(blob);
+        try {
+            const img = new Image();
+            img.decoding = 'async';
+            img.src = objectUrl;
+            await new Promise((resolve, reject) => {
+                img.onload = resolve;
+                img.onerror = () => reject(new Error('IMAGE_DECODE_FAILED'));
+            });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, img.naturalWidth || img.width);
+            canvas.height = Math.max(1, img.naturalHeight || img.height);
+            const ctx = canvas.getContext('2d', { alpha: true });
+            if (!ctx) throw new Error('CANVAS_UNAVAILABLE');
+            ctx.drawImage(img, 0, 0);
+            const png = await new Promise((resolve, reject) => {
+                canvas.toBlob(value => value ? resolve(value) : reject(new Error('PNG_ENCODE_FAILED')), 'image/png');
+            });
+            return png;
+        } finally {
+            URL.revokeObjectURL(objectUrl);
+        }
+    }
+
+    async function fetchMediaForZip(url, type) {
+        if (/^data:image\//i.test(String(url || ''))) {
+            const directData = await fetch(url);
+            if (!directData.ok) throw new Error(`MEDIA_DATA_URL_${directData.status}`);
+            const imageBlob = await directData.blob();
+            return type === 'image' ? await imageBlobAsPng(imageBlob) : imageBlob;
+        }
+        // The Study route contains an SSRF-safe allowlisted asset proxy for media
+        // returned by the existing Pixazo-backed image.js.
+        try {
+            const proxy = await fetch('/api/study', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'asset', url }),
+                cache: 'no-store'
+            });
+
+            if (proxy.ok) {
+                const proxyBlob = await proxy.blob();
+                return type === 'image' ? await imageBlobAsPng(proxyBlob) : proxyBlob;
+            }
+        } catch {}
+
+        // Direct fetch is a real fallback for providers/CDNs that already expose CORS.
+        const direct = await fetch(url, { mode: 'cors', cache: 'no-store' });
+        if (!direct.ok) throw new Error(`MEDIA_FETCH_${direct.status}`);
+        const directBlob = await direct.blob();
+        return type === 'image' ? await imageBlobAsPng(directBlob) : directBlob;
+    }
+
+    window.downloadStudyZip = async function() {
+        if (!state.current) return showStudyError('There is no completed study workspace to package.');
+        if (typeof JSZip === 'undefined') return showStudyError('ZIP exporter library is unavailable.');
+
+        const zip = new JSZip();
+        const base = sanitizeFileName(state.current.pack?.title || 'ArixAI_Study');
+        const failures = [];
+
+        try {
+            showToast('Assembling real Study ZIP…');
+
+            const reportBlob = await generateStudyPdfBlob();
+            zip.file(`${base}/ArixAI_Study_Report.pdf`, reportBlob);
+
+            const manifest = state.current.manifest || {
+                studyId: state.current.studyId,
+                createdAt: state.current.finishedAt,
+                goal: state.current.goal,
+                plan: state.current.plan,
+                qa: state.current.qa,
+                artifacts: state.current.artifacts
+            };
+            zip.file(`${base}/study-manifest.json`, JSON.stringify(manifest, null, 2));
+            zip.file(`${base}/study-pack.json`, JSON.stringify(state.current.pack || {}, null, 2));
+
+            if (state.current.research) {
+                zip.file(`${base}/research-report.json`, JSON.stringify({
+                    query: state.current.research.query,
+                    report: state.current.research.report,
+                    sources: state.current.research.sources
+                }, null, 2));
+            }
+
+            const slideArtifact = (state.current.artifacts || []).find(a => a.type === 'slides');
+            if (slideArtifact) {
+                const pptxBlob = await buildStudyPptxBlob();
+                zip.file(`${base}/${sanitizeFileName(slideArtifact.title || 'ArixAI_Study')}.pptx`, pptxBlob);
+            }
+
+            let mediaIndex = 0;
+            for (const artifact of (state.current.artifacts || []).filter(a => a.type === 'image' || a.type === 'video')) {
+                mediaIndex += 1;
+                try {
+                    const blob = await fetchMediaForZip(artifact.url, artifact.type);
+                    const extension = artifact.type === 'video' ? 'mp4' : (blob.type === 'image/png' ? 'png' : 'jpg');
+                    zip.file(`${base}/media/${String(mediaIndex).padStart(2, '0')}_${sanitizeFileName(artifact.title || artifact.type)}.${extension}`, blob);
+                } catch (error) {
+                    failures.push({ title: artifact.title, url: artifact.url, error: error?.message || 'MEDIA_FETCH_FAILED' });
+                }
+            }
+
+            if (failures.length) {
+                zip.file(`${base}/media-not-packaged.json`, JSON.stringify({
+                    note: 'These real provider media URLs could not be downloaded into the ZIP from the current browser/network context. No placeholder files were created.',
+                    failures
+                }, null, 2));
+            }
+
+            const blob = await zip.generateAsync({
+                type: 'blob',
+                compression: 'DEFLATE',
+                compressionOptions: { level: 6 }
+            });
+
+            downloadBlob(blob, `${base}.zip`);
+            showToast(failures.length ? 'ZIP ready; some real media could not be fetched.' : 'Complete Study ZIP ready.');
+        } catch (error) {
+            showStudyError(error?.message || 'ZIP packaging failed.');
+        }
+    };
+
+    // Replace the legacy Study mode path with the dedicated workspace while
+    // retaining handleSend compatibility for code that still activates Study.
+    window.toggleStudyMode = function() {
+        const wasOn = typeof isStudyMode !== 'undefined' ? isStudyMode : false;
+
+        try {
+            isDeepResearchOn = false;
+            isPresentationMode = false;
+            isMathMode = false;
+            isPodcastMode = false;
+            isAppMode = false;
+            isImageMode = false;
+            isVideoMode = false;
+            isStudyMode = !wasOn;
+            if (typeof resetAllModeUI === 'function') resetAllModeUI();
+        } catch {}
+
+        if (isStudyMode) {
+            const btn = qs('study-btn');
+            const icon = qs('study-icon');
+            btn?.classList.add('bg-indigo-50', 'border-indigo-200');
+            btn?.classList.remove('text-gray-500');
+            btn?.classList.add('text-indigo-600');
+            icon?.classList.add('animate-pulse');
+            openStudyScreen();
+            showToast('ArixAI Study Workspace Engaged');
+        } else {
+            closeStudyScreen();
+        }
+    };
+
+    // A main-chat send while Study is selected is redirected to the dedicated
+    // Study workspace, so no older deck implementation can accidentally run.
+    const originalRunStudyTask = runStudyTask;
+
+    // Make the helper available to the existing handleSend branch.
+    window.runStudyTask = async function(text, payloadFiles) {
+        if (payloadFiles) mergeSeedFiles(payloadFiles);
+        if (text) {
+            const input = qs('study-input');
+            if (input) input.value = text;
+            state.lastGoal = text;
+        }
+        if (!qs('study-screen')?.classList.contains('flex')) openStudyScreen();
+        return originalRunStudyTask(text, payloadFiles, false);
+    };
+
+    // Keep local output preferences synced after page reload.
+    renderStudyOutputs();
+    renderStudyFiles();
+    renderStudyContext();
+    setStudyUiMode(state.uiMode, false);
+})();
+</script>
+
 </body>
 </html>
