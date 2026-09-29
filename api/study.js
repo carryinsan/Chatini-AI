@@ -113,7 +113,7 @@ function extractBalancedJson(source) {
 
 function repairJsonText(source) {
   let text = String(source || '')
-    .replace(/<(?:think|think_s|thinking)[^>]*>[\s\S]*?<\/(?:think|think_e|think_s|thinking)>/gi, '')
+    .replace(/<(?:think|think_s|thinking)[^>]*>[\s\S]*?(?:<\/(?:think|think_e|think_s|thinking)>|$)/gi, '')
     .trim();
 
   const candidates = [];
@@ -988,10 +988,10 @@ ${sourceDigest || '[None]'}
 LIVE RESEARCH:
 ${research ? evidenceContext(research) : '[No live research requested/returned]'}
 
-${requestedOutputsContext(plan.outputs)}
+REQUIRED TEXT OUTPUTS: ${Object.entries(plan.outputs || {}).filter(([k, v]) => v && !['slides', 'images', 'video', 'researchReport', 'exportPdf'].includes(k)).map(([k]) => k).join(', ') || 'Determine from request.'}
+IMPORTANT: Slides, images, and video are handled by a completely separate downstream pipeline. DO NOT invent keys or write content for slides/media in this JSON. Focus strictly on the core text materials defined in the schema to prevent token truncation and JSON parser failure.
 `;
 }
-
 function normalizeSynthesis(parsed, plan) {
   if (!parsed || typeof parsed !== 'object') {
     throw new Error('STUDY_SYNTHESIS_INVALID_JSON');
