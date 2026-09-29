@@ -112,7 +112,9 @@ function extractBalancedJson(source) {
 }
 
 function repairJsonText(source) {
-  let text = String(source || '').trim()
+  let text = String(source || '')
+    .replace(/<(?:think|think_s|thinking)[^>]*>[\s\S]*?<\/(?:think|think_e|think_s|thinking)>/gi, '')
+    .trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim();
