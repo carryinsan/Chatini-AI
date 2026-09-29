@@ -114,20 +114,39 @@ function extractBalancedJson(source) {
 function repairJsonText(source) {
   let text = String(source || '')
     .replace(/<(?:think|think_s|thinking)[^>]*>[\s\S]*?<\/(?:think|think_e|think_s|thinking)>/gi, '')
-    .trim()
-    .replace(/^```(?:json)?\s*/i, '')
-    .replace(/\s*```$/i, '')
     .trim();
 
-  const candidates = [text];
-  const balanced = extractBalancedJson(text);
-  if (balanced && balanced !== text) candidates.push(balanced);
+  const candidates = [];
 
-  for (const candidate of candidates) {
+  // 1. Try to extract from a markdown code block anywhere in the text
+  const blockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (blockMatch) candidates.push(blockMatch[1].trim());
+
+  // 2. Try greedy brace extraction (bypasses intro/outro chatter)
+  const firstBrace = text.indexOf('{');
+  const lastBrace = text.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    candidates.push(text.slice(firstBrace, lastBrace + 1));
+  }
+
+  // 3. Keep original balanced extraction as fallback
+  const balanced = extractBalancedJson(text);
+  if (balanced) candidates.push(balanced);
+  candidates.push(text);
+
+  for (let candidate of candidates) {
+    if (!candidate) continue;
+    
     try { return JSON.parse(candidate); } catch {}
-    // Safe, narrow repair: remove trailing commas only. Never invent keys/values.
-    const repaired = candidate.replace(/,\s*([}\]])/g, '$1');
+
+    // Repair A: Trailing commas
+    let repaired = candidate.replace(/,\s*([}\]])/g, '$1');
     try { return JSON.parse(repaired); } catch {}
+
+    // Repair B: Unescaped control characters (literal newlines/tabs inside strings)
+    // Flattens the string, eliminating invalid control chars while preserving escaped \n
+    let flat = repaired.replace(/[\u0000-\u001F]+/g, ' ');
+    try { return JSON.parse(flat); } catch {}
   }
   return null;
 }
