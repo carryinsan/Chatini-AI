@@ -33,7 +33,7 @@ import presentationHandler from './presentation.js';
 import { POST as visualPost } from './image.js';
 import { verifyAndLimit } from './auth.js';
 
-const VERSION = 'arix-study-1.0.0';
+const VERSION = 'arix-study-1.1.0';
 const ENCODER = new TextEncoder();
 
 const HARD_BUDGET_MS = 290_000;
@@ -85,23 +85,54 @@ function safeJson(value) {
   try { return JSON.stringify(value); } catch { return null; }
 }
 
-function parseJsonLoose(value) {
-  if (typeof value !== 'string') return null;
-  let source = value.trim()
+function extractBalancedJson(source) {
+  const start = source.search(/[\[{]/);
+  if (start < 0) return null;
+  const stack = [];
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < source.length; i++) {
+    const ch = source[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === '\\') escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === '{' || ch === '[') stack.push(ch);
+    else if (ch === '}' || ch === ']') {
+      const expected = ch === '}' ? '{' : '[';
+      if (stack[stack.length - 1] !== expected) return null;
+      stack.pop();
+      if (!stack.length) return source.slice(start, i + 1);
+    }
+  }
+  return null;
+}
+
+function repairJsonText(source) {
+  let text = String(source || '').trim()
     .replace(/^```(?:json)?\s*/i, '')
     .replace(/\s*```$/i, '')
     .trim();
 
-  try { return JSON.parse(source); } catch {}
+  const candidates = [text];
+  const balanced = extractBalancedJson(text);
+  if (balanced && balanced !== text) candidates.push(balanced);
 
-  for (const [open, close] of [['{', '}'], ['[', ']']]) {
-    const start = source.indexOf(open);
-    const end = source.lastIndexOf(close);
-    if (start >= 0 && end > start) {
-      try { return JSON.parse(source.slice(start, end + 1)); } catch {}
-    }
+  for (const candidate of candidates) {
+    try { return JSON.parse(candidate); } catch {}
+    // Safe, narrow repair: remove trailing commas only. Never invent keys/values.
+    const repaired = candidate.replace(/,\s*([}\]])/g, '$1');
+    try { return JSON.parse(repaired); } catch {}
   }
   return null;
+}
+
+function parseJsonLoose(value) {
+  if (typeof value !== 'string') return null;
+  return repairJsonText(value);
 }
 
 function shortError(error) {
@@ -1025,17 +1056,40 @@ function normalizeQuestionSet(set) {
 
 async function runSynthesis(req, input) {
   const prompt = buildSynthesisPrompt(input);
-  const raw = await callChat(req, {
-    prompt,
-    modelId: 'flux',
-    userProfile: input.userProfile,
-    useGlobalMemory: input.useGlobalMemory,
-    contributeToMemory: input.contributeToMemory,
-    messages: input.history,
-  });
+  let lastRaw = '';
+  let lastError = null;
 
-  const parsed = parseJsonLoose(raw);
-  return normalizeSynthesis(parsed, input.plan);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    const retryInstruction = attempt === 0 ? '' : `\n\nREPAIR RETRY ${attempt}: Your previous response could not be parsed as JSON.
+Return ONLY one complete JSON object. Do not use markdown fences. Do not add commentary.
+Keep strings concise and finish every array/object. If a section is disabled, return [] or {}.
+Do not omit required top-level keys from the schema.`;
+
+    try {
+      lastRaw = await callChat(req, {
+        prompt: prompt + retryInstruction,
+        modelId: attempt === 0 ? 'flux' : 'spark',
+        userProfile: input.userProfile,
+        useGlobalMemory: input.useGlobalMemory,
+        contributeToMemory: input.contributeToMemory,
+        messages: input.history,
+      });
+
+      const parsed = parseJsonLoose(lastRaw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return normalizeSynthesis(parsed, input.plan);
+      }
+      lastError = new Error('STUDY_SYNTHESIS_INVALID_JSON');
+    } catch (error) {
+      lastError = error;
+      if (attempt < MAX_RETRIES && !retryableError(error) && !/STUDY_(?:SYNTHESIS|LESSON|WORKSHEET|ASSESSMENT)/.test(shortError(error))) {
+        break;
+      }
+    }
+  }
+
+  // Never expose the model's raw malformed output to the browser or treat it as an artifact.
+  throw new Error(lastError?.message || 'STUDY_SYNTHESIS_INVALID_JSON');
 }
 
 async function runQA(req, input) {
