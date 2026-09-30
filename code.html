@@ -1,4 +1,4 @@
-<!--//###<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="light">
 <head>
 <meta charset="UTF-8">
@@ -879,7 +879,7 @@ body {
     <div class="flex items-center gap-2 mb-2">
         <i id="visual-controls-icon" class="ph-bold ph-aperture text-fuchsia-500"></i>
         <span id="visual-controls-title" class="text-[11px] font-bold uppercase tracking-wider text-gray-500">Image Controls</span>
-        <span class="ml-auto text-[9px] text-gray-400">Pixazo</span>
+        <span class="ml-auto text-[9px] text-gray-400">ArixStudio</span>
     </div>
 
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -3193,7 +3193,7 @@ function updateUIState() {
 
 // ====== DYNAMIC MESSAGE PARSING & FORMATTING ======
 function parseRichText(content, isStreaming = false, msgId = null) {
-    // Bypass Markdown parsing for Pixazo Visual Engine HTML widgets
+    // Bypass Markdown parsing for ArixStudio Visual Engine HTML widgets
     if (typeof content === 'string' && content.includes('bg-gray-900/60 border border-white/10')) {
         return content;
     }
@@ -3782,35 +3782,252 @@ async function handleSend() {
         isProcessing = false; updateUIState(); return;
     }
     
-    // 5D. WEB APP BUILDER
+    // 5D. WEB APP BUILDER (SSE LIVE CODER UI)
     if (isAppMode) {
         els.indicator.classList.add('hidden');
-        const logContainer = appendResearchTerminal('Initializing App Builder Engine...', 'math');
-        try {
-            const res = await fetch('/api/app-builder', { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify({ prompt: text }) 
+        
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+        const container = assistantMsgObj.container;
+        
+        container.innerHTML = `
+        <div class="w-full border border-gray-200 rounded-2xl shadow-sm bg-white overflow-hidden flex flex-col font-sans mb-4">
+            <!-- Header -->
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/80">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="w-10 h-10 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center flex-shrink-0 border border-orange-100">
+                        <i class="ph-bold ph-code text-xl"></i>
+                    </div>
+                    <div class="min-w-0 pr-2">
+                        <h4 class="text-sm font-bold text-gray-900 truncate">Arix Coder Workspace</h4>
+                        <p class="text-[11px] text-gray-500 font-medium truncate" id="coder-sub-${assistantMsgObj.id}">Initializing builder...</p>
+                    </div>
+                </div>
+                <div id="coder-spinner-${assistantMsgObj.id}" class="text-orange-500 shrink-0">
+                    <i class="ph-bold ph-spinner-gap text-2xl animate-spin"></i>
+                </div>
+            </div>
+            
+            <!-- Phase Tracker -->
+            <div class="px-5 py-3 border-b border-gray-100 bg-white overflow-x-auto no-scrollbar" id="coder-phases-${assistantMsgObj.id}">
+                <div class="flex items-center gap-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider whitespace-nowrap">
+                    <span class="text-orange-600 flex items-center gap-1.5"><i class="ph-fill ph-circle-notch animate-spin"></i> Understanding</span>
+                    <i class="ph-bold ph-caret-right text-gray-200"></i> <span>Checking Project</span>
+                    <i class="ph-bold ph-caret-right text-gray-200"></i> <span>Planning</span>
+                    <i class="ph-bold ph-caret-right text-gray-200"></i> <span>Building</span>
+                    <i class="ph-bold ph-caret-right text-gray-200"></i> <span>Testing & Safety</span>
+                    <i class="ph-bold ph-caret-right text-gray-200"></i> <span>Verifying</span>
+                </div>
+            </div>
+
+            <!-- Expandable Live Logs -->
+            <details class="group bg-[#0a0a0a] text-gray-300" open>
+                <summary class="px-5 py-3 flex items-center justify-between cursor-pointer hover:bg-[#111111] transition-colors select-none outline-none border-b border-gray-800">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-gray-400 group-open:text-gray-300 flex items-center gap-2">
+                        <i class="ph-bold ph-terminal text-sm"></i> Live Agent Activity
+                    </span>
+                    <i class="ph-bold ph-caret-down group-open:rotate-180 transition-transform"></i>
+                </summary>
+                <div class="px-5 py-4 max-h-64 overflow-y-auto custom-scrollbar font-mono text-[11px] space-y-2 leading-relaxed" id="coder-logs-${assistantMsgObj.id}">
+                    <div class="text-gray-500">System booted. Establishing context...</div>
+                </div>
+            </details>
+
+            <!-- Final Verification & Export -->
+            <div id="coder-result-${assistantMsgObj.id}" class="hidden p-6 bg-white flex-col items-center justify-center text-center">
+            </div>
+        </div>`;
+
+        const logsEl = document.getElementById(`coder-logs-${assistantMsgObj.id}`);
+        const subEl = document.getElementById(`coder-sub-${assistantMsgObj.id}`);
+        const phasesEl = document.getElementById(`coder-phases-${assistantMsgObj.id}`);
+        const spinnerEl = document.getElementById(`coder-spinner-${assistantMsgObj.id}`);
+        const resultEl = document.getElementById(`coder-result-${assistantMsgObj.id}`);
+
+        const addLog = (msg, type = 'info') => {
+            const colors = { info: 'text-gray-300', success: 'text-emerald-400', warn: 'text-amber-400', error: 'text-red-400', action: 'text-blue-400' };
+            const icons = { info: 'ph-info', success: 'ph-check', warn: 'ph-warning-circle', error: 'ph-x-circle', action: 'ph-lightning' };
+            logsEl.insertAdjacentHTML('beforeend', `<div class="${colors[type]} flex items-start gap-2"><i class="ph-bold ${icons[type]} mt-0.5 shrink-0 text-sm"></i> <span>${msg}</span></div>`);
+            logsEl.scrollTop = logsEl.scrollHeight;
+        };
+
+        const updatePhases = (activeStageName) => {
+            const stages = ['Understanding', 'Checking Project', 'Planning', 'Building', 'Testing & Safety', 'Reviewing & Fixing', 'Verifying', 'Completed'];
+            let html = '<div class="flex items-center gap-4 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">';
+            let foundActive = false;
+            stages.forEach((s, i) => {
+                const isActive = s === activeStageName;
+                const isPast = !foundActive && !isActive;
+                if (isActive) foundActive = true;
+                let color = 'text-gray-400', icon = '';
+                if (isPast) { color = 'text-emerald-500'; icon = '<i class="ph-bold ph-check"></i> '; }
+                else if (isActive) { color = 'text-orange-600'; icon = '<i class="ph-fill ph-circle-notch animate-spin"></i> '; }
+                html += `<span class="${color} flex items-center gap-1.5 transition-colors duration-300">${icon}${s}</span>`;
+                if (i < stages.length - 1) html += `<i class="ph-bold ph-caret-right text-gray-200"></i> `;
             });
-            const data = await res.json();
-            logContainer.parentElement.parentElement.remove();
-            if (data.success && data.html) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
-                const artifactContent = `<artifact title="Interactive Web App" type="html">\n${data.html}\n</artifact>`;
-                assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
+            html += '</div>';
+            phasesEl.innerHTML = html;
+            if (activeStageName) subEl.innerText = activeStageName + '...';
+        };
+
+        // Convert base64 staging files to utf-8 text payloads for the backend
+        let payloadFiles = [];
+        try {
+            if (pendingFiles.length === 0) {
+                payloadFiles.push({ path: 'app.js', content: '// Request entrypoint\n' });
             } else {
-                appendMessage('assistant', `<span class="text-red-500 font-medium">Failed to generate App: ${data.error}</span>`, activeModelId);
+                payloadFiles = pendingFiles.map(f => {
+                    let textContext = '';
+                    try { textContext = decodeURIComponent(escape(window.atob(f.base64))); }
+                    catch (e) { textContext = window.atob(f.base64); }
+                    return { path: f.name, content: textContext };
+                });
+            }
+        } catch (e) { addLog('Warning: Failed to decode attached files.', 'warn'); }
+
+        try {
+            const res = await fetch('/api/app-builder', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ task: text, files: payloadFiles, stream: true })
+            });
+
+            if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+            
+            const reader = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "", isFatal = false, finalResult = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n\n');
+                buffer = lines.pop();
+
+                for (const block of lines) {
+                    if (block.startsWith('data: ')) {
+                        try {
+                            const data = JSON.parse(block.slice(6));
+                            const type = data.type, msg = data.message || '';
+
+                            switch(type) {
+                                case 'run_started': updatePhases('Checking Project'); addLog(msg, 'info'); break;
+                                case 'phase':
+                                    if (data.phase === 'FAST_PATH') { updatePhases('Verifying'); addLog(msg, 'action'); }
+                                    else if (['MASTER_PLAN', 'RESEARCH_AND_ARCHITECTURE'].includes(data.phase)) { updatePhases('Planning'); addLog(msg, 'info'); }
+                                    else if (data.phase === 'TASK_GRAPH') { addLog(msg, 'action'); }
+                                    else if (data.phase === 'VERIFY') { updatePhases('Verifying'); addLog(msg, 'info'); }
+                                    else if (data.phase === 'REPAIR_VERIFY') { updatePhases('Reviewing & Fixing'); addLog(msg, 'warn'); }
+                                    break;
+                                case 'agent_started': addLog(msg, 'action'); break;
+                                case 'agent_completed': addLog(`[${data.agent}] logic computed.`, 'success'); break;
+                                case 'agent_failed': addLog(`[${data.agent}] failed: ${data.error}`, 'error'); break;
+                                case 'coder_group_started': updatePhases('Building'); addLog(msg, 'action'); break;
+                                case 'coder_merged': addLog(`Task ${data.task} merged successfully.`, 'success'); break;
+                                case 'test_report': updatePhases('Testing & Safety'); addLog(`Test suite verdict: ${data.recommendation}`, data.recommendation === 'pass' ? 'success' : 'warn'); break;
+                                case 'security_report': updatePhases('Testing & Safety'); addLog(`Security audit: ${data.blocked ? 'Vulnerabilities detected' : 'Clear'}`, data.blocked ? 'error' : 'success'); break;
+                                case 'review_report': updatePhases('Reviewing & Fixing'); addLog(`Review approval: ${data.approval}`, data.approval === 'pass' ? 'success' : 'warn'); break;
+                                case 'repair_started': addLog(msg, 'warn'); break;
+                                case 'repair_applied': addLog(msg, 'success'); break;
+                                case 'verified': case 'run_completed': updatePhases('Completed'); addLog(msg, data.status === 'verified' ? 'success' : 'warn'); break;
+                                case 'fatal_error': isFatal = true; updatePhases('Completed'); addLog(data.error || msg, 'error'); break;
+                                case 'result': finalResult = data.result; break;
+                                default: if (msg) addLog(msg, 'info');
+                            }
+                        } catch (e) {}
+                    }
+                }
+                els.canvas.scrollTop = els.canvas.scrollHeight;
+            }
+            
+            spinnerEl.innerHTML = `<i class="ph-bold ${isFatal ? 'ph-warning-circle text-red-500' : 'ph-check-circle text-emerald-500'} text-2xl"></i>`;
+            subEl.innerText = isFatal ? "Build failed." : (finalResult?.ok ? "Build verified & completed." : "Build completed with warnings.");
+            
+            // Build Download & Summary UI
+            if (finalResult && finalResult.files) {
+                window[`coder_files_${assistantMsgObj.id}`] = finalResult.files; // Store securely in window dict
+                
+                resultEl.classList.remove('hidden');
+                resultEl.classList.add('flex');
+                
+                const isVerified = finalResult.status === 'verified';
+                const statusColor = isVerified ? 'emerald' : 'amber';
+                const statusIcon = isVerified ? 'ph-shield-check' : 'ph-shield-warning';
+                
+                resultEl.innerHTML = `
+                    <div class="w-16 h-16 rounded-2xl bg-${statusColor}-50 text-${statusColor}-600 flex items-center justify-center text-3xl mb-4 border border-${statusColor}-100">
+                        <i class="ph-fill ${statusIcon}"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">${isVerified ? 'Project Verified & Ready' : 'Project Built (Unverified)'}</h3>
+                    <p class="text-sm text-gray-500 mb-6 max-w-sm">${finalResult.note || 'The builder engine has completed this execution.'}</p>
+                    
+                    <button onclick="downloadArixProject('${assistantMsgObj.id}')" class="bg-gray-900 hover:bg-gray-800 text-white font-bold py-3 px-6 rounded-xl transition-all shadow-md flex items-center gap-2">
+                        <i class="ph-bold ph-download-simple text-lg"></i> Download Full Project (.zip)
+                    </button>
+                    
+                    ${finalResult.changedFiles?.length > 0 ? `
+                    <div class="mt-6 w-full text-left bg-gray-50 p-4 rounded-xl border border-gray-100">
+                        <h4 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-2"><i class="ph-bold ph-git-diff"></i> Changed Files</h4>
+                        <div class="flex flex-col gap-1.5 max-h-32 overflow-y-auto custom-scrollbar pr-2">
+                            ${finalResult.changedFiles.map(cf => {
+                                const text = typeof cf === 'string' ? cf : `${cf.operation.toUpperCase()} ${cf.path}`;
+                                return `<div class="text-[11px] text-gray-700 font-mono flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-gray-200 shadow-sm"><i class="ph-bold ph-file-code text-orange-500"></i> ${text}</div>`;
+                            }).join('')}
+                        </div>
+                    </div>` : ''}
+                `;
             }
         } catch (err) {
-            logContainer.parentElement.parentElement.remove();
-            appendMessage('assistant', `<span class="text-red-500 font-medium">Network Error.</span>`, activeModelId);
+            addLog(`System Error: ${err.message}`, 'error');
+            updatePhases('Completed');
+            spinnerEl.innerHTML = `<i class="ph-bold ph-warning-circle text-red-500 text-2xl"></i>`;
+            subEl.innerText = "Connection lost.";
         }
-        isProcessing = false; updateUIState(); return;
+        
+        isProcessing = false; updateUIState();
+        messages.push({ role: 'assistant', content: container.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+        saveCurrentChat();
+        
+        // Define global ZIP compiler if it hasn't been instantiated yet
+        if (!window.downloadArixProject) {
+            window.downloadArixProject = async function(msgId) {
+                const files = window[`coder_files_${msgId}`];
+                if (!files || !files.length) return showToast("No build artifacts found.");
+                showToast("Packaging ZIP archive...");
+                
+                // Dynamically fetch JSZip only when a user requests a download
+                if (!window.JSZip) {
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const script = document.createElement('script');
+                            script.src = "https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js";
+                            script.onload = resolve;
+                            script.onerror = reject;
+                            document.head.appendChild(script);
+                        });
+                    } catch (e) { return showToast("Failed to load compression library."); }
+                }
+                
+                try {
+                    const zip = new JSZip();
+                    files.forEach(f => { if (f.path && f.content != null) zip.file(f.path, f.content); });
+                    const blob = await zip.generateAsync({type:"blob"});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `arix-project-${Date.now()}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                    showToast("Download started!");
+                } catch (e) { showToast("Failed to compile ZIP archive."); }
+            };
+        }
+        return;
     }
     
-    // 5E. UNIFIED PIXAZO IMAGE + VIDEO ENGINE
+    // 5E. UNIFIED ArixStudio IMAGE + VIDEO ENGINE
 if (
     isImageMode ||
     isVideoMode ||
@@ -3865,7 +4082,7 @@ if (
 
     let latestProgress = null;
     let latestStage = 'starting';
-    let latestDetail = 'Connecting to Pixazo...';
+    let latestDetail = 'Connecting to ArixStudio...';
     const generationStartedAt = Date.now();
 
     const progressShell = document.createElement('div');
@@ -3885,7 +4102,7 @@ if (
                             ${detectedVideo ? 'Generating Video' : 'Generating Image'}
                         </div>
                         <div id="visual-stage-text" class="text-[10px] text-gray-400 truncate">
-                            Connecting to Pixazo...
+                            Connecting to ArixStudio...
                         </div>
                     </div>
                 </div>
@@ -3924,7 +4141,7 @@ if (
             <div id="visual-indeterminate"
                  class="hidden mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-[10px] text-gray-500 flex items-center gap-2">
                 <i class="ph-bold ph-spinner-gap animate-spin"></i>
-                <span>Pixazo has not supplied an exact percentage yet. Generation is still active.</span>
+                <span>ArixStudio has not supplied an exact percentage yet. Generation is still active.</span>
             </div>
         </div>
     `;
@@ -5737,4 +5954,4 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 </script>
 </body>
-</html>###// -->
+</html>
