@@ -1039,7 +1039,7 @@ function buildCoderPrompt(input, task, repoInfo, architecture, research, files) 
       repository: repoInfo,
       architecture,
       research,
-      relevantFiles: serializeRepo(files, task.files, 90_000),
+      relevantFiles: serializeRepo(files, task.files, 25_000), // FIX: Reduced from 90_000
       requiredShape: {
         edits: [{ path: 'path', operation: 'create|modify|delete', oldText: 'required for modify/delete when existing', newText: 'required except delete', rationale: 'string' }],
         tests_to_run: ['string'],
@@ -1058,7 +1058,7 @@ function buildDebugPrompt(input, repoInfo, architecture, failures, files) {
       repository: repoInfo,
       architecture,
       failures,
-      files: serializeRepo(files, null, 110_000),
+      files: serializeRepo(files, null, 25_000), // FIX: Reduced from 110_000
       requiredShape: { root_cause: 'string', confidence: 0, edits: [], verification_steps: ['string'], residual_risks: ['string'] }
     })
   };
@@ -1071,7 +1071,7 @@ function buildTestPrompt(input, repoInfo, architecture, files, runtimeEvidence) 
       request: input.task,
       repository: repoInfo,
       architecture,
-      implementation: serializeRepo(files, null, 130_000),
+      implementation: serializeRepo(files, null, 30_000), // FIX: Reduced from 130_000
       runtimeEvidence,
       requiredShape: {
         test_cases: [{ name: 'string', type: 'unit|integration|e2e|security|edge', procedure: 'string', expected: 'string' }],
@@ -1090,7 +1090,7 @@ function buildSecurityPrompt(input, repoInfo, architecture, files, runtimeEviden
       request: input.task,
       repository: repoInfo,
       architecture,
-      implementation: serializeRepo(files, null, 145_000),
+      implementation: serializeRepo(files, null, 30_000), // FIX: Reduced from 145_000
       runtimeEvidence,
       requiredShape: {
         findings: [{ severity: 'critical|high|medium|low|info', code: 'string', title: 'string', evidence: 'string', affectedFiles: ['path'], remediation: 'string' }],
@@ -1111,7 +1111,7 @@ function buildReviewPrompt(input, repoInfo, masterPlan, architecture, taskGraph,
       masterPlan,
       architecture,
       taskGraph,
-      changes: serializeRepo(files, null, 150_000),
+      changes: serializeRepo(files, null, 35_000), // FIX: Reduced from 150_000
       tests,
       security,
       requiredShape: { requirementCoverage: [], drift: [], blockers: [], approval: 'pass|fail|blocked', summary: 'string' }
@@ -1133,7 +1133,9 @@ function buildJudgePrompt(input, candidates, evidence) {
 async function runStructuredAgent({ name, prompt, tier, emit }) {
   emit({ type: 'agent_started', agent: name, tier, message: `${name} online — collecting evidence and producing a structured result.` });
   try {
-    const result = await callAgent({ role: name, tier, system: prompt.system, user: prompt.user, maxTokens: tier === 'strong' ? 10_000 : 7_000 });
+    // FIX: Cap at 8000 to prevent Gemini HTTP 400 errors, and scale down for faster models
+    const safeMaxTokens = tier === 'strong' ? 8000 : 4000;
+    const result = await callAgent({ role: name, tier, system: prompt.system, user: prompt.user, maxTokens: safeMaxTokens });
     const parsed = extractJsonObject(result.content);
     if (!parsed) throw new Error(`${name}_INVALID_JSON`);
     emit({ type: 'agent_completed', agent: name, provider: result.provider, model: result.model, message: `${name} completed; result committed to Arix Code State.` });
