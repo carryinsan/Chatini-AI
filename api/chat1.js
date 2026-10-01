@@ -1424,6 +1424,32 @@ ${memoryString}${clockContext}`;
             if (!llmRes.ok) lastErr = await llmRes.text();
           }
 
+          // ================================================================
+          // PUTER API FALLBACK: GEMINI 3.8 FLASH (LAST OPTION FOR FLUX)
+          // ================================================================
+          if ((!llmRes || !llmRes.ok) && modelId === 'flux') {
+            isMistral = true; // Tricks the existing SSE loop below into using OpenAI-format chunk parsing
+            
+            const puterPayload = {
+              model: 'gemini-3.8-flash',
+              messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
+              stream: true,
+              temperature: 0.7
+            };
+            
+            llmRes = await fetch('https://api.puter.com/v1/chat/completions', {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                // Optional: Add PUTER_API_KEY to your environment variables if using a paid/authed tier
+                ...(process.env.PUTER_API_KEY && { 'Authorization': `Bearer ${process.env.PUTER_API_KEY}` })
+              },
+              body: JSON.stringify(puterPayload)
+            });
+            
+            if (!llmRes.ok) lastErr = await llmRes.text();
+          }
+
           if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All API keys exhausted or rate-limited.");
         }
 
