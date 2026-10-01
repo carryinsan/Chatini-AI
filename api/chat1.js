@@ -1428,21 +1428,22 @@ ${memoryString}${clockContext}`;
           // PUTER API FALLBACK: GEMINI 3.8 FLASH (LAST OPTION FOR FLUX)
           // ================================================================
           if ((!llmRes || !llmRes.ok) && modelId === 'flux') {
-            isMistral = true; // Tricks the existing SSE loop below into using OpenAI-format chunk parsing
+            isMistral = true; // Route through the OpenAI-compatible stream parser below
             
+            const PUTER_AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InYyIn0.eyJ0IjoidCIsInYiOiIyIiwidG9rZW5fdWlkIjoiYTczMTQ5ZDEtOGUxZS00YWE1LWE1NjgtMzZmNWEwMzQ3YTZlIiwidXUiOiI0ZVJPVXlSWlE1MnRtYks4T2R1Rjh3PT0iLCJzdSI6IjFKampWUUtsVGl1RW5WQ0Z1dytFNkE9PSIsImFpIjoiNGVST1V5UlpRNTJ0bWJLOE9kdUY4dz09IiwiZnVsbF9hY2Nlc3MiOnRydWUsImlhdCI6MTc5MDg2NzM5M30.JgoKR8LOAwDOU4JAPTHXnoL5reFfE1jE_mQfPPb4118";
+
             const puterPayload = {
-              model: 'google/gemini-3.8-flash', // Correct Puter model slug
+              model: 'google/gemini-3.8-flash',
               messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
               stream: true,
               temperature: 0.7
             };
             
-            // Corrected Puter OpenAI-compatible REST endpoint
             llmRes = await fetch('https://api.puter.com/puterai/openai/v1/chat/completions', {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
-                ...(process.env.PUTER_API_KEY && { 'Authorization': `Bearer ${process.env.PUTER_API_KEY}` })
+                'Authorization': `Bearer ${PUTER_AUTH_TOKEN}`
               },
               body: JSON.stringify(puterPayload)
             });
