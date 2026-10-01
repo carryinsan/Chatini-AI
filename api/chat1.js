@@ -1431,17 +1431,17 @@ ${memoryString}${clockContext}`;
             isMistral = true; // Tricks the existing SSE loop below into using OpenAI-format chunk parsing
             
             const puterPayload = {
-              model: 'gemini-3.8-flash',
+              model: 'google/gemini-3.8-flash', // Correct Puter model slug
               messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
               stream: true,
               temperature: 0.7
             };
             
-            llmRes = await fetch('https://api.puter.com/v1/chat/completions', {
+            // Corrected Puter OpenAI-compatible REST endpoint
+            llmRes = await fetch('https://api.puter.com/puterai/openai/v1/chat/completions', {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
-                // Optional: Add PUTER_API_KEY to your environment variables if using a paid/authed tier
                 ...(process.env.PUTER_API_KEY && { 'Authorization': `Bearer ${process.env.PUTER_API_KEY}` })
               },
               body: JSON.stringify(puterPayload)
@@ -1449,9 +1449,6 @@ ${memoryString}${clockContext}`;
             
             if (!llmRes.ok) lastErr = await llmRes.text();
           }
-
-          if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All API keys exhausted or rate-limited.");
-        }
 
         // ================================================================
         // CORE BUG FIX: THE IRONCLAD SSE PARSER WITH REAL-TIME DETOKENIZATION & ANTI-LAG AGGREGATION
