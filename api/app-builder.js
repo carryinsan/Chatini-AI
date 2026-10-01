@@ -1035,19 +1035,21 @@ function buildTaskGraphPrompt(input, repoInfo, masterPlan, architecture, researc
 
 function buildCoderPrompt(input, task, repoInfo, architecture, research, files) {
   return {
-    system: `${AGENT_SAFETY}\nYou are a SPECIALIZED CODER. Implement only the assigned task. Produce preconditioned edits using exact oldText/newText. Never claim you ran commands. Do not touch files outside the task unless absolutely required and explicitly explain why.`,
+    // FIX: Enforced strict JSON boundaries and forced conciseness to prevent mid-code truncation.
+    system: `${AGENT_SAFETY}\nYou are a SPECIALIZED CODER. Implement only the assigned task. Produce preconditioned edits using exact oldText/newText. Never claim you ran commands. Do not touch files outside the task unless absolutely required and explicitly explain why.\nCRITICAL: You must return ONLY valid, perfectly formed JSON. Keep rationale, risks, and notes extremely concise (maximum 1 short sentence) to conserve tokens and prevent JSON truncation.`,
     user: JSON.stringify({
       request: cleanText(input.task, LIMITS.maxTaskChars),
       assignedTask: task,
       repository: repoInfo,
       architecture,
       research,
-      relevantFiles: serializeRepo(files, task.files, 25_000), // FIX: Reduced from 90_000
+      relevantFiles: serializeRepo(files, task.files, 25_000),
+      // FIX: Constrained text fields to 'short string' so the LLM doesn't waste tokens on prose.
       requiredShape: {
-        edits: [{ path: 'path', operation: 'create|modify|delete', oldText: 'required for modify/delete when existing', newText: 'required except delete', rationale: 'string' }],
-        tests_to_run: ['string'],
-        risks: ['string'],
-        notes: ['string']
+        edits: [{ path: 'path', operation: 'create|modify|delete', oldText: 'string (exact match required for modify/delete)', newText: 'string (required except delete)', rationale: 'short string' }],
+        tests_to_run: ['short string'],
+        risks: ['short string'],
+        notes: ['short string']
       }
     })
   };
