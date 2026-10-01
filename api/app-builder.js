@@ -1015,14 +1015,19 @@ function buildResearchQueries(task, architecture, repoInfo) {
 }
 
 function buildTaskGraphPrompt(input, repoInfo, masterPlan, architecture, research) {
+  // FIX: If a Judge debated multiple architectures, only pass the winning design to prevent HTTP 413 payload explosion.
+  const finalArchitecture = architecture?.selected ? 
+    { selectedApproach: architecture.selected, design: architecture.baseline, judgeNotes: architecture.judge?.reasons } : 
+    architecture;
+
   return {
     system: `${AGENT_SAFETY}\nYou are the TASK DECOMPOSER. Turn the design into small executable tasks with explicit file ownership. Avoid assigning the same mutable file to multiple parallel tasks.`,
     user: JSON.stringify({
       request: cleanText(input.task, LIMITS.maxTaskChars),
       repository: repoInfo,
       masterPlan,
-      architecture,
-      research,
+      architecture: finalArchitecture,
+      // FIX: Omit raw web `research` here. The Architect already analyzed it and baked it into `finalArchitecture`.
       requiredShape: {
         tasks: [{ id: 'task-1', title: 'string', role: 'backend|frontend|tests|infra|debug', description: 'string', files: ['path'], dependsOn: ['task-id'], risk: 'low|medium|high', acceptance: ['string'] }], parallel_groups: [['task-id']], critical_path: ['task-id']
       }
