@@ -1449,6 +1449,8 @@ ${memoryString}${clockContext}`;
             
             if (!llmRes.ok) lastErr = await llmRes.text();
           }
+            if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All API keys exhausted or rate-limited.");
+        }
 
         // ================================================================
         // CORE BUG FIX: THE IRONCLAD SSE PARSER WITH REAL-TIME DETOKENIZATION & ANTI-LAG AGGREGATION
