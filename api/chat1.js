@@ -1425,7 +1425,7 @@ ${memoryString}${clockContext}`;
           }
 
           // ================================================================
-          // LLM7 API FALLBACK: GEMINI 3.8 FLASH (LAST OPTION FOR FLUX)
+          // LLM7 API FALLBACK: DEEPSEEK (FREE TIER) (LAST OPTION FOR FLUX)
           // ================================================================
           if ((!llmRes || !llmRes.ok) && modelId === 'flux') {
             isMistral = true; // Tricks the existing SSE loop below into using OpenAI-format chunk parsing
@@ -1433,7 +1433,7 @@ ${memoryString}${clockContext}`;
             const LLM7_API_KEY = "ler4WjM+7b6gecL3uxWMn/ZaPfLr5l3wMwLzfsjFB47GMNuaM6VJXVqR8YJCZ0HJOAVlhxcRdYXSV5I5NK6FFsyb1LcqK0FyINFTDCBPPIOe9Q9GjrDtI5XMmN0Ya0jecwJpoWvcolW3JvH6cXZ1+0D2F+bWBSoU5AqYjtM=";
 
             const llm7Payload = {
-              model: 'gemini-3.8-flash-high', // Official LLM7 model ID for Gemini Flash
+              model: 'DeepSeek-V4-Flash-0731', // Free 'turbo' tier model on LLM7
               messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
               stream: true,
               temperature: 0.7
