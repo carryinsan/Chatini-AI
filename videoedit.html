@@ -18,6 +18,54 @@ button,input,select,textarea{font:inherit}button{color:inherit;background:#141c2
 .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.65);z-index:50}.modal.open{display:grid}.modal-card{width:min(940px,92vw);max-height:88vh;overflow:auto;background:#0d131e;border:1px solid var(--line);border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.5)}.modal-head{padding:11px 13px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.modal-body{padding:13px}.command-list{display:grid;gap:6px}.command-item{padding:9px;border:1px solid var(--line);border-radius:8px;background:#111925;cursor:pointer}.command-item:hover{background:#172235;border-color:#41618c}.toast-stack{position:fixed;right:16px;bottom:16px;display:grid;gap:7px;z-index:80}.toast{background:#111925;border:1px solid var(--line);border-radius:9px;padding:9px 11px;box-shadow:var(--shadow);max-width:380px}.progress{height:8px;background:#0a0e15;border-radius:999px;overflow:hidden;border:1px solid var(--line)}.progress>div{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0}.drop-zone{border:1px dashed #38527b;border-radius:12px;padding:18px;text-align:center;color:var(--muted);margin:8px 0;background:#0a1019}.drop-zone.drag{border-color:var(--accent);background:#101a2a;color:var(--text)}
 .inspector .section{padding:10px 11px}.inspector-scroll{height:100%;overflow:auto}.histogram{width:100%;height:90px;background:#070a10;border:1px solid var(--line);border-radius:7px}.curve{width:100%;height:180px;background:#070a10;border:1px solid var(--line);border-radius:7px;cursor:crosshair}.scope-row{display:grid;grid-template-columns:1fr 1fr;gap:7px}.scope{width:100%;height:120px;background:#070a10;border:1px solid var(--line);border-radius:7px}.timeline-search{width:190px}.footer-hint{padding:8px 10px;color:#72809a;font-size:10px;border-top:1px solid var(--line)}.feature-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.feature{padding:7px;border:1px solid var(--line);background:#0b111a;border-radius:7px;font-size:10px}.feature b{display:block;margin-bottom:2px}.pill{display:inline-block;font-size:9px;padding:2px 5px;border-radius:999px;background:#113629;color:#73dfba;border:1px solid #275d4f}.warn-pill{background:#3d3013;color:#f2d17b;border-color:#655024}.kbd{border:1px solid #37465d;padding:1px 4px;border-radius:4px;font-size:9px;background:#101722;color:#aab8cb}
 @media(max-width:1050px){#app{grid-template-columns:240px 1fr}.inspector{position:fixed;right:0;top:48px;bottom:0;width:330px;transform:translateX(100%);transition:.2s;z-index:30}.inspector.open{transform:none}.topbar{grid-column:1/3}}@media(max-width:780px){#app{grid-template-columns:1fr}.sidebar{position:fixed;left:0;top:48px;bottom:0;width:280px;transform:translateX(-100%);transition:.2s;z-index:30}.sidebar.open{transform:none}.topbar{grid-column:1}.preview-wrap{height:38vh}.timeline-toolbar{flex-wrap:wrap}.timeline-search{display:none}}
+
+/* ArixVid workspace polish — index.html only. Existing JS hooks/IDs remain unchanged. */
+:root{
+  --top:54px;--left:292px;--right:342px;--chrome:#090d15;--panel:#0d131d;--panel-hi:#121b28;
+  --line:#243147;--line-soft:rgba(255,255,255,.07);--accent:#76a7ff;--accent-hi:#a98cff;
+  --text:#f3f7ff;--muted:#8fa0bb;--shadow-xl:0 28px 90px rgba(0,0,0,.55)
+}
+html,body{background:radial-gradient(1200px 700px at 55% 10%,#101827 0,#070a10 62%);}
+body{letter-spacing:.005em}
+button{transition:background .16s ease,border-color .16s ease,transform .06s ease,box-shadow .16s ease}
+button:active{transform:translateY(1px)}
+button.primary{box-shadow:0 5px 18px rgba(79,124,209,.22)}
+.topbar{height:var(--top);padding:7px 12px;gap:7px;background:linear-gradient(180deg,#0b1019,#080c14);box-shadow:0 10px 28px rgba(0,0,0,.18)}
+.brand{font-size:15px;margin-right:8px}.brand span{color:#86b0ff}
+.top-group{gap:5px}.workspace-toggle{padding:7px 9px;font-size:11px}
+#app{grid-template-rows:var(--top) minmax(0,1fr);grid-template-columns:var(--left) minmax(0,1fr) var(--right)}
+.sidebar,.inspector{background:linear-gradient(180deg,#0d131d,#0b1018);border-color:var(--line)}
+.sidebar{box-shadow:7px 0 28px rgba(0,0,0,.08);z-index:14}.inspector{box-shadow:-7px 0 28px rgba(0,0,0,.08);z-index:14}
+.tabs{gap:3px;padding:7px 8px}.tabs button{font-size:10px}.tabs button.active{box-shadow:inset 0 -2px 0 var(--accent)}
+#main{grid-template-rows:minmax(390px,54vh) 46px minmax(220px,1fr);background:transparent}
+.preview-wrap{min-height:0;position:relative;padding:48px 14px 66px;background:radial-gradient(900px 480px at 50% 42%,rgba(48,67,101,.18),transparent 62%),linear-gradient(180deg,#060a11,#03050a);}
+.preview-wrap::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:32px 32px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.5),transparent 82%);pointer-events:none}
+.preview-heading{position:absolute;top:10px;left:14px;right:14px;display:flex;align-items:center;justify-content:space-between;z-index:6;pointer-events:none}.preview-title{font-weight:800;font-size:13px}.preview-meta{color:var(--muted);font-size:10px;margin-top:2px}.preview-heading-actions{display:flex;gap:6px}.preview-chip{pointer-events:none;padding:5px 8px;border:1px solid var(--line);background:rgba(11,17,27,.72);border-radius:999px;color:#b8c6da;font-size:10px;backdrop-filter:blur(12px)}
+.canvas-stage{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;min-height:0}.canvas-stage::before{content:"";position:absolute;width:min(86%,1100px);height:min(86%,650px);border-radius:20px;background:linear-gradient(135deg,rgba(255,255,255,.025),rgba(255,255,255,.01));box-shadow:0 30px 70px rgba(0,0,0,.25);pointer-events:none}
+.canvas-shell{position:relative;display:block;max-width:calc(100% - 24px);max-height:calc(100% - 18px);background-color:#000;background-image:linear-gradient(45deg,#10151d 25%,transparent 25%),linear-gradient(-45deg,#10151d 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#10151d 75%),linear-gradient(-45deg,transparent 75%,#10151d 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0;box-shadow:0 26px 65px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.12);z-index:2;overflow:hidden}
+.canvas-shell canvas{width:100%!important;height:100%!important;display:block;object-fit:fill;background:#000}
+.preview-toolbar{left:14px;right:14px;bottom:12px;min-height:45px;padding:7px 9px;border-color:rgba(255,255,255,.10);background:rgba(8,12,20,.84);box-shadow:0 12px 34px rgba(0,0,0,.32)}
+.preview-toolbar button,.preview-toolbar select{min-height:31px}.preview-toolbar .timecode{font-size:12px;font-weight:700;color:#d7e2f5}
+.preview-empty{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:min(390px,72%);text-align:center;padding:30px 28px;border:1px solid rgba(255,255,255,.10);border-radius:20px;background:rgba(10,15,24,.88);box-shadow:var(--shadow-xl);backdrop-filter:blur(18px)}
+.empty-mark{width:54px;height:54px;margin:0 auto 13px;display:grid;place-items:center;border-radius:16px;background:linear-gradient(145deg,#223a62,#151f33);color:#d5e4ff;font-size:22px;box-shadow:0 10px 25px rgba(56,95,158,.18)}
+.empty-title{font-size:16px;font-weight:800}.empty-copy{margin:8px auto 17px;color:var(--muted);font-size:11px;line-height:1.55;max-width:330px}
+.timeline-toolbar{min-height:46px;padding:6px 9px;background:rgba(9,14,23,.98);backdrop-filter:blur(10px)}
+.timeline-toolbar button.active,#selectTool.active{border-color:#4b6eaa;background:#172844}
+.tl{background:linear-gradient(180deg,#070b12,#080c13)}.ruler{height:32px;background:#0c121d}.track-row{height:74px}.track-head{width:104px;min-width:104px;background:linear-gradient(90deg,#0d131d,#0b1018)}.track-content{min-width:1500px}.clip{height:60px;top:7px;border-radius:7px;box-shadow:0 5px 18px rgba(0,0,0,.13)}
+.inspector .panel-head,.sidebar .panel-head{height:42px}.section{padding:11px}.field>label{font-size:10px}.inspector-scroll{scrollbar-gutter:stable}
+.modal-card{background:linear-gradient(180deg,#101723,#0c111a);box-shadow:0 30px 110px rgba(0,0,0,.62)}
+.toast{background:#111a28;border-color:#33445f;box-shadow:0 18px 50px rgba(0,0,0,.34)}
+.work-overlay{position:fixed;inset:0;display:grid;place-items:center;z-index:120;background:rgba(3,6,11,.62);backdrop-filter:blur(5px);opacity:0;visibility:hidden;transition:opacity .16s ease,visibility .16s ease}.work-overlay.open{opacity:1;visibility:visible}
+.work-card{width:min(520px,calc(100vw - 30px));display:grid;grid-template-columns:46px 1fr auto;column-gap:14px;row-gap:11px;align-items:center;padding:18px 20px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:linear-gradient(180deg,rgba(20,29,43,.97),rgba(10,15,24,.97));box-shadow:var(--shadow-xl)}
+.work-spinner{width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.10);border-top-color:#82adff;border-right-color:#9a83ff;animation:arixSpin .75s linear infinite}.work-title{font-weight:800;font-size:14px}.work-detail{margin-top:3px;color:#9aabc3;font-size:11px;line-height:1.45}.work-progress-wrap{grid-column:1/4;height:7px;border:1px solid #2a3850;background:#080d14;border-radius:999px;overflow:hidden}.work-progress{height:100%;width:0;background:linear-gradient(90deg,#76a7ff,#9a83ff);transition:width .18s ease}.work-percent{font-variant-numeric:tabular-nums;font-size:11px;color:#cbd8eb}.workspace-hint{position:fixed;left:50%;bottom:18px;transform:translateX(-50%) translateY(10px);padding:7px 10px;border-radius:999px;background:rgba(11,17,27,.94);border:1px solid var(--line);color:#b8c6da;font-size:10px;opacity:0;pointer-events:none;transition:.16s;z-index:90}.workspace-hint.show{opacity:1;transform:translateX(-50%) translateY(0)}
+body.left-collapsed #app{grid-template-columns:0 minmax(0,1fr) var(--right)}body.left-collapsed .sidebar{width:0;min-width:0;overflow:hidden;border-right:0;visibility:hidden}body.right-collapsed #app{grid-template-columns:var(--left) minmax(0,1fr) 0}body.right-collapsed .inspector{width:0;min-width:0;overflow:hidden;border-left:0;visibility:hidden}
+body.focus-mode #app{grid-template-columns:0 minmax(0,1fr) 0}body.focus-mode .sidebar,body.focus-mode .inspector{width:0;min-width:0;overflow:hidden;visibility:hidden;border:0}body.focus-mode #main{grid-template-rows:minmax(440px,62vh) 46px minmax(220px,1fr)}
+:fullscreen{background:#05080d}#app:fullscreen{width:100vw;height:100vh;background:#070a10}.arix-fullscreen-fallback{overflow:hidden!important}.arix-fullscreen-fallback #app{position:fixed;inset:0;z-index:1000}
+@keyframes arixSpin{to{transform:rotate(360deg)}}
+@media(max-width:1250px){:root{--left:260px;--right:316px}.workspace-toggle{font-size:10px;padding:7px}.brand{margin-right:2px}}
+@media(max-width:1050px){#app{grid-template-columns:250px minmax(0,1fr)}body.right-collapsed #app{grid-template-columns:250px minmax(0,1fr)}body.focus-mode #app{grid-template-columns:0 minmax(0,1fr)}body.focus-mode .inspector{display:none}.preview-heading{top:9px}}
+@media(max-width:780px){#app{grid-template-columns:1fr}.topbar{overflow-x:auto;white-space:nowrap}.workspace-toggle{display:none}.preview-wrap{padding:44px 8px 66px}.preview-toolbar{left:8px;right:8px;overflow:auto}.preview-toolbar>*{flex:none}.canvas-stage::before{width:92%;height:86%}.preview-empty{width:min(360px,88%)}.work-card{grid-template-columns:38px 1fr;}.work-spinner{width:32px;height:32px}.work-percent{grid-column:2}.work-progress-wrap{grid-column:1/3}}
+
 </style>
 </head>
 <body>
@@ -32,6 +80,9 @@ button,input,select,textarea{font:inherit}button{color:inherit;background:#141c2
   <div class="top-group">
     <button id="undoBtn" class="icon" title="Undo (Ctrl/Cmd+Z)">↶</button><button id="redoBtn" class="icon" title="Redo (Ctrl/Cmd+Shift+Z)">↷</button>
     <button id="focusBtn">Focus</button><button id="commandBtn">⌘K</button>
+    <button id="leftPanelBtn" class="workspace-toggle" title="Toggle media panel">Media</button>
+    <button id="inspectorBtn" class="workspace-toggle" title="Toggle inspector">Inspector</button>
+    <button id="workspaceFullscreenBtn" class="workspace-toggle primary" title="Fullscreen editing workspace">⛶ Edit Fullscreen</button>
   </div>
   <div class="top-spacer"></div>
   <div class="status"><span class="dot"></span><span id="statusText">Ready</span><span id="fpsText" class="muted">30 fps</span></div>
@@ -46,7 +97,24 @@ button,input,select,textarea{font:inherit}button{color:inherit;background:#141c2
 </aside>
 <main id="main">
   <div class="preview-wrap" id="previewWrap">
-    <div class="canvas-shell" id="canvasShell"><canvas id="previewCanvas" width="1280" height="720"></canvas><div class="overlay" id="overlay"><div class="guide v" id="centerV" style="left:50%"></div><div class="guide h" id="centerH" style="top:50%"></div><div class="safe-box" id="safeBox"></div></div></div>
+    <div class="preview-heading">
+      <div>
+        <div id="previewTitle" class="preview-title">Preview</div>
+        <div id="previewMeta" class="preview-meta">Drop media onto the timeline to begin editing</div>
+      </div>
+      <div class="preview-heading-actions">
+        <span id="previewZoomHint" class="preview-chip">Canvas · Fit</span>
+      </div>
+    </div>
+    <div class="canvas-stage" id="canvasStage">
+      <div class="canvas-shell" id="canvasShell"><canvas id="previewCanvas" width="1280" height="720"></canvas><div class="overlay" id="overlay"><div class="guide v" id="centerV" style="left:50%"></div><div class="guide h" id="centerH" style="top:50%"></div><div class="safe-box" id="safeBox"></div></div></div>
+      <div id="previewEmpty" class="preview-empty">
+        <div class="empty-mark">▶</div>
+        <div class="empty-title">Your video appears here</div>
+        <div class="empty-copy">Import a video, then double-click it or drag it to the timeline. The preview automatically fits your project.</div>
+        <button id="previewImport" class="primary">Import media</button>
+      </div>
+    </div>
     <div class="preview-toolbar">
       <button id="playBtn" class="primary">▶</button><button id="prevFrame" class="icon">⏮</button><button id="nextFrame" class="icon">⏭</button><button id="homeBtn" class="icon">⌂</button><button id="endBtn" class="icon">⇥</button>
       <div class="timecode mono" id="timecode">00:00:00.000</div><div class="grow"></div>
@@ -70,6 +138,233 @@ button,input,select,textarea{font:inherit}button{color:inherit;background:#141c2
 <div class="modal" id="historyModal"><div class="modal-card"><div class="modal-head"><b>History</b><button data-close="historyModal">×</button></div><div class="modal-body" id="historyBody"></div></div></div>
 <div class="modal" id="featuresModal"><div class="modal-card"><div class="modal-head"><b>ArixVid Feature Set</b><button data-close="featuresModal">×</button></div><div class="modal-body"><div class="panel-note">Implemented as deterministic browser algorithms or native media APIs. Codec and hardware availability are detected at runtime; unsupported export paths are not offered.</div><div id="featuresGrid" class="feature-grid"></div></div></div></div>
 <div class="toast-stack" id="toastStack"></div>
+
+<!-- Presentation-only enhancement layer. videdit.js remains untouched. -->
+<div id="workOverlay" class="work-overlay" aria-live="polite" aria-busy="false">
+  <div class="work-card">
+    <div class="work-spinner" aria-hidden="true"></div>
+    <div class="work-copy">
+      <div id="workTitle" class="work-title">Working…</div>
+      <div id="workDetail" class="work-detail">ArixVid is processing your edit. You can keep the workspace open.</div>
+    </div>
+    <div id="workProgressWrap" class="work-progress-wrap hidden"><div id="workProgress" class="work-progress"></div></div>
+    <div id="workPercent" class="work-percent hidden">0%</div>
+  </div>
+</div>
+
+<div id="workspaceHint" class="workspace-hint" aria-hidden="true"></div>
+
+<script>
+(() => {
+  'use strict';
+  const q = (s, r = document) => r.querySelector(s);
+  const qa = (s, r = document) => [...r.querySelectorAll(s)];
+  const body = document.body;
+  const app = q('#app');
+  const previewWrap = q('#previewWrap');
+  const stage = q('#canvasStage');
+  const shell = q('#canvasShell');
+  const canvas = q('#previewCanvas');
+  const work = q('#workOverlay');
+  const workTitle = q('#workTitle');
+  const workDetail = q('#workDetail');
+  const workProgressWrap = q('#workProgressWrap');
+  const workProgress = q('#workProgress');
+  const workPercent = q('#workPercent');
+  const status = q('#statusText');
+  let workTimer = 0;
+  let importTimer = 0;
+  let pointerWork = false;
+  let lastMediaCount = -1;
+
+  const heavySelector = [
+    '[data-effect-add]','[data-effect-toggle]','[data-effect-delete]','[data-effect-param]',
+    '[data-motion]','[data-transition]','[data-mask]','[data-chroma]',
+    '[data-audio-tool]','[data-audio-op]','[data-color-action]','[data-op]',
+    '[data-text-anim]','[data-text-style]','[data-shape]','[data-key]',
+    '#startExport','#exportFramePng','#exportFrameJpg','#exportFrameWebp',
+    '#applySettings','#showFeatures','#showHistory','#savePreset','#relinkMedia',
+    '#fitTimeline','#folderDynamic','#addMediaDynamic'
+  ].join(',');
+
+  function setWork(title, detail, progress = null) {
+    workTitle.textContent = title || 'Working…';
+    workDetail.textContent = detail || 'ArixVid is processing your edit. You can keep the workspace open.';
+    if (typeof progress === 'number' && Number.isFinite(progress)) {
+      workProgressWrap.classList.remove('hidden');
+      workPercent.classList.remove('hidden');
+      workProgress.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+      workPercent.textContent = `${Math.round(Math.max(0, Math.min(100, progress)))}%`;
+    } else {
+      workProgressWrap.classList.add('hidden');
+      workPercent.classList.add('hidden');
+      workProgress.style.width = '0%';
+    }
+    work.classList.add('open');
+    work.setAttribute('aria-busy', 'true');
+  }
+  function hideWork(delay = 0) {
+    window.clearTimeout(workTimer);
+    workTimer = window.setTimeout(() => {
+      work.classList.remove('open');
+      work.setAttribute('aria-busy', 'false');
+      pointerWork = false;
+    }, delay);
+  }
+  function deferHide(ms = 320) {
+    window.clearTimeout(workTimer);
+    workTimer = window.setTimeout(() => hideWork(), ms);
+  }
+
+  function resizeCanvasStage() {
+    if (!previewWrap || !stage || !shell || !canvas) return;
+    const rect = stage.getBoundingClientRect();
+    const cw = Math.max(1, Number(canvas.width) || 1280);
+    const ch = Math.max(1, Number(canvas.height) || 720);
+    const ratio = cw / ch;
+    const maxW = Math.max(160, rect.width - 28);
+    const maxH = Math.max(120, rect.height - 22);
+    let w = maxW;
+    let h = w / ratio;
+    if (h > maxH) { h = maxH; w = h * ratio; }
+    shell.style.width = `${Math.max(160, Math.floor(w))}px`;
+    shell.style.height = `${Math.max(120, Math.floor(h))}px`;
+    shell.style.aspectRatio = `${cw} / ${ch}`;
+  }
+
+  function updatePreviewState() {
+    const clips = qa('.clip[data-clip]');
+    const hasVideoClip = clips.some(el => /V/i.test(el.closest('.track-row')?.querySelector('.track-head .name')?.textContent || ''));
+    const empty = q('#previewEmpty');
+    if (empty) empty.classList.toggle('hidden', hasVideoClip);
+    const title = q('#previewTitle');
+    const meta = q('#previewMeta');
+    if (title) title.textContent = hasVideoClip ? 'Video Preview' : 'Preview';
+    if (meta) {
+      const fps = q('#fpsText')?.textContent || '30 fps';
+      const res = `${canvas.width} × ${canvas.height}`;
+      meta.textContent = hasVideoClip ? `${res} · ${fps} · Canvas updates live with your timeline` : `${res} · ${fps} · Import or drag media to the timeline`;
+    }
+    const hint = q('#previewZoomHint');
+    if (hint) hint.textContent = `${canvas.width}×${canvas.height} · Fit`;
+  }
+
+  function observeMedia() {
+    const left = q('#leftContent');
+    if (!left) return;
+    const scan = () => {
+      const count = qa('.media-item', left).length;
+      if (lastMediaCount !== -1 && count !== lastMediaCount) deferHide(550);
+      lastMediaCount = count;
+      updatePreviewState();
+    };
+    new MutationObserver(scan).observe(left, { childList: true, subtree: true, attributes: true });
+    new MutationObserver(() => { resizeCanvasStage(); updatePreviewState(); }).observe(canvas, { attributes: true, attributeFilter: ['width','height'] });
+    new ResizeObserver(resizeCanvasStage).observe(stage);
+    window.addEventListener('resize', resizeCanvasStage, { passive: true });
+    scan();
+    resizeCanvasStage();
+  }
+
+  function bindWorkspaceButtons() {
+    q('#previewImport')?.addEventListener('click', () => q('#fileInput')?.click());
+    q('#leftPanelBtn')?.addEventListener('click', () => {
+      body.classList.toggle('left-collapsed');
+      const closed = body.classList.contains('left-collapsed');
+      q('#leftPanelBtn').textContent = closed ? 'Show Media' : 'Media';
+      window.setTimeout(resizeCanvasStage, 220);
+    });
+    q('#inspectorBtn')?.addEventListener('click', () => {
+      body.classList.toggle('right-collapsed');
+      const closed = body.classList.contains('right-collapsed');
+      q('#inspectorBtn').textContent = closed ? 'Show Inspector' : 'Inspector';
+      window.setTimeout(resizeCanvasStage, 220);
+    });
+    q('#workspaceFullscreenBtn')?.addEventListener('click', async () => {
+      try {
+        if (document.fullscreenElement) await document.exitFullscreen();
+        else await app.requestFullscreen();
+      } catch {
+        document.documentElement.classList.toggle('arix-fullscreen-fallback');
+      }
+    });
+    document.addEventListener('fullscreenchange', () => {
+      const b = q('#workspaceFullscreenBtn');
+      if (b) b.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Edit Fullscreen';
+      window.setTimeout(resizeCanvasStage, 120);
+    });
+  }
+
+  function isHeavyTarget(target) {
+    return !!target?.closest?.(heavySelector);
+  }
+
+  document.addEventListener('pointerdown', e => {
+    const t = e.target?.closest?.(heavySelector);
+    if (!t || t.disabled) return;
+    pointerWork = true;
+    const label = (t.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 44);
+    setWork(label || 'Working…', 'Applying your change. The preview will update when the operation finishes.');
+  }, true);
+
+  document.addEventListener('pointerup', e => {
+    if (!pointerWork || !isHeavyTarget(e.target)) return;
+    deferHide(450);
+  }, true);
+
+  document.addEventListener('input', e => {
+    const t = e.target;
+    if (!(t instanceof HTMLInputElement) || t.type !== 'range') return;
+    const heavyParent = t.closest('.section, .modal-body, #leftContent, #inspectorContent');
+    if (!heavyParent) return;
+    pointerWork = true;
+    const label = t.closest('.field')?.querySelector('label')?.textContent?.trim() || 'Updating control';
+    setWork(label, 'Processing the preview while you adjust this setting…');
+    window.clearTimeout(workTimer);
+    workTimer = window.setTimeout(() => hideWork(), 600);
+  }, true);
+
+  document.addEventListener('change', e => {
+    if (e.target === q('#fileInput') || e.target === q('#folderInput')) {
+      if (!(e.target.files?.length)) return;
+      setWork('Importing media', 'Reading your files and preparing thumbnails and metadata…');
+      window.clearTimeout(importTimer);
+      importTimer = window.setTimeout(() => hideWork(), 1800);
+    }
+  }, true);
+
+  new MutationObserver(() => {
+    const s = (status?.textContent || '').trim();
+    const match = s.match(/Exporting\s+(\d+)%/i);
+    if (match) {
+      setWork('Exporting video', 'Rendering the timeline into the browser-supported export format…', Number(match[1]));
+      return;
+    }
+    if (/^Exporting/i.test(s)) {
+      setWork('Exporting video', 'Rendering the timeline into the browser-supported export format…');
+      return;
+    }
+    if (/Export complete/i.test(s)) {
+      workTitle.textContent = 'Export complete';
+      workDetail.textContent = 'Your rendered video has been created successfully.';
+      workProgressWrap.classList.remove('hidden');
+      workPercent.classList.remove('hidden');
+      workProgress.style.width = '100%';
+      workPercent.textContent = '100%';
+      hideWork(900);
+    }
+  }).observe(status, { childList: true, characterData: true, subtree: true });
+
+  function bootEnhancements() {
+    bindWorkspaceButtons();
+    observeMedia();
+    updatePreviewState();
+    resizeCanvasStage();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootEnhancements, { once: true });
+  else bootEnhancements();
+})();
+</script>
 
 <script src="videdit.js" defer></script>
 </body></html>
