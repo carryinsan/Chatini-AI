@@ -4732,19 +4732,47 @@ if (
                                 'noopener,noreferrer'
                             );
                         }
-                    }
-                });
+                        }
+                    });
+                }
+            });
+
+            // --- INJECT EDIT BUTTON FOR IMAGES & VIDEOS ---
+            const mediaUrl = detectedVideo 
+                ? (aiMsgObj.container.querySelector('video source')?.src || aiMsgObj.container.querySelector('video')?.src)
+                : aiMsgObj.container.querySelector('img')?.src;
+
+            if (mediaUrl) {
+                const editBase = detectedVideo 
+                    ? 'https://lexis-ai-chatini.vercel.app/videoedit.html' 
+                    : 'https://lexis-ai-chatini.vercel.app/imageedit.html';
+                
+                const editUrl = `${editBase}?url=${encodeURIComponent(mediaUrl)}`;
+                const icon = detectedVideo ? 'ph-magic-wand' : 'ph-paint-brush';
+                const text = detectedVideo ? 'Edit Video' : 'Edit Image';
+                const color = detectedVideo ? 'violet' : 'fuchsia';
+                
+                aiMsgObj.container.insertAdjacentHTML('beforeend', `
+                    <div class="mt-3 flex items-center w-full">
+                        <a href="${editUrl}" target="_blank" class="flex items-center gap-2 bg-${color}-50 hover:bg-${color}-100 text-${color}-700 border border-${color}-200 px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-sm">
+                            <i class="ph-bold ${icon} text-lg"></i> ${text}
+                        </a>
+                    </div>
+                `);
+                
+                // Update htmlWidget so the edit button is saved to chat history
+                htmlWidget = aiMsgObj.container.innerHTML;
             }
-        });
+            // -----------------------------------------------
 
-        messages.push({
-            role: 'assistant',
-            content: htmlWidget,
-            id: aiMsgObj.id,
-            modelId: activeModelId
-        });
+            messages.push({
+                role: 'assistant',
+                content: htmlWidget,
+                id: aiMsgObj.id,
+                modelId: activeModelId
+            });
 
-        saveCurrentChat();
+            saveCurrentChat();
 
         sendTelemetry(
             modality === 'video' ? 'video_generation' : 'image_generation',
