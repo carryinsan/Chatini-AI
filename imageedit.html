@@ -4,108 +4,381 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b0d12">
+<meta name="theme-color" content="#080b10">
+<meta name="color-scheme" content="dark">
 <title>ArixGen — Pure Image Editor</title>
 <style>
-:root{--bg:#0b0d12;--panel:#11151c;--panel2:#171c24;--line:#252c37;--text:#eef2f7;--muted:#93a0b3;--accent:#7c5cff;--accent2:#32d5ff;--good:#3bd88f;--danger:#ff6574;--white:#fff;--shadow:0 18px 50px rgba(0,0,0,.28)}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font:13px/1.35 Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;overflow:hidden}button,input,select{font:inherit}button{color:inherit}
-.app{height:100%;display:grid;grid-template-rows:54px 1fr 30px;background:radial-gradient(circle at 70% 15%,rgba(124,92,255,.07),transparent 32%),var(--bg)}
-.topbar{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--line);padding:8px 12px;background:rgba(11,13,18,.92);backdrop-filter:blur(18px);z-index:10}.brand{display:flex;align-items:center;gap:9px;padding-right:8px}.logo{width:28px;height:28px;border-radius:9px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:white;font-weight:900;box-shadow:0 8px 22px rgba(124,92,255,.25)}.brand strong{font-size:15px;letter-spacing:.2px}.brand small{display:block;color:var(--muted);font-size:10px}.docTitle{width:180px;background:transparent;border:1px solid transparent;color:var(--muted);padding:7px 9px;border-radius:8px}.docTitle:focus{outline:none;border-color:var(--line);background:var(--panel)}.spacer{flex:1}.topAction,.menuBtn{background:var(--panel2);border:1px solid var(--line);padding:7px 10px;border-radius:8px;cursor:pointer}.topAction:hover,.menuBtn:hover{border-color:#394554;background:#1b212b}.primary{background:linear-gradient(135deg,#7c5cff,#5e4bf2);border:0}.recover{display:none;background:rgba(59,216,143,.12);border-color:rgba(59,216,143,.25)}.recover.show{display:inline-flex}.menuWrap{position:relative}.menu{position:absolute;top:42px;left:0;min-width:230px;background:rgba(18,22,29,.98);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:12px;padding:7px;display:none;z-index:30}.menu.open{display:block}.menu button{width:100%;text-align:left;border:0;background:transparent;padding:8px 9px;border-radius:7px;cursor:pointer;display:flex;justify-content:space-between;gap:15px}.menu button:hover{background:#222935}.menu kbd,.commandResults kbd{color:var(--muted)}
-.workspace{display:grid;grid-template-columns:58px minmax(0,1fr) 330px;min-height:0}.leftbar{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;align-items:center;padding:8px 6px;gap:5px;overflow:auto}.tool{width:42px;height:40px;border-radius:9px;border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-size:16px;display:grid;place-items:center;position:relative}.tool span{font-size:9px;display:none}.tool:hover{background:#171c24;color:var(--text)}.tool.active{background:rgba(124,92,255,.17);border-color:rgba(124,92,255,.35);color:#fff}.toolSep{height:1px;background:var(--line);width:38px;margin:3px 0}.leftBottom{margin-top:auto;display:flex;flex-direction:column;gap:5px}.swatches{position:relative;width:42px;height:48px}.sw{position:absolute;width:24px;height:24px;border-radius:6px;border:1px solid #fff3;box-shadow:0 3px 9px #0005;cursor:pointer}.fg{left:4px;top:2px;z-index:2}.bg{right:4px;bottom:2px}.swap{position:absolute;right:-2px;top:19px;width:15px;height:15px;background:#222a34;border:1px solid #fff2;border-radius:4px;font-size:9px;cursor:pointer}
-.canvasArea{position:relative;min-width:0;min-height:0;background:radial-gradient(circle at center,#151a22, #0f1319 55%,#0d1015);overflow:hidden}.canvasWrap{position:absolute;inset:0;overflow:hidden}.canvas{width:100%;height:100%;display:block;touch-action:none}.canvasOverlay{position:absolute;top:12px;left:12px;display:flex;gap:7px;align-items:center}.pill{background:rgba(13,17,23,.84);border:1px solid var(--line);padding:7px 10px;border-radius:999px;color:var(--muted);backdrop-filter:blur(10px)}.hintDrop{position:absolute;inset:20px;border:2px dashed rgba(124,92,255,.7);border-radius:20px;display:none;place-items:center;background:rgba(124,92,255,.08);font-size:20px;font-weight:700;z-index:5}.hintDrop.show{display:grid}.measure{position:absolute;bottom:12px;left:12px;background:rgba(13,17,23,.9);padding:7px 10px;border:1px solid var(--line);border-radius:8px;color:var(--muted)}
-.rightbar{border-left:1px solid var(--line);background:var(--panel);min-width:0;display:flex;flex-direction:column}.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}.tab{padding:10px 5px;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted);cursor:pointer}.tab.active{color:#fff;border-color:var(--accent)}.tabContent{display:none;min-height:0;overflow:auto;padding:12px}.tabContent.active{display:block}.section{border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.02);padding:10px;margin-bottom:10px}.section h3{margin:0 0 9px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#a9b4c6}.row{display:grid;grid-template-columns:1fr 1fr;gap:7px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}.field{display:flex;flex-direction:column;gap:4px}.field label,.section label{color:var(--muted);font-size:11px}.field input,.field select,.section input,.section select,.section textarea{width:100%;background:#0d1117;border:1px solid var(--line);color:#fff;padding:7px;border-radius:7px;outline:none}.field input:focus,.field select:focus,.section input:focus{border-color:#495669}.smallBtn{width:100%;background:#171c24;border:1px solid var(--line);padding:7px;border-radius:7px;cursor:pointer}.smallBtn:hover{background:#202733}.btnGrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.btnGrid button{background:#171c24;border:1px solid var(--line);border-radius:7px;padding:7px;cursor:pointer;text-align:left}.btnGrid button:hover{background:#202733}.stack{display:flex;flex-direction:column;gap:5px}.stackItem{display:flex;justify-content:space-between;align-items:center;background:#0d1117;border:1px solid var(--line);padding:7px 8px;border-radius:7px}.stackItem button,.snapshotItem button{background:transparent;border:0;color:var(--muted);cursor:pointer}.empty{color:var(--muted);font-size:12px;padding:8px}.adjustPanel label{display:flex;flex-direction:column;gap:4px;margin-bottom:8px}.adjustPanel label span{display:grid;grid-template-columns:1fr 38px;gap:7px;align-items:center}.adjustPanel output{color:#fff;text-align:right;font-variant-numeric:tabular-nums}.layerSearch{margin-bottom:7px}.layerItem{display:grid;grid-template-columns:26px 34px 1fr auto;gap:7px;align-items:center;padding:7px 6px;border:1px solid transparent;border-radius:8px;margin-bottom:3px;cursor:pointer}.layerItem:hover{background:#171c24}.layerItem.active{background:rgba(124,92,255,.13);border-color:rgba(124,92,255,.25)}.eye{border:0;background:transparent;color:var(--muted);cursor:pointer}.thumb{width:34px;height:26px;border-radius:5px;background:#202632;display:grid;place-items:center;font-weight:700;color:#b8c2d1}.thumb.text{background:#273042}.thumb.shape{background:#22263a}.layerName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.layerMeta{color:var(--muted);font-size:10px}.contextTitle{font-weight:800}.hint{font-size:11px;color:var(--muted);margin-top:4px}.snapshotItem{display:grid;grid-template-columns:1fr 26px 26px;align-items:center;background:#0d1117;border:1px solid var(--line);border-radius:7px;padding:6px}.historyItem{width:100%;background:transparent;border:0;border-bottom:1px solid #1b222b;padding:7px 5px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;gap:8px}.historyItem:hover{background:#171c24}.historyItem small{color:var(--muted)}
-.statusbar{display:flex;align-items:center;gap:12px;padding:0 10px;border-top:1px solid var(--line);background:#0d1015;color:var(--muted);font-size:11px}.statusRight{margin-left:auto}.statusDot{width:6px;height:6px;border-radius:50%;background:var(--good);display:inline-block}.focusMode .leftbar,.focusMode .rightbar,.focusMode .topbar{display:none}.focusMode .workspace{grid-template-columns:1fr}.focusMode .app{grid-template-rows:1fr}.focusMode .statusbar{display:none}
-.palette{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-start;justify-content:center;padding-top:90px;z-index:50}.palette.open{display:flex}.paletteInner{width:min(660px,calc(100vw - 30px));background:#11161d;border:1px solid #303846;border-radius:14px;box-shadow:0 25px 90px #0008;overflow:hidden}.commandInput{width:100%;padding:16px;border:0;border-bottom:1px solid var(--line);background:#0c1015;color:#fff;font-size:16px;outline:none}.commandResults{max-height:470px;overflow:auto;padding:7px}.commandResults button{width:100%;display:flex;justify-content:space-between;background:transparent;border:0;padding:10px 11px;border-radius:8px;cursor:pointer;text-align:left}.commandResults button:hover{background:#202733}.modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.58);backdrop-filter:blur(6px);display:none;place-items:center;z-index:40}.modalBackdrop.open{display:grid}.modal{width:min(720px,calc(100vw - 24px));max-height:min(84vh,760px);overflow:auto;background:#11161d;border:1px solid #2e3744;border-radius:16px;box-shadow:var(--shadow)}.modalHead{display:flex;align-items:center;padding:14px;border-bottom:1px solid var(--line)}.modalHead h2{font-size:15px;margin:0}.modalHead button{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:20px}.modalBody{padding:15px}.modalActions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}.modalActions button,.modalBody>button{border:1px solid var(--line);background:#1a2029;border-radius:8px;padding:8px 10px;cursor:pointer}.modalActions button:first-child,.modalBody>button:first-of-type{background:#6f55ef;border-color:transparent}.templateGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}.templateCard{background:#171d26;border:1px solid var(--line);padding:16px;border-radius:12px;text-align:left;cursor:pointer;min-height:100px}.templateCard:hover{border-color:#4b5670;transform:translateY(-1px)}.templateCard strong{display:block;font-size:14px}.templateCard span{display:block;color:var(--muted);font-size:11px;margin-top:6px}.batchGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.batchGrid label{display:flex;flex-direction:column;gap:4px;color:var(--muted)}.guideForm{display:grid;gap:10px}.guideForm label{display:flex;flex-direction:column;gap:5px;color:var(--muted)}.guideList{display:flex;flex-direction:column;gap:4px}.guideList>div{background:#0d1117;border:1px solid var(--line);border-radius:8px;padding:7px;display:flex;justify-content:space-between}.guideList button{background:transparent;border:0;cursor:pointer}.macroList{max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:8px}.macroList div{padding:7px 8px;border-bottom:1px solid #1d2430;color:#c6ceda}.featureCols{columns:2;column-gap:24px}.featureCols div{break-inside:avoid;padding:4px 0;color:#bdc6d4}.featureCols b{color:#fff}.toast{position:fixed;left:50%;bottom:46px;transform:translate(-50%,15px);background:#171d26;border:1px solid #364154;padding:9px 12px;border-radius:999px;color:#fff;opacity:0;transition:.2s;z-index:70;box-shadow:var(--shadow)}.toast.show{opacity:1;transform:translate(-50%,0)}
-@media(max-width:1000px){.workspace{grid-template-columns:52px minmax(0,1fr) 290px}.brand small{display:none}.docTitle{width:130px}.topbar .menuWrap:nth-of-type(n+4){display:none}}@media(max-width:760px){.app{grid-template-rows:50px 1fr 28px}.workspace{grid-template-columns:50px 1fr}.rightbar{position:absolute;right:0;top:50px;bottom:28px;width:min(330px,86vw);z-index:15;box-shadow:var(--shadow);transform:translateX(100%);transition:.2s}.rightbar:focus-within,.rightbar:hover{transform:translateX(0)}.topbar{gap:5px}.topAction{padding:6px 8px}.topbar .menuWrap{display:none}.docTitle{flex:1;min-width:90px}.leftbar{padding:5px 4px}.tool{width:40px;height:38px}}
+:root{
+  --bg:#080b10;--surface:#0d1219;--surface2:#111822;--surface3:#151d28;--surface4:#1a2430;
+  --line:#222d3a;--line2:#2b3746;--text:#f4f7fb;--muted:#8e9caf;--muted2:#647286;
+  --accent:#765cff;--accent2:#33c9ff;--good:#39d98a;--warn:#f7c95f;--danger:#ff6676;
+  --shadow:0 24px 90px rgba(0,0,0,.42);--radius:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;background:var(--bg);color:var(--text);font:13px/1.4 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;overflow:hidden}
+button,input,select,textarea{font:inherit}button{color:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid rgba(118,92,255,.75);outline-offset:1px}
+
+.app{height:100%;display:grid;grid-template-rows:58px minmax(0,1fr) 34px;background:var(--bg)}
+.app.isFullscreen{grid-template-rows:1fr}
+
+/* Top navigation */
+.topbar{display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(8,11,16,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(22px);z-index:30}
+.brand{display:flex;align-items:center;gap:10px;min-width:148px;padding:0 6px 0 1px}.logo{width:31px;height:31px;border-radius:10px;display:grid;place-items:center;font-weight:900;color:#fff;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 8px 25px rgba(118,92,255,.23)}
+.brand strong{display:block;font-size:15px;letter-spacing:.15px}.brand small{display:block;color:var(--muted2);font-size:10px;margin-top:1px}
+.docTitle{width:220px;max-width:24vw;background:transparent;color:var(--muted);border:1px solid transparent;padding:8px 10px;border-radius:9px}.docTitle:hover{background:rgba(255,255,255,.025)}.docTitle:focus{border-color:var(--line2);background:var(--surface)}
+.spacer{flex:1}.topAction,.menuBtn{display:inline-flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--line);padding:8px 11px;border-radius:9px;cursor:pointer;transition:.16s ease}.topAction:hover,.menuBtn:hover{background:var(--surface3);border-color:var(--line2);transform:translateY(-1px)}.topAction.primary{background:linear-gradient(135deg,#765cff,#5943ea);border:0;box-shadow:0 8px 22px rgba(118,92,255,.22)}.recover{display:none;background:rgba(57,217,138,.08);border-color:rgba(57,217,138,.22)}.recover.show{display:inline-flex}
+.menuWrap{position:relative}.menu{position:absolute;top:43px;left:0;min-width:245px;background:rgba(14,18,25,.985);border:1px solid var(--line2);border-radius:13px;padding:7px;box-shadow:var(--shadow);display:none;z-index:60}.menu.open{display:block}.menu button{width:100%;display:flex;justify-content:space-between;gap:16px;text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:8px;cursor:pointer}.menu button:hover{background:var(--surface3)}.menu kbd,.commandResults kbd{color:var(--muted2);font-size:11px}
+
+/* Main workspace */
+.workspace{display:grid;grid-template-columns:74px minmax(0,1fr) 372px;min-height:0;overflow:hidden}
+.leftbar{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 7px;background:linear-gradient(180deg,#0d1219,#0b0f15);border-right:1px solid var(--line);overflow:auto;z-index:20}
+.tool{position:relative;width:50px;height:44px;display:grid;place-items:center;border:1px solid transparent;background:transparent;color:#8d99ab;border-radius:11px;cursor:pointer;font-size:17px;transition:.14s ease}.tool span{display:block;font-size:8px;line-height:1;color:var(--muted2);position:absolute;bottom:4px;letter-spacing:.02em}.tool:hover{background:var(--surface2);color:#fff}.tool.active{background:rgba(118,92,255,.17);border-color:rgba(118,92,255,.35);color:#fff;box-shadow:inset 0 0 0 1px rgba(118,92,255,.06)}.toolSep{height:1px;width:44px;background:var(--line);margin:4px 0}
+.leftBottom{margin-top:auto;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:8px}.swatches{position:relative;width:50px;height:52px}.sw{position:absolute;width:27px;height:27px;border:1px solid rgba(255,255,255,.35);border-radius:8px;box-shadow:0 5px 14px rgba(0,0,0,.35);cursor:pointer}.fg{left:4px;top:2px;z-index:2}.bg{right:4px;bottom:2px}.swap{position:absolute;right:-1px;top:19px;width:18px;height:18px;border:1px solid var(--line2);background:var(--surface3);border-radius:5px;font-size:10px;cursor:pointer;z-index:3}
+
+/* Canvas stage */
+.canvasArea{position:relative;min-width:0;min-height:0;overflow:hidden;background:radial-gradient(circle at 50% 44%,#1a222d 0,#10161e 44%,#0b0f15 78%)}
+.canvasWrap{position:absolute;inset:0;overflow:hidden;isolation:isolate}
+.canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:default}
+.stageShade{position:absolute;inset:0;z-index:2;pointer-events:none}.stageShade>i{position:absolute;display:block;background:rgba(3,5,9,.64);opacity:.94}.shadeTop,.shadeBottom{left:0;right:0}.shadeLeft,.shadeRight{top:0;bottom:0}.docEdge{position:absolute;z-index:3;pointer-events:none;border:1px solid rgba(255,255,255,.24);box-shadow:0 32px 80px rgba(0,0,0,.45),0 0 0 1px rgba(0,0,0,.18);border-radius:2px;opacity:1}
+.canvasTopbar{position:absolute;top:13px;left:15px;right:15px;display:flex;align-items:center;gap:8px;z-index:8;pointer-events:none}.canvasTopbar>*{pointer-events:auto}
+.pill{display:inline-flex;align-items:center;gap:6px;min-height:32px;background:rgba(10,14,20,.76);border:1px solid rgba(255,255,255,.08);padding:7px 10px;border-radius:999px;color:#c2ccda;backdrop-filter:blur(12px);box-shadow:0 8px 24px rgba(0,0,0,.14)}
+.pill.subtle{color:var(--muted2)}.statusDot{width:7px;height:7px;border-radius:999px;background:var(--good);box-shadow:0 0 9px rgba(57,217,138,.35)}
+.viewTools{margin-left:auto;display:flex;align-items:center;gap:5px}.viewBtn{height:32px;padding:0 10px;border-radius:9px;background:rgba(10,14,20,.76);border:1px solid rgba(255,255,255,.08);color:#c5ceda;cursor:pointer;backdrop-filter:blur(12px)}.viewBtn:hover{background:rgba(20,27,36,.9);color:#fff}
+.canvasHint{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);z-index:8;background:rgba(9,13,19,.78);border:1px solid rgba(255,255,255,.08);padding:7px 11px;border-radius:999px;color:#8897aa;font-size:11px;pointer-events:none;backdrop-filter:blur(12px)}
+.measure{position:absolute;left:15px;bottom:15px;z-index:8;background:rgba(9,13,19,.8);padding:8px 10px;border:1px solid rgba(255,255,255,.08);border-radius:9px;color:#8d9aab;backdrop-filter:blur(12px);box-shadow:0 10px 28px rgba(0,0,0,.16)}
+.hintDrop{position:absolute;inset:18px;border:2px dashed rgba(118,92,255,.7);border-radius:18px;display:none;place-items:center;background:rgba(118,92,255,.08);font-size:18px;font-weight:800;z-index:12}.hintDrop.show{display:grid}
+.welcome{position:absolute;z-index:10;left:50%;top:50%;transform:translate(-50%,-46%);width:min(470px,calc(100% - 44px));padding:28px 28px 24px;background:rgba(12,17,24,.9);border:1px solid rgba(255,255,255,.1);border-radius:20px;box-shadow:0 30px 100px rgba(0,0,0,.44);backdrop-filter:blur(18px);text-align:center;transition:.25s ease}.welcome.hidden{opacity:0;visibility:hidden;transform:translate(-50%,-42%) scale(.98);pointer-events:none}.welcomeMark{width:56px;height:56px;margin:0 auto 15px;border-radius:17px;display:grid;place-items:center;font-size:25px;font-weight:900;background:linear-gradient(135deg,rgba(118,92,255,.24),rgba(51,201,255,.16));border:1px solid rgba(118,92,255,.32)}.welcome h1{font-size:22px;line-height:1.15;margin:0 0 8px}.welcome p{margin:0 auto 19px;max-width:370px;color:var(--muted);line-height:1.55}.welcomeActions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.welcomeActions button{padding:10px 14px;border-radius:10px;cursor:pointer;border:1px solid var(--line2);background:var(--surface3)}.welcomeActions .primaryAction{border:0;background:linear-gradient(135deg,#765cff,#5b46e9);box-shadow:0 10px 24px rgba(118,92,255,.2)}.welcomeMeta{display:flex;justify-content:center;gap:13px;margin-top:16px;color:#69778a;font-size:11px}
+
+/* Inspector */
+.rightbar{min-width:0;display:flex;flex-direction:column;background:linear-gradient(180deg,#0d1219,#0b1016);border-left:1px solid var(--line);overflow:hidden}.panelHeader{padding:10px 12px 9px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}.panelHeader strong{font-size:12px}.panelHeader span{font-size:10px;color:var(--muted2)}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line);background:#0b0f15}.tab{padding:11px 4px;background:transparent;border:0;border-bottom:2px solid transparent;color:var(--muted2);cursor:pointer;font-weight:650}.tab:hover{color:#cbd4df}.tab.active{color:#fff;border-color:var(--accent);background:rgba(118,92,255,.05)}
+.tabContent{display:none;min-height:0;overflow:auto;padding:12px}.tabContent.active{display:block}
+.section{border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.017);padding:11px;margin-bottom:10px}.section h3{margin:0 0 9px;font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:#8e9bad}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}.field{display:flex;flex-direction:column;gap:5px}.field label,.section label{color:var(--muted2);font-size:10px}.field input,.field select,.section input,.section select,.section textarea{width:100%;min-width:0;background:#0a0f15;border:1px solid var(--line);color:#eef2f7;padding:8px;border-radius:8px;outline:none}.field input:focus,.field select:focus,.section input:focus,.section select:focus{border-color:#4a586b}.smallBtn{width:100%;background:var(--surface3);border:1px solid var(--line);padding:8px 9px;border-radius:8px;cursor:pointer}.smallBtn:hover{background:var(--surface4);border-color:var(--line2)}.btnGrid{display:grid;grid-template-columns:1fr 1fr;gap:7px}.btnGrid button{background:var(--surface3);border:1px solid var(--line);border-radius:8px;padding:8px 9px;cursor:pointer;text-align:left}.btnGrid button:hover{background:var(--surface4);border-color:var(--line2)}
+.adjustPanel label{display:flex;flex-direction:column;gap:5px;margin-bottom:10px}.adjustPanel label span{display:grid;grid-template-columns:1fr 40px;gap:8px;align-items:center}.adjustPanel output{color:#fff;text-align:right;font-variant-numeric:tabular-nums}.layerSearch{margin-bottom:8px}.layerItem{display:grid;grid-template-columns:25px 38px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 7px;border:1px solid transparent;border-radius:9px;margin-bottom:3px;cursor:pointer}.layerItem:hover{background:var(--surface2)}.layerItem.active{background:rgba(118,92,255,.13);border-color:rgba(118,92,255,.25)}.eye{border:0;background:transparent;color:var(--muted2);cursor:pointer}.thumb{width:38px;height:28px;border-radius:6px;background:#202a36;display:grid;place-items:center;font-weight:800;color:#b6c1d0}.thumb.text{background:#252f40}.thumb.shape{background:#272840}.layerName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.layerMeta{color:var(--muted2);font-size:9px}.stack{display:flex;flex-direction:column;gap:5px}.stackItem{display:flex;justify-content:space-between;align-items:center;background:#0a0f15;border:1px solid var(--line);padding:8px;border-radius:8px}.stackItem button,.snapshotItem button{background:transparent;border:0;color:var(--muted);cursor:pointer}.empty{color:var(--muted2);font-size:11px;padding:8px}.contextTitle{font-weight:800}.hint{font-size:10px;color:var(--muted2);margin-top:4px}.snapshotItem{display:grid;grid-template-columns:1fr 26px 26px;align-items:center;background:#0a0f15;border:1px solid var(--line);border-radius:8px;padding:7px}.historyItem{width:100%;background:transparent;border:0;border-bottom:1px solid #18212b;padding:8px 5px;text-align:left;cursor:pointer;display:flex;justify-content:space-between;gap:8px}.historyItem:hover{background:var(--surface2)}.historyItem small{color:var(--muted2)}
+
+/* Bottom bar */
+.statusbar{display:flex;align-items:center;gap:12px;padding:0 12px;background:#0a0e14;border-top:1px solid var(--line);color:#718093;font-size:10px;z-index:20}.statusRight{margin-left:auto}.focusMode .leftbar,.focusMode .rightbar,.focusMode .topbar,.focusMode .statusbar{display:none}.focusMode .workspace{grid-template-columns:1fr}.focusMode .canvasArea{position:fixed;inset:0;z-index:100;background:#080b10}.focusMode .welcome{z-index:105}
+
+/* Dialogs / palette */
+.palette{position:fixed;inset:0;background:rgba(0,0,0,.56);display:none;align-items:flex-start;justify-content:center;padding-top:86px;z-index:200;backdrop-filter:blur(7px)}.palette.open{display:flex}.paletteInner{width:min(700px,calc(100vw - 28px));background:#0f151d;border:1px solid var(--line2);border-radius:16px;box-shadow:0 32px 110px rgba(0,0,0,.6);overflow:hidden}.commandInput{width:100%;padding:17px;border:0;border-bottom:1px solid var(--line);background:#0a0f15;color:#fff;font-size:16px;outline:none}.commandResults{max-height:480px;overflow:auto;padding:7px}.commandResults button{width:100%;display:flex;justify-content:space-between;background:transparent;border:0;padding:10px 11px;border-radius:8px;cursor:pointer;text-align:left}.commandResults button:hover{background:var(--surface3)}
+.modalBackdrop{position:fixed;inset:0;background:rgba(0,0,0,.62);backdrop-filter:blur(8px);display:none;place-items:center;z-index:180}.modalBackdrop.open{display:grid}.modal{width:min(760px,calc(100vw - 24px));max-height:min(86vh,780px);overflow:auto;background:#0f151d;border:1px solid var(--line2);border-radius:17px;box-shadow:0 32px 110px rgba(0,0,0,.58)}.modalHead{position:sticky;top:0;display:flex;align-items:center;padding:14px 16px;background:rgba(15,21,29,.96);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);z-index:2}.modalHead h2{font-size:15px;margin:0}.modalHead button{margin-left:auto;border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:21px}.modalBody{padding:16px}.modalActions{display:flex;justify-content:flex-end;gap:8px;margin-top:15px;flex-wrap:wrap}.modalActions button,.modalBody>button{border:1px solid var(--line2);background:var(--surface3);border-radius:9px;padding:8px 11px;cursor:pointer}.modalActions button:hover,.modalBody>button:hover{background:var(--surface4)}.featureCols{display:grid;grid-template-columns:1fr 1fr;gap:7px}.featureCols>div{padding:8px 9px;background:#0a0f15;border:1px solid var(--line);border-radius:8px;color:#c0cad7;font-size:11px}.featureCols b{color:var(--accent2);font-variant-numeric:tabular-nums}.guideForm label{display:grid;gap:5px;margin-bottom:10px}.guideList{display:grid;gap:6px;margin-top:12px}.guideList>div{display:flex;justify-content:space-between;background:#0a0f15;border:1px solid var(--line);border-radius:8px;padding:8px}.templateGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.templateCard{min-height:110px;border:1px solid var(--line);background:linear-gradient(145deg,#121a24,#0c1118);border-radius:12px;padding:15px;text-align:left;cursor:pointer}.templateCard:hover{border-color:#4b596b;transform:translateY(-1px)}.templateCard strong{display:block;font-size:14px;margin-bottom:6px}.templateCard span{color:var(--muted);font-size:11px}.batchForm p{color:var(--muted);margin-top:0}.batchGrid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.batchGrid label{display:grid;gap:5px;color:var(--muted2)}.macroList{background:#0a0f15;border:1px solid var(--line);border-radius:10px;padding:9px;max-height:280px;overflow:auto}.macroList>div{padding:5px 2px;border-bottom:1px solid #18212b}.macroList>div:last-child{border-bottom:0}
+
+/* Busy / loading */
+.busyScreen{position:fixed;inset:0;background:rgba(4,7,11,.72);display:flex;align-items:center;justify-content:center;z-index:500;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .18s ease,visibility .18s ease;backdrop-filter:blur(7px)}.busyScreen.show{opacity:1;visibility:visible;pointer-events:auto}.busyCard{width:min(430px,calc(100vw - 38px));padding:25px 25px 22px;background:rgba(14,20,28,.97);border:1px solid var(--line2);border-radius:18px;box-shadow:0 36px 120px rgba(0,0,0,.65);text-align:center}.busyIcon{width:50px;height:50px;margin:0 auto 15px;border:3px solid rgba(255,255,255,.1);border-top-color:var(--accent);border-right-color:var(--accent2);border-radius:50%;animation:spin .78s linear infinite}.busyCard h2{margin:0 0 6px;font-size:17px}.busyCard p{margin:0;color:var(--muted);font-size:12px}.busyStage{margin-top:13px;display:flex;justify-content:center;gap:7px;color:#8998aa;font-size:10px}.busyStage i{width:6px;height:6px;border-radius:50%;background:#465466;animation:pulse 1s ease-in-out infinite}.busyStage i:nth-child(2){animation-delay:.15s}.busyStage i:nth-child(3){animation-delay:.3s}.busyTime{margin-top:10px;color:#5f6e80;font-size:10px;font-variant-numeric:tabular-nums}.startup{position:fixed;inset:0;background:#080b10;display:flex;align-items:center;justify-content:center;z-index:600;transition:opacity .35s ease,visibility .35s ease}.startup.done{opacity:0;visibility:hidden;pointer-events:none}.startupCard{text-align:center}.startupLogo{width:68px;height:68px;margin:0 auto 18px;border-radius:21px;display:grid;place-items:center;font-size:28px;font-weight:900;background:linear-gradient(135deg,var(--accent),var(--accent2));box-shadow:0 22px 60px rgba(118,92,255,.25)}.startupCard strong{font-size:20px;display:block}.startupCard span{display:block;margin-top:5px;color:var(--muted);font-size:11px}.startupLine{width:190px;height:3px;border-radius:999px;background:#1b2430;overflow:hidden;margin:17px auto 0}.startupLine i{display:block;width:42%;height:100%;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2));animation:loadline 1.2s ease-in-out infinite}
+.toast{position:fixed;left:50%;bottom:52px;transform:translate(-50%,10px);opacity:0;background:#111821;border:1px solid var(--line2);color:#e9eef5;padding:9px 12px;border-radius:9px;box-shadow:0 16px 45px rgba(0,0,0,.35);z-index:550;transition:.2s}.toast.show{opacity:1;transform:translate(-50%,0)}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes pulse{0%,100%{opacity:.28;transform:scale(.85)}50%{opacity:1;transform:scale(1)}}@keyframes loadline{0%{transform:translateX(-140%)}50%{transform:translateX(110%)}100%{transform:translateX(320%)}}
+
+@media (max-width:1100px){.workspace{grid-template-columns:66px minmax(0,1fr) 330px}.brand{min-width:118px}.docTitle{width:160px}.topAction .label{display:none}}
+@media (max-width:860px){.workspace{grid-template-columns:58px minmax(0,1fr)}.rightbar{position:absolute;top:58px;right:0;bottom:34px;width:min(380px,94vw);z-index:25;transform:translateX(100%);transition:transform .2s ease;box-shadow:-18px 0 50px rgba(0,0,0,.35)}.rightbar.open{transform:translateX(0)}.panelToggle{display:inline-flex!important}.docTitle{max-width:33vw}.welcome{width:min(440px,calc(100% - 28px))}}
+@media (max-width:620px){.topbar{padding:8px}.brand small,.brand strong{display:none}.brand{min-width:auto}.docTitle{max-width:35vw;width:130px}.topAction,.menuBtn{padding:8px}.workspace{grid-template-columns:56px minmax(0,1fr)}.tool{width:44px}.viewTools .viewBtn:nth-child(n+4){display:none}.canvasHint{display:none}.measure{left:8px;bottom:8px;max-width:calc(100% - 16px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.featureCols,.templateGrid,.batchGrid{grid-template-columns:1fr}.welcome{padding:22px 19px}.welcome h1{font-size:19px}}
+.panelToggle{display:none;background:var(--surface2);border:1px solid var(--line);padding:8px 10px;border-radius:9px;cursor:pointer}
 </style>
 </head>
 <body>
-<div class="app">
-<header class="topbar">
-  <div class="brand"><div class="logo">A</div><div><strong>ArixGen</strong><small>Pure editing · local-first</small></div></div>
-  <input id="docTitle" class="docTitle" value="Untitled" aria-label="Document name">
-  <div class="menuWrap"><button class="menuBtn" data-menu="file">File</button><div class="menu" data-menu-panel="file"><button data-cmd="new">New document <kbd>Ctrl+N</kbd></button><button data-cmd="open">Open image / project <kbd>Ctrl+O</kbd></button><button data-cmd="save">Save .arix project <kbd>Ctrl+S</kbd></button><button data-cmd="export">Export image</button><button data-cmd="batch">Batch processing</button></div></div>
-  <div class="menuWrap"><button class="menuBtn" data-menu="edit">Edit</button><div class="menu" data-menu-panel="edit"><button data-cmd="undo">Undo <kbd>Ctrl+Z</kbd></button><button data-cmd="redo">Redo <kbd>Ctrl+Shift+Z</kbd></button><button data-cmd="copy">Copy pixels <kbd>Ctrl+C</kbd></button><button data-cmd="paste">Paste pixels <kbd>Ctrl+V</kbd></button><button data-cmd="clearSelection">Clear selection</button></div></div>
-  <div class="menuWrap"><button class="menuBtn" data-menu="image">Image</button><div class="menu" data-menu-panel="image"><button data-cmd="cropSelection">Crop selection</button><button data-cmd="grayscale">Black & white</button><button data-cmd="removeColor">Color to alpha</button><button data-cmd="fitCanvas">Fit layer to canvas</button><button data-cmd="flipH">Flip horizontally</button><button data-cmd="flipV">Flip vertically</button></div></div>
-  <div class="menuWrap"><button class="menuBtn" data-menu="layer">Layer</button><div class="menu" data-menu-panel="layer"><button data-cmd="newLayer">New raster layer</button><button data-cmd="newText">New text layer</button><button data-cmd="newShape">New shape</button><button data-cmd="newAdjustment">New adjustment layer</button><button data-cmd="duplicate">Duplicate</button><button data-cmd="group">Group</button><button data-cmd="ungroup">Ungroup</button><button data-cmd="merge">Merge group</button><button data-cmd="addMask">Add mask</button></div></div>
-  <div class="menuWrap"><button class="menuBtn" data-menu="select">Select</button><div class="menu" data-menu-panel="select"><button data-cmd="clearSelection">Clear selection</button><button data-cmd="invertSelection">Invert selection</button><button data-cmd="expandSelection">Expand</button><button data-cmd="contractSelection">Contract</button><button data-cmd="featherSelection">Feather</button></div></div>
-  <div class="menuWrap"><button class="menuBtn" data-menu="view">View</button><div class="menu" data-menu-panel="view"><button data-cmd="grid">Toggle grid</button><button id="guidesMenuBtn">Guides & grids</button><button id="resetViewMenuBtn">Fit canvas</button><button id="zoom100MenuBtn">100%</button><button id="isolateMenuBtn">Isolation mode</button><button id="focusBtn">Focus mode <kbd>Tab</kbd></button></div></div>
-  <div class="spacer"></div>
-  <button id="recoverBtn" class="topAction recover">Recover session</button><button id="newBtn" class="topAction">New</button><button id="openBtn" class="topAction">Open</button><button id="undoBtn" class="topAction">Undo</button><button id="redoBtn" class="topAction">Redo</button><button id="paletteBtn" class="topAction">⌘ Command</button><button id="featuresBtn" class="topAction">90 Features</button><button id="snapshotBtn" class="topAction">Snapshot</button><button id="macroBtn" class="topAction">Record macro</button><button id="compareBtn" class="topAction">Before / after</button><button id="saveBtn" class="topAction">Save</button><button id="exportBtn" class="topAction primary">Export</button>
-</header>
-<main class="workspace">
-  <aside class="leftbar" aria-label="Tools">
-    <button class="tool active" data-tool="move" title="Move (V)">↖</button>
-    <button class="tool" data-tool="brush" title="Brush (B)">✦</button>
-    <button class="tool" data-tool="eraser" title="Eraser (E)">⌫</button>
-    <button class="tool" data-tool="clone" title="Clone">⊕</button>
-    <button class="tool" data-tool="heal" title="Heal">✚</button>
-    <button class="tool" data-tool="blur" title="Blur">◌</button>
-    <button class="tool" data-tool="sharpen" title="Sharpen">✧</button>
-    <button class="tool" data-tool="dodge" title="Dodge">☼</button>
-    <button class="tool" data-tool="burn" title="Burn">◉</button>
-    <button class="tool" data-tool="smudge" title="Smudge">≈</button>
-    <div class="toolSep"></div>
-    <button class="tool" data-tool="crop" title="Crop (C)">▣</button>
-    <button class="tool" data-tool="marquee" title="Rectangle select (M)">▭</button>
-    <button class="tool" data-tool="lasso" title="Lasso select (Q)">⌁</button>
-    <button class="tool" data-tool="polygon" title="Polygon select">◇</button>
-    <button class="tool" data-tool="wand" title="Magic wand (W)">✥</button>
-    <div class="toolSep"></div>
-    <button class="tool" data-tool="rect" title="Rectangle (R)">□</button>
-    <button class="tool" data-tool="ellipse" title="Ellipse (O)">○</button>
-    <button class="tool" data-tool="line" title="Line (L)">／</button>
-    <button class="tool" data-tool="pen" title="Pen (P)">⌒</button>
-    <button class="tool" data-tool="text" title="Text (T)">T</button>
-    <button class="tool" data-tool="gradient" title="Gradient (G)">▰</button>
-    <button class="tool" data-tool="picker" title="Eyedropper (I)">◉</button>
-    <div class="toolSep"></div>
-    <button class="tool" id="measureBtn" title="Measure">↗</button>
-    <button class="tool" id="sliceBtn" title="Slice">▤</button>
-    <div class="leftBottom">
-      <div class="swatches"><button class="sw fg" id="fgSwatch" aria-label="Foreground color"></button><button class="sw bg" id="bgSwatch" aria-label="Background color"></button><button class="swap" id="swapColors">↔</button></div>
-      <input id="colorPicker" type="color" value="#111111" hidden><input id="colorPickerBg" type="color" value="#ffffff" hidden>
-    </div>
-  </aside>
-  <section class="canvasArea">
-    <div id="canvasWrap" class="canvasWrap"><canvas id="canvas" class="canvas" aria-label="ArixGen canvas"></canvas></div>
-    <div class="canvasOverlay"><span class="pill" id="toolLabel">Move</span><span class="pill"><span class="statusDot"></span> Local</span><span class="pill" id="zoomLabel">100%</span><span class="pill">GPU: <span id="gpuStatus">detecting…</span></span></div>
-    <div class="hintDrop" id="dropHint">Drop images or .arix projects anywhere</div>
-    <div class="measure">Tool: <b id="toolLabel2">Canvas</b> · Position: <b id="cursorText">—</b> · <span id="measureValue">Measure output appears here</span></div>
-  </section>
-  <aside class="rightbar">
-    <div class="tabs"><button class="tab active" data-tab="layers">Layers</button><button class="tab" data-tab="adjust">Adjust</button><button class="tab" data-tab="filters">Filters</button><button class="tab" data-tab="effects">Effects</button></div>
-    <section id="tab-layers" class="tabContent active">
-      <div class="section"><div class="row3"><button class="smallBtn" id="newLayerBtn">+ Layer</button><button class="smallBtn" id="newTextBtn">+ Text</button><button class="smallBtn" id="newShapeBtn">+ Shape</button></div></div>
-      <div class="section"><div class="row"><div class="field"><label>Position X</label><input id="posX" type="number"></div><div class="field"><label>Position Y</label><input id="posY" type="number"></div></div><div class="row"><div class="field"><label>Width</label><input id="width" type="number"></div><div class="field"><label>Height</label><input id="height" type="number"></div></div><div class="row"><div class="field"><label>Rotation</label><input id="rotate" type="number"></div><div class="field"><label>Opacity</label><input id="opacity" type="range" min="0" max="100" value="100"><output id="opacityValue">100%</output></div></div><div class="field"><label>Layer name</label><input id="layerName"></div><div class="field"><label>Blend mode</label><select id="blend"><option value="source-over">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft-light">Soft Light</option><option value="hard-light">Hard Light</option><option value="color-dodge">Color Dodge</option><option value="color-burn">Color Burn</option><option value="darken">Darken</option><option value="lighten">Lighten</option><option value="difference">Difference</option><option value="exclusion">Exclusion</option><option value="hue">Hue</option><option value="saturation">Saturation</option><option value="color">Color</option><option value="luminosity">Luminosity</option></select></div></div>
-      <div class="section"><div id="contextPanel"></div><div id="quickActions" class="btnGrid" style="margin-top:8px"></div></div>
-      <div class="section"><h3>Layers</h3><input id="searchLayers" class="layerSearch" placeholder="Search layers…"><div id="layers"></div><div class="btnGrid" style="margin-top:8px"><button id="duplicateBtn">Duplicate</button><button id="deleteBtn">Delete</button><button id="hideBtn">Hide / show</button><button id="lockBtn">Lock / unlock</button><button id="soloBtn">Solo</button><button id="isolateBtn">Isolate</button><button id="groupBtn">Group</button><button id="ungroupBtn">Ungroup</button><button id="mergeBtn">Merge</button><button id="maskBtn">Add mask</button><button id="applyMaskBtn">Apply mask</button><button id="invertMaskBtn">Invert mask</button></div></div>
-      <div class="section"><h3>Symmetry</h3><div class="row"><div class="field"><label>Mode</label><select id="symmetryMode"><option value="none">Off</option><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option><option value="radial">Radial</option><option value="mandala">Mandala</option></select></div><div class="field"><label>Count</label><input id="symmetryCount" type="number" min="2" max="24" value="8"></div></div></div>
-      <div class="section"><h3>Brush / selection controls</h3><div class="row"><div class="field"><label>Brush size</label><input id="brushSize" type="number" min="1" max="1000" value="32"></div><div class="field"><label>Brush opacity %</label><input id="brushOpacity" type="number" min="1" max="100" value="100"></div></div><div class="row"><div class="field"><label>Magic tolerance</label><input id="tolerance" type="number" min="0" max="255" value="32"></div><div class="field"><label>Feather px</label><input id="feather" type="number" min="0" max="200" value="0"></div></div><div class="field"><label>Foreground HEX</label><input id="hex" value="#111111"></div></div>
-    </section>
-    <section id="tab-adjust" class="tabContent">
-      <div class="section"><h3>Adjustments</h3><div id="adjustPanel" class="adjustPanel"></div><div class="btnGrid"><button id="applyAdjustments">Apply stack</button><button id="resetAdjustments">Reset sliders</button></div></div>
-      <div class="section"><h3>Technical</h3><div class="row"><div class="field"><label>Zoom</label><div class="btnGrid"><button id="zoomOut">−</button><button id="zoomIn">+</button></div></div><div class="field"><label>View</label><div class="btnGrid"><button id="zoom100PanelBtn">100%</button><button id="resetView">Fit</button></div></div></div><button class="smallBtn" style="margin-top:8px" onclick="ArixGen.executeCommand('templates')">Templates</button><button class="smallBtn" style="margin-top:6px" onclick="ArixGen.executeCommand('batch')">Batch processing</button></div>
-    </section>
-    <section id="tab-filters" class="tabContent">
-      <div class="section"><h3>Filter library</h3><div id="filterGrid" class="btnGrid">
-        <button data-filter="gaussian">Gaussian blur</button><button data-filter="motion">Motion blur</button><button data-filter="radial">Radial blur</button><button data-filter="sharpen">Sharpen</button><button data-filter="unsharp">Unsharp mask</button><button data-filter="noise">Film grain</button><button data-filter="grayscale">Grayscale</button><button data-filter="edge">Edge detect</button><button data-filter="emboss">Emboss</button><button data-filter="pixelate">Pixelate</button><button data-filter="halftone">Halftone</button><button data-filter="posterize">Posterize</button><button data-filter="vignette">Vignette</button><button data-filter="glow">Glow</button><button data-filter="ripple">Ripple</button><button data-filter="twirl">Twirl</button><button data-filter="spherize">Spherize</button>
-      </div></div><div class="section"><h3>Active stack</h3><div id="activeFilters" class="stack"></div></div>
-    </section>
-    <section id="tab-effects" class="tabContent">
-      <div class="section"><h3>Layer effects</h3><div id="effectGrid" class="btnGrid"><button data-effect="shadow">Drop shadow</button><button data-effect="innerShadow">Inner shadow</button><button data-effect="glow">Glow</button><button data-effect="stroke">Stroke</button><button data-effect="bevel">Bevel</button><button data-effect="innerGlow">Inner glow</button><button data-effect="colorOverlay">Color overlay</button><button data-effect="gradientOverlay">Gradient overlay</button></div></div><div class="section"><h3>Effect stack</h3><div id="activeEffects" class="stack"></div></div>
-      <div class="section"><h3>Snapshots</h3><div id="snapshots" class="stack"></div></div>
-      <div class="section"><h3>History</h3><div id="history"></div></div>
-    </section>
-  </aside>
-</main>
-<footer class="statusbar"><span id="statusText">1200×800 · 1/1 visible · raster</span><span>Tool: <b id="toolLabelBottom">local</b></span><span class="statusRight">No upload · no AI · local document</span></footer>
+<div id="startup" class="startup" aria-live="polite">
+  <div class="startupCard"><div class="startupLogo">A</div><strong>ArixGen</strong><span>Preparing your local editing workspace…</span><div class="startupLine"><i></i></div></div>
 </div>
-<input id="fileInput" type="file" accept="image/*,.arix,image/svg+xml" hidden><input id="importInput" type="file" accept="image/*,.arix,image/svg+xml" hidden>
+
+<div class="app" id="app">
+  <header class="topbar">
+    <div class="brand"><div class="logo">A</div><div><strong>ArixGen</strong><small>Pure image editing · local</small></div></div>
+    <div class="menuWrap"><button class="menuBtn" data-menu="file" aria-haspopup="menu">File <span>⌄</span></button><div class="menu" data-menu-panel="file">
+      <button data-cmd="new"><span>New document</span><kbd>Ctrl+N</kbd></button><button data-cmd="open"><span>Open image / project</span><kbd>Ctrl+O</kbd></button><button data-cmd="save"><span>Save project</span><kbd>Ctrl+S</kbd></button><button data-cmd="export"><span>Export image</span><kbd>Ctrl+E</kbd></button>
+    </div></div>
+    <div class="menuWrap"><button class="menuBtn" data-menu="edit" aria-haspopup="menu">Edit <span>⌄</span></button><div class="menu" data-menu-panel="edit">
+      <button data-cmd="undo"><span>Undo</span><kbd>Ctrl+Z</kbd></button><button data-cmd="redo"><span>Redo</span><kbd>Ctrl+Shift+Z</kbd></button><button data-cmd="duplicate"><span>Duplicate layer</span><kbd>Ctrl+D</kbd></button><button data-cmd="copy"><span>Copy pixels</span><kbd>Ctrl+C</kbd></button><button id="pasteBtn" data-cmd="paste"><span>Paste pixels</span><kbd>Ctrl+V</kbd></button><button data-cmd="clearSelection"><span>Clear selection</span><kbd>Esc</kbd></button>
+    </div></div>
+    <div class="menuWrap"><button class="menuBtn" data-menu="image" aria-haspopup="menu">Image <span>⌄</span></button><div class="menu" data-menu-panel="image">
+      <button data-cmd="grayscale"><span>Black &amp; white</span></button><button data-cmd="sharpen"><span>Sharpen</span></button><button data-cmd="removeColor"><span>Color → alpha</span></button><button data-cmd="flipH"><span>Flip horizontally</span></button><button data-cmd="flipV"><span>Flip vertically</span></button><button data-cmd="fitCanvas"><span>Fit layer to canvas</span></button>
+    </div></div>
+    <div class="menuWrap"><button class="menuBtn" data-menu="view" aria-haspopup="menu">View <span>⌄</span></button><div class="menu" data-menu-panel="view">
+      <button id="zoom100MenuBtn" data-cmd="zoom100"><span>100% zoom</span><kbd>Actual size</kbd></button><button id="resetViewMenuBtn" data-cmd="fitView"><span>Fit canvas in workspace</span></button><button id="guidesMenuBtn" data-cmd="guides"><span>Guides &amp; grids</span></button><button id="isolateMenuBtn" data-cmd="isolate"><span>Isolate current group</span></button>
+    </div></div>
+    <input id="docTitle" class="docTitle" value="Untitled" aria-label="Document name">
+    <span class="spacer"></span>
+    <button id="recoverBtn" class="topAction recover">↺ Recover</button>
+    <button id="undoBtn" class="topAction" title="Undo (Ctrl+Z)">↶</button>
+    <button id="redoBtn" class="topAction" title="Redo (Ctrl+Shift+Z)">↷</button>
+    <button id="compareBtn" class="topAction" title="Before / after">◐ <span class="label">Compare</span></button>
+    <button id="snapshotBtn" class="topAction" title="Create snapshot">◇ <span class="label">Snapshot</span></button>
+    <button id="macroBtn" class="topAction" title="Record macro">● <span class="label">Macro</span></button>
+    <button id="paletteBtn" class="topAction" title="Command palette (Ctrl+K)">⌕ <span class="label">Search</span></button>
+    <button id="focusBtn" class="topAction" title="Focus / full editing view">⛶ <span class="label">Full screen</span></button>
+    <button id="featuresBtn" class="topAction" title="ArixGen capabilities">90</button>
+    <button id="exportBtn" class="topAction primary" title="Export image">Export</button>
+    <button id="newBtn" class="topAction" title="New document" style="display:none">New</button><button id="openBtn" class="topAction" title="Open image" style="display:none">Open</button><button id="saveBtn" class="topAction" title="Save project" style="display:none">Save</button><button id="panelToggle" class="panelToggle" title="Toggle inspector">☰</button>
+  </header>
+
+  <main class="workspace">
+    <aside class="leftbar" aria-label="Tools">
+      <button class="tool active" data-tool="move" title="Move (V)">↖<span>Move</span></button>
+      <button class="tool" data-tool="marquee" title="Rectangle select (M)">▧<span>Select</span></button>
+      <button class="tool" data-tool="lasso" title="Lasso select (Q)">〰<span>Lasso</span></button>
+      <button class="tool" data-tool="polygon" title="Polygon select">⌁<span>Polygon</span></button>
+      <button class="tool" data-tool="wand" title="Magic wand (W)">✦<span>Wand</span></button>
+      <div class="toolSep"></div>
+      <button class="tool" data-tool="brush" title="Brush (B)">✎<span>Brush</span></button>
+      <button class="tool" data-tool="eraser" title="Eraser (E)">⌫<span>Erase</span></button>
+      <button class="tool" data-tool="clone" title="Clone retouch">◌<span>Clone</span></button>
+      <button class="tool" data-tool="heal" title="Healing-style retouch">✚<span>Heal</span></button>
+      <button class="tool" data-tool="blur" title="Blur brush">◒<span>Blur</span></button>
+      <button class="tool" data-tool="sharpen" title="Sharpen brush">◆<span>Sharp</span></button>
+      <button class="tool" data-tool="dodge" title="Dodge">☼<span>Dodge</span></button>
+      <button class="tool" data-tool="burn" title="Burn">◐<span>Burn</span></button>
+      <button class="tool" data-tool="smudge" title="Smudge">◍<span>Smudge</span></button>
+      <div class="toolSep"></div>
+      <button class="tool" data-tool="crop" title="Crop (C)">⌗<span>Crop</span></button>
+      <button class="tool" data-tool="rect" title="Rectangle shape (R)">□<span>Rect</span></button>
+      <button class="tool" data-tool="ellipse" title="Ellipse (O)">○<span>Ellipse</span></button>
+      <button class="tool" data-tool="line" title="Line (L)">╱<span>Line</span></button>
+      <button class="tool" data-tool="pen" title="Bezier pen (P)">⌁<span>Pen</span></button>
+      <button class="tool" data-tool="text" title="Text (T)">T<span>Text</span></button>
+      <button class="tool" data-tool="gradient" title="Gradient (G)">▰<span>Gradient</span></button>
+      <button class="tool" data-tool="picker" title="Eyedropper (I)">◉<span>Pick</span></button>
+      <button class="tool" id="measureBtn" title="Measure">↗<span>Measure</span></button>
+      <button class="tool" id="sliceBtn" title="Slice">▤<span>Slice</span></button>
+      <div class="leftBottom">
+        <div class="swatches"><button class="sw fg" id="fgSwatch" aria-label="Foreground color"></button><button class="sw bg" id="bgSwatch" aria-label="Background color"></button><button class="swap" id="swapColors" title="Swap colors">↔</button></div>
+        <input id="colorPicker" type="color" value="#111111" hidden><input id="colorPickerBg" type="color" value="#ffffff" hidden>
+      </div>
+    </aside>
+
+    <section class="canvasArea" id="canvasArea">
+      <div id="canvasWrap" class="canvasWrap">
+        <canvas id="canvas" class="canvas" aria-label="ArixGen editing canvas"></canvas>
+        <div class="stageShade" aria-hidden="true"><i class="shadeTop"></i><i class="shadeRight"></i><i class="shadeBottom"></i><i class="shadeLeft"></i></div>
+        <div id="docEdge" class="docEdge"></div>
+      </div>
+      <div class="canvasTopbar">
+        <span class="pill"><span class="statusDot"></span> Local editing</span>
+        <span class="pill subtle" id="toolLabel">Move</span>
+        <span class="pill subtle">GPU <b id="gpuStatus">checking…</b></span>
+        <div class="viewTools"><button class="viewBtn" id="viewFit" title="Fit canvas">Fit</button><button class="viewBtn" id="view100" title="100% zoom">100%</button><button class="viewBtn" id="viewMinus" title="Zoom out">−</button><span class="pill subtle" id="zoomLabel">100%</span><button class="viewBtn" id="viewPlus" title="Zoom in">+</button></div>
+      </div>
+      <div id="welcome" class="welcome">
+        <div class="welcomeMark">A</div><h1>Bring an image into the workspace</h1><p>See the artwork large and clear, then edit it with layers, selections, color controls, masks and filters—all locally in your browser.</p>
+        <div class="welcomeActions"><button id="heroOpen" class="primaryAction">Open image</button><button id="heroNew">New canvas</button></div>
+        <div class="welcomeMeta"><span>⌘ / Ctrl + O to open</span><span>•</span><span>Drop files anywhere</span><span>•</span><span>No AI</span></div>
+      </div>
+      <div class="canvasHint">Space + drag to pan · Ctrl/Cmd + wheel to zoom · Tab for full editing view</div>
+      <div class="hintDrop" id="dropHint">Drop images or .arix projects anywhere</div>
+      <div class="measure">Tool: <b id="toolLabel2">Move</b> · Position: <b id="cursorText">—</b> · <span id="measureValue">Move and edit directly on the canvas</span></div>
+    </section>
+
+    <aside class="rightbar" id="rightbar" aria-label="Inspector">
+      <div class="panelHeader"><strong>Inspector &amp; workspace</strong><span id="panelHint">Everything stays local</span></div>
+      <div class="tabs"><button class="tab active" data-tab="layers">Layers</button><button class="tab" data-tab="adjust">Adjust</button><button class="tab" data-tab="filters">Filters</button><button class="tab" data-tab="effects">Effects</button></div>
+
+      <section id="tab-layers" class="tabContent active">
+        <div class="section"><div class="row3"><button class="smallBtn" id="newLayerBtn">+ Layer</button><button class="smallBtn" id="newTextBtn">+ Text</button><button class="smallBtn" id="newShapeBtn">+ Shape</button></div></div>
+        <div class="section">
+          <div class="row"><div class="field"><label>Position X</label><input id="posX" type="number"></div><div class="field"><label>Position Y</label><input id="posY" type="number"></div></div>
+          <div class="row" style="margin-top:8px"><div class="field"><label>Width</label><input id="width" type="number"></div><div class="field"><label>Height</label><input id="height" type="number"></div></div>
+          <div class="row" style="margin-top:8px"><div class="field"><label>Rotation</label><input id="rotate" type="number"></div><div class="field"><label>Opacity</label><input id="opacity" type="range" min="0" max="100" value="100"><output id="opacityValue">100%</output></div></div>
+          <div class="field" style="margin-top:8px"><label>Layer name</label><input id="layerName"></div>
+          <div class="field" style="margin-top:8px"><label>Blend mode</label><select id="blend"><option value="source-over">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft-light">Soft Light</option><option value="hard-light">Hard Light</option><option value="color-dodge">Color Dodge</option><option value="color-burn">Color Burn</option><option value="darken">Darken</option><option value="lighten">Lighten</option><option value="difference">Difference</option><option value="exclusion">Exclusion</option><option value="hue">Hue</option><option value="saturation">Saturation</option><option value="color">Color</option><option value="luminosity">Luminosity</option></select></div>
+        </div>
+        <div class="section"><div id="contextPanel"></div><div id="quickActions" class="btnGrid" style="margin-top:9px"></div></div>
+        <div class="section"><h3>Layer stack</h3><input id="searchLayers" class="layerSearch" placeholder="Search layers…"><div id="layers"></div><div class="btnGrid" style="margin-top:9px"><button id="duplicateBtn">Duplicate</button><button id="deleteBtn">Delete</button><button id="hideBtn">Hide / show</button><button id="lockBtn">Lock / unlock</button><button id="soloBtn">Solo</button><button id="isolateBtn">Isolate</button><button id="groupBtn">Group</button><button id="ungroupBtn">Ungroup</button><button id="mergeBtn">Merge</button><button id="maskBtn">Add mask</button><button id="applyMaskBtn">Apply mask</button><button id="invertMaskBtn">Invert mask</button></div></div>
+        <div class="section"><h3>Symmetry</h3><div class="row"><div class="field"><label>Mode</label><select id="symmetryMode"><option value="none">Off</option><option value="vertical">Vertical</option><option value="horizontal">Horizontal</option><option value="radial">Radial</option><option value="mandala">Mandala</option></select></div><div class="field"><label>Count</label><input id="symmetryCount" type="number" min="2" max="24" value="8"></div></div></div>
+        <div class="section"><h3>Brush &amp; selection</h3><div class="row"><div class="field"><label>Brush size</label><input id="brushSize" type="number" min="1" max="1000" value="32"></div><div class="field"><label>Brush opacity %</label><input id="brushOpacity" type="number" min="1" max="100" value="100"></div></div><div class="row" style="margin-top:8px"><div class="field"><label>Magic tolerance</label><input id="tolerance" type="number" min="0" max="255" value="32"></div><div class="field"><label>Feather px</label><input id="feather" type="number" min="0" max="200" value="0"></div></div><div class="field" style="margin-top:8px"><label>Foreground HEX</label><input id="hex" value="#111111"></div></div>
+      </section>
+
+      <section id="tab-adjust" class="tabContent">
+        <div class="section"><h3>Adjustments</h3><div id="adjustPanel" class="adjustPanel"></div><div class="btnGrid"><button id="applyAdjustments">Apply stack</button><button id="resetAdjustments">Reset sliders</button></div></div>
+        <div class="section"><h3>View &amp; workflow</h3><div class="row"><div class="field"><label>Zoom</label><div class="btnGrid"><button id="zoomOut">−</button><button id="zoomIn">+</button></div></div><div class="field"><label>View</label><div class="btnGrid"><button id="zoom100PanelBtn">100%</button><button id="resetView">Fit</button></div></div></div><button class="smallBtn" style="margin-top:8px" onclick="ArixGen.executeCommand('templates')">Templates</button><button class="smallBtn" style="margin-top:7px" onclick="ArixGen.executeCommand('batch')">Batch processing</button></div>
+      </section>
+
+      <section id="tab-filters" class="tabContent">
+        <div class="section"><h3>Filter library</h3><div id="filterGrid" class="btnGrid"><button data-filter="gaussian">Gaussian blur</button><button data-filter="motion">Motion blur</button><button data-filter="radial">Radial blur</button><button data-filter="sharpen">Sharpen</button><button data-filter="unsharp">Unsharp mask</button><button data-filter="noise">Film grain</button><button data-filter="grayscale">Grayscale</button><button data-filter="edge">Edge detect</button><button data-filter="emboss">Emboss</button><button data-filter="pixelate">Pixelate</button><button data-filter="halftone">Halftone</button><button data-filter="posterize">Posterize</button><button data-filter="vignette">Vignette</button><button data-filter="glow">Glow</button><button data-filter="ripple">Ripple</button><button data-filter="twirl">Twirl</button><button data-filter="spherize">Spherize</button></div></div>
+        <div class="section"><h3>Active filter stack</h3><div id="activeFilters" class="stack"></div></div>
+      </section>
+
+      <section id="tab-effects" class="tabContent">
+        <div class="section"><h3>Layer effects</h3><div id="effectGrid" class="btnGrid"><button data-effect="shadow">Drop shadow</button><button data-effect="innerShadow">Inner shadow</button><button data-effect="glow">Glow</button><button data-effect="stroke">Stroke</button><button data-effect="bevel">Bevel</button><button data-effect="innerGlow">Inner glow</button><button data-effect="colorOverlay">Color overlay</button><button data-effect="gradientOverlay">Gradient overlay</button></div></div>
+        <div class="section"><h3>Effect stack</h3><div id="activeEffects" class="stack"></div></div>
+        <div class="section"><h3>Snapshots</h3><div id="snapshots" class="stack"></div></div>
+        <div class="section"><h3>History</h3><div id="history"></div></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="statusbar"><span id="statusText">1200×800 · 1/1 visible · raster</span><span>Tool: <b id="toolLabelBottom">Move</b></span><span>Pan: Space</span><span class="statusRight">No upload · no AI · local document</span></footer>
+</div>
+
+<input id="fileInput" type="file" accept="image/*,.arix,image/svg+xml" hidden>
+<input id="importInput" type="file" accept="image/*,.arix,image/svg+xml" hidden>
+
 <div id="palette" class="palette"><div class="paletteInner"><input id="commandInput" class="commandInput" placeholder="Search tools, actions, layers…"><div id="commandResults" class="commandResults"></div></div></div>
 <div id="modalBackdrop" class="modalBackdrop"><div class="modal"><div class="modalHead"><h2 id="modalTitle">ArixGen</h2><button id="modalClose" aria-label="Close">×</button></div><div id="modalBody" class="modalBody"></div></div></div>
-<template id="exportTemplate"><div class="exportForm"><div class="row"><div class="field"><label>Format</label><select id="exportFormat"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></div><div class="field"><label>Quality</label><input id="exportQuality" type="range" min="10" max="100" value="92"></div></div><div class="row"><div class="field"><label>Width</label><input id="exportWidth" type="number"></div><div class="field"><label>Height</label><input id="exportHeight" type="number"></div></div><div class="section" style="margin-top:10px"><b id="exportEstimate">—</b><p style="color:#93a0b3;margin-bottom:0">Export is rendered locally from the current composite.</p></div><div class="modalActions"><button id="clipboardBtn">Copy PNG</button><button id="svgExport">Export SVG</button><button id="downloadExport">Download image</button></div></div></template>
+<div id="busyScreen" class="busyScreen" aria-live="polite" aria-modal="true"><div class="busyCard"><div class="busyIcon"></div><h2 id="busyTitle">Working locally…</h2><p id="busyMessage">ArixGen is applying your edit. Large images can take a little longer.</p><div class="busyStage"><i></i><i></i><i></i><span id="busyStageText">Processing pixels</span></div><div class="busyTime" id="busyTime">0.0s</div></div></div>
+
+<template id="exportTemplate"><div class="exportForm"><div class="row"><div class="field"><label>Format</label><select id="exportFormat"><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></div><div class="field"><label>Quality</label><input id="exportQuality" type="range" min="10" max="100" value="92"></div></div><div class="row" style="margin-top:9px"><div class="field"><label>Width</label><input id="exportWidth" type="number"></div><div class="field"><label>Height</label><input id="exportHeight" type="number"></div></div><div class="section" style="margin-top:11px"><b id="exportEstimate">—</b><p style="color:#8190a2;margin-bottom:0">Export is rendered locally from the current composite.</p></div><div class="modalActions"><button id="clipboardBtn">Copy PNG</button><button id="svgExport">Export SVG</button><button id="downloadExport">Download image</button></div></div></template>
+
 <script src="imgedit.js"></script>
-<script>document.addEventListener('DOMContentLoaded',()=>{document.getElementById('gpuStatus').textContent=window.ArixGen?.gpuAvailable()?'available':'Canvas fallback';document.getElementById('toolLabel2').textContent='Move';});</script>
+<script>
+(() => {
+  'use strict';
+  const $ = (s, r=document) => r.querySelector(s);
+  const app = $('#app'), startup = $('#startup'), welcome = $('#welcome'), busy = $('#busyScreen');
+  const wrap = $('#canvasWrap'), edge = $('#docEdge');
+  const shadeTop=$('.shadeTop'), shadeRight=$('.shadeRight'), shadeBottom=$('.shadeBottom'), shadeLeft=$('.shadeLeft');
+  let busyTimer = null, busyStarted = 0, busyQueued = false, busyLabel = '';
+  let internalReplay = false;
+  const heavyCommands = new Set(['undo','redo','duplicate','grayscale','sharpen','removeColor','shadow','newLayer','group','merge','addMask','applyMask','invertMask','cropSelection','expandSelection','contractSelection','featherSelection','newAdjustment','paste']);
+  const heavyClickSelectors = [
+    '#applyAdjustments','#applyMaskBtn','#invertMaskBtn','#mergeBtn','#runBatch',
+    '#filterGrid [data-filter]','#effectGrid [data-effect]','#quickActions [data-action]','#downloadExport','#clipboardBtn','#svgExport'
+  ].join(',');
+
+  function showBusy(title='Working locally…', message='ArixGen is applying your edit. Large images can take a little longer.', stage='Processing pixels') {
+    clearInterval(busyTimer); busyStarted = performance.now(); busyLabel = title;
+    $('#busyTitle').textContent=title; $('#busyMessage').textContent=message; $('#busyStageText').textContent=stage; $('#busyTime').textContent='0.0s'; busy.classList.add('show');
+    busyTimer=setInterval(()=>{$('#busyTime').textContent=((performance.now()-busyStarted)/1000).toFixed(1)+'s';},100);
+  }
+  function hideBusy(){ clearInterval(busyTimer); busyTimer=null; busy.classList.remove('show'); }
+  function replayClick(el){
+    if(!el || internalReplay) return;
+    internalReplay=true;
+    setTimeout(()=>{ try{ el.click(); }finally{ internalReplay=false; } }, 40);
+  }
+  function deferHeavyClick(el, label='Applying edit…', stage='Processing pixels'){
+    showBusy(label,'Your image is being processed locally. Nothing is being uploaded.',stage);
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const started=performance.now();
+      replayClick(el);
+      const finish=()=>{
+        const remain=Math.max(0,520-(performance.now()-started));
+        setTimeout(hideBusy,remain);
+      };
+      setTimeout(finish,0);
+    }));
+  }
+
+  function updateDocChrome(){
+    const s=window.ArixGen?.state, d=s?.doc;
+    if(!s || !d || !wrap || !edge) return;
+    const r=wrap.getBoundingClientRect();
+    const w=d.width*s.zoom, h=d.height*s.zoom;
+    const x=r.width/2-w/2+s.panX, y=r.height/2-h/2+s.panY;
+    edge.style.left=x+'px';edge.style.top=y+'px';edge.style.width=Math.max(0,w)+'px';edge.style.height=Math.max(0,h)+'px';
+    const clamp0=v=>Math.max(0,v);
+    shadeTop.style.left='0px';shadeTop.style.top='0px';shadeTop.style.right='0px';shadeTop.style.height=clamp0(y)+'px';
+    shadeBottom.style.left='0px';shadeBottom.style.right='0px';shadeBottom.style.top=clamp0(y+h)+'px';shadeBottom.style.height=clamp0(r.height-clamp0(y+h))+'px';
+    shadeLeft.style.left='0px';shadeLeft.style.top=clamp0(y)+'px';shadeLeft.style.bottom=clamp0(r.height-clamp0(y+h))+'px';shadeLeft.style.width=clamp0(x)+'px';
+    shadeRight.style.top=clamp0(y)+'px';shadeRight.style.bottom=clamp0(r.height-clamp0(y+h))+'px';shadeRight.style.left=clamp0(x+w)+'px';shadeRight.style.right='0px';
+  }
+
+  function patchRender(){
+    if(!window.ArixGen || window.ArixGen.__arixGenUiPatched) return false;
+    const originalRender=window.ArixGen.render;
+    window.ArixGen.render=(...args)=>{const out=originalRender(...args);updateDocChrome();syncWelcome();return out;};
+    const originalCommand=window.ArixGen.executeCommand;
+    window.ArixGen.executeCommand=(id,...args)=>{
+      if(internalReplay) return originalCommand(id,...args);
+      if(heavyCommands.has(id)){
+        showBusy('Working locally…','ArixGen is applying your edit to the current document.','Processing '+id.replace(/([A-Z])/g,' $1').toLowerCase());
+        let out;
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{ try{out=originalCommand(id,...args);}catch(err){hideBusy();throw err;} finally{ setTimeout(hideBusy,560); } }));
+        return out;
+      }
+      return originalCommand(id,...args);
+    };
+    window.ArixGen.__arixGenUiPatched=true;
+    return true;
+  }
+
+  function syncWelcome(){
+    const s=window.ArixGen?.state, d=s?.doc;
+    // Keep the welcome surface on a fresh document; any added layer/import dismisses it.
+    const shouldHide = !!(d && d.layers && (d.layers.length>1 || (d.layers[0] && d.layers[0].name!=='Background')));
+    welcome?.classList.toggle('hidden',shouldHide || !!(s?.lastPoint));
+  }
+
+  function install(){
+    patchRender();
+    updateDocChrome();
+    setTimeout(()=>startup.classList.add('done'),520);
+    setTimeout(()=>{ patchRender(); updateDocChrome(); syncWelcome(); },80);
+
+    $('#heroOpen').onclick=()=>$('#fileInput').click();
+    $('#heroNew').onclick=()=>window.ArixGen?.executeCommand('new');
+    $('#viewFit').onclick=()=>window.ArixGen?.fitCanvas();
+    $('#view100').onclick=()=>{if(window.ArixGen){window.ArixGen.state.zoom=1;window.ArixGen.state.panX=0;window.ArixGen.state.panY=0;window.ArixGen.render();}};
+    $('#viewMinus').onclick=()=>{if(window.ArixGen){window.ArixGen.state.zoom=Math.max(.03,window.ArixGen.state.zoom/1.2);window.ArixGen.render();}};
+    $('#viewPlus').onclick=()=>{if(window.ArixGen){window.ArixGen.state.zoom=Math.min(20,window.ArixGen.state.zoom*1.2);window.ArixGen.render();}};
+    $('#panelToggle').onclick=()=>$('#rightbar').classList.toggle('open');
+
+    document.addEventListener('click',e=>{
+      if(internalReplay) return;
+      const el=e.target.closest(heavyClickSelectors);
+      if(!el) return;
+      e.preventDefault();e.stopImmediatePropagation();
+      if(el.id==='runBatch'){
+        showBusy('Processing batch…','ArixGen is processing your selected images locally.','Processing image set');
+        replayClick(el);
+        const observer=new MutationObserver(()=>{const t=$('#batchStatus')?.textContent||''; if(/complete|Choose at least|Processed \d+ \/ \d+/.test(t) && /complete|Choose at least/.test(t)){observer.disconnect();setTimeout(hideBusy,450);}});
+        observer.observe($('#modalBody'),{subtree:true,childList:true,characterData:true});
+        setTimeout(()=>{observer.disconnect();if(busy.classList.contains('show'))hideBusy();},120000);
+        return;
+      }
+      const label=el.dataset.filter ? 'Applying '+el.textContent.trim()+'…' : el.dataset.effect ? 'Applying '+el.textContent.trim()+'…' : el.id==='applyAdjustments' ? 'Applying adjustments…' : 'Updating image…';
+      deferHeavyClick(el,label,'Processing image');
+    },true);
+
+    // File import is asynchronous in the existing engine, so the overlay can remain visible while the browser decodes it.
+    ['fileInput','importInput'].forEach(id=>{
+      $('#'+id).addEventListener('change',()=>{
+        const input=$('#'+id); if(!input.files?.length)return;
+        showBusy('Opening image…','Reading and decoding your file locally.','Decoding image');
+        const started=performance.now();
+        const wait=()=>{
+          if((window.ArixGen?.state?.doc?.layers?.length||0)>1 || performance.now()-started>15000){hideBusy();syncWelcome();return;}
+          setTimeout(wait,80);
+        };
+        setTimeout(wait,100);
+      });
+    });
+
+    // Crop / wand / other pointer-up operations can be synchronous; defer the pointer-up so the busy UI paints first.
+    const canvas=$('#canvas');
+    canvas.addEventListener('pointerup',e=>{
+      if(internalReplay || !window.ArixGen?.state) return;
+      const tool=window.ArixGen.state.activeTool;
+      if(!['crop','wand'].includes(tool) || !window.ArixGen.state.isDown) return;
+      e.stopImmediatePropagation();
+      const props={pointerId:e.pointerId,clientX:e.clientX,clientY:e.clientY,button:e.button,buttons:e.buttons,ctrlKey:e.ctrlKey,shiftKey:e.shiftKey,altKey:e.altKey,metaKey:e.metaKey,bubbles:true};
+      showBusy(tool==='crop'?'Cropping image…':'Analyzing pixels…','ArixGen is working locally on the current image.','Processing selection');
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{canvas.dispatchEvent(new PointerEvent('pointerup',props));setTimeout(hideBusy,560);}));
+    },true);
+
+    // Show a light status when a file is dragged over the canvas.
+    window.addEventListener('dragover',()=>{document.documentElement.classList.add('dragging');},true);
+    window.addEventListener('drop',()=>{document.documentElement.classList.remove('dragging');},true);
+    window.addEventListener('dragleave',()=>{document.documentElement.classList.remove('dragging');},true);
+
+    // Native fullscreen + the engine's own focus mode. Escape still exits the browser fullscreen normally.
+    $('#focusBtn').addEventListener('click',async()=>{
+      try{
+        if(!document.fullscreenElement) await app.requestFullscreen?.();
+        else await document.exitFullscreen?.();
+      }catch{}
+      app.classList.toggle('isFullscreen',!!document.fullscreenElement);
+      const b=$('#focusBtn .label'); if(b)b.textContent=document.fullscreenElement?'Exit full screen':'Full screen';
+      setTimeout(updateDocChrome,60);
+    });
+    document.addEventListener('fullscreenchange',()=>{const fs=!!document.fullscreenElement;app.classList.toggle('isFullscreen',fs);if(!fs)document.body.classList.remove('focusMode');const b=$('#focusBtn .label');if(b)b.textContent=fs?'Exit full screen':'Full screen';setTimeout(updateDocChrome,50);});
+
+    window.addEventListener('resize',()=>setTimeout(updateDocChrome,30));
+    document.addEventListener('pointerdown',()=>syncWelcome(),true);
+
+    // Keep the canvas framing in sync even when the engine renders during long/complex operations.
+    setInterval(()=>{patchRender();updateDocChrome();syncWelcome();},350);
+  }
+
+  if(window.ArixGen) install(); else window.addEventListener('load',install,{once:true});
+})();
+</script>
 </body>
 </html>
