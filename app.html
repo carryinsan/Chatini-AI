@@ -1203,7 +1203,7 @@ body {
                     
                     <!-- Left Tools -->
                     <div class="flex items-center gap-1 sm:gap-2">
-                        <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx">
+                        <input type="file" id="file-upload" multiple class="hidden" accept="image/*,.pdf,.txt,.html,.md,.csv,.doc,.docx,.js">
                         <button onclick="document.getElementById('file-upload').click()" class="p-2 sm:p-2.5 text-gray-400 hover:text-theme-600 hover:bg-theme-50 rounded-xl transition-colors flex items-center justify-center" title="Attach Files">
                             <i class="ph-bold ph-paperclip text-lg"></i>
                         </button>
@@ -1292,6 +1292,7 @@ const EXTENSION_MAP = {
     'pdf': 'application/pdf', 'doc': 'application/msword', 
     'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp', 'py': 'text/plain'
+    'js': 'text/javascript'
 };
 
 const DB = {
@@ -3181,7 +3182,7 @@ els.fileInput.addEventListener('change', async (e) => {
         const isImg = fileType.startsWith('image/');
         if (isImg && imgCount >= 5) { alert('Max 5 images per msg.'); continue; } 
         if (!isImg && docCount >= 3) { alert('Max 3 docs per msg.'); continue; } 
-        if (file.size > 2*1024*1024 && !isImg) { alert('File too large. Max 2MB.'); continue; }
+        if (file.size > 10*1024*1024 && !isImg) { alert('File too large. Max 10MB.'); continue; }
         
         const reader = new FileReader(); 
         reader.onload = (ev) => { 
@@ -6378,7 +6379,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="absolute right-3 bottom-3 text-[9px] text-gray-400">Enter to run • Shift+Enter for new line</div>
                         </div>
                         <div class="flex sm:flex-col gap-2 sm:w-36">
-                            <input id="study-file-input" type="file" multiple class="hidden" accept=".pdf,.doc,.docx,.txt,.csv,.html,.png,.jpg,.jpeg,.webp">
+                            <input id="study-file-input" type="file" multiple class="hidden" accept=".pdf,.doc,.docx,.txt,.csv,.html,.png,.jpg,.jpeg,.webp,.js">
                             <button onclick="document.getElementById('study-file-input').click()" class="flex-1 rounded-2xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold px-4 py-3 flex items-center justify-center gap-2">
                                 <i class="ph-bold ph-paperclip"></i> Attach
                             </button>
@@ -6652,8 +6653,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const files = Array.from(event.target.files || []);
         for (const file of files.slice(0, 5)) {
             if (state.pendingFiles.length >= 5) break;
-            if (file.size > 2 * 1024 * 1024 && !file.type.startsWith('image/')) {
-                showToast(`Skipped ${file.name}: documents are limited to 2 MB.`);
+            if (file.size > 10 * 1024 * 1024 && !file.type.startsWith('image/')) {
+                showToast(`Skipped ${file.name}: documents are limited to 10 MB.`);
                 continue;
             }
 
