@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -380,5 +379,212 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
   if(window.ArixGen) install(); else window.addEventListener('load',install,{once:true});
 })();
 </script>
+
+<style>
+/* ArixGen UI reliability layer: does not modify imgedit.js */
+.textDock{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:rgba(255,255,255,.018);padding:11px}
+.textDock[hidden]{display:none}
+.textDock h3{margin:0 0 9px;font-size:10px;text-transform:uppercase;letter-spacing:.11em;color:#8e9bad}
+.textDock textarea{width:100%;min-height:72px;resize:vertical;background:#0a0f15;border:1px solid var(--line);color:#f4f7fb;border-radius:8px;padding:9px;outline:none}
+.textDock textarea:focus,.textDock select:focus,.textDock input:focus{border-color:#58677a}
+.textDock .textGrid{display:grid;grid-template-columns:1.5fr .7fr;gap:7px;margin-top:7px}
+.textDock .textGrid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;margin-top:7px}
+.textDock select,.textDock input[type=number]{width:100%;background:#0a0f15;border:1px solid var(--line);color:#f4f7fb;border-radius:8px;padding:8px}
+.textDock input[type=color]{width:100%;height:36px;padding:3px;background:#0a0f15;border:1px solid var(--line);border-radius:8px}
+.textDock label{display:flex;flex-direction:column;gap:5px;color:var(--muted2);font-size:10px}
+.textDock .textState{font-size:10px;color:#718093;margin-top:7px;min-height:14px}
+.textDock .textActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.textDock button{background:var(--surface3);border:1px solid var(--line);padding:8px;border-radius:8px;cursor:pointer}
+.textDock button:hover{border-color:var(--line2);background:#202b38}
+.canvasArea.rendering:after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent,rgba(118,92,255,.035),transparent);animation:arixSweep 1s linear infinite;z-index:1}
+@keyframes arixSweep{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.busyScreen.autoHidden{display:none!important}
+</style>
+<script>
+/*
+  ArixGen reliability/UI layer.
+  imgedit.js remains untouched. This layer only fixes presentation timing,
+  viewport fitting, text editing controls, fullscreen redraws and endless UI states.
+*/
+(() => {
+  'use strict';
+  const $ = (s,r=document)=>r.querySelector(s);
+  let installed=false, lastDocKey='', resizeTimer=0, busyWatch=0;
+  const app=$('#app'), wrap=$('#canvasWrap'), canvas=$('#canvas'), busy=$('#busyScreen'), canvasArea=$('#canvasArea');
+
+  function renderNow(reason='ui'){
+    const A=window.ArixGen;
+    if(!A?.state?.doc || typeof A.render!=='function') return;
+    try { A.render(); } catch(e) { /* never let UI chrome break editing */ }
+    try { if(typeof A.fitCanvas==='function' && reason==='fit') A.fitCanvas(); } catch(e) {}
+  }
+  function renderBurst(reason='ui'){
+    cancelAnimationFrame(renderBurst.raf1); cancelAnimationFrame(renderBurst.raf2);
+    renderBurst.raf1=requestAnimationFrame(()=>{
+      renderBurst.raf2=requestAnimationFrame(()=>renderNow(reason));
+    });
+  }
+
+  function gpuStatus(){
+    const el=$('#gpuStatus'); if(!el)return;
+    let gl=false;
+    try{const c=document.createElement('canvas');gl=!!(c.getContext('webgl2')||c.getContext('webgl'));}catch(e){}
+    el.textContent=gl?'ready':'2D fallback';
+    el.title=gl?'Browser graphics context available. ArixGen uses its local canvas renderer.':'WebGL unavailable; ArixGen is using the local 2D renderer.';
+  }
+
+  function ensureTextDock(){
+    const right=$('#rightbar'); if(!right || $('#arixTextDock')) return;
+    const dock=document.createElement('div');
+    dock.id='arixTextDock'; dock.className='textDock'; dock.hidden=true;
+    dock.innerHTML=`
+      <h3>Text editor</h3>
+      <textarea id="arixTextValue" spellcheck="false" placeholder="Type your text…"></textarea>
+      <div class="textGrid">
+        <label>Font<select id="arixTextFont"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Trebuchet MS</option><option>Courier New</option><option>Times New Roman</option><option>Impact</option></select></label>
+        <label>Size<input id="arixTextSize" type="number" min="4" max="600" step="1"></label>
+      </div>
+      <div class="textGrid3">
+        <label>Weight<select id="arixTextWeight"><option value="400">Regular</option><option value="600">Semibold</option><option value="700">Bold</option><option value="800">Extra bold</option></select></label>
+        <label>Align<select id="arixTextAlign"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label>
+        <label>Color<input id="arixTextColor" type="color" value="#ffffff"></label>
+      </div>
+      <div class="textGrid3">
+        <label>Style<select id="arixTextStyle"><option value="normal">Normal</option><option value="italic">Italic</option></select></label>
+        <label>Line height<input id="arixTextLine" type="number" min="0.5" max="3" step="0.05" value="1.15"></label>
+        <label>Stroke<input id="arixTextStroke" type="number" min="0" max="60" step="1" value="0"></label>
+      </div>
+      <div class="textActions"><button id="arixTextApply">Apply text</button><button id="arixTextCenter">Center text</button></div>
+      <div class="textState" id="arixTextState"></div>`;
+    const anchor=$('#contextPanel')?.parentElement || right.querySelector('.tabContent');
+    if(anchor) anchor.appendChild(dock); else right.appendChild(dock);
+
+    const update=(prop,value)=>{
+      const A=window.ArixGen,l=A?.state?.doc?.layers?.find(x=>x.id===A.state.activeLayerId);
+      if(!l || l.type!=='text') return;
+      l[prop]=value; renderBurst('text');
+      const st=$('#arixTextState'); if(st)st.textContent='Changes are applied directly to the selected text layer.';
+    };
+    $('#arixTextValue').addEventListener('input',e=>update('text',e.target.value));
+    $('#arixTextFont').addEventListener('change',e=>update('font',e.target.value));
+    $('#arixTextSize').addEventListener('change',e=>update('fontSize',Math.max(4,+e.target.value||72)));
+    $('#arixTextWeight').addEventListener('change',e=>update('fontWeight',e.target.value));
+    $('#arixTextAlign').addEventListener('change',e=>update('textAlign',e.target.value));
+    $('#arixTextColor').addEventListener('input',e=>update('color',e.target.value));
+    $('#arixTextStyle').addEventListener('change',e=>update('fontStyle',e.target.value));
+    $('#arixTextLine').addEventListener('change',e=>update('lineHeight',Math.max(.5,Math.min(3,+e.target.value||1.15))));
+    $('#arixTextStroke').addEventListener('change',e=>update('strokeWidth',Math.max(0,+e.target.value||0)));
+    $('#arixTextApply').onclick=()=>{const A=window.ArixGen,l=A?.state?.doc?.layers?.find(x=>x.id===A.state.activeLayerId);if(l?.type==='text'){l.text=$('#arixTextValue').value;renderBurst('text');}};
+    $('#arixTextCenter').onclick=()=>{const A=window.ArixGen,l=A?.state?.doc?.layers?.find(x=>x.id===A.state.activeLayerId);if(l?.type==='text'){l.textAlign='center';l.x=(A.state.doc.width-l.width)/2;renderBurst('text');syncTextDock();}};
+  }
+
+  function syncTextDock(){
+    const A=window.ArixGen,d=A?.state?.doc,l=d?.layers?.find(x=>x.id===A.state.activeLayerId),dock=$('#arixTextDock');
+    if(!dock)return;
+    const isText=l?.type==='text'; dock.hidden=!isText;
+    if(!isText)return;
+    $('#arixTextValue').value=l.text||'';
+    $('#arixTextFont').value=l.font||'Arial';
+    $('#arixTextSize').value=l.fontSize||72;
+    $('#arixTextWeight').value=l.fontWeight||'700';
+    $('#arixTextAlign').value=l.textAlign||'left';
+    $('#arixTextColor').value=/^#[0-9a-f]{6}$/i.test(l.color||'')?l.color:'#ffffff';
+    $('#arixTextStyle').value=l.fontStyle||'normal';
+    $('#arixTextLine').value=l.lineHeight||1.15;
+    $('#arixTextStroke').value=l.strokeWidth||0;
+    $('#arixTextState').textContent='Text layer selected · edit it here or double-click the text on canvas.';
+  }
+
+  function fitImportedLayer(){
+    const A=window.ArixGen,s=A?.state,d=s?.doc;if(!s||!d)return;
+    const layers=d.layers||[]; const l=layers.find(x=>x.id===s.activeLayerId)||layers[layers.length-1];
+    if(!l)return;
+    // The existing engine imports into its default document. Fit the newly imported layer
+    // immediately so large images are never clipped by the initial 1200×800 document.
+    if(l.type==='raster' && l.width>0 && l.height>0){
+      try{A.executeCommand('fitCanvas');}catch(e){
+        const scale=Math.min(d.width/l.width,d.height/l.height);
+        l.scaleX=l.scaleY=Math.min(1,scale);l.x=(d.width-l.width*l.scaleX)/2;l.y=(d.height-l.height*l.scaleY)/2;
+      }
+    }
+    renderBurst('fit');
+  }
+
+  function watchImport(input){
+    if(!input)return;
+    input.addEventListener('change',()=>{
+      if(!input.files?.length)return;
+      const file=input.files[0];
+      // Let the original engine decode/import it. Then force several paints after layout.
+      const started=performance.now();
+      const timer=setInterval(()=>{
+        const A=window.ArixGen, layers=A?.state?.doc?.layers||[];
+        if(layers.length>1 || performance.now()-started>4000){
+          clearInterval(timer);
+          fitImportedLayer();
+          renderBurst('import');
+          setTimeout(()=>renderBurst('import'),120);
+          setTimeout(()=>renderBurst('import'),450);
+          if(busy){busy.classList.remove('show');busy.classList.remove('autoHidden');}
+        }
+      },60);
+      setTimeout(()=>{clearInterval(timer);if(busy)busy.classList.remove('show');renderBurst('import');},6500);
+    },false);
+  }
+
+  function patchCommand(){
+    const A=window.ArixGen;if(!A||A.__arixReliableUi)return;
+    const original=A.executeCommand;
+    A.executeCommand=function(id,...args){
+      let result;
+      try{result=original.call(this,id,...args);}finally{
+        // Always repaint after an operation, including filters/adjustments and layer actions.
+        renderBurst('command');
+        setTimeout(()=>renderBurst('command'),80);
+        setTimeout(()=>renderBurst('command'),300);
+      }
+      return result;
+    };
+    A.__arixReliableUi=true;
+  }
+
+  function install(){
+    if(installed)return;installed=true;
+    gpuStatus(); ensureTextDock(); patchCommand();
+    watchImport($('#fileInput')); watchImport($('#importInput'));
+
+    // The original engine renders during initialization, sometimes before the grid has a final size.
+    // Repaint after layout settles and after every real viewport resize.
+    const repaint=()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{renderBurst('resize');syncTextDock();},20);};
+    window.addEventListener('resize',repaint,{passive:true});
+    document.addEventListener('fullscreenchange',()=>{setTimeout(repaint,40);setTimeout(repaint,180);setTimeout(repaint,500);});
+    if(window.ResizeObserver && wrap){new ResizeObserver(repaint).observe(wrap);}
+
+    // Keep text controls synchronized with layer selection and canvas interactions.
+    setInterval(()=>{syncTextDock();patchCommand();gpuStatus();},450);
+
+    // Never allow the modal loading screen to trap the editor forever.
+    busyWatch=setInterval(()=>{
+      if(busy?.classList.contains('show')){
+        const time=Number.parseFloat($('#busyTime')?.textContent||'0');
+        if(time>12){busy.classList.remove('show');busy.classList.add('autoHidden');renderBurst('watchdog');setTimeout(()=>busy.classList.remove('autoHidden'),50);}
+      }
+    },500);
+
+    // Make fullscreen a true canvas-first workspace and force a paint on both transitions.
+    const focus=$('#focusBtn');
+    if(focus)focus.addEventListener('click',()=>{setTimeout(()=>renderBurst('fullscreen'),80);setTimeout(()=>renderBurst('fullscreen'),300);},false);
+
+    // Initial paints after fonts/layout are ready.
+    setTimeout(()=>{gpuStatus();renderBurst('initial');},100);
+    setTimeout(()=>renderBurst('initial'),500);
+    setTimeout(()=>renderBurst('initial'),1200);
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});
+  else setTimeout(install,0);
+})();
+</script>
+
 </body>
 </html>
