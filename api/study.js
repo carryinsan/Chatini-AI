@@ -33,7 +33,7 @@ import presentationHandler from './presentation.js';
 import { POST as visualPost } from './image.js';
 import { verifyAndLimit } from './auth.js';
 
-const VERSION = 'arix-study-1.2.0';
+const VERSION = 'arix-study-1.2.1';
 const ENCODER = new TextEncoder();
 
 const HARD_BUDGET_MS = 290_000;
@@ -253,6 +253,37 @@ function normalizePreferences(value = {}) {
   const out = { ...defaults };
   for (const key of Object.keys(defaults)) {
     if (key in value) out[key] = Boolean(value[key]);
+  }
+  return out;
+}
+
+function inferRequestedOutputs(goal) {
+  const text = String(goal || '').toLowerCase();
+  const patterns = {
+    lessonPlan: /\b(lesson\s*plan|teaching\s*plan|lesson outline|classroom plan)\b/,
+    worksheet: /\b(worksheet|practice sheet|student sheet|work sheet)\b/,
+    assessment: /\b(test|quiz|assessment|exam|question paper|question\s*paper)\b/,
+    answerKey: /\b(answer\s*key|solutions?|marking\s*scheme|with answers?|answers? at (the )?(end|last))\b/,
+    homework: /\b(homework|assignment)\b/,
+    differentiation: /\b(differentiat|mixed ability|remedial|support and extension|scaffold|enrichment)\b/,
+    slides: /\b(slides?|presentation|pptx?|deck)\b/,
+    images: /\b(images?|visuals?|diagram|illustration|poster|graphic)\b/,
+    video: /\b(video|animation|demonstration clip)\b/,
+    researchReport: /\b(research|research report|latest|current|verify|verified|sources?|evidence)\b/,
+    flashcards: /\b(flashcards?|revision cards?)\b/,
+    rubric: /\b(rubric|marking rubric|assessment criteria)\b/,
+    exitTicket: /\b(exit ticket|exit slip|plenary)\b/,
+    teachingScript: /\b(teaching script|teacher script|teacher phrasing|what should i say|what do i say|teacher dialogue)\b/,
+  };
+  return Object.fromEntries(Object.entries(patterns).map(([key, rx]) => [key, rx.test(text)]));
+}
+
+function requestedOutputMap(goal, preferences) {
+  const selected = normalizePreferences(preferences);
+  const inferred = inferRequestedOutputs(goal);
+  const out = { ...selected };
+  for (const key of Object.keys(out)) {
+    if (inferred[key]) out[key] = true;
   }
   return out;
 }
@@ -642,7 +673,7 @@ ${attachmentsPrompt(attachments)}
 
   const parsed = parseJsonLoose(raw);
   if (parsed && typeof parsed === 'object') {
-    return normalizePlan(parsed, preferences);
+    return normalizePlan(parsed, preferences, goal);
   }
 
   // Conservative fallback: only ask for fields that commonly determine a lesson
@@ -704,7 +735,7 @@ ${attachmentsPrompt(attachments)}
         imagePurposes: inferred.images ? ['Create one clean classroom visual that directly supports the requested concept.'] : [],
         videoPurpose: inferred.video ? 'Create one short classroom demonstration of the requested concept.' : ''
       },
-    }, preferences);
+    }, preferences, goal);
   }
 
   return normalizePlan({
@@ -732,16 +763,20 @@ function normalizeQuestions(questions) {
   })).filter(question => question.question);
 }
 
-function normalizePlan(plan, preferences) {
-  const requested = normalizePreferences(preferences);
+function normalizePlan(plan, preferences, goal = '') {
+  const requested = requestedOutputMap(goal, preferences);
   const output = { ...requested };
+  const inferred = inferRequestedOutputs(goal);
 
   if (plan?.outputs && typeof plan.outputs === 'object') {
     for (const key of Object.keys(output)) {
-      // Teacher-selected outputs are hard requirements. The planner may add useful
-      // low-cost outputs from the wording, but it may never silently turn off a
-      // selected deliverable.
-      if (key in plan.outputs) output[key] = output[key] || Boolean(plan.outputs[key]);
+      // Planner flags are advisory. Only preserve a planner-added deliverable when
+      // the teacher selected it or the teacher's wording explicitly asks for it.
+      // This prevents hidden outputs (for example teachingScript=true) from being
+      // generated merely because the planner thought they were useful.
+      if (key in plan.outputs && Boolean(plan.outputs[key])) {
+        if (requested[key] || inferred[key]) output[key] = true;
+      }
     }
   }
 
@@ -935,6 +970,7 @@ QUALITY RULES:
 - Never add fake URLs, placeholder citations presented as real sources, or unsupported claims.
 - Do not silently resolve conflicting evidence; state an uncertainty when needed.
 - Avoid repetitive filler. Detail must add classroom value.
+- Never return an empty required array/object. Generate the requested deliverable in full.
 
 ${outputLengthInstruction(input.goal, outputType)}
 
@@ -1051,8 +1087,13 @@ function normalizeSingleOutput(type, parsed, plan) {
   switch (type) {
     case 'lessonPlan':
       return normalizeLessonOutput(parsed, plan);
-    case 'worksheet':
-      return normalizeQuestionSet(parsed, { hideAnswers: false });
+    case 'worksheet': {
+      const set = normalizeQuestionSet(parsed, { hideAnswers: true });
+      if (!set.answerKey.length && Array.isArray(parsed.questions)) {
+        set.answerKey = normalizeAnswerKey(parsed.questions.map((q, i) => ({ number: q?.number || i + 1, answer: q?.answer || '', explanation: q?.explanation || '', marks: q?.marks })));
+      }
+      return set;
+    }
     case 'assessment': {
       const set = normalizeQuestionSet(parsed, { hideAnswers: true });
       set.answerKey = normalizeAnswerKey(parsed.answerKey?.length ? parsed.answerKey : parsed.answers);
@@ -1103,10 +1144,13 @@ function normalizeSingleOutput(type, parsed, plan) {
           answer: cleanText(q?.answer || '', 1_000),
         })).filter(q => q.question) : [],
       };
-    case 'teachingScript':
-      return {
-        script: Array.isArray(parsed.script) ? parsed.script.slice(0, 50).map(x => cleanText(x, 1_500)).filter(Boolean) : [],
-      };
+    case 'teachingScript': {
+      const rawScript = parsed.script ?? parsed.teachingScript ?? parsed.lines ?? parsed.steps ?? parsed.content ?? parsed.text ?? '';
+      const script = Array.isArray(rawScript)
+        ? rawScript.map(x => cleanText(typeof x === 'object' ? (x?.text || x?.line || x?.say || '') : x, 1_500)).filter(Boolean).slice(0, 50)
+        : String(rawScript).split(/\n+/).map(x => cleanText(x.replace(/^[-*]\s*/, ''), 1_500)).filter(Boolean).slice(0, 50);
+      return { script };
+    }
     case 'answerKey':
       return {
         title: cleanText(parsed.title || 'Answer Key', 180),
@@ -1266,7 +1310,19 @@ async function runSingleTextOutput(req, type, input, currentPack) {
   });
 
   const parsed = parseJsonLoose(raw);
-  return normalizeSingleOutput(type, parsed, input.plan);
+  if (parsed) return normalizeSingleOutput(type, parsed, input.plan);
+
+  // Preserve the single-call guarantee while tolerating a model that returned plain
+  // teacher-ready text instead of JSON. Teaching scripts and some simple outputs can
+  // be recovered without another model call; complex structured documents still fail
+  // loudly rather than fabricating structure.
+  if (type === 'teachingScript' && String(raw || '').trim()) {
+    return {
+      script: String(raw).split(/\n+/).map(x => cleanText(x.replace(/^[-*]\s*/, ''), 1_500)).filter(Boolean).slice(0, 50),
+    };
+  }
+
+  throw new Error(`STUDY_${type.toUpperCase()}_INVALID_JSON`);
 }
 
 function applyGeneratedOutput(pack, type, value) {
@@ -1323,19 +1379,31 @@ function applyGeneratedOutput(pack, type, value) {
   }
 }
 
-function runDeterministicQA(input, pack) {
+function runDeterministicQA(input, pack, completed = new Set(), stageStatus = new Map()) {
   const criticalIssues = [];
   const warnings = [];
   const verifiedChecks = [];
 
   const requested = input.plan.outputs || {};
-  if (requested.lessonPlan) {
-    if (!pack.lessonPlan.length) criticalIssues.push({ issue: 'Lesson plan output is empty.', where: 'Lesson Plan', reason: 'The teacher explicitly requested a lesson plan.' });
-    else verifiedChecks.push('Lesson plan contains executable classroom phases.');
-  }
+  const requireOutput = (key, label, hasContent, successMessage) => {
+    if (!requested[key]) return;
+    if (completed.has(key)) {
+      if (hasContent) verifiedChecks.push(successMessage);
+      else criticalIssues.push({ issue: `${label} output is empty.`, where: label, reason: `The teacher explicitly requested a ${label.toLowerCase()}.` });
+      return;
+    }
+    const status = stageStatus.get(key);
+    warnings.push(`${label} was not produced (${status || 'not completed'}).`);
+  };
 
-  const inspectSet = (label, set, required) => {
+  requireOutput('lessonPlan', 'Lesson Plan', Boolean(pack.lessonPlan.length), 'Lesson plan contains executable classroom phases.');
+
+  const inspectSet = (label, set, required, key) => {
     if (!required) return;
+    if (!completed.has(key)) {
+      warnings.push(`${label} was not produced (${stageStatus.get(key) || 'not completed'}).`);
+      return;
+    }
     if (!set?.questions?.length) {
       criticalIssues.push({ issue: `${label} contains no questions.`, where: label, reason: `The teacher explicitly requested a ${label.toLowerCase()}.` });
       return;
@@ -1353,7 +1421,7 @@ function runDeterministicQA(input, pack) {
     else verifiedChecks.push(`${label} question numbering and total marks are internally consistent.`);
   };
 
-  inspectSet('Worksheet', pack.worksheet, requested.worksheet);
+  inspectSet('Worksheet', pack.worksheet, requested.worksheet, 'worksheet');
   inspectSet('Assessment', pack.assessment, requested.assessment);
 
   if (requested.assessment) {
@@ -1366,18 +1434,18 @@ function runDeterministicQA(input, pack) {
     }
   }
 
-  if (requested.worksheet && requested.answerKey) {
+  if (requested.worksheet && requested.answerKey && completed.has('worksheet')) {
     const qCount = pack.worksheet.questions.length;
     const aCount = pack.worksheet.answerKey.length;
     if (aCount !== qCount) warnings.push(`Worksheet answer key has ${aCount} entries for ${qCount} questions.`);
     else verifiedChecks.push('Worksheet answer key matches the worksheet question count.');
   }
 
-  if (requested.flashcards && !pack.flashcards.length) criticalIssues.push({ issue: 'Flashcard output is empty.', where: 'Flashcards', reason: 'The teacher explicitly requested flashcards.' });
-  if (requested.homework && !pack.homework.length) criticalIssues.push({ issue: 'Homework output is empty.', where: 'Homework', reason: 'The teacher explicitly requested homework.' });
-  if (requested.rubric && !pack.rubric.length) criticalIssues.push({ issue: 'Rubric output is empty.', where: 'Rubric', reason: 'The teacher explicitly requested a rubric.' });
-  if (requested.exitTicket && !pack.exitTicket.length) criticalIssues.push({ issue: 'Exit ticket output is empty.', where: 'Exit Ticket', reason: 'The teacher explicitly requested an exit ticket.' });
-  if (requested.teachingScript && !pack.teachingScript.length) criticalIssues.push({ issue: 'Teaching script output is empty.', where: 'Teaching Script', reason: 'The teacher explicitly requested a teaching script.' });
+  requireOutput('flashcards', 'Flashcards', Boolean(pack.flashcards.length), 'Flashcards were generated.');
+  requireOutput('homework', 'Homework', Boolean(pack.homework.length), 'Homework was generated.');
+  requireOutput('rubric', 'Rubric', Boolean(pack.rubric.length), 'Rubric was generated.');
+  requireOutput('exitTicket', 'Exit Ticket', Boolean(pack.exitTicket.length), 'Exit ticket was generated.');
+  requireOutput('teachingScript', 'Teaching Script', Boolean(pack.teachingScript.length), 'Teaching script is teacher-ready and non-empty.');
 
   if (input.research && requested.researchReport) {
     if (!input.research.sources?.length && !(input.research.report || input.research.context)) {
@@ -1742,6 +1810,8 @@ async function executeStudy(req, input, controller) {
 
   stage('outputs', 'running', 'Generating each requested teaching deliverable with its dedicated AI call.');
   state.pack = emptyPack(input.plan);
+  const completedOutputTypes = new Set();
+  const outputStageStatus = new Map();
 
   const requestedTextOutputs = [
     'lessonPlan',
@@ -1762,6 +1832,7 @@ async function executeStudy(req, input, controller) {
 
     const minRemaining = type === 'assessment' || type === 'worksheet' ? 24_000 : 14_000;
     if (remaining() < minRemaining) {
+      outputStageStatus.set(type, 'deferred');
       stage(type, 'deferred', `Skipped because the remaining runtime budget is too low for a complete ${type} generation.`);
       continue;
     }
@@ -1773,8 +1844,11 @@ async function executeStudy(req, input, controller) {
         pack: state.pack,
       }, state.pack);
       applyGeneratedOutput(state.pack, type, generated);
+      completedOutputTypes.add(type);
+      outputStageStatus.set(type, 'complete');
       stage(type, 'complete', `One dedicated AI generation call returned the ${type} deliverable.`);
     } catch (error) {
+      outputStageStatus.set(type, `failed: ${shortError(error)}`);
       stage(type, 'failed', shortError(error));
     }
   }
@@ -1809,7 +1883,7 @@ async function executeStudy(req, input, controller) {
       : 'Research report was requested but no research payload was returned.');
   }
 
-  state.qa = runDeterministicQA(input, state.pack);
+  state.qa = runDeterministicQA(input, state.pack, completedOutputTypes, outputStageStatus);
   stage('qa', state.qa.passed ? 'complete' : 'warning', state.qa.passed
     ? 'Deterministic QA checks passed.'
     : 'Deterministic QA found issues or warnings; no model call was used for QA.', {
@@ -1974,7 +2048,7 @@ async function executeAction(req, body) {
     async start(controller) {
       try {
         let plan = body.plan && typeof body.plan === 'object'
-          ? normalizePlan(body.plan, preferences)
+          ? normalizePlan(body.plan, preferences, goal)
           : null;
 
         if (!plan) {
