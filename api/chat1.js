@@ -1215,7 +1215,7 @@ ${memoryString}${clockContext}`;
           if (m.attachments && Array.isArray(m.attachments)) {
             for (const att of m.attachments) {
               const mime = att.type ? att.type.toLowerCase() : 'text/plain';
-              const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv') || att.name.endsWith('.txt') || att.name.endsWith('.md') || att.name.endsWith('.py');
+              const isText = mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('csv') || mime.includes('javascript') || att.name.endsWith('.txt') || att.name.endsWith('.md') || att.name.endsWith('.py') || att.name.endsWith('.js');
 
               if (isText) {
                 try {
