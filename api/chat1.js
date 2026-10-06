@@ -546,23 +546,28 @@ telemetry.model = modelId || 'unknown';
         const ARIX_CRAWLER_HOST = (process.env.ARIX_CRAWLER_URL || 'https://arix-web-crawler-chi.vercel.app').replace(/\/+$/, '');
         const ARIX_SEARCH_FALLBACK = 'https://web-crawler-pink.vercel.app/api/crawler';
 
-        async function queryArixIntelligence(searchQuery, maxPages = 5) {
+        async function queryArixIntelligence(searchQuery, maxPages = 5, onStatus = null) {
           if (!searchQuery || typeof searchQuery !== 'string') return [];
-          const cleanQuery = searchQuery.trim();
+          const rawQuery = searchQuery.trim();
+          if (!rawQuery) return [];
+
+          // 1. Stage 1: Discovery (Fetch URLs from Search Fallback Engine via GET)
+          // Uses stripped query variations to ensure search results are never missed due to strict quotes
+          const queryVariations = [
+            rawQuery,
+            rawQuery.replace(/["']/g, ' ').replace(/\s+/g, ' ').trim()
+          ].filter(Boolean);
+
           let rawResults = [];
 
-          // 1. Search Discovery Stage (Tries Primary Host, then Fallback Engine)
-          const searchUrls = [
-            `${ARIX_CRAWLER_HOST}/api/crawler?query=${encodeURIComponent(cleanQuery)}&count=${maxPages}&mode=auto&type=mixed&verify=true`,
-            `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery)}&count=${maxPages}&mode=auto&type=mixed&verify=true`
-          ];
-
-          for (const sUrl of searchUrls) {
+          for (const q of queryVariations) {
+            const searchEndpoint = `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(q)}&count=${maxPages}&mode=auto&type=mixed&verify=true`;
             try {
-              const res = await fetch(sUrl, {
+              if (onStatus) onStatus(`Arix Discovery: Querying live web index for "${q}"...`);
+              const res = await fetch(searchEndpoint, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(6000)
+                signal: AbortSignal.timeout(8000)
               });
               if (res.ok) {
                 const data = await res.json();
@@ -592,12 +597,14 @@ telemetry.model = modelId || 'unknown';
           const targetUrls = validCandidates.map(c => c.url);
           const finalPages = [];
 
+          if (onStatus) onStatus(`Arix Rust Engine: Crawling & parsing full DOM for ${targetUrls.length} pages...`);
+
           try {
             const extractRes = await fetch(`${ARIX_CRAWLER_HOST}/api/crawler`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ urls: targetUrls, include_ai_context: true }),
-              signal: AbortSignal.timeout(12000)
+              signal: AbortSignal.timeout(20000) // Strictly wait for Tokio multi-threaded DOM walk
             });
 
             if (extractRes.ok) {
@@ -620,15 +627,15 @@ telemetry.model = modelId || 'unknown';
                   finalPages.push({
                     url: ext?.final_url || cand.url,
                     title: ext?.title || cand.title || 'Untitled Document',
-                    quality: ext?.quality || 70,
+                    quality: ext?.quality || 75,
                     wordCount: ext?.word_count || fullText.split(/\s+/).filter(Boolean).length,
                     content: fullText
                   });
                 }
               }
             }
-          } catch (_) {
-            // Safe fallback to candidate snippets if parallel crawler POST times out
+          } catch (postErr) {
+            // Resilient fallback to candidate snippets if Rust endpoint hits upstream limit
             for (const cand of validCandidates) {
               const text = cand.extractedText || cand.pageContent || cand.snippet || '';
               if (text && text.length >= 25) {
@@ -1247,18 +1254,27 @@ Output strictly JSON:
             : [userQuery].slice(0, maxSearches);
 
           const aggregatedJsonPayload = [];
+          const allDiscoveredSources = [];
           let totalExtractedPages = 0;
 
           for (let q = 0; q < queries.length; q++) {
             const queryTarget = queries[q];
             if (!queryTarget) continue;
 
-            sendThinkStep(`Arix Intelligence: Searching & Crawling for "${queryTarget}"...`);
+            sendThinkStep(`Arix Web Intelligence: Initiating query "${queryTarget}"...`);
 
             try {
-              const pages = await queryArixIntelligence(queryTarget, 4);
+              const pages = await queryArixIntelligence(queryTarget, 4, (msg) => sendThinkStep(msg));
               if (pages.length > 0) {
                 totalExtractedPages += pages.length;
+
+                // Collect sources for immediate UI streaming
+                pages.forEach(p => {
+                  if (!allDiscoveredSources.some(s => s.url === p.url)) {
+                    allDiscoveredSources.push({ url: p.url, title: p.title || p.url });
+                  }
+                });
+
                 aggregatedJsonPayload.push({
                   query: queryTarget,
                   extracted_pages: pages.map(p => ({
@@ -1273,6 +1289,16 @@ Output strictly JSON:
             } catch (crawlErr) {
               console.error('[Arix Web Crawler Error]:', crawlErr);
             }
+          }
+
+          // INSTANT FRONTEND SOURCES STREAMING (Runs immediately before LLM generation)
+          if (allDiscoveredSources.length > 0) {
+            const instantSourcesPayload = {
+              sources: allDiscoveredSources,
+              choices: [{ index: 0, delta: { role: "assistant", content: "" }, finish_reason: null }],
+              candidates: [{ index: 0, content: { role: "model", parts: [{ text: "" }] }, finishReason: null }]
+            };
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify(instantSourcesPayload)}\n\n`));
           }
 
           if (aggregatedJsonPayload.length > 0) {
