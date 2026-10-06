@@ -540,15 +540,111 @@ telemetry.model = modelId || 'unknown';
           "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"
         ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
-        const TAVILY_KEYS = [
-          process.env.TAVILY_API_KEY,
-          process.env.TAVILY_KEY_2,
-          process.env.TAVILY_KEY_3,
-          process.env.TAVILY_KEY_4,
-          process.env.TAVILY_KEY_5,
-          process.env.TAVILY_KEY_6,
-          process.env.TAVILY_KEY_7
-        ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
+        // ====================================================================
+        // ARIX WEB INTELLIGENCE SEARCH + FULL-PAGE DOM EXTRACTOR
+        // ====================================================================
+        const ARIX_CRAWLER_HOST = (process.env.ARIX_CRAWLER_URL || 'https://arix-web-crawler-chi.vercel.app').replace(/\/+$/, '');
+        const ARIX_SEARCH_FALLBACK = 'https://web-crawler-pink.vercel.app/api/crawler';
+
+        async function queryArixIntelligence(searchQuery, maxPages = 5) {
+          if (!searchQuery || typeof searchQuery !== 'string') return [];
+          const cleanQuery = searchQuery.trim();
+          let rawResults = [];
+
+          // 1. Search Discovery Stage (Tries Primary Host, then Fallback Engine)
+          const searchUrls = [
+            `${ARIX_CRAWLER_HOST}/api/crawler?query=${encodeURIComponent(cleanQuery)}&count=${maxPages}&mode=auto&type=mixed&verify=true`,
+            `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery)}&count=${maxPages}&mode=auto&type=mixed&verify=true`
+          ];
+
+          for (const sUrl of searchUrls) {
+            try {
+              const res = await fetch(sUrl, {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' },
+                signal: AbortSignal.timeout(6000)
+              });
+              if (res.ok) {
+                const data = await res.json();
+                if (Array.isArray(data?.results) && data.results.length > 0) {
+                  rawResults = data.results;
+                  break;
+                }
+              }
+            } catch (_) {}
+          }
+
+          // 2. Filter un-crawlable candidates (YouTube, Video types, empty links)
+          const isYouTubeUrl = (target) => {
+            try {
+              const h = new URL(target).hostname.toLowerCase().replace(/^www\./, '');
+              return h === 'youtube.com' || h === 'youtu.be' || h.endsWith('.youtube.com');
+            } catch { return true; }
+          };
+
+          const validCandidates = rawResults
+            .filter(r => r?.url && !isYouTubeUrl(r.url) && r.type !== 'video')
+            .slice(0, maxPages);
+
+          if (!validCandidates.length) return [];
+
+          // 3. Stage 2: Parallel Full-Page Extraction via Rust Crawler POST
+          const targetUrls = validCandidates.map(c => c.url);
+          const finalPages = [];
+
+          try {
+            const extractRes = await fetch(`${ARIX_CRAWLER_HOST}/api/crawler`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ urls: targetUrls, include_ai_context: true }),
+              signal: AbortSignal.timeout(12000)
+            });
+
+            if (extractRes.ok) {
+              const extractData = await extractRes.json();
+              const extractedList = Array.isArray(extractData?.results) ? extractData.results : [];
+              const extractedMap = new Map();
+
+              extractedList.forEach(item => {
+                if (item?.url) extractedMap.set(item.url, item);
+                if (item?.final_url) extractedMap.set(item.final_url, item);
+              });
+
+              for (const cand of validCandidates) {
+                const ext = extractedMap.get(cand.url);
+                const fullText = (ext?.ok && ext?.text && ext.text.length >= 40)
+                  ? ext.text
+                  : (cand.extractedText || cand.pageContent || cand.snippet || '');
+
+                if (fullText && fullText.length >= 25) {
+                  finalPages.push({
+                    url: ext?.final_url || cand.url,
+                    title: ext?.title || cand.title || 'Untitled Document',
+                    quality: ext?.quality || 70,
+                    wordCount: ext?.word_count || fullText.split(/\s+/).filter(Boolean).length,
+                    content: fullText
+                  });
+                }
+              }
+            }
+          } catch (_) {
+            // Safe fallback to candidate snippets if parallel crawler POST times out
+            for (const cand of validCandidates) {
+              const text = cand.extractedText || cand.pageContent || cand.snippet || '';
+              if (text && text.length >= 25) {
+                finalPages.push({
+                  url: cand.url,
+                  title: cand.title || 'Untitled Document',
+                  quality: 50,
+                  wordCount: text.split(/\s+/).filter(Boolean).length,
+                  content: text
+                });
+              }
+            }
+          }
+
+          return finalPages;
+        }
 
         const MISTRAL_KEY = process.env.MISTRAL_API_KEY ? process.env.MISTRAL_API_KEY.replace(/[\r\n\s]/g, '') : null;
 
@@ -976,15 +1072,7 @@ if (taskMode === true) {
           queries = [],
           maxSearches = 6
         } = {}) {
-
-          if (!TAVILY_KEYS || !TAVILY_KEYS.length) {
-            throw new Error('Live research is unavailable because no Tavily key is configured.');
-          }
-
-          const requestedQueries = Array.isArray(queries)
-            ? queries.filter(Boolean)
-            : [];
-
+          const requestedQueries = Array.isArray(queries) ? queries.filter(Boolean) : [];
           const finalQueries = [
             ...requestedQueries,
             ...(query ? [query] : [])
@@ -992,70 +1080,40 @@ if (taskMode === true) {
             .map(q => String(q).trim())
             .filter(Boolean)
             .filter((q, index, arr) => arr.indexOf(q) === index)
-            .slice(0, Math.max(1, Math.min(Number(maxSearches) || 6, 10)));
+            .slice(0, Math.max(1, Math.min(Number(maxSearches) || 4, 8)));
 
           if (!finalQueries.length) {
-            throw new Error('No valid live-research query was generated.');
+            throw new Error('No valid research query provided.');
           }
 
           const combinedResults = [];
           const sourceMap = new Map();
 
-          for (let qIndex = 0; qIndex < finalQueries.length; qIndex++) {
-            const searchQuery = finalQueries[qIndex];
-            let success = false;
-
-            for (let keyOffset = 0; keyOffset < TAVILY_KEYS.length; keyOffset++) {
-              const key = TAVILY_KEYS[(qIndex + keyOffset) % TAVILY_KEYS.length];
-
-              try {
-                const response = await fetch('https://api.tavily.com/search', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    api_key: key,
-                    query: searchQuery,
-                    search_depth: 'advanced',
-                    max_results: 10,
-                    include_answer: true,
-                    include_raw_content: false
-                  })
-                });
-
-                if (!response.ok) continue;
-
-                const data = await response.json();
-                const answer = typeof data?.answer === 'string' ? data.answer.trim() : '';
-
-                if (answer) {
-                  combinedResults.push(`SEARCH QUERY: ${searchQuery}\nSEARCH ANSWER:\n${answer}`);
+          for (const searchQ of finalQueries) {
+            try {
+              const pages = await queryArixIntelligence(searchQ, 5);
+              for (const p of pages) {
+                if (!sourceMap.has(p.url)) {
+                  sourceMap.set(p.url, p.title);
+                  combinedResults.push(JSON.stringify({
+                    url: p.url,
+                    title: p.title,
+                    quality: p.quality,
+                    full_content: p.content
+                  }));
                 }
-
-                const results = Array.isArray(data?.results) ? data.results : [];
-
-                for (const result of results) {
-                  const url = typeof result?.url === 'string' ? result.url.trim() : '';
-                  if (!url || sourceMap.has(url)) continue;
-                  sourceMap.set(url, true);
-                  combinedResults.push(`TITLE: ${result?.title || url}\nURL: ${url}\nCONTENT: ${result?.content || ''}`);
-                }
-
-                success = true;
-                break;
-              } catch (err) {}
-            }
-
-            if (!success && qIndex === 0) continue;
+              }
+            } catch (_) {}
           }
 
           if (!combinedResults.length) {
-            throw new Error('Live research returned no usable results.');
+            throw new Error('Arix Web Intelligence returned no usable results.');
           }
 
-          const sources = Array.from(sourceMap.keys()).map(url => ({ title: url, url }));
+          const sources = Array.from(sourceMap.entries()).map(([url, title]) => ({ title, url }));
 
           return {
-            text: combinedResults.join('\n\n---\n\n'),
+            text: combinedResults.join('\n\n'),
             sources,
             results: sources
           };
@@ -1149,14 +1207,25 @@ ${memoryString}${clockContext}`;
         let deepReasoningContext = "";
 
         if (isThinkingEnabled) {
-          sendThinkStep("Evaluating intent semantics and domain constraints...");
+          sendThinkStep("Searching Web and Thinking...");
 
-          const triagePrompt = `Analyze the complexity of this user query. Scale 1-10 (1=simple greeting/fact, 5=requires planning, 10=complex code/math/analysis). Output strictly JSON:
-          {
-              "thought": "1 sentence professional thought (e.g., 'Deconstructing multi-variable constraints...', 'Analyzing engineering realism parameters...')",
-              "complexity": number,
-              "search_queries": ["query1", "query2"] // Max ${maxSearches} highly targeted web queries. Empty array if no real-time data is needed.
-          }`;
+          const triagePrompt = `Analyze the complexity of this user query. Scale 1-10 (1=simple greeting/fact, 5=requires planning, 10=complex code/math/analysis).
+When generating queries for the search tool, optimize for the Arix Web Intelligence Engine:
+1. Output 4 to 7 dense keywords without filler phrases ("search for", "find me", "can you tell").
+2. Wrap critical 2-word entities in double quotes (e.g., "DeepSeek R1").
+3. Always include an intent modifier:
+   - For fresh events: append 'latest 2026' or 'today'.
+   - For laws, regulations, or taxes: append 'official circular' or 'policy'.
+   - For academic evidence: append 'research study' or 'paper'.
+   - For technical docs: append 'documentation' or 'guide'.
+4. Do not search for web applications or dashboard URLs; prioritize articles, documentation, and reporting pages.
+
+Output strictly JSON:
+{
+    "thought": "1 sentence professional thought (e.g., 'Deconstructing multi-variable constraints...', 'Analyzing engineering realism parameters...')",
+    "complexity": number,
+    "search_queries": ["query1", "query2"] // Max ${maxSearches} targeted search queries strictly obeying rules 1-4. Empty array if no real-time web data is needed.
+}`;
 
           const triageData = await callGroqAPI(triagePrompt, userQuery);
 
@@ -1167,43 +1236,51 @@ ${memoryString}${clockContext}`;
         }
 
         // ====================================================================
-        // PHASE 3: ADAPTIVE TAVILY WEB GROUNDING (Oracle Only)
+        // PHASE 3: ARIX WEB INTELLIGENCE SEARCH & FULL-PAGE CRAWLER (Oracle Only)
         // ====================================================================
         const genericNeedsSearch = /latest|news|who|what|when|where|why|how|price|stock|weather|update|search|current|today/i.test(userQuery);
-        const shouldSearch = isThinkingEnabled && !researchContext && TAVILY_KEYS.length > 0 && (dynamicPlan.search_queries.length > 0 || genericNeedsSearch);
+        const shouldSearch = isThinkingEnabled && !researchContext && (dynamicPlan.search_queries.length > 0 || genericNeedsSearch);
 
         if (shouldSearch) {
-          let queries = dynamicPlan.search_queries && Array.isArray(dynamicPlan.search_queries) && dynamicPlan.search_queries.length > 0
+          const queries = (dynamicPlan.search_queries && Array.isArray(dynamicPlan.search_queries) && dynamicPlan.search_queries.length > 0)
             ? dynamicPlan.search_queries.slice(0, maxSearches)
             : [userQuery].slice(0, maxSearches);
 
-          const maxResults = 20;
-          let successfulSearches = 0;
+          const aggregatedJsonPayload = [];
+          let totalExtractedPages = 0;
 
           for (let q = 0; q < queries.length; q++) {
-            if (!queries[q]) continue;
+            const queryTarget = queries[q];
+            if (!queryTarget) continue;
 
-            sendThinkStep(`Searching network for "${queries[q]}"...`);
+            sendThinkStep(`Arix Intelligence: Searching & Crawling for "${queryTarget}"...`);
 
-            for (let k = 0; k < TAVILY_KEYS.length; k++) {
-              let tKey = TAVILY_KEYS[(q + k) % TAVILY_KEYS.length];
-              try {
-                const tavilyRes = await fetch('https://api.tavily.com/search', {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ api_key: tKey, query: queries[q], search_depth: "advanced", max_results: maxResults, include_answer: true })
+            try {
+              const pages = await queryArixIntelligence(queryTarget, 4);
+              if (pages.length > 0) {
+                totalExtractedPages += pages.length;
+                aggregatedJsonPayload.push({
+                  query: queryTarget,
+                  extracted_pages: pages.map(p => ({
+                    url: p.url,
+                    title: p.title,
+                    quality_score: `${p.quality}/100`,
+                    word_count: p.wordCount,
+                    full_content: p.content
+                  }))
                 });
-                if (tavilyRes.ok) {
-                  const tavData = await tavilyRes.json();
-                  const searchResults = tavData.results.map(r => `Title: ${r.title}\nURL: ${r.url}\nContent: ${r.content}`).join('\n\n');
-                  massiveKnowledgeBase += `\n--- SECURE SEARCH CONTEXT (Query: ${queries[q]}) ---\n${searchResults}\n`;
-                  successfulSearches++;
-                  break;
-                }
-              } catch (e) {}
+              }
+            } catch (crawlErr) {
+              console.error('[Arix Web Crawler Error]:', crawlErr);
             }
           }
-          if (successfulSearches > 0) {
-            sendThinkStep(`Context indexed from ${successfulSearches} distributed sources.`);
+
+          if (aggregatedJsonPayload.length > 0) {
+            massiveKnowledgeBase += `\n--- ARIX WEB INTELLIGENCE CONTEXT (FULL PAGES JSON) ---\n` +
+              JSON.stringify(aggregatedJsonPayload, null, 2) +
+              `\n--- END WEB INTELLIGENCE CONTEXT ---\n`;
+
+            sendThinkStep(`Extracted ${totalExtractedPages} verified pages via Arix Search.`);
           }
         }
 
