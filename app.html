@@ -3628,43 +3628,168 @@ ${marked.parse(unclosedContent.trim())}
     });
     
     
-    // Process <sources> into modern target UI blocks
-    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(<\/sources>|$)/g, (match, jsonStr, closeTag) => {
-        if (!closeTag) return `<div class="animate-pulse text-purple-600 text-xs font-semibold mt-4 flex items-center gap-2"><i class="ph ph-circle-notch animate-spin"></i> Analyzing Sources...</div>`;
+    // ====================================================================
+    // ARIX ALGORITHMIC SOURCE DEDUPLICATION & SCRUBBER ENGINE
+    // ====================================================================
+    window.MSG_SOURCES = window.MSG_SOURCES || {};
+
+    const cleanSafeUrl = (rawUrl) => {
         try {
-            const cleanedStr = jsonStr.replace(/^```json/gi, "").replace(/```$/g, "").trim();
-            const sources = JSON.parse(cleanedStr);
-            const listHtml = sources.map((s) => {
-                let domain = "";
-                try { domain = new URL(s.url).hostname; } catch(e) { domain = s.url.split('/')[0] || "link"; }
-                const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : '';
-                
-                return `<a href="${s.url}" target="_blank" class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors border border-transparent hover:border-gray-200 group/link">
-                    <img src="${faviconUrl}" alt="logo" class="w-8 h-8 rounded-lg shadow-sm bg-white p-1 border border-gray-100" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="w-8 h-8 rounded-lg bg-gray-900 text-white flex items-center justify-center font-bold text-xs shadow-sm hidden" style="display:none;">${(s.title || s.name || domain).charAt(0).toUpperCase()}</div>
-                    <div class="flex flex-col flex-1 overflow-hidden">
-                        <span class="text-[13px] text-gray-900 font-bold truncate group-hover/link:text-theme-600 transition-colors">${s.title || s.name || s.url}</span>
-                        <span class="text-[10px] text-gray-500 font-medium truncate">${domain}</span>
-                    </div>
-                    <i class="ph-bold ph-arrow-up-right text-gray-300 group-hover/link:text-theme-500 text-sm transition-colors mr-1"></i>
-                </a>`;
-            }).join("");
-            
-            extractedHtml += `<details class="group mt-6 w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-4 hover:bg-gray-50 transition-colors select-none">
-                    <div class="flex items-center gap-2.5">
-                        <div class="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center"><i class="ph-bold ph-link text-sm"></i></div>
-                        <h4 class="text-[14px] font-bold text-gray-900">View Sources (${sources.length})</h4>
-                    </div>
-                    <i class="ph-bold ph-caret-down text-gray-400 group-open:rotate-180 transition-transform"></i>
-                </summary>
-                <div class="flex flex-col gap-1 p-3 pt-0 border-t border-gray-100 bg-gray-50/50">
-                   ${listHtml}
-                </div>
-            </details>`;
-        } catch (e) { console.error("Failed to parse sources"); }
+            if (!rawUrl || typeof rawUrl !== 'string') return null;
+            let u = rawUrl.trim().replace(/[.,;!>\]\)\'\"]+$/, '');
+            if (!/^https?:\/\//i.test(u)) return null;
+            const parsed = new URL(u);
+            if (!parsed.hostname || parsed.hostname.includes(' ') || ['localhost', '127.0.0.1'].includes(parsed.hostname)) return null;
+            ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref', 'source'].forEach(p => parsed.searchParams.delete(p));
+            return parsed.toString();
+        } catch { return null; }
+    };
+
+    const getCleanDomain = (urlStr) => {
+        try { return new URL(urlStr).hostname.toLowerCase().replace(/^www\./, ''); } catch { return urlStr.split('/')[0] || 'web'; }
+    };
+
+    const sourcesMap = new Map();
+
+    // 1. Ingest App/Crawler-level sources streamed from backend
+    if (msgId && Array.isArray(window.MSG_SOURCES[msgId])) {
+        window.MSG_SOURCES[msgId].forEach(s => {
+            const u = cleanSafeUrl(s.url || s.link);
+            if (u) {
+                const domain = getCleanDomain(u);
+                sourcesMap.set(u.toLowerCase(), {
+                    url: u,
+                    title: s.title && s.title !== u ? s.title : domain,
+                    domain: domain
+                });
+            }
+        });
+    }
+
+    // 2. Extract and remove all <sources> tags (JSON or raw URLs)
+    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(?:<\/sources>|$)/gi, (match, rawInner) => {
+        if (rawInner) {
+            try {
+                const cleaned = rawInner.replace(/^```json/gi, '').replace(/```$/g, '').trim();
+                const parsed = JSON.parse(cleaned);
+                if (Array.isArray(parsed)) {
+                    parsed.forEach(item => {
+                        const u = cleanSafeUrl(item.url || item.link);
+                        if (u) {
+                            const domain = getCleanDomain(u);
+                            const norm = u.toLowerCase();
+                            const existing = sourcesMap.get(norm);
+                            sourcesMap.set(norm, {
+                                url: u,
+                                title: (item.title && item.title !== u) ? item.title : (existing?.title || domain),
+                                domain: domain
+                            });
+                        }
+                    });
+                }
+            } catch {
+                const urlMatches = rawInner.matchAll(/https?:\/\/[^\s"'\<\>]+/g);
+                for (const m of urlMatches) {
+                    const u = cleanSafeUrl(m[0]);
+                    if (u) {
+                        const domain = getCleanDomain(u);
+                        if (!sourcesMap.has(u.toLowerCase())) {
+                            sourcesMap.set(u.toLowerCase(), { url: u, title: domain, domain });
+                        }
+                    }
+                }
+            }
+        }
         return "";
     });
+
+    // 3. Remove AI-written "Sources" / "References" section at end of text and harvest links
+    const aiTrailingSourcesRegex = /(?:^|\n)(?:[-*_]{3,}\s*\n)?(?:#{1,4}\s+|\*{2})?(?:Sources|References|Citations|Web Sources|Sources Consulted|External Links)\*{0,2}\s*:?\s*[\n\r]+([\s\S]*)$/i;
+    const aiSectionMatch = markdownContent.match(aiTrailingSourcesRegex);
+    if (aiSectionMatch) {
+        const body = aiSectionMatch[1] || '';
+        let foundAnyLink = false;
+        
+        // Harvest [Title](url)
+        const mdLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^\s\)]+)\)/g;
+        let m;
+        while ((m = mdLinkRegex.exec(body)) !== null) {
+            foundAnyLink = true;
+            const u = cleanSafeUrl(m[2]);
+            if (u) {
+                const domain = getCleanDomain(u);
+                const norm = u.toLowerCase();
+                const existing = sourcesMap.get(norm);
+                sourcesMap.set(norm, {
+                    url: u,
+                    title: m[1].trim() || existing?.title || domain,
+                    domain: domain
+                });
+            }
+        }
+
+        // Harvest raw URLs
+        const rawUrlRegex = /(?:^|\s)(https?:\/\/[^\s\)\>\]]+)/g;
+        while ((m = rawUrlRegex.exec(body)) !== null) {
+            foundAnyLink = true;
+            const u = cleanSafeUrl(m[1]);
+            if (u) {
+                const domain = getCleanDomain(u);
+                const norm = u.toLowerCase();
+                if (!sourcesMap.has(norm)) {
+                    sourcesMap.set(norm, { url: u, title: domain, domain });
+                }
+            }
+        }
+
+        // If links were found, wipe the AI text section completely
+        if (foundAnyLink) {
+            markdownContent = markdownContent.substring(0, aiSectionMatch.index).trimEnd();
+        }
+    }
+
+    // 4. Render EXACTLY ONE consolidated sources accordion
+    const consolidatedSources = Array.from(sourcesMap.values());
+    if (consolidatedSources.length > 0) {
+        const listHtml = consolidatedSources.map((s) => {
+            const domain = s.domain || getCleanDomain(s.url);
+            const faviconUrl = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
+            const displayTitle = (s.title && s.title !== s.url && s.title !== domain) ? s.title : domain;
+            const letter = (displayTitle || domain).charAt(0).toUpperCase() || 'W';
+
+            return `<a href="${s.url}" target="_blank" rel="noopener noreferrer" class="flex items-center gap-3 p-2.5 hover:bg-gray-100/70 rounded-xl transition-colors border border-transparent hover:border-gray-200 group/link">
+                <div class="w-8 h-8 rounded-lg bg-white border border-gray-100 shadow-sm flex items-center justify-center p-1 shrink-0 overflow-hidden">
+                    <img src="${faviconUrl}" alt="" class="w-5 h-5 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" loading="lazy">
+                    <div class="w-full h-full bg-purple-50 text-purple-700 rounded flex items-center justify-center font-bold text-xs" style="display:none;">${letter}</div>
+                </div>
+                <div class="flex flex-col flex-1 min-w-0">
+                    <span class="text-[13px] text-gray-900 font-bold truncate group-hover/link:text-theme-600 transition-colors">${displayTitle}</span>
+                    <span class="text-[10px] text-gray-500 font-medium truncate mt-0.5 flex items-center gap-1.5">
+                        <span class="text-gray-700 font-semibold">${domain}</span>
+                        <span class="text-gray-300">•</span>
+                        <span class="truncate text-gray-400">${s.url}</span>
+                    </span>
+                </div>
+                <i class="ph-bold ph-arrow-up-right text-gray-300 group-hover/link:text-theme-500 text-sm transition-colors shrink-0 ml-1"></i>
+            </a>`;
+        }).join("");
+
+        extractedHtml += `<details class="group mt-6 w-full bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <summary class="flex items-center justify-between cursor-pointer list-none outline-none p-3.5 px-4 hover:bg-gray-50 transition-colors select-none">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center"><i class="ph-bold ph-link text-sm"></i></div>
+                    <h4 class="text-[13px] font-bold text-gray-900 flex items-center gap-2">
+                        <span>View Sources</span>
+                        <span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-purple-50 text-purple-700 border border-purple-100">${consolidatedSources.length}</span>
+                    </h4>
+                </div>
+                <i class="ph-bold ph-caret-down text-gray-400 text-xs group-open:rotate-180 transition-transform"></i>
+            </summary>
+            <div class="flex flex-col gap-1 p-3 pt-1 border-t border-gray-100 bg-gray-50/50">
+               ${listHtml}
+            </div>
+        </details>`;
+    }
 
     
     // Process <chart> into modern target UI blocks
@@ -5030,6 +5155,12 @@ if (
                                     break; 
                                 }
                                 
+                                // Ingest any direct app sources delivered via SSE
+                                if (data.sources && Array.isArray(data.sources)) {
+                                    window.MSG_SOURCES = window.MSG_SOURCES || {};
+                                    window.MSG_SOURCES[assistantMsgObj.id] = (window.MSG_SOURCES[assistantMsgObj.id] || []).concat(data.sources);
+                                }
+
                                 let textChunk = ""; 
                                 if (data.choices && data.choices[0].delta.content) textChunk = data.choices[0].delta.content; 
                                 else if (data.candidates && data.candidates[0].content.parts[0].text) textChunk = data.candidates[0].content.parts[0].text;
