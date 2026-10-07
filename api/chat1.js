@@ -541,12 +541,11 @@ telemetry.model = modelId || 'unknown';
         ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
 
         // ====================================================================
-        // ARIX WEB INTELLIGENCE SEARCH + FULL-PAGE DOM EXTRACTOR
+        // ARIX WEB INTELLIGENCE SEARCH + FULL-PAGE DOM EXTRACTOR (HIGH YIELD)
         // ====================================================================
         const ARIX_CRAWLER_HOST = (process.env.ARIX_CRAWLER_URL || 'https://arix-web-crawler-chi.vercel.app').replace(/\/+$/, '');
         const ARIX_SEARCH_FALLBACK = 'https://web-crawler-pink.vercel.app/api/crawler';
 
-        // 1. Domain and Noise Guardrails
         const isAdultOrNoiseUrl = (url, title = '') => {
           const lowerUrl = String(url || '').toLowerCase();
           const lowerTitle = String(title || '').toLowerCase();
@@ -564,12 +563,12 @@ telemetry.model = modelId || 'unknown';
           } catch { return true; }
         };
 
-        // 2. Pure Relevance Scoring (Ported directly from Arix app.html & index.html)
+        // Relevance Scorer preserving 2-letter tokens (e.g. AI, ML, IT)
         const scoreCandidateMatch = (item, query) => {
           if (typeof item.relevanceScore === 'number' && item.relevanceScore > 0) {
             return item.relevanceScore;
           }
-          const qWords = String(query || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length > 2);
+          const qWords = String(query || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 2);
           if (!qWords.length) return 50;
           const title = String(item.title || '').toLowerCase();
           const snippet = String(item.snippet || item.extractedText || '').toLowerCase();
@@ -583,28 +582,26 @@ telemetry.model = modelId || 'unknown';
           return Math.max(0, Math.min(100, base + trust + (item.verified ? 8 : 0)));
         };
 
-        async function queryArixIntelligence(searchQuery, maxPages = 180, onStatus = null) {
+        async function queryArixIntelligence(searchQuery, maxPages = 40, onStatus = null) {
           if (!searchQuery || typeof searchQuery !== 'string') return [];
-          
-          // Strip restrictive quotes and excessive punctuation to prevent 0-hit fallback spam
           const cleanQuery = searchQuery.replace(/["']/g, ' ').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
           if (!cleanQuery) return [];
 
           let rawResults = [];
 
-          // STAGE 1: Discovery via web-crawler-pink.vercel.app (GET)
+          // STAGE 1: Discovery via web-crawler-pink with full depth (count=40)
           const searchUrls = [
             `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery)}&count=40&mode=auto&type=mixed&verify=true`,
-            `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery.split(' ').slice(0, 4).join(' '))}&count=10&mode=auto&type=mixed&verify=true`
+            `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery.split(' ').slice(0, 4).join(' '))}&count=40&mode=auto&type=mixed&verify=true`
           ];
 
           for (const sUrl of searchUrls) {
             try {
-              if (onStatus) onStatus(`Arix Search: Discovering sources for "${cleanQuery}"...`);
+              if (onStatus) onStatus(`Arix Discovery: Searching index for "${cleanQuery}" (depth 40)...`);
               const res = await fetch(sUrl, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(8000)
+                signal: AbortSignal.timeout(9000)
               });
               if (res.ok) {
                 const data = await res.json();
@@ -616,27 +613,26 @@ telemetry.model = modelId || 'unknown';
             } catch (_) {}
           }
 
-          // STAGE 2: Relevance Filter & Bot/Adult Drop
+          // STAGE 2: Filter Noise and Weak Matches (< 20%)
           const candidates = [];
           for (const r of rawResults) {
             if (!r?.url || isYouTubeUrl(r.url) || r.type === 'video') continue;
             if (isAdultOrNoiseUrl(r.url, r.title)) continue;
 
             const score = scoreCandidateMatch(r, cleanQuery);
-            if (score < 25) continue; // Disregard Weak Matches (<25%)
+            if (score < 20) continue;
 
             candidates.push({ ...r, _score: score });
           }
 
           if (!candidates.length) return [];
 
-          // Sort by highest keyword relevance match
           candidates.sort((a, b) => (b._score || 0) - (a._score || 0));
-          const topCandidates = candidates.slice(0, maxPages);
+          const topCandidates = candidates.slice(0, Math.max(10, maxPages));
           const targetUrls = topCandidates.map(c => c.url);
 
-          // STAGE 3: Extract COMPLETE FULL-PAGE CONTENT via arix-web-crawler-chi (POST)
-          if (onStatus) onStatus(`Arix Rust Extractor: Crawling ${targetUrls.length} verified pages...`);
+          // STAGE 3: Single-Batch Parallel Crawl via arix-web-crawler-chi (POST)
+          if (onStatus) onStatus(`Arix Rust Engine: Concurrently crawling ${targetUrls.length} pages...`);
           const finalPages = [];
 
           try {
@@ -644,7 +640,7 @@ telemetry.model = modelId || 'unknown';
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ urls: targetUrls, include_ai_context: true }),
-              signal: AbortSignal.timeout(20000) // Strictly await Tokio multi-threaded DOM walk
+              signal: AbortSignal.timeout(25000)
             });
 
             if (extractRes.ok) {
@@ -659,15 +655,14 @@ telemetry.model = modelId || 'unknown';
 
               for (const cand of topCandidates) {
                 const ext = extractedMap.get(cand.url);
-                const fullText = (ext?.ok && ext?.text && ext.text.length >= 80)
+                const fullText = (ext?.ok && ext?.text && ext.text.length >= 60)
                   ? ext.text
                   : (cand.extractedText || cand.pageContent || cand.snippet || '');
 
-                // Drop Cloudflare captcha / blocked screens from the final text
                 if (isAdultOrNoiseUrl(cand.url, ext?.title || cand.title)) continue;
                 if (fullText.toLowerCase().includes('checking your browser') || fullText.toLowerCase().includes('enable javascript and cookies')) continue;
 
-                if (fullText && fullText.length >= 40) {
+                if (fullText && fullText.length >= 35) {
                   finalPages.push({
                     url: ext?.final_url || cand.url,
                     title: ext?.title || cand.title || 'Verified Document',
@@ -679,10 +674,9 @@ telemetry.model = modelId || 'unknown';
               }
             }
           } catch (postErr) {
-            // Graceful fallback to verified candidates if crawler POST hits timeout
             for (const cand of topCandidates) {
               const text = cand.extractedText || cand.pageContent || cand.snippet || '';
-              if (text && text.length >= 40 && !isAdultOrNoiseUrl(cand.url, cand.title)) {
+              if (text && text.length >= 35 && !isAdultOrNoiseUrl(cand.url, cand.title)) {
                 finalPages.push({
                   url: cand.url,
                   title: cand.title || 'Verified Document',
@@ -1293,7 +1287,6 @@ Output strictly JSON:
             ? dynamicPlan.search_queries.slice(0, maxSearches)
             : [userQuery].slice(0, maxSearches);
 
-          // Strip any residual quotes from LLM output
           queries = queries.map(q => String(q).replace(/["']/g, ' ').trim()).filter(Boolean);
 
           const aggregatedJsonPayload = [];
@@ -1304,10 +1297,11 @@ Output strictly JSON:
             const queryTarget = queries[q];
             if (!queryTarget) continue;
 
-            sendThinkStep(`Arix Web Intelligence: Querying "${queryTarget}"...`);
+            sendThinkStep(`Arix Web Intelligence: Crawling up to 40 sources for "${queryTarget}"...`);
 
             try {
-              const pages = await queryArixIntelligence(queryTarget, 4, (msg) => sendThinkStep(msg));
+              // High-yield extraction requesting up to 40 pages per query
+              const pages = await queryArixIntelligence(queryTarget, 40, (msg) => sendThinkStep(msg));
               if (pages.length > 0) {
                 totalExtractedPages += pages.length;
 
@@ -1333,12 +1327,12 @@ Output strictly JSON:
             }
           }
 
-          // Resilient Fallback: If generated queries returned 0 pages, try the raw user query
+          // Fallback: If query expansion yielded zero, run raw query with full depth
           if (totalExtractedPages === 0 && userQuery.trim().length > 2) {
             const cleanUserQ = userQuery.replace(/["']/g, ' ').trim();
-            sendThinkStep(`Arix Intelligence: Trying direct query "${cleanUserQ}"...`);
+            sendThinkStep(`Arix Intelligence: Running deep search for "${cleanUserQ}"...`);
             try {
-              const fallbackPages = await queryArixIntelligence(cleanUserQ, 4, (msg) => sendThinkStep(msg));
+              const fallbackPages = await queryArixIntelligence(cleanUserQ, 40, (msg) => sendThinkStep(msg));
               if (fallbackPages.length > 0) {
                 totalExtractedPages += fallbackPages.length;
                 fallbackPages.forEach(p => {
@@ -1360,7 +1354,7 @@ Output strictly JSON:
             } catch (_) {}
           }
 
-          // INSTANT FRONTEND SOURCES STREAMING (Sends sources to the UI immediately)
+          // INSTANT FRONTEND SOURCES STREAMING: Push all 30-50 sources to UI immediately
           if (allDiscoveredSources.length > 0) {
             const instantSourcesPayload = {
               sources: allDiscoveredSources,
@@ -1375,7 +1369,7 @@ Output strictly JSON:
               JSON.stringify(aggregatedJsonPayload, null, 2) +
               `\n--- END WEB INTELLIGENCE CONTEXT ---\n`;
 
-            sendThinkStep(`Extracted ${totalExtractedPages} verified pages via Arix Search`);
+            sendThinkStep(`${totalExtractedPages} verified pages via Arix Search`);
           }
         }
 
