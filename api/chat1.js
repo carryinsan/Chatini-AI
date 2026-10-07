@@ -583,7 +583,7 @@ telemetry.model = modelId || 'unknown';
           return Math.max(0, Math.min(100, base + trust + (item.verified ? 8 : 0)));
         };
 
-        async function queryArixIntelligence(searchQuery, maxPages = 4, onStatus = null) {
+        async function queryArixIntelligence(searchQuery, maxPages = 180, onStatus = null) {
           if (!searchQuery || typeof searchQuery !== 'string') return [];
           
           // Strip restrictive quotes and excessive punctuation to prevent 0-hit fallback spam
@@ -594,7 +594,7 @@ telemetry.model = modelId || 'unknown';
 
           // STAGE 1: Discovery via web-crawler-pink.vercel.app (GET)
           const searchUrls = [
-            `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery)}&count=10&mode=auto&type=mixed&verify=true`,
+            `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery)}&count=40&mode=auto&type=mixed&verify=true`,
             `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery.split(' ').slice(0, 4).join(' '))}&count=10&mode=auto&type=mixed&verify=true`
           ];
 
