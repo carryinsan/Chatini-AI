@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -1073,6 +1071,17 @@ body {
                 
                 <!-- Staging Area for Uploaded Files -->
                 <div id="staging-area" class="flex flex-wrap gap-2 px-2 empty:hidden pt-1"></div>
+
+                <!-- Edit Notice Banner (Visible only while editing a previous message) -->
+                <div id="edit-notice-banner" class="hidden items-center justify-between px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 font-medium">
+                    <div class="flex items-center gap-1.5">
+                        <i class="ph-bold ph-pencil-simple text-amber-600"></i>
+                        <span>It will restart your this prompt</span>
+                    </div>
+                    <button type="button" onclick="cancelEditMessage()" class="text-amber-700 hover:text-amber-900 text-[11px] font-bold px-1.5 py-0.5 rounded hover:bg-amber-100 transition-colors">
+                        Cancel
+                    </button>
+                </div>
 
                 <!-- Main Textarea -->
                 <textarea 
@@ -3236,6 +3245,7 @@ function saveCurrentChat() {
         role: m.role, 
         content: m.content,
         modelId: m.modelId, 
+        sources: m.sources || (window.MSG_SOURCES && window.MSG_SOURCES[m.id] ? window.MSG_SOURCES[m.id] : undefined),
         attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) 
     }));
     
@@ -3255,6 +3265,7 @@ function saveCurrentChat() {
 }
 
 function createNewChat() { 
+    if (typeof cancelEditMessage === 'function') cancelEditMessage();
     currentChatId = Date.now().toString(); 
     messages = []; 
     pendingFiles = []; 
@@ -3272,8 +3283,15 @@ function createNewChat() {
 function loadChat(id) { 
     const chat = chats.find(c => c.id === id); 
     if (chat) { 
+        if (typeof cancelEditMessage === 'function') cancelEditMessage();
         currentChatId = chat.id; 
-        messages = chat.messages; 
+        messages = chat.messages || []; 
+        window.MSG_SOURCES = window.MSG_SOURCES || {};
+        (messages || []).forEach(m => {
+            if (m.sources && Array.isArray(m.sources)) {
+                window.MSG_SOURCES[m.id] = m.sources;
+            }
+        });
         currentChatExtId = chat.extId || null; 
         els.extSelector.value = currentChatExtId || ""; 
         renderMessagesToUI(); 
@@ -3338,19 +3356,50 @@ function renderHistoryList() {
     ).join(""); 
 }
 
+let editingMessageId = null;
+let editingOriginalText = "";
+
 function editMessage(msgId) { 
     if(isProcessing) return; 
     const msgIndex = messages.findIndex(m => m.id === msgId); 
     if (msgIndex === -1) return; 
     
-    els.input.value = messages[msgIndex].content;
-    messages = messages.slice(0, msgIndex); 
-    renderMessagesToUI(); 
+    editingMessageId = msgId;
+    editingOriginalText = messages[msgIndex].content;
+
+    els.input.value = editingOriginalText;
     els.input.focus();
     els.input.style.height = 'auto'; 
     els.input.style.height = els.input.scrollHeight + 'px';
+    
+    // Show the "It will restart your this prompt" notice banner
+    const banner = document.getElementById('edit-notice-banner');
+    if (banner) {
+        banner.classList.remove('hidden');
+        banner.classList.add('flex');
+    }
+
+    // Keep the target prompt and AI response visible in the viewport
+    const targetWrapper = document.getElementById('msg-wrapper-' + msgId);
+    if (targetWrapper) {
+        targetWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     updateUIState(); 
     closeCanvas(); 
+}
+
+function cancelEditMessage() {
+    editingMessageId = null;
+    editingOriginalText = "";
+    const banner = document.getElementById('edit-notice-banner');
+    if (banner) {
+        banner.classList.add('hidden');
+        banner.classList.remove('flex');
+    }
+    els.input.value = "";
+    els.input.style.height = 'auto';
+    updateUIState();
 }
 
 function switchModel(modelId) {
@@ -3750,6 +3799,10 @@ ${marked.parse(unclosedContent.trim())}
 
     // 4. Render EXACTLY ONE consolidated sources accordion
     const consolidatedSources = Array.from(sourcesMap.values());
+    if (msgId && consolidatedSources.length > 0) {
+        window.MSG_SOURCES = window.MSG_SOURCES || {};
+        window.MSG_SOURCES[msgId] = consolidatedSources;
+    }
     if (consolidatedSources.length > 0) {
         const listHtml = consolidatedSources.map((s) => {
             const domain = s.domain || getCleanDomain(s.url);
@@ -3922,6 +3975,22 @@ function renderMessagesToUI() {
 async function handleSend() {
     const text = els.input.value.trim();
     if ((!text && pendingFiles.length === 0) || isProcessing) return;
+
+    // Erase subsequent data only when user sends their edited prompt
+    if (editingMessageId) {
+        const editIdx = messages.findIndex(m => m.id === editingMessageId);
+        if (editIdx !== -1) {
+            messages = messages.slice(0, editIdx);
+            renderMessagesToUI();
+        }
+        editingMessageId = null;
+        editingOriginalText = "";
+        const banner = document.getElementById('edit-notice-banner');
+        if (banner) {
+            banner.classList.add('hidden');
+            banner.classList.remove('flex');
+        }
+    }
     
     const attachmentsMeta = pendingFiles.map(f => ({ name: f.name, type: f.type }));
     const myNick = localStorage.getItem('Arix_nickname') || 'Anonymous';
@@ -5061,9 +5130,16 @@ if (
                 // If it STILL fails to wake up
                 if (!window.localAIEngine) {
                     contentContainer.classList.remove('typing-cursor');
-                    contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Engine failed to load. Click the model in Advanced Integrations to retry.</span>`;
-                    messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
-                    saveCurrentChat();
+        contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
+
+        // Permanently bundle all sources inside fullResponse so reload, share, and revisit always retain the sources dropdown
+        const persistentSources = (window.MSG_SOURCES && window.MSG_SOURCES[assistantMsgObj.id]) ? window.MSG_SOURCES[assistantMsgObj.id] : [];
+        if (persistentSources.length > 0 && !fullResponse.includes('<sources>')) {
+            fullResponse += `\n\n<sources>${JSON.stringify(persistentSources)}</sources>`;
+        }
+
+        messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId, sources: persistentSources });
+        saveCurrentChat();
                     isProcessing = false; return;
                 }
             }
