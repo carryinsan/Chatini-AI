@@ -6343,7 +6343,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function loadCloudBootstrap({ migrateLocal = false } = {}) {
-        const localSnapshot = migrateLocal ? await buildSnapshot({ idsPrefix: `migr_${shortHash(String(Date.now()))}_` }) : null;
+        // Use original IDs so Supabase merges records instead of duplicating
+        const localSnapshot = migrateLocal ? await buildSnapshot({ idsPrefix: '' }) : null;
         const data = await apiJson('/api/storage', {
             action: 'bootstrap',
             chatLimit: 100,
@@ -6550,7 +6551,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showAuthModal('login');
             return false;
         }
-        const shouldMigrate = fromFreshLogin || await migrateToCloud();
+        // Always safely sync offline work to Supabase before loading
+        const shouldMigrate = true;
         try {
             await apiJson('/api/storage', { action: 'mode_set', mode: 'cloud' }, 25_000);
             await loadCloudBootstrap({ migrateLocal: shouldMigrate });
