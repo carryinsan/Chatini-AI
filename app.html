@@ -1675,20 +1675,43 @@ window.onload = async () => {
             }
             
             if (data.success && data.chat) {
-                // Fork it: Assign a brand new local ID so it doesn't overwrite anything
                 currentChatId = Date.now().toString(); 
                 messages = data.chat.messages || [];
-                
-                // Add an indicator message so the user knows they imported a branch
                 messages.push({ role: 'assistant', content: '> *You have successfully cloned a shared chat branch. Your new messages here remain strictly private.*', id: 'sys_branch', modelId: 'oracle' });
                 
+                const importedTitle = data.chat.title || "Shared Conversation";
+                const clonedChat = {
+                    id: currentChatId,
+                    title: importedTitle,
+                    messages: messages,
+                    extId: null,
+                    date: Date.now(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    pinned: false,
+                    _cloudLoaded: true
+                };
+
+                // Add to chats list immediately so bootstrap merge will never purge it
+                const existingIdx = chats.findIndex(c => c.id === currentChatId);
+                if (existingIdx > -1) chats[existingIdx] = clonedChat;
+                else chats.unshift(clonedChat);
+
+                try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch(e){}
+                
                 renderMessagesToUI();
-                saveCurrentChat();
                 renderHistoryList();
                 
-                // Strip the URL so refreshing doesn't reload the same snapshot
+                // Upload this newly opened shared chat straight to Supabase database!
+                if (typeof syncCurrentChat === 'function') {
+                    syncCurrentChat();
+                } else if (window.ArixStorage && window.ArixStorage.syncCurrentChat) {
+                    window.ArixStorage.syncCurrentChat();
+                }
+
+                // Strip the URL parameter so refreshing keeps you on the now-saved chat
                 window.history.replaceState({}, document.title, window.location.pathname);
-                showToast("Chat Branch Cloned!");
+                showToast("Chat Branch imported & Saved to Database!");
             } else {
                 showToast("Shared Chat Expired or Invalid");
                 createNewChat();
@@ -9132,17 +9155,32 @@ window.downloadWorkspaceZip = async function() {
 
         const cloudChats = Array.isArray(cloud.chats) ? cloud.chats : [];
         const pins = new Set((Array.isArray(cloud.pinned) ? cloud.pinned : []).map((p) => String(p.chatId)));
-        chats = cloudChats.map((c) => ({
-            id: String(c.id),
-            title: String(c.title || 'New Conversation'),
-            extId: c.extId || null,
-            date: localTime(c.updatedAt || c.createdAt),
-            createdAt: c.createdAt,
-            updatedAt: c.updatedAt,
-            pinned: pins.has(String(c.id)),
-            messages: [],
-            _cloudLoaded: false,
-        }));
+        
+        const mappedCloud = cloudChats.map((c) => {
+            const existing = (chats || []).find(e => String(e.id) === String(c.id));
+            return {
+                id: String(c.id),
+                title: String(c.title || 'New Conversation'),
+                extId: c.extId || null,
+                date: localTime(c.updatedAt || c.createdAt),
+                createdAt: c.createdAt,
+                updatedAt: c.updatedAt,
+                pinned: pins.has(String(c.id)),
+                messages: existing ? existing.messages : [],
+                _cloudLoaded: existing ? existing._cloudLoaded : false,
+            };
+        });
+
+        // Retain freshly opened shared links or offline chats not yet in the cloud list
+        const cloudIds = new Set(mappedCloud.map(c => String(c.id)));
+        const unuploadedLocalChats = (chats || []).filter(c => c && c.id && !cloudIds.has(String(c.id)));
+
+        chats = [...unuploadedLocalChats, ...mappedCloud];
+
+        // Immediately queue newly opened shared links to upload to Supabase
+        if (unuploadedLocalChats.length > 0 && typeof scheduleFullSync === 'function') {
+            scheduleFullSync(200);
+        }
 
         const chatById = new Map(chats.map((c) => [String(c.id), c]));
         customProjects = (Array.isArray(cloud.projects) ? cloud.projects : []).map((p) => ({
@@ -9214,11 +9252,22 @@ window.downloadWorkspaceZip = async function() {
         refreshExtSelectors();
         updateUIState();
 
-        if (chats.length) {
-            const active = chats[0];
+        // Check if the user is currently viewing the newly imported shared chat
+        const activeLocal = unuploadedLocalChats.find(c => String(c.id) === String(currentChatId));
+
+        if (activeLocal) {
+            // Do not wipe the screen with "Loading secure workspace"! Keep the shared chat visible.
+            renderHistoryList();
+            renderMessagesToUI();
+        } else if (chats.length) {
+            const active = chats.find(c => String(c.id) === String(currentChatId)) || chats[0];
             currentChatId = active.id;
-            messages = [];
-            await loadCloudChat(active.id, { background: false });
+            if (!active._cloudLoaded) {
+                await loadCloudChat(active.id, { background: false });
+            } else {
+                renderHistoryList();
+                renderMessagesToUI();
+            }
         } else {
             currentChatId = Date.now().toString();
             messages = [];
