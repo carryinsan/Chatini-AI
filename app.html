@@ -1348,6 +1348,7 @@ body {
 
 <!-- ==================== JAVASCRIPT APPLICATION CORE ==================== -->
 <script>
+window.id = window.id || undefined;
 marked.setOptions({ breaks: true, gfm: true });
 
 // UI-Adapted Config for Light Theme Targeting
@@ -1495,9 +1496,10 @@ function toggleVoice() {
 
 function checkNickname() {
     const nick = localStorage.getItem('Arix_nickname');
-    if (!nick) {
-        document.getElementById('username-modal').classList.remove('hidden');
-    } else {
+    const modal = document.getElementById('username-modal');
+    if (!nick && modal) {
+        modal.classList.remove('hidden');
+    } else if (nick) {
         updateSidebarName(nick);
     }
 }
@@ -3388,11 +3390,12 @@ async function loadChat(id) {
 
         // ON-DEMAND CLOUD FETCH: If messages are empty, pull them from Supabase
         const isCloud = typeof cloudEnabled === 'function' ? cloudEnabled() : localStorage.getItem('Arix_storage_mode') === 'cloud';
+        const targetId = chat.id || id;
         if (isCloud && (!messages || messages.length === 0 || !chat._cloudLoaded)) {
             if (typeof window.loadCloudChat === 'function') {
-                await window.loadCloudChat(chat.id, { background: false });
+                await window.loadCloudChat(targetId, { background: false });
             } else if (typeof loadCloudChat === 'function') {
-                await loadCloudChat(chat.id, { background: false });
+                await loadCloudChat(targetId, { background: false });
             }
         }
     } 
