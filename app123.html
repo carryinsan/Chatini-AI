@@ -9731,9 +9731,146 @@ window.downloadWorkspaceZip = async function() {
         bootStorageIntegration();
     }
 
+    // =========================================================================
+    // ADAPTIVE BURST-DECAY MULTI-DEVICE SENTINEL (FREE-TIER SAFE)
+    // =========================================================================
+    const localBroadcast = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('arix_local_sync') : null;
+    let autoSyncTimer = null;
+    let isAutoPulling = false;
+    let lastActivityTimestamp = Date.now();
+
+    // 1. Same-Device Tab Air-Gap (0 Network / 0 Redis / 0 Database Cost)
+    if (localBroadcast) {
+        localBroadcast.onmessage = (e) => {
+            if (e.data === 'REMOTE_UPDATE' && cloudEnabled()) {
+                loadCloudBootstrap({ migrateLocal: false }).then(() => {
+                    if (currentChatId) loadCloudChat(currentChatId, { background: true });
+                });
+            }
+        };
+    }
+
+    // Broadcast local outbound syncs to sibling tabs instantly
+    const originalSendSync = sendSync;
+    sendSync = async function(...args) {
+        const result = await originalSendSync.apply(this, args);
+        if (localBroadcast) localBroadcast.postMessage('REMOTE_UPDATE');
+        registerActivityBurst();
+        return result;
+    };
+
+    // Track user presence to adapt cadence
+    function registerActivityBurst() {
+        lastActivityTimestamp = Date.now();
+        scheduleNextPulse();
+    }
+
+    ['keydown', 'pointerdown', 'touchstart'].forEach(evt => {
+        window.addEventListener(evt, () => {
+            const now = Date.now();
+            if (now - lastActivityTimestamp > 15000) {
+                lastActivityTimestamp = now;
+            }
+        }, { passive: true });
+    });
+
+    // 2. The 1-Row Sentinel Micro-Probe
+    async function probeAndSync() {
+        if (!cloudEnabled() || isAutoPulling || bridge.busy || isProcessing) return;
+        if (document.visibilityState !== 'visible') return;
+
+        // Draft Interlock: Do not pull if the user has an unsubmitted prompt typed
+        const currentInput = document.getElementById('chat-input');
+        if (currentInput && currentInput.value.trim().length > 0) return;
+
+        isAutoPulling = true;
+        try {
+            // Ultra-lightweight 1-row probe
+            const probe = await apiJson('/api/storage', {
+                action: 'bootstrap',
+                chatLimit: 1,
+                projectLimit: 1,
+                taskLimit: 1,
+                pinLimit: 1,
+                artifactLimit: 1,
+                libraryLimit: 1
+            }, 8000);
+
+            const remoteTop = probe?.data?.chats?.[0];
+            if (!remoteTop) return;
+
+            const remoteTime = localTime(remoteTop.updatedAt || remoteTop.createdAt);
+            const localTimeCurrent = Math.max(...(chats || []).map(c => localTime(c.updatedAt || c.date || 0)), 0);
+
+            // True remote update detected from Device A
+            if (remoteTime > localTimeCurrent) {
+                const activeId = currentChatId;
+                await loadCloudBootstrap({ migrateLocal: false });
+                if (activeId && chats.some(c => c.id === activeId)) {
+                    await loadCloudChat(activeId, { background: true });
+                }
+            }
+        } catch (_) {
+            // Silently swallow transient network blips
+        } finally {
+            isAutoPulling = false;
+        }
+    }
+
+    // 3. Adaptive Decay Engine
+    function scheduleNextPulse() {
+        clearTimeout(autoSyncTimer);
+
+        if (document.visibilityState !== 'visible') {
+            // Tab hidden / phone locked: Full sleep (0 requests)
+            return;
+        }
+
+        const idleSeconds = (Date.now() - lastActivityTimestamp) / 1000;
+        let nextDelayMs;
+
+        if (idleSeconds < 60) {
+            // Active conversation burst: smooth 8-second sync
+            nextDelayMs = 8000;
+        } else if (idleSeconds < 180) {
+            // Slow reading: decay to 25 seconds
+            nextDelayMs = 25000;
+        } else if (idleSeconds < 600) {
+            // Passive idle: relax to 60 seconds
+            nextDelayMs = 60000;
+        } else {
+            // Deep idle (>10 minutes without touching): Sleep until interaction
+            return;
+        }
+
+        autoSyncTimer = setTimeout(async () => {
+            await probeAndSync();
+            scheduleNextPulse();
+        }, nextDelayMs);
+    }
+
+    // 4. Instant Glance-Wake Triggers
+    function handleGlanceWake() {
+        registerActivityBurst();
+        probeAndSync();
+    }
+
+    window.addEventListener('focus', handleGlanceWake);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            handleGlanceWake();
+        } else {
+            clearTimeout(autoSyncTimer);
+        }
+    });
+
     window.addEventListener('online', () => {
         if (cloudEnabled() && localStorage.getItem('Arix_cloud_dirty')) scheduleFullSync(50);
+        if (cloudEnabled()) handleGlanceWake();
     });
+
+    // Start engine on boot
+    scheduleNextPulse();
 })();
 
 </script>
