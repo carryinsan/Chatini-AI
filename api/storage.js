@@ -42,7 +42,7 @@ const VERSION = 'arix-storage-1.1.0';
 
 const SERVER_ENV = globalThis.process?.env || {};
 const ENV = Object.freeze({
-    supabaseUrl: "https://vvcpdfdofihdmzshglxr.supabase.co",
+    supabaseUrl: "https://vvcpfdofihdmzshdglxr.supabase.co",
     supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ",
     redisUrl: "https://immortal-eagle-36171.upstash.io",
     redisToken: "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw",
