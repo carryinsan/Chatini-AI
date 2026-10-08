@@ -3367,7 +3367,7 @@ function createNewChat() {
     renderPulseTodayWidget();
 }
 
-function loadChat(id) { 
+async function loadChat(id) { 
     const chat = chats.find(c => c.id === id); 
     if (chat) { 
         if (typeof cancelEditMessage === 'function') cancelEditMessage();
@@ -3385,6 +3385,16 @@ function loadChat(id) {
         if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
         closeCanvas(); 
         renderPulseTodayWidget();
+
+        // ON-DEMAND CLOUD FETCH: If messages are empty, pull them from Supabase
+        const isCloud = typeof cloudEnabled === 'function' ? cloudEnabled() : localStorage.getItem('Arix_storage_mode') === 'cloud';
+        if (isCloud && (!messages || messages.length === 0 || !chat._cloudLoaded)) {
+            if (typeof window.loadCloudChat === 'function') {
+                await window.loadCloudChat(chat.id, { background: false });
+            } else if (typeof loadCloudChat === 'function') {
+                await loadCloudChat(chat.id, { background: false });
+            }
+        }
     } 
 }
 
@@ -9262,9 +9272,9 @@ window.downloadWorkspaceZip = async function() {
         } else if (chats.length) {
             const active = chats.find(c => String(c.id) === String(currentChatId)) || chats[0];
             currentChatId = active.id;
-            if (!active._cloudLoaded) {
-                await loadCloudChat(active.id, { background: false });
-            } else {
+            if (!active._cloudLoaded || !active.messages || active.messages.length === 0) {
+            await loadCloudChat(active.id, { background: false });
+        } else {
                 renderHistoryList();
                 renderMessagesToUI();
             }
@@ -9275,7 +9285,8 @@ window.downloadWorkspaceZip = async function() {
         }
     }
 
-    async function loadCloudChat(id, { background = false } = {}) {
+    window.loadCloudChat = loadCloudChat;
+    async function loadCloudChat(chatId, { background = false } = {}) {
         const epoch = ++bridge.loadEpoch;
         const chat = chats.find((c) => String(c.id) === String(id));
         if (!chat || !cloudEnabled()) return;
