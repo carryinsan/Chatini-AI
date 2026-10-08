@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -426,6 +425,14 @@ body {
 <!-- DYNAMIC LIGHT THEME OVERRIDES -->
 <style>
 /* These overrides ensure that any hardcoded Dark Mode classes injected directly by the backend JS map flawlessly into the Light Target UI. */
+#history-list {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+}
+#history-list > div {
+    width: 100% !important;
+}
 #history-list .group { transition: all 0.3s ease; }
 #history-list .text-gray-300 { color: #374151 !important; font-weight: 500; font-size: 0.875rem; }
 #history-list .hover\:bg-white\/5:hover { background-color: #f3f4f6 !important; }
@@ -1033,14 +1040,26 @@ body {
             <button onclick="toggleSidebar(); document.getElementById('sidebar').classList.toggle('lg:hidden');" class="text-gray-500 hover:text-gray-900 transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-50" title="Toggle Sidebar">
                 <i class="ph-bold ph-list text-2xl"></i>
             </button>
-            <div class="relative w-full hidden sm:block">
-                <i class="ph-bold ph-magnifying-glass text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg"></i>
+            <form class="relative w-full hidden sm:block" role="search" autocomplete="off" onsubmit="return false;">
+                <!-- Dummy trap inputs to absorb aggressive browser credential autofill -->
+                <input type="text" style="display:none !important;" tabindex="-1" autocomplete="username">
+                <input type="password" style="display:none !important;" tabindex="-1" autocomplete="new-password">
+
+                <i class="ph-bold ph-magnifying-glass text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 text-lg pointer-events-none"></i>
                 <input 
-                    type="text" 
+                    type="search" 
                     id="global-search-input"
+                    name="q_search_query_no_autofill"
+                    readonly
+                    autocomplete="one-time-code"
+                    autocorrect="off"
+                    autocapitalize="off"
+                    spellcheck="false"
+                    role="searchbox"
                     placeholder="Search all chats & messages..." 
+                    onfocus="this.removeAttribute('readonly'); if(this.value.trim()) document.getElementById('search-results-dropdown').classList.remove('hidden');"
+                    onblur="this.setAttribute('readonly', 'readonly');"
                     oninput="handleGlobalSearch(this.value)"
-                    onfocus="if(this.value.trim()) document.getElementById('search-results-dropdown').classList.remove('hidden')"
                     class="w-full bg-gray-50 border border-transparent hover:border-gray-200 focus:border-theme-300 focus:bg-white focus:ring-4 focus:ring-theme-50 transition-all duration-500 rounded-full py-2.5 pl-11 pr-12 text-sm outline-none text-gray-700"
                 />
                 <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-gray-400 bg-white border border-gray-200 rounded px-1.5 py-0.5 shadow-sm pointer-events-none">
@@ -1050,7 +1069,7 @@ body {
 
                 <!-- Live Search Results Dropdown -->
                 <div id="search-results-dropdown" class="absolute left-0 right-0 top-full mt-2 bg-white border border-gray-200 rounded-2xl shadow-xl z-50 hidden max-h-80 overflow-y-auto custom-scrollbar p-2"></div>
-            </div>
+            </form>
         </div>
 
         <!-- Right Section: Tools, Models & Pro Badge -->
@@ -1329,6 +1348,7 @@ body {
 
 <!-- ==================== JAVASCRIPT APPLICATION CORE ==================== -->
 <script>
+window.id = window.id || undefined;
 marked.setOptions({ breaks: true, gfm: true });
 
 // UI-Adapted Config for Light Theme Targeting
@@ -1476,9 +1496,10 @@ function toggleVoice() {
 
 function checkNickname() {
     const nick = localStorage.getItem('Arix_nickname');
-    if (!nick) {
-        document.getElementById('username-modal').classList.remove('hidden');
-    } else {
+    const modal = document.getElementById('username-modal');
+    if (!nick && modal) {
+        modal.classList.remove('hidden');
+    } else if (nick) {
         updateSidebarName(nick);
     }
 }
@@ -1656,20 +1677,43 @@ window.onload = async () => {
             }
             
             if (data.success && data.chat) {
-                // Fork it: Assign a brand new local ID so it doesn't overwrite anything
                 currentChatId = Date.now().toString(); 
                 messages = data.chat.messages || [];
-                
-                // Add an indicator message so the user knows they imported a branch
                 messages.push({ role: 'assistant', content: '> *You have successfully cloned a shared chat branch. Your new messages here remain strictly private.*', id: 'sys_branch', modelId: 'oracle' });
                 
+                const importedTitle = data.chat.title || "Shared Conversation";
+                const clonedChat = {
+                    id: currentChatId,
+                    title: importedTitle,
+                    messages: messages,
+                    extId: null,
+                    date: Date.now(),
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    pinned: false,
+                    _cloudLoaded: true
+                };
+
+                // Add to chats list immediately so bootstrap merge will never purge it
+                const existingIdx = chats.findIndex(c => c.id === currentChatId);
+                if (existingIdx > -1) chats[existingIdx] = clonedChat;
+                else chats.unshift(clonedChat);
+
+                try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch(e){}
+                
                 renderMessagesToUI();
-                saveCurrentChat();
                 renderHistoryList();
                 
-                // Strip the URL so refreshing doesn't reload the same snapshot
+                // Upload this newly opened shared chat straight to Supabase database!
+                if (typeof syncCurrentChat === 'function') {
+                    syncCurrentChat();
+                } else if (window.ArixStorage && window.ArixStorage.syncCurrentChat) {
+                    window.ArixStorage.syncCurrentChat();
+                }
+
+                // Strip the URL parameter so refreshing keeps you on the now-saved chat
                 window.history.replaceState({}, document.title, window.location.pathname);
-                showToast("Chat Branch Cloned!");
+                showToast("Chat Branch imported & Saved to Database!");
             } else {
                 showToast("Shared Chat Expired or Invalid");
                 createNewChat();
@@ -3325,7 +3369,7 @@ function createNewChat() {
     renderPulseTodayWidget();
 }
 
-function loadChat(id) { 
+async function loadChat(id) { 
     const chat = chats.find(c => c.id === id); 
     if (chat) { 
         if (typeof cancelEditMessage === 'function') cancelEditMessage();
@@ -3343,6 +3387,17 @@ function loadChat(id) {
         if(!els.sidebar.classList.contains('-translate-x-full') && window.innerWidth < 1024) toggleSidebar(); 
         closeCanvas(); 
         renderPulseTodayWidget();
+
+        // ON-DEMAND CLOUD FETCH: If messages are empty, pull them from Supabase
+        const isCloud = typeof cloudEnabled === 'function' ? cloudEnabled() : localStorage.getItem('Arix_storage_mode') === 'cloud';
+        const targetId = chat.id || id;
+        if (isCloud && (!messages || messages.length === 0 || !chat._cloudLoaded)) {
+            if (typeof window.loadCloudChat === 'function') {
+                await window.loadCloudChat(targetId, { background: false });
+            } else if (typeof loadCloudChat === 'function') {
+                await loadCloudChat(targetId, { background: false });
+            }
+        }
     } 
 }
 
@@ -3383,22 +3438,29 @@ function renderHistoryList() {
         return (b.date || 0) - (a.date || 0);
     });
 
-    els.historyList.innerHTML = chats.map(chat => 
-        `<div class="group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-100 border border-theme-300 shadow-md ring-1 ring-theme-200' : 'hover:bg-gray-50 border border-transparent'} relative" onclick="loadChat('${chat.id}')">
-            <div class="flex items-center gap-2 overflow-hidden">
+    els.historyList.innerHTML = chats.map(chat => {
+        const safeTitle = String(chat.title || 'New Conversation')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        return `<div class="w-full group flex items-center justify-between px-3 py-2.5 rounded-xl cursor-pointer transition-colors ${chat.id === currentChatId ? 'bg-theme-100 border border-theme-300 shadow-md ring-1 ring-theme-200' : 'hover:bg-gray-50 border border-transparent'} relative" onclick="loadChat('${chat.id}')">
+            <div class="flex items-center gap-2 overflow-hidden flex-1 min-w-0 pr-2">
                 <i class="${chat.pinned ? 'ph-fill ph-push-pin text-amber-500' : 'ph-bold ph-chat-circle'} ${chat.id === currentChatId && !chat.pinned ? 'text-theme-600' : (!chat.pinned ? 'text-gray-400' : '')} flex-shrink-0 text-lg"></i>
-                <div class="flex flex-col">
-                    <span class="text-[13px] font-bold ${chat.id === currentChatId ? 'text-theme-900' : 'text-gray-700'} truncate">${chat.title}</span>
+                <div class="flex flex-col truncate min-w-0">
+                    <span class="text-[13px] font-bold ${chat.id === currentChatId ? 'text-theme-900' : 'text-gray-700'} truncate">${safeTitle}</span>
                     ${chat.extId ? '<span class="text-[9px] text-purple-600 font-bold uppercase tracking-wide flex items-center gap-1"><i class="ph-bold ph-brain"></i> Active Ext</span>' : ""}
                 </div>
             </div>
-            <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity relative z-20">
+            <div class="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity relative z-20 shrink-0">
                 <button onclick="togglePinChat('${chat.id}', event)" class="text-gray-400 hover:text-amber-500 p-1 bg-white hover:bg-amber-50 rounded shadow-sm border border-gray-100" title="${chat.pinned ? 'Unpin Chat' : 'Pin Chat'}"><i class="ph-bold ${chat.pinned ? 'ph-push-pin-slash' : 'ph-push-pin'}"></i></button>
                 <button onclick="renameChat('${chat.id}', event)" class="text-gray-400 hover:text-blue-600 p-1 bg-white hover:bg-blue-50 rounded shadow-sm border border-gray-100" title="Rename"><i class="ph-bold ph-pencil-simple"></i></button>
                 <button onclick="deleteChat('${chat.id}', event)" class="text-gray-400 hover:text-red-600 p-1 bg-white hover:bg-red-50 rounded shadow-sm border border-gray-100" title="Delete"><i class="ph-bold ph-trash"></i></button>
             </div>
-        </div>`
-    ).join(""); 
+        </div>`;
+    }).join(""); 
 }
 
 let editingMessageId = null;
@@ -9106,17 +9168,32 @@ window.downloadWorkspaceZip = async function() {
 
         const cloudChats = Array.isArray(cloud.chats) ? cloud.chats : [];
         const pins = new Set((Array.isArray(cloud.pinned) ? cloud.pinned : []).map((p) => String(p.chatId)));
-        chats = cloudChats.map((c) => ({
-            id: String(c.id),
-            title: String(c.title || 'New Conversation'),
-            extId: c.extId || null,
-            date: localTime(c.updatedAt || c.createdAt),
-            createdAt: c.createdAt,
-            updatedAt: c.updatedAt,
-            pinned: pins.has(String(c.id)),
-            messages: [],
-            _cloudLoaded: false,
-        }));
+        
+        const mappedCloud = cloudChats.map((c) => {
+            const existing = (chats || []).find(e => String(e.id) === String(c.id));
+            return {
+                id: String(c.id),
+                title: String(c.title || 'New Conversation'),
+                extId: c.extId || null,
+                date: localTime(c.updatedAt || c.createdAt),
+                createdAt: c.createdAt,
+                updatedAt: c.updatedAt,
+                pinned: pins.has(String(c.id)),
+                messages: existing ? existing.messages : [],
+                _cloudLoaded: existing ? existing._cloudLoaded : false,
+            };
+        });
+
+        // Retain freshly opened shared links or offline chats not yet in the cloud list
+        const cloudIds = new Set(mappedCloud.map(c => String(c.id)));
+        const unuploadedLocalChats = (chats || []).filter(c => c && c.id && !cloudIds.has(String(c.id)));
+
+        chats = [...unuploadedLocalChats, ...mappedCloud];
+
+        // Immediately queue newly opened shared links to upload to Supabase
+        if (unuploadedLocalChats.length > 0 && typeof scheduleFullSync === 'function') {
+            scheduleFullSync(200);
+        }
 
         const chatById = new Map(chats.map((c) => [String(c.id), c]));
         customProjects = (Array.isArray(cloud.projects) ? cloud.projects : []).map((p) => ({
@@ -9188,11 +9265,22 @@ window.downloadWorkspaceZip = async function() {
         refreshExtSelectors();
         updateUIState();
 
-        if (chats.length) {
-            const active = chats[0];
+        // Check if the user is currently viewing the newly imported shared chat
+        const activeLocal = unuploadedLocalChats.find(c => String(c.id) === String(currentChatId));
+
+        if (activeLocal) {
+            // Do not wipe the screen with "Loading secure workspace"! Keep the shared chat visible.
+            renderHistoryList();
+            renderMessagesToUI();
+        } else if (chats.length) {
+            const active = chats.find(c => String(c.id) === String(currentChatId)) || chats[0];
             currentChatId = active.id;
-            messages = [];
+            if (!active._cloudLoaded || !active.messages || active.messages.length === 0) {
             await loadCloudChat(active.id, { background: false });
+        } else {
+                renderHistoryList();
+                renderMessagesToUI();
+            }
         } else {
             currentChatId = Date.now().toString();
             messages = [];
@@ -9200,7 +9288,8 @@ window.downloadWorkspaceZip = async function() {
         }
     }
 
-    async function loadCloudChat(id, { background = false } = {}) {
+    window.loadCloudChat = loadCloudChat;
+    async function loadCloudChat(chatId, { background = false } = {}) {
         const epoch = ++bridge.loadEpoch;
         const chat = chats.find((c) => String(c.id) === String(id));
         if (!chat || !cloudEnabled()) return;
