@@ -482,6 +482,50 @@ body {
     </div>
 </div>
 
+
+<!-- ArixAI Settings Modal -->
+<div id="arix-settings-modal" class="fixed inset-0 z-[210] hidden items-center justify-center bg-gray-900/40 backdrop-blur-md px-4">
+    <div class="w-full max-w-lg max-h-[85vh] overflow-y-auto bg-white rounded-3xl border border-gray-100 shadow-2xl">
+        <div class="p-6 sm:p-7 border-b border-gray-100 flex items-start justify-between gap-4">
+            <div>
+                <div class="text-xs font-bold uppercase tracking-[0.18em] text-theme-600">ArixAI Settings</div>
+                <h2 class="text-2xl font-extrabold text-gray-900 mt-2">Settings</h2>
+                <p class="text-sm text-gray-500 mt-2 leading-relaxed">Manage your profile and choose how your workspace data is stored.</p>
+            </div>
+            <button onclick="window.ArixSettings.close()" class="text-gray-400 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-50"><i class="ph-bold ph-x"></i></button>
+        </div>
+        <div class="p-5 sm:p-7 space-y-4">
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <div class="text-[10px] font-bold uppercase tracking-widest text-gray-400">Profile</div>
+                        <div id="arix-settings-nickname" class="mt-1 text-sm font-bold text-gray-900">Anonymous</div>
+                        <div id="arix-settings-arixname" class="text-xs text-gray-500 mt-1">ArixName not connected</div>
+                    </div>
+                    <button onclick="window.ArixSettings.editNickname()" class="shrink-0 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-100 transition-colors">Change nickname</button>
+                </div>
+            </div>
+
+            <button onclick="window.ArixSettings.openDataAccount()" class="w-full text-left rounded-2xl border border-gray-200 bg-white hover:border-theme-300 hover:bg-theme-50/40 transition-all p-4 flex items-center gap-4">
+                <span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center shrink-0"><i class="ph-bold ph-database text-xl"></i></span>
+                <span class="flex-1 min-w-0">
+                    <b class="block text-sm text-gray-900">Data &amp; Account</b>
+                    <small id="arix-settings-storage-badge" class="block text-xs text-gray-500 mt-1">Local storage</small>
+                </span>
+                <i class="ph-bold ph-caret-right text-gray-400"></i>
+            </button>
+
+            <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
+                <div class="flex items-center gap-2 text-sm font-bold text-gray-800"><i class="ph-bold ph-sliders-horizontal text-theme-600"></i> Preferences</div>
+                <div class="mt-3 grid gap-2 text-xs text-gray-500">
+                    <div class="flex items-center justify-between"><span>Use Memory</span><span id="arix-settings-memory-state">Enabled</span></div>
+                    <div class="flex items-center justify-between"><span>Save Data</span><span id="arix-settings-save-state">Enabled</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- PDF Export Modal -->
 <div id="pdf-modal" class="fixed inset-0 bg-gray-900/40 z-[60] hidden flex items-center justify-center backdrop-blur-sm px-4">
     <div class="bg-white border border-gray-100 p-6 rounded-3xl w-full max-w-sm shadow-2xl">
@@ -959,7 +1003,7 @@ body {
 
     <!-- User Profile Footer -->
     <div class="p-4 border-t border-gray-100 bg-white">
-        <button onclick="changeNickname()" class="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
+        <button onclick="window.ArixSettings.open()" class="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-theme-600 text-white flex items-center justify-center font-medium text-sm transition-colors duration-500 shadow-sm">
                     <i class="ph-bold ph-user"></i>
@@ -8373,6 +8417,1460 @@ window.downloadWorkspaceZip = async function() {
     btn.innerHTML = origHtml;
     btn.disabled = false;
 }
+
+</script>
+<script>
+/*
+ * ArixAI app.html integration for api/otp.js + api/storage.js.
+ *
+ * Product rule:
+ * - DEVICE mode: no auth/storage API is contacted; chat state stays on this device.
+ * - CLOUD mode: requires an ArixAI account/session; Supabase is authoritative.
+ * - Email/OTP is therefore optional for the product because device-only mode does not use it.
+ *   With the current otp.js, OTP remains mandatory for cloud account registration/login.
+ */
+(() => {
+    'use strict';
+
+    const MODE_KEY = 'Arix_storage_mode';
+    const CLOUD_ACCOUNT_KEY = 'Arix_cloud_account';
+    const MIGRATED_KEY_PREFIX = 'Arix_cloud_migrated_';
+    const DEVICE_CACHE_KEYS = [
+        'chatini_sessions',
+        'Arix_custom_projects',
+        'Arix_pulse_tasks',
+        'Arix_sentinel_tasks',
+        'arix_access_tool_chats',
+        'Arix_user_profile'
+    ];
+
+    const bridge = {
+        mode: localStorage.getItem(MODE_KEY) === 'cloud' ? 'cloud' : 'device',
+        authenticated: false,
+        busy: false,
+        loadEpoch: 0,
+        syncTimer: null,
+        syncPromise: null,
+        syncAgain: false,
+        challengeId: null,
+        authMode: 'login'
+    };
+
+    const qs = (id) => document.getElementById(id);
+    const nowIso = () => new Date().toISOString();
+
+    function randomId(prefix = 'id') {
+        try {
+            if (crypto.randomUUID) return `${prefix}_${crypto.randomUUID()}`;
+        } catch {}
+        return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+    }
+
+    function bytes(value) {
+        return new TextEncoder().encode(String(value ?? '')).byteLength;
+    }
+
+    function htmlEscape(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[c]));
+    }
+
+    function normalizeIso(value, fallback = nowIso()) {
+        if (value == null || value === '') return fallback;
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? fallback : d.toISOString();
+    }
+
+    function localTime(value) {
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? Date.now() : d.getTime();
+    }
+
+    function localStorageMode() {
+        return bridge.mode === 'cloud' ? 'cloud' : 'device';
+    }
+
+    function setModeLocal(mode) {
+        bridge.mode = mode === 'cloud' ? 'cloud' : 'device';
+        localStorage.setItem(MODE_KEY, bridge.mode);
+    }
+
+    function cloudEnabled() {
+        return bridge.mode === 'cloud' && bridge.authenticated;
+    }
+
+    function safeJsonParse(value, fallback) {
+        try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
+    }
+
+    async function apiJson(url, body, timeoutMs = 80_000) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                credentials: 'include',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+                cache: 'no-store',
+                signal: controller.signal,
+            });
+            let data = null;
+            try { data = await response.json(); } catch {}
+            if (!response.ok || data?.success === false) {
+                const error = new Error(data?.error || `Request failed (HTTP ${response.status})`);
+                error.status = response.status;
+                error.code = data?.code || '';
+                throw error;
+            }
+            return data;
+        } finally {
+            clearTimeout(timeout);
+        }
+    }
+
+    function showStorageModal() {
+        const modal = qs('arix-storage-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        const status = qs('arix-storage-status');
+        if (status) {
+            status.textContent = bridge.authenticated
+                ? `Signed in as ${localStorage.getItem('Arix_nickname') || 'ArixAI user'}`
+                : (bridge.mode === 'cloud'
+                    ? 'Cloud Sync selected — sign in is required to connect.'
+                    : 'Local Storage is active. Cloud Sync can be enabled from this menu.');
+        }
+        const deviceBtn = qs('arix-device-btn');
+        const cloudBtn = qs('arix-cloud-btn');
+        const deviceCheck = qs('arix-device-check');
+        const cloudCheck = qs('arix-cloud-check');
+        if (deviceBtn) {
+            deviceBtn.classList.toggle('ring-2', bridge.mode === 'device');
+            deviceBtn.classList.toggle('ring-emerald-100', bridge.mode === 'device');
+            deviceBtn.classList.toggle('border-emerald-300', bridge.mode === 'device');
+        }
+        if (cloudBtn) {
+            cloudBtn.classList.toggle('ring-2', bridge.mode === 'cloud');
+            cloudBtn.classList.toggle('ring-theme-100', bridge.mode === 'cloud');
+            cloudBtn.classList.toggle('border-theme-300', bridge.mode === 'cloud');
+        }
+        if (deviceCheck) deviceCheck.classList.toggle('hidden', bridge.mode !== 'device');
+        if (cloudCheck) cloudCheck.classList.toggle('hidden', bridge.mode !== 'cloud');
+        const cloudDesc = qs('arix-cloud-desc');
+        if (cloudDesc) cloudDesc.textContent = bridge.authenticated
+            ? 'Cloud Sync is connected for this account.'
+            : 'Sync your workspace across devices with your ArixAI account.';
+        updateAuthButtons();
+        updateSettingsUi();
+    }
+
+    function hideStorageModal() {
+        const modal = qs('arix-storage-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function showAuthModal(mode = 'login') {
+        bridge.authMode = mode === 'register' ? 'register' : 'login';
+        const modal = qs('arix-auth-modal');
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        qs('arix-auth-email').value = '';
+        qs('arix-auth-password').value = '';
+        qs('arix-auth-arixname').value = '';
+        qs('arix-auth-otp').value = '';
+        qs('arix-auth-nickname').value = localStorage.getItem('Arix_nickname') || '';
+        bridge.challengeId = null;
+        updateAuthButtons();
+    }
+
+    function hideAuthModal() {
+        const modal = qs('arix-auth-modal');
+        if (!modal) return;
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function updateAuthButtons() {
+        const isRegister = bridge.authMode === 'register';
+        qs('arix-auth-register-fields')?.classList.toggle('hidden', !isRegister);
+        qs('arix-auth-login-fields')?.classList.toggle('hidden', isRegister);
+        qs('arix-auth-submit')?.classList.toggle('hidden', !!bridge.challengeId);
+        qs('arix-auth-verify')?.classList.toggle('hidden', !bridge.challengeId);
+        qs('arix-auth-resend')?.classList.toggle('hidden', !bridge.challengeId);
+        const title = qs('arix-auth-title');
+        const desc = qs('arix-auth-desc');
+        if (title) title.textContent = isRegister ? 'Create your ArixAI account' : 'Sign in to ArixAI';
+        if (desc) desc.textContent = isRegister
+            ? 'Your nickname stays as your existing display name. Choose a different ArixName, a strong password, and an email for verification.'
+            : 'Use your ArixName or email and password. A one-time verification code will be sent to your account email.';
+        qs('arix-auth-email')?.classList.toggle('hidden', !isRegister);
+        const submit = qs('arix-auth-submit');
+        if (submit) submit.innerHTML = isRegister
+            ? '<i class="ph-bold ph-user-plus"></i> Create Account & Send Code'
+            : '<i class="ph-bold ph-paper-plane-right"></i> Sign In & Send Code';
+    }
+
+    async function submitAuthStart() {
+        const isRegister = bridge.authMode === 'register';
+        const email = qs('arix-auth-email').value.trim();
+        const password = qs('arix-auth-password').value;
+        const btn = qs('arix-auth-submit');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Requesting...';
+        }
+
+        try {
+            let data;
+            if (isRegister) {
+                const nickname = (localStorage.getItem('Arix_nickname') || qs('arix-auth-nickname').value || '').trim();
+                const arixName = qs('arix-auth-arixname').value.trim();
+                if (!nickname) throw new Error('Set your nickname first.');
+                if (!arixName) throw new Error('ArixName is required.');
+                if (arixName.toLowerCase() === nickname.toLowerCase()) throw new Error('ArixName must be different from your nickname.');
+                if (password.length < 12) throw new Error('Use a password of at least 12 characters.');
+                if (!email) throw new Error('Email is required for cloud account verification.');
+                data = await apiJson('/api/otp', {
+                    action: 'register_start',
+                    username: nickname,
+                    arixName,
+                    email,
+                    password
+                });
+            } else {
+                const identifier = qs('arix-auth-identifier').value.trim();
+                if (!identifier || !password) throw new Error('Enter your ArixName/email and password.');
+                data = await apiJson('/api/otp', {
+                    action: 'login_start',
+                    identifier,
+                    password
+                });
+            }
+            bridge.challengeId = data.challengeId;
+            updateAuthButtons();
+            showToast(data.message || 'Verification code sent.');
+            setTimeout(() => qs('arix-auth-otp')?.focus(), 50);
+        } catch (error) {
+            showToast(error?.message || 'Account request failed.');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        }
+    }
+
+    async function verifyAuthCode() {
+        if (!bridge.challengeId) return showToast('Start the account request first.');
+        const otp = qs('arix-auth-otp').value.trim();
+        if (!/^\d{6}$/.test(otp)) return showToast('Enter the 6-digit verification code.');
+        const btn = qs('arix-auth-verify');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> Verifying & Syncing...';
+        }
+        try {
+            const data = await apiJson('/api/otp', {
+                action: 'verify_otp',
+                challengeId: bridge.challengeId,
+                otp
+            });
+            if (!data.authenticated) throw new Error('Authentication could not be completed.');
+            bridge.authenticated = true;
+            localStorage.setItem(CLOUD_ACCOUNT_KEY, '1');
+            if (data.arixName) localStorage.setItem('Arix_arixName', data.arixName);
+            if (data.username) localStorage.setItem('Arix_nickname', data.username);
+            updateSidebarName(data.username || data.arixName || localStorage.getItem('Arix_nickname') || 'ArixAI');
+            
+            const titleEl = qs('arix-auth-title');
+            const descEl = qs('arix-auth-desc');
+            if(titleEl) titleEl.textContent = "Syncing Cloud Workspace...";
+            if(descEl) descEl.textContent = "Please wait while we sync your secure data.";
+            qs('arix-auth-login-fields')?.classList.add('hidden');
+            qs('arix-auth-register-fields')?.classList.add('hidden');
+            qs('arix-auth-otp-wrap')?.classList.add('hidden');
+            qs('arix-auth-resend')?.classList.add('hidden');
+            
+            const success = await enterCloudMode(true);
+            if (success) {
+                hideAuthModal();
+                showToast('ArixAI account connected. Cloud sync is active.');
+            } else {
+                throw new Error('Failed to load cloud data. Check your network.');
+            }
+        } catch (error) {
+            showToast(error?.message || 'Verification failed.');
+            const titleEl = qs('arix-auth-title');
+            const descEl = qs('arix-auth-desc');
+            if(titleEl) titleEl.textContent = "Sign in to ArixAI";
+            if(descEl) descEl.textContent = "Verification failed or sync interrupted.";
+            qs('arix-auth-otp-wrap')?.classList.remove('hidden');
+            qs('arix-auth-resend')?.classList.remove('hidden');
+        } finally {
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+        }
+    }
+
+    async function resendAuthCode() {
+        if (!bridge.challengeId) return;
+        const btn = qs('arix-auth-resend');
+        if (btn) btn.disabled = true;
+        try {
+            const data = await apiJson('/api/otp', {
+                action: 'resend_otp',
+                challengeId: bridge.challengeId
+            });
+            bridge.challengeId = data.challengeId || bridge.challengeId;
+            showToast(data.message || 'A new code was sent.');
+        } catch (error) {
+            showToast(error?.message || 'Could not resend the code.');
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    async function ensureCloudAuthentication() {
+        if (bridge.authenticated) return true;
+        try {
+            // storage.js revalidates the same HttpOnly session itself; no client token is trusted.
+            await apiJson('/api/storage', { action: 'bootstrap', chatLimit: 1, projectLimit: 1, taskLimit: 1, pinLimit: 1, artifactLimit: 1, libraryLimit: 1 }, 15_000);
+            bridge.authenticated = true;
+            localStorage.setItem(CLOUD_ACCOUNT_KEY, '1');
+            return true;
+        } catch (error) {
+            bridge.authenticated = false;
+            if (error?.status === 401) return false;
+            return false;
+        }
+    }
+
+    function chatMeta(chat, forcedId = null) {
+        const id = forcedId || String(chat?.id || randomId('chat')).slice(0, 160);
+        const created = normalizeIso(chat?.createdAt || chat?.date || nowIso());
+        const updated = normalizeIso(chat?.updatedAt || chat?.date || created);
+        return {
+            id,
+            title: String(chat?.title || 'New Conversation').slice(0, 500),
+            extId: chat?.extId ? String(chat.extId).slice(0, 512) : null,
+            createdAt: created,
+            updatedAt: updated,
+            extra: {
+                pinned: !!chat?.pinned,
+            }
+        };
+    }
+
+    function messagePayload(msg, chatId, idPrefix = '') {
+        const createdAt = normalizeIso(msg?.createdAt || nowIso());
+        const updatedAt = normalizeIso(msg?.updatedAt || createdAt);
+        const attachmentsSource = Array.isArray(msg?.attachmentsMeta) ? msg.attachmentsMeta : (Array.isArray(msg?.attachments) ? msg.attachments : []);
+        const attachments = attachmentsSource.map((a) => ({
+            name: String(a?.name || '').slice(0, 512),
+            type: String(a?.type || '').slice(0, 160),
+            id: a?.id ? String(a.id).slice(0, 512) : '',
+            url: /^https?:\/\//i.test(String(a?.url || '')) ? String(a.url).slice(0, 4096) : null,
+            size: Number.isFinite(Number(a?.size)) ? Math.max(0, Number(a.size)) : null,
+        }));
+        const extra = {};
+        for (const key of ['name', 'fileName', 'tool', 'mode', 'sources']) {
+            if (msg && msg[key] != null) extra[key] = msg[key];
+        }
+        return {
+            id: String(`${idPrefix}${msg?.id || randomId('msg')}`).slice(0, 160),
+            chatId: String(chatId).slice(0, 160),
+            role: String(msg?.role || 'assistant').slice(0, 32),
+            content: String(msg?.content || ''),
+            modelId: msg?.modelId ? String(msg.modelId).slice(0, 120) : '',
+            createdAt,
+            updatedAt,
+            attachments,
+            extra,
+        };
+    }
+
+    function projectMeta(project) {
+        return {
+            id: String(project?.id || randomId('proj')).slice(0, 160),
+            name: String(project?.name || 'Untitled Project').slice(0, 500),
+            createdAt: normalizeIso(project?.createdAt || nowIso()),
+            updatedAt: normalizeIso(project?.updatedAt || project?.createdAt || nowIso()),
+            extra: project?.shareId ? { shareId: String(project.shareId).slice(0, 512) } : {}
+        };
+    }
+
+    function projectRelationships(project) {
+        const ids = Array.isArray(project?.chatIds)
+            ? project.chatIds
+            : (Array.isArray(project?.chats) ? project.chats.map((c) => c?.id) : []);
+        return ids.filter(Boolean).map((chatId) => ({
+            projectId: String(project.id),
+            chatId: String(chatId),
+            addedAt: normalizeIso(project?.addedAt || project?.updatedAt || project?.createdAt || nowIso()),
+            extra: {}
+        }));
+    }
+
+    function pinPayload(chat) {
+        return chat?.pinned ? [{ chatId: String(chat.id), pinnedAt: normalizeIso(chat?.updatedAt || chat?.date || nowIso()) }] : [];
+    }
+
+    function collectMediaArtifacts(messagesForChat) {
+        const found = new Map();
+        const parser = typeof DOMParser !== 'undefined' ? new DOMParser() : null;
+        if (!parser) return [];
+        for (const msg of messagesForChat || []) {
+            const content = String(msg?.content || '');
+            if (!content) continue;
+            const doc = parser.parseFromString(content, 'text/html');
+            for (const el of doc.querySelectorAll('img[src],video[src],source[src],a[href]')) {
+                const raw = el.getAttribute('src') || el.getAttribute('href') || '';
+                if (!/^https?:\/\//i.test(raw)) continue;
+                const kind = el.matches('video,source') ? 'video' : (el.matches('img') ? 'image' : 'media');
+                if (!found.has(raw)) found.set(raw, { url: raw, kind });
+            }
+        }
+        return [...found.entries()].slice(0, 200).map(([url, item]) => ({
+            id: `media_${shortHash(url)}`,
+            kind: item.kind,
+            title: item.kind === 'video' ? 'ArixAI Video' : item.kind === 'image' ? 'ArixAI Image' : 'ArixAI Media',
+            url: url.slice(0, 4096),
+            externalId: '',
+            updatedAt: nowIso(),
+            metadata: {}
+        }));
+    }
+
+    function shortHash(value) {
+        let h1 = 2166136261 >>> 0;
+        let h2 = 16777619 >>> 0;
+        for (let i = 0; i < String(value).length; i++) {
+            const c = String(value).charCodeAt(i);
+            h1 ^= c; h1 = Math.imul(h1, 16777619) >>> 0;
+            h2 ^= (c + i); h2 = Math.imul(h2, 2246822519) >>> 0;
+        }
+        return `${h1.toString(36)}${h2.toString(36)}`.slice(0, 24);
+    }
+
+    function settingsPayload() {
+        return [
+            { key: 'activeModelId', value: activeModelId || 'spark', updatedAt: nowIso() },
+            { key: 'activeAccessTool', value: activeAccessTool || '57', updatedAt: nowIso() },
+            { key: 'useMemory', value: !!qs('toggle-use-memory')?.checked, updatedAt: nowIso() },
+            { key: 'saveMemory', value: !!qs('toggle-save-memory')?.checked, updatedAt: nowIso() },
+            { key: 'nickname', value: localStorage.getItem('Arix_nickname') || '', updatedAt: nowIso() },
+        ];
+    }
+
+    async function currentExtensionsForCloud() {
+        try {
+            const exts = await DB.getAll();
+            return (exts || []).map((ext) => ({
+                id: `extension_${String(ext.id).slice(0, 120)}`,
+                kind: 'extension',
+                title: String(ext.name || 'Untitled Extension').slice(0, 500),
+                updatedAt: nowIso(),
+                data: {
+                    originalId: String(ext.id),
+                    name: String(ext.name || 'Untitled Extension').slice(0, 500),
+                    links: Array.isArray(ext.links) ? ext.links.map((l) => ({
+                        url: String(l?.url || '').slice(0, 4096),
+                        status: String(l?.status || '').slice(0, 160)
+                    })) : [],
+                    files: Array.isArray(ext.files) ? ext.files.map((f) => ({
+                        name: String(f?.name || '').slice(0, 512),
+                        type: String(f?.type || '').slice(0, 160),
+                        externalId: String(f?.id || f?.externalId || '').slice(0, 512),
+                        url: /^https?:\/\//i.test(String(f?.url || '')) ? String(f.url).slice(0, 4096) : null
+                    })) : []
+                }
+            }));
+        } catch { return []; }
+    }
+
+    function fitJsonObject(value, maxBytes = 100_000) {
+        try {
+            if (bytes(JSON.stringify(value)) <= maxBytes) return value;
+            if (Array.isArray(value)) {
+                const copy = value.slice();
+                while (copy.length && bytes(JSON.stringify(copy)) > maxBytes) copy.shift();
+                return copy;
+            }
+            if (value && typeof value === 'object') {
+                const out = { ...value };
+                for (const key of Object.keys(out).reverse()) {
+                    delete out[key];
+                    if (bytes(JSON.stringify(out)) <= maxBytes) break;
+                }
+                return out;
+            }
+        } catch {}
+        return value;
+    }
+
+    function stableMessageTime(chat, index) {
+        const base = localTime(chat?.createdAt || chat?.date || Date.now());
+        return new Date(base + Math.min(Math.max(Number(index) || 0, 0), 999999) ).toISOString();
+    }
+
+    async function buildSnapshot({ idsPrefix = '' } = {}) {
+        const localChats = Array.isArray(chats) ? chats : [];
+        const idMap = new Map();
+        const projectIdMap = new Map();
+        const outChats = [];
+        const outMessages = [];
+        const outProjects = [];
+        const outProjectChats = [];
+        const outPinned = [];
+
+        for (const chat of localChats) {
+            const oldId = String(chat?.id || randomId('chat'));
+            const newId = idsPrefix ? `${idsPrefix}${oldId}`.slice(0, 160) : oldId.slice(0, 160);
+            idMap.set(oldId, newId);
+            const meta = chatMeta(chat, newId);
+            outChats.push(meta);
+            const msgs = Array.isArray(chat?.messages) ? chat.messages : (chat?.id === currentChatId && Array.isArray(messages) ? messages : []);
+            msgs.forEach((msg, index) => {
+                const stableTime = stableMessageTime(chat, index);
+                outMessages.push(messagePayload({ ...msg, createdAt: msg?.createdAt || stableTime, updatedAt: msg?.updatedAt || stableTime }, newId, idsPrefix ? idsPrefix : ''));
+            });
+            outPinned.push(...pinPayload({ ...chat, id: newId }));
+        }
+
+        const pinSeen = new Set();
+        const pinned = outPinned.filter((pin) => !pinSeen.has(pin.chatId) && (pinSeen.add(pin.chatId), true));
+
+        for (const project of (Array.isArray(customProjects) ? customProjects : [])) {
+            const oldProjectId = String(project?.id || randomId('proj'));
+            const newProjectId = idsPrefix ? `${idsPrefix}${oldProjectId}`.slice(0, 160) : oldProjectId.slice(0, 160);
+            projectIdMap.set(oldProjectId, newProjectId);
+            outProjects.push(projectMeta({ ...project, id: newProjectId }));
+            for (const rel of projectRelationships(project)) {
+                const mappedChatId = idMap.get(String(rel.chatId));
+                if (!mappedChatId) continue;
+                outProjectChats.push({
+                    ...rel,
+                    projectId: newProjectId,
+                    chatId: mappedChatId,
+                });
+            }
+        }
+
+        const tasks = [];
+        for (const t of (Array.isArray(pulseTasks) ? pulseTasks : [])) {
+            const oldId = String(t?.id || randomId('pulse'));
+            tasks.push({ id: (idsPrefix ? `${idsPrefix}${oldId}` : oldId).slice(0, 160), kind: 'pulse', title: String(t?.title || t?.task || 'Pulse Task').slice(0, 500), updatedAt: nowIso(), data: fitJsonObject(t || {}, 100_000) });
+        }
+        for (const t of (Array.isArray(activeSentinelTasks) ? activeSentinelTasks : [])) {
+            const oldId = String(t?.id || randomId('sentinel'));
+            tasks.push({ id: (idsPrefix ? `${idsPrefix}${oldId}` : oldId).slice(0, 160), kind: 'sentinel', title: String(t?.task || 'Sentinel Task').slice(0, 500), updatedAt: nowIso(), data: fitJsonObject(t || {}, 100_000) });
+        }
+        for (const [toolId, history] of Object.entries(accessToolChats || {})) {
+            if (!Array.isArray(history)) continue;
+            const taskId = `access_${String(toolId).slice(0, 120)}`;
+            tasks.push({ id: (idsPrefix ? `${idsPrefix}${taskId}` : taskId).slice(0, 160), kind: 'access_tool', title: `Accessibility Tool ${toolId}`, updatedAt: nowIso(), data: fitJsonObject({ toolId, chats: history.slice(-120) }, 100_000) });
+        }
+        tasks.push(...(await currentExtensionsForCloud()).map((task) => idsPrefix ? { ...task, id: `${idsPrefix}${task.id}`.slice(0, 160) } : task));
+
+        const artifacts = collectMediaArtifacts(outMessages).map((artifact) => idsPrefix ? { ...artifact, id: `${idsPrefix}${artifact.id}`.slice(0, 160) } : artifact);
+        const memory = [{ key: 'profile', value: fitJsonObject(userProfile || {}, 100_000), updatedAt: nowIso() }];
+        const settings = settingsPayload();
+        return { chats: outChats, messages: outMessages, projects: outProjects, projectChats: outProjectChats, pinned, tasks, artifacts, libraryRefs: [], memory, settings, events: [] };
+    }
+
+    function opCount(changes) {
+        return Object.entries(changes).reduce((n, [k, v]) => n + (Array.isArray(v) ? v.length : 0), 0);
+    }
+
+    function emptyChanges() {
+        return { chats: [], messages: [], projects: [], projectChats: [], pinned: [], tasks: [], artifacts: [], libraryRefs: [], memory: [], settings: [], events: [], deletes: [] };
+    }
+
+    function chunkSyncChanges(changes, maxBytes = 800_000, maxOps = 50) {
+        const source = { ...emptyChanges(), ...(changes || {}) };
+        const keys = ['chats', 'messages', 'projects', 'projectChats', 'pinned', 'tasks', 'artifacts', 'libraryRefs', 'memory', 'settings', 'events', 'deletes'];
+        const chunks = [];
+        let current = emptyChanges();
+        let count = 0;
+        let size = 200;
+        for (const key of keys) {
+            for (const item of (Array.isArray(source[key]) ? source[key] : [])) {
+                const itemBytes = bytes(JSON.stringify(item)) + 8;
+                const wouldOverflow = count >= maxOps || (size + itemBytes > maxBytes && count > 0);
+                if (wouldOverflow) {
+                    chunks.push(current);
+                    current = emptyChanges();
+                    count = 0;
+                    size = 200;
+                }
+                current[key].push(item);
+                count++;
+                size += itemBytes;
+            }
+        }
+        if (opCount(current) > 0) chunks.push(current);
+        return chunks;
+    }
+
+    async function sendSync(changes) {
+        if (!cloudEnabled()) return { skipped: true };
+        const source = { ...emptyChanges(), ...(changes || {}) };
+        const chunks = chunkSyncChanges(source);
+        if (!chunks.length && source.storageMode) chunks.push({ ...emptyChanges(), storageMode: source.storageMode });
+        for (const chunk of chunks) await apiJson('/api/storage', { action: 'sync', changes: chunk }, 45_000);
+        return { synced: chunks.reduce((n, c) => n + opCount(c), 0) };
+    }
+
+    async function syncEverything() {
+        if (!cloudEnabled() || bridge.busy) return;
+        bridge.busy = true;
+        try {
+            const snapshot = await buildSnapshot();
+            snapshot.storageMode = 'cloud';
+            await sendSync(snapshot);
+            localStorage.setItem('Arix_cloud_sync_ok', String(Date.now()));
+        } catch (error) {
+            console.error('[ArixAI] cloud sync failed:', error);
+            localStorage.setItem('Arix_cloud_dirty', '1');
+        } finally {
+            bridge.busy = false;
+        }
+    }
+
+    function scheduleFullSync(delay = 500) {
+        if (!cloudEnabled()) return;
+        clearTimeout(bridge.syncTimer);
+        bridge.syncTimer = setTimeout(() => {
+            if (bridge.syncPromise) {
+                bridge.syncAgain = true;
+                return;
+            }
+            bridge.syncPromise = syncEverything().finally(() => {
+                bridge.syncPromise = null;
+                if (bridge.syncAgain) { bridge.syncAgain = false; scheduleFullSync(50); }
+            });
+        }, delay);
+    }
+
+    async function syncCurrentChat() {
+        if (!cloudEnabled()) return;
+        const chat = chats.find((c) => String(c.id) === String(currentChatId));
+        if (!chat) return;
+        const saved = { ...chat, messages: Array.isArray(messages) ? messages : [] };
+        try {
+            await sendSync({
+                chats: [chatMeta(saved, String(chat.id))],
+                messages: (saved.messages || []).map((m, index) => {
+                    const stableTime = stableMessageTime(saved, index);
+                    return messagePayload({ ...m, createdAt: m?.createdAt || stableTime, updatedAt: m?.updatedAt || stableTime }, String(chat.id));
+                }),
+                pinned: pinPayload(saved),
+                artifacts: collectMediaArtifacts(saved.messages || []),
+            });
+            localStorage.removeItem('Arix_cloud_dirty');
+        } catch (error) {
+            console.error('[ArixAI] current chat sync failed:', error);
+            localStorage.setItem('Arix_cloud_dirty', '1');
+        }
+    }
+
+    async function loadCloudBootstrap({ migrateLocal = false } = {}) {
+        // Use original IDs so Supabase merges records instead of duplicating
+        const localSnapshot = migrateLocal ? await buildSnapshot({ idsPrefix: '' }) : null;
+        const data = await apiJson('/api/storage', {
+            action: 'bootstrap',
+            chatLimit: 100,
+            projectLimit: 100,
+            taskLimit: 150,
+            pinLimit: 200,
+            artifactLimit: 100,
+            libraryLimit: 100
+        }, 45_000);
+        bridge.authenticated = true;
+        localStorage.setItem(CLOUD_ACCOUNT_KEY, '1');
+        const cloud = data?.data || {};
+
+        if (migrateLocal && localSnapshot && opCount(localSnapshot) > 0) {
+            await sendSync(localSnapshot);
+            // Prevent a second automatic migration of the same browser cache for this account.
+            const hint = (localStorage.getItem('Arix_arixName') || localStorage.getItem('Arix_nickname') || 'account').toLowerCase();
+            localStorage.setItem(`${MIGRATED_KEY_PREFIX}${shortHash(hint)}`, '1');
+            // Re-bootstrap so the UI has one canonical merged dataset.
+            return loadCloudBootstrap({ migrateLocal: false });
+        }
+
+        const cloudChats = Array.isArray(cloud.chats) ? cloud.chats : [];
+        const pins = new Set((Array.isArray(cloud.pinned) ? cloud.pinned : []).map((p) => String(p.chatId)));
+        chats = cloudChats.map((c) => ({
+            id: String(c.id),
+            title: String(c.title || 'New Conversation'),
+            extId: c.extId || null,
+            date: localTime(c.updatedAt || c.createdAt),
+            createdAt: c.createdAt,
+            updatedAt: c.updatedAt,
+            pinned: pins.has(String(c.id)),
+            messages: [],
+            _cloudLoaded: false,
+        }));
+
+        const chatById = new Map(chats.map((c) => [String(c.id), c]));
+        customProjects = (Array.isArray(cloud.projects) ? cloud.projects : []).map((p) => ({
+            id: String(p.id),
+            name: String(p.name || 'Untitled Project'),
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+            shareId: p?.extra?.shareId || null,
+            chats: (Array.isArray(p.chatIds) ? p.chatIds : []).map((id) => ({
+                id: String(id),
+                title: chatById.get(String(id))?.title || String(id),
+            }))
+        }));
+
+        const tasks = Array.isArray(cloud.tasks) ? cloud.tasks : [];
+        pulseTasks = tasks.filter((t) => t.kind === 'pulse').map((t) => t.data || {});
+        activeSentinelTasks = tasks.filter((t) => t.kind === 'sentinel').map((t) => t.data || {});
+        accessToolChats = {};
+        for (const t of tasks.filter((x) => x.kind === 'access_tool')) {
+            if (t?.data?.toolId) accessToolChats[String(t.data.toolId)] = Array.isArray(t.data.chats) ? t.data.chats : [];
+        }
+        const profileTask = tasks.filter((t) => t.kind === 'extension');
+        if (profileTask.length && window.DB?.put) {
+            // Restore reference-only extensions; scraped text/base64 is intentionally not reconstructed.
+            for (const t of profileTask) {
+                const d = t.data || {};
+                try {
+                    await DB.put({
+                        id: String(d.originalId || t.id.replace(/^extension_/, '')),
+                        name: String(d.name || t.title || 'Untitled Extension'),
+                        links: Array.isArray(d.links) ? d.links : [],
+                        files: Array.isArray(d.files) ? d.files : []
+                    });
+                } catch {}
+            }
+        }
+
+        userProfile = cloud.memory?.profile || {};
+        const settings = cloud.settings && typeof cloud.settings === 'object' ? cloud.settings : {};
+        if (settings.activeModelId) {
+            activeModelId = String(settings.activeModelId);
+            localStorage.setItem('Arix_active_model', activeModelId);
+        }
+        if (settings.activeAccessTool) {
+            activeAccessTool = String(settings.activeAccessTool);
+            localStorage.setItem('arix_active_access_tool', activeAccessTool);
+        }
+        if (qs('toggle-use-memory') && typeof settings.useMemory === 'boolean') qs('toggle-use-memory').checked = settings.useMemory;
+        if (qs('toggle-save-memory') && typeof settings.saveMemory === 'boolean') qs('toggle-save-memory').checked = settings.saveMemory;
+        if (settings.nickname) {
+            localStorage.setItem('Arix_nickname', String(settings.nickname));
+            updateSidebarName(String(settings.nickname));
+        }
+        localStorage.setItem('Arix_user_profile', JSON.stringify(userProfile || {}));
+        localStorage.setItem('Arix_storage_mode', 'cloud');
+        bridge.mode = 'cloud';
+
+        try {
+            localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => ({ ...c, messages: [] }))));
+            localStorage.setItem('Arix_custom_projects', JSON.stringify(customProjects));
+            localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
+            localStorage.setItem('Arix_sentinel_tasks', JSON.stringify(activeSentinelTasks));
+            localStorage.setItem('arix_access_tool_chats', JSON.stringify(accessToolChats));
+        } catch {}
+
+        renderHistoryList();
+        renderProjectsList();
+        renderPulseTodayWidget();
+        refreshExtSelectors();
+        updateUIState();
+
+        if (chats.length) {
+            const active = chats[0];
+            currentChatId = active.id;
+            messages = [];
+            await loadCloudChat(active.id, { background: false });
+        } else {
+            currentChatId = Date.now().toString();
+            messages = [];
+            createNewChat();
+        }
+    }
+
+    async function loadCloudChat(id, { background = false } = {}) {
+        const epoch = ++bridge.loadEpoch;
+        const chat = chats.find((c) => String(c.id) === String(id));
+        if (!chat || !cloudEnabled()) return;
+        currentChatId = chat.id;
+        currentChatExtId = chat.extId || null;
+        els.extSelector.value = currentChatExtId || '';
+        messages = [];
+        renderMessagesToUI();
+        if (!background) {
+            els.container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-500 font-medium w-full animate-pulse"><i class="ph-bold ph-spinner animate-spin text-4xl mb-3 text-theme-500"></i> Loading secure workspace...</div>';
+        }
+        try {
+            let before = null;
+            const all = [];
+            let pages = 0;
+            do {
+                const payload = { action: 'chat', chatId: String(id), limit: 100 };
+                if (before) payload.before = before;
+                const response = await apiJson('/api/storage', payload, 45_000);
+                const page = response?.data || {};
+                if (page.chat) {
+                    chat.title = page.chat.title || chat.title;
+                    chat.extId = page.chat.extId || chat.extId || null;
+                    chat.pinned = !!page.chat.pinned;
+                    chat.date = localTime(page.chat.updatedAt || chat.date);
+                }
+                if (Array.isArray(page.messages)) all.push(...page.messages);
+                before = page.nextBefore || null;
+                pages++;
+                // First page is immediately visible; older pages continue in the same request loop.
+                if (pages === 1) {
+                    if (epoch !== bridge.loadEpoch) return;
+                    messages = all.map(cloudMessageToLocal);
+                    chat.messages = messages;
+                    chat._cloudLoaded = true;
+                    renderMessagesToUI();
+                }
+                if (pages > 200) break;
+            } while (before);
+            if (epoch !== bridge.loadEpoch) return;
+            messages = all.map(cloudMessageToLocal);
+            chat.messages = messages;
+            chat._cloudLoaded = true;
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => c.id === id ? c : { ...c, messages: [] }))); } catch {}
+            renderMessagesToUI();
+            renderHistoryList();
+        } catch (error) {
+            if (error?.status === 401) {
+                bridge.authenticated = false;
+                setModeLocal('device');
+                updateStorageBadge();
+                updateSettingsUi();
+                showToast('Cloud session expired. Reconnect from Settings > Data & Account > Cloud Sync.');
+            } else if (!background) {
+                showToast(error?.message || 'Could not load cloud chat.');
+            }
+        }
+    }
+
+    function cloudMessageToLocal(m) {
+        return {
+            id: String(m.id),
+            chatId: String(m.chatId || currentChatId),
+            role: String(m.role || 'assistant'),
+            content: String(m.content || ''),
+            modelId: m.modelId || null,
+            createdAt: m.createdAt,
+            updatedAt: m.updatedAt,
+            attachmentsMeta: Array.isArray(m.attachments) ? m.attachments.map((a) => ({
+                name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null
+            })) : []
+        };
+    }
+
+    async function migrateToCloud() {
+        const hint = (localStorage.getItem('Arix_arixName') || localStorage.getItem('Arix_nickname') || 'account').toLowerCase();
+        if (localStorage.getItem(`${MIGRATED_KEY_PREFIX}${shortHash(hint)}`) === '1') return false;
+        return true;
+    }
+
+    async function enterCloudMode(fromFreshLogin = false) {
+        const ok = await ensureCloudAuthentication();
+        if (!ok) {
+            bridge.authenticated = false;
+            setModeLocal('device');
+            updateStorageBadge();
+            updateSettingsUi();
+            return false;
+        }
+        // Always safely sync offline work to Supabase before loading
+        const shouldMigrate = true;
+        try {
+            await apiJson('/api/storage', { action: 'mode_set', mode: 'cloud' }, 25_000);
+            await loadCloudBootstrap({ migrateLocal: shouldMigrate });
+            updateStorageBadge();
+            return true;
+        } catch (error) {
+            bridge.authenticated = false;
+            setModeLocal('device');
+            updateStorageBadge();
+            if (error?.status === 401) {
+                showAuthModal('login');
+                throw new Error("Session expired. Please sign in again.");
+            }
+            throw error; // Propagate the real error to the UI
+        }
+    }
+
+    async function chooseDeviceMode() {
+        bridge.mode = 'device';
+        setModeLocal('device');
+        updateStorageBadge();
+        updateSettingsUi();
+        hideStorageModal();
+        renderHistoryList();
+        showToast('Local Storage is active.');
+    }
+
+    async function chooseCloudMode() {
+        if (!bridge.authenticated) {
+            setModeLocal('cloud');
+            updateStorageBadge();
+            updateSettingsUi();
+            hideStorageModal();
+            showAuthModal('login');
+            return;
+        }
+        const btn = qs('arix-cloud-btn');
+        const origHtml = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center"><i class="ph-bold ph-spinner animate-spin text-xl"></i></span><span class="flex-1"><b class="block text-sm text-gray-900">Connecting...</b><small class="block text-xs text-gray-500 mt-1">Syncing workspace</small></span>';
+        }
+        
+        const success = await enterCloudMode(false);
+        
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+        }
+        if (success) {
+            hideStorageModal();
+            showToast('Cloud Sync is active.');
+        } else {
+            if (!bridge.authenticated) showAuthModal('login');
+            else showToast('Cloud connection failed. Check network.');
+        }
+    }
+
+    async function logoutArix() {
+        try {
+            await apiJson('/api/otp', { action: 'logout' }, 15_000);
+        } catch (error) {
+            // A local logout is still safer than retaining another user's cloud view in this tab.
+            console.warn('[ArixAI] logout request failed:', error);
+        }
+        bridge.authenticated = false;
+        bridge.mode = 'device';
+        localStorage.removeItem(CLOUD_ACCOUNT_KEY);
+        localStorage.setItem(MODE_KEY, 'device');
+        for (const key of DEVICE_CACHE_KEYS) localStorage.removeItem(key);
+        chats = [];
+        customProjects = [];
+        pulseTasks = [];
+        activeSentinelTasks = [];
+        accessToolChats = {};
+        userProfile = {};
+        messages = [];
+        currentChatId = Date.now().toString();
+        try {
+            const exts = await DB.getAll();
+            for (const ext of (exts || [])) await DB.delete(ext.id);
+        } catch {}
+        hideAuthModal();
+        hideStorageModal();
+        updateSidebarName('Anonymous');
+        renderHistoryList();
+        renderProjectsList();
+        renderMessagesToUI();
+        createNewChat();
+        showToast('Signed out. Cloud cache cleared from this browser.');
+    }
+
+    function installUi() {
+        if (!qs('arix-storage-modal')) {
+            document.body.insertAdjacentHTML('beforeend', `
+            <div id="arix-storage-modal" class="fixed inset-0 z-[230] hidden items-center justify-center bg-gray-900/45 backdrop-blur-md px-4">
+              <div class="w-full max-w-xl bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
+                <div class="p-6 sm:p-7 border-b border-gray-100 bg-gradient-to-br from-white to-gray-50">
+                  <div class="flex items-start justify-between gap-4">
+                    <div>
+                      <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-theme-600"><i class="ph-fill ph-shield-check"></i> ArixAI Data Storage</div>
+                      <h2 class="text-2xl font-extrabold text-gray-900 mt-2">Choose where your ArixAI data lives</h2>
+                      <p id="arix-storage-status" class="text-sm text-gray-500 mt-2"></p>
+                    </div>
+                    <button onclick="window.ArixStorage.close()" class="text-gray-400 hover:text-gray-900 p-2 rounded-xl hover:bg-white"><i class="ph-bold ph-x"></i></button>
+                  </div>
+                </div>
+                <div class="p-5 sm:p-7 grid gap-3">
+                  <button id="arix-device-btn" onclick="window.ArixStorage.device()" class="w-full text-left p-4 rounded-2xl border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 transition-all flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><i class="ph-bold ph-device-mobile text-xl"></i></span>
+                    <span class="flex-1"><b class="block text-sm text-gray-900">Local Storage</b><small id="arix-device-desc" class="block text-xs text-gray-500 mt-1">Chats stay in this browser. No email, OTP, or cloud request is needed.</small></span>
+                    <i id="arix-device-check" class="ph-bold ph-check text-emerald-600 hidden"></i>
+                  </button>
+                  <button id="arix-cloud-btn" onclick="window.ArixStorage.cloud()" class="w-full text-left p-4 rounded-2xl border border-gray-200 hover:border-theme-300 hover:bg-theme-50 transition-all flex items-center gap-4">
+                    <span class="w-11 h-11 rounded-xl bg-theme-50 text-theme-600 flex items-center justify-center"><i class="ph-bold ph-cloud-arrow-up text-xl"></i></span>
+                    <span class="flex-1"><b class="block text-sm text-gray-900">Cloud Sync</b><small id="arix-cloud-desc" class="block text-xs text-gray-500 mt-1">Sync your workspace across devices with your ArixAI account.</small></span>
+                    <i id="arix-cloud-check" class="ph-bold ph-check text-theme-600 hidden"></i>
+                  </button>
+                  <div class="pt-2 flex gap-2">
+                    <button id="arix-sync-btn" onclick="window.ArixStorage.syncWithUI()" class="hidden flex-1 px-4 py-2.5 rounded-xl bg-theme-50 text-theme-600 border border-theme-100 text-sm font-bold hover:bg-theme-100"><i class="ph-bold ph-arrows-clockwise"></i> Sync Now</button>
+                    <button id="arix-logout-btn" onclick="window.ArixStorage.logout()" class="hidden flex-1 px-4 py-2.5 rounded-xl bg-red-50 text-red-600 border border-red-100 text-sm font-bold hover:bg-red-100">Sign out</button>
+                  </div>
+                  <p class="text-[11px] text-gray-400 leading-relaxed">Choose Cloud Sync to sign in or create your ArixAI account. Sign-in is never shown automatically when you visit the app.</p>
+                </div>
+              </div>
+            </div>
+            <div id="arix-auth-modal" class="fixed inset-0 z-[240] hidden items-center justify-center bg-gray-900/45 backdrop-blur-md px-4">
+              <div class="w-full max-w-lg bg-white rounded-3xl border border-gray-100 shadow-2xl overflow-hidden">
+                <div class="p-6 sm:p-7 border-b border-gray-100">
+                  <div class="flex items-start justify-between gap-4">
+                    <div>
+                      <div class="text-xs font-bold uppercase tracking-[0.18em] text-theme-600">ArixAI Account</div>
+                      <h2 id="arix-auth-title" class="text-2xl font-extrabold text-gray-900 mt-2"></h2>
+                      <p id="arix-auth-desc" class="text-sm text-gray-500 mt-2 leading-relaxed"></p>
+                    </div>
+                    <button onclick="window.ArixStorage.closeAuth()" class="text-gray-400 hover:text-gray-900 p-2 rounded-xl hover:bg-gray-50"><i class="ph-bold ph-x"></i></button>
+                  </div>
+                  <div class="flex gap-2 mt-5 p-1 bg-gray-50 rounded-xl border border-gray-100">
+                    <button id="arix-auth-tab-login" onclick="window.ArixStorage.login()" class="flex-1 py-2 text-xs font-bold rounded-lg hover:bg-white transition-all">Sign in</button>
+                    <button id="arix-auth-tab-register" onclick="window.ArixStorage.register()" class="flex-1 py-2 text-xs font-bold rounded-lg hover:bg-white transition-all">Create account</button>
+                  </div>
+                </div>
+                <div class="p-6 sm:p-7 space-y-3">
+                  <div id="arix-auth-register-fields" class="hidden space-y-3">
+                    <input id="arix-auth-nickname" readonly class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-500" placeholder="Existing nickname">
+                    <input id="arix-auth-arixname" maxlength="32" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Choose a different ArixName">
+                  </div>
+                  <div id="arix-auth-login-fields" class="space-y-3">
+                    <input id="arix-auth-identifier" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="ArixName or email">
+                  </div>
+                  <input id="arix-auth-email" type="email" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Email address (required for account verification)">
+                  <input id="arix-auth-password" type="password" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:bg-white" placeholder="Strong password">
+                  <div id="arix-auth-otp-wrap" class="space-y-2">
+                    <input id="arix-auth-otp" inputmode="numeric" maxlength="6" class="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm tracking-[0.5em] text-center font-mono outline-none focus:bg-white" placeholder="6-digit OTP">
+                  </div>
+                  <div class="flex gap-2 pt-2">
+                    <button id="arix-auth-submit" class="flex-1 bg-theme-600 hover:bg-theme-700 text-white font-bold py-3 rounded-xl"></button>
+                    <button id="arix-auth-verify" class="hidden flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl"><i class="ph-bold ph-shield-check"></i> Verify Code</button>
+                  </div>
+                  <button id="arix-auth-resend" class="hidden w-full py-2 text-xs font-bold text-theme-600 hover:underline">Resend code</button>
+                  <button onclick="window.ArixStorage.back()" class="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-800">Back to storage choices</button>
+                  <p class="text-[11px] text-gray-400">Email/OTP is not needed for device-only storage. It is used here only because this cloud account endpoint currently verifies ownership by OTP.</p>
+                </div>
+              </div>
+            </div>`);
+        }
+    }
+
+    function updateSettingsUi() {
+        const nickname = localStorage.getItem('Arix_nickname') || 'Anonymous';
+        const arixName = localStorage.getItem('Arix_arixName');
+        const nicknameEl = qs('arix-settings-nickname');
+        const arixNameEl = qs('arix-settings-arixname');
+        if (nicknameEl) nicknameEl.textContent = nickname;
+        if (arixNameEl) arixNameEl.textContent = arixName ? `ArixName: ${arixName}` : 'ArixName not connected';
+        const storageEl = qs('arix-settings-storage-badge');
+        if (storageEl) storageEl.textContent = bridge.mode === 'cloud'
+            ? `Cloud Sync${bridge.authenticated ? ' • Signed in' : ' • Sign in required'}`
+            : 'Local Storage';
+        const useEl = qs('toggle-use-memory');
+        const saveEl = qs('toggle-save-memory');
+        const memState = qs('arix-settings-memory-state');
+        const saveState = qs('arix-settings-save-state');
+        if (memState) memState.textContent = useEl?.checked ? 'Enabled' : 'Disabled';
+        if (saveState) saveState.textContent = saveEl?.checked ? 'Enabled' : 'Disabled';
+    }
+
+    function updateStorageBadge() {
+        const badge = qs('arix-storage-badge');
+        if (badge) badge.textContent = bridge.mode === 'cloud' ? `Secure Cloud${bridge.authenticated ? ' • Signed in' : ''}` : 'Device only';
+        
+
+        const logout = qs('arix-logout-btn');
+        if (logout) logout.classList.toggle('hidden', !bridge.authenticated);
+        
+        const syncBtn = qs('arix-sync-btn');
+        if (syncBtn) syncBtn.classList.toggle('hidden', !bridge.authenticated || bridge.mode !== 'cloud');
+        updateSettingsUi();
+    }
+
+    function syncMemorySettings() {
+        const use = !!qs('toggle-use-memory')?.checked;
+        const save = !!qs('toggle-save-memory')?.checked;
+        localStorage.setItem('Arix_use_memory', use ? '1' : '0');
+        localStorage.setItem('Arix_save_memory', save ? '1' : '0');
+        if (cloudEnabled()) scheduleFullSync(200);
+    }
+
+    async function initAfterOriginalLoad() {
+        installUi();
+        updateStorageBadge();
+        updateSettingsUi();
+        if (typeof window.saveMemorySettings !== 'function') window.saveMemorySettings = syncMemorySettings;
+
+        // Never open storage/auth UI automatically on app entry. If the user previously
+        // selected Cloud Sync, silently restore it when the existing session is valid.
+        const wantedCloud = localStorage.getItem(MODE_KEY) === 'cloud';
+        if (wantedCloud) {
+            try {
+                await loadCloudBootstrap({ migrateLocal: false });
+                bridge.authenticated = true;
+                updateStorageBadge();
+                updateSettingsUi();
+                return;
+            } catch (error) {
+                bridge.authenticated = false;
+                setModeLocal('device');
+                updateStorageBadge();
+                updateSettingsUi();
+                console.warn('[ArixAI] cloud bootstrap unavailable; staying on local storage:', error);
+            }
+        }
+
+        updateStorageBadge();
+        updateSettingsUi();
+    }
+
+    function wrapFunction(name, after) {
+        const original = window[name];
+        if (typeof original !== 'function' || original.__arixWrapped) return;
+        const wrapped = function(...args) {
+            const result = original.apply(this, args);
+            Promise.resolve().then(() => after(...args, result)).catch(() => {});
+            return result;
+        };
+        wrapped.__arixWrapped = true;
+        window[name] = wrapped;
+    }
+
+    function installCloudHooks() {
+        wrapFunction('saveCurrentChat', () => syncCurrentChat());
+        wrapFunction('saveProjects', () => scheduleFullSync(150));
+        wrapFunction('deleteChat', (id) => cloudEnabled() && sendSync({ deletes: [{ kind: 'chat', id: String(id) }] }).catch(() => {}));
+        wrapFunction('renameChat', (id) => {
+            if (!cloudEnabled()) return;
+            const chat = chats.find((c) => String(c.id) === String(id));
+            if (chat) sendSync({ chats: [chatMeta(chat, String(id))] }).catch(() => {});
+        });
+        wrapFunction('togglePinChat', (id) => {
+            if (!cloudEnabled()) return;
+            const chat = chats.find((c) => String(c.id) === String(id));
+            if (chat) sendSync({ chats: [chatMeta(chat, String(id))], pinned: chat.pinned ? [{ chatId: String(id), pinnedAt: nowIso() }] : [], deletes: chat.pinned ? [] : [{ kind: 'pinned', chatId: String(id) }] }).catch(() => {});
+        });
+        wrapFunction('updateMemoryAsync', () => {
+            if (cloudEnabled()) scheduleFullSync(300);
+        });
+        wrapFunction('saveAccessChats', () => {
+            if (cloudEnabled()) {
+                const data = accessToolChats?.[activeAccessTool] || [];
+                sendSync({ tasks: [{ id: `access_${String(activeAccessTool).slice(0, 120)}`, kind: 'access_tool', title: `Accessibility Tool ${activeAccessTool}`, updatedAt: nowIso(), data: { toolId: activeAccessTool, chats: data } }] }).catch(() => {});
+            }
+        });
+        wrapFunction('saveExtension', () => scheduleFullSync(300));
+        wrapFunction('deleteExt', () => scheduleFullSync(300));
+        wrapFunction('deploySentinel', () => scheduleFullSync(300));
+        wrapFunction('deleteSentinelTask', () => scheduleFullSync(200));
+        wrapFunction('confirmPulseTask', () => scheduleFullSync(200));
+        wrapFunction('undoPulseTask', () => scheduleFullSync(200));
+        wrapFunction('markPulseTaskDone', () => scheduleFullSync(200));
+        wrapFunction('deletePulseTask', () => scheduleFullSync(200));
+        wrapFunction('selectAccessTool', (id) => {
+            localStorage.setItem('Arix_active_access_tool', String(id));
+            if (cloudEnabled()) scheduleFullSync(150);
+        });
+        wrapFunction('switchModel', (id) => {
+            localStorage.setItem('Arix_active_model', String(id));
+            if (cloudEnabled()) scheduleFullSync(150);
+        });
+        wrapFunction('assignExtToCurrentChat', () => scheduleFullSync(150));
+    }
+
+    // Override only the persistence functions, not the app's AI/rendering functions.
+    const originalLoadChat = window.loadChat;
+    if (typeof originalLoadChat === 'function' && !originalLoadChat.__arixWrapped) {
+        const wrappedLoadChat = function(id) {
+            if (cloudEnabled()) {
+                const chat = chats.find((c) => String(c.id) === String(id));
+                if (chat && chat._cloudLoaded) {
+                    currentChatId = chat.id;
+                    messages = Array.isArray(chat.messages) ? chat.messages : [];
+                    currentChatExtId = chat.extId || null;
+                    els.extSelector.value = currentChatExtId || '';
+                    renderMessagesToUI();
+                    renderPulseTodayWidget();
+                    return;
+                }
+                return loadCloudChat(id);
+            }
+            return originalLoadChat.apply(this, arguments);
+        };
+        wrappedLoadChat.__arixWrapped = true;
+        window.loadChat = wrappedLoadChat;
+    }
+
+    async function syncWithUI() {
+        if (!cloudEnabled()) return showToast('Cloud sync is not active.');
+        if (bridge.busy) return showToast('Sync is already running...');
+        
+        const btn = qs('arix-sync-btn');
+        if (btn) btn.innerHTML = '<i class="ph-bold ph-spinner animate-spin"></i> 0%';
+        
+        bridge.busy = true;
+        try {
+            const snapshot = await buildSnapshot();
+            snapshot.storageMode = 'cloud';
+            const source = { ...emptyChanges(), ...(snapshot || {}) };
+            const chunks = chunkSyncChanges(source);
+            if (!chunks.length && source.storageMode) chunks.push({ ...emptyChanges(), storageMode: source.storageMode });
+            
+            let totalOps = chunks.reduce((n, c) => n + opCount(c), 0);
+            let completedOps = 0;
+            
+            for (let i = 0; i < chunks.length; i++) {
+                await apiJson('/api/storage', { action: 'sync', changes: chunks[i] }, 25_000);
+                completedOps += opCount(chunks[i]);
+                let pct = totalOps > 0 ? Math.round((completedOps / totalOps) * 100) : 100;
+                if (btn) btn.innerHTML = `<i class="ph-bold ph-spinner animate-spin"></i> ${pct}%`;
+            }
+            
+            localStorage.setItem('Arix_cloud_sync_ok', String(Date.now()));
+            localStorage.removeItem('Arix_cloud_dirty');
+            
+            if (btn) btn.innerHTML = '<i class="ph-bold ph-check"></i> 100%';
+            showToast('All local data successfully synced to the cloud!');
+            setTimeout(() => { if (btn) btn.innerHTML = '<i class="ph-bold ph-arrows-clockwise"></i> Sync Now'; }, 3000);
+            
+            await loadCloudBootstrap({ migrateLocal: false });
+            updateStorageBadge();
+        } catch (error) {
+            console.error('[ArixAI] UI sync failed:', error);
+            if (btn) btn.innerHTML = '<i class="ph-bold ph-warning"></i> Error';
+            showToast(error?.message || 'Sync failed. Please try again.');
+            setTimeout(() => { if (btn) btn.innerHTML = '<i class="ph-bold ph-arrows-clockwise"></i> Sync Now'; }, 3000);
+        } finally {
+            bridge.busy = false;
+        }
+    }
+
+    const settingsApi = {
+        open: () => { updateStorageBadge(); updateSettingsUi(); const modal = qs('arix-settings-modal'); if (!modal) return; modal.classList.remove('hidden'); modal.classList.add('flex'); },
+        close: () => { const modal = qs('arix-settings-modal'); if (!modal) return; modal.classList.add('hidden'); modal.classList.remove('flex'); },
+        editNickname: () => { settingsApi.close(); changeNickname(); },
+        openDataAccount: () => { settingsApi.close(); updateStorageBadge(); showStorageModal(); }
+    };
+    window.ArixSettings = Object.freeze(settingsApi);
+
+    window.ArixStorage = Object.freeze({
+        open: () => { updateStorageBadge(); showStorageModal(); },
+        close: hideStorageModal,
+        device: chooseDeviceMode,
+        cloud: chooseCloudMode,
+        login: () => { if (bridge.authenticated) return showToast('Already signed in. Sign out first to switch accounts.'); showAuthModal('login'); },
+        register: () => { if (bridge.authenticated) return showToast('Already signed in. Sign out first to switch accounts.'); showAuthModal('register'); },
+        closeAuth: hideAuthModal,
+        back: () => { hideAuthModal(); showStorageModal(); },
+        submit: submitAuthStart,
+        verify: verifyAuthCode,
+        resend: resendAuthCode,
+        logout: logoutArix,
+        sync: syncEverything,
+        syncCurrentChat: syncCurrentChat,
+        syncWithUI: syncWithUI,
+    });
+
+    // Initialize the storage/auth UI independently of the app's heavy window.onload.
+    // The previous version waited for the original onload handler (which initializes
+    // IndexedDB and other app state) before creating the account controls. If that
+    // handler was delayed, the Create Account button could appear inert.
+    function bindAuthUi() {
+        const submit = qs('arix-auth-submit');
+        const verify = qs('arix-auth-verify');
+        const resend = qs('arix-auth-resend');
+        const email = qs('arix-auth-email');
+        const password = qs('arix-auth-password');
+        const arixName = qs('arix-auth-arixname');
+        const otp = qs('arix-auth-otp');
+        const identifier = qs('arix-auth-identifier');
+        const onEnterStart = (event) => {
+            if (event.key === 'Enter') { event.preventDefault(); submitAuthStart(); }
+        };
+        const onEnterVerify = (event) => {
+            if (event.key === 'Enter') { event.preventDefault(); verifyAuthCode(); }
+        };
+        [email, password, arixName, identifier].filter(Boolean).forEach((el) => el.addEventListener('keydown', onEnterStart));
+        if (otp) otp.addEventListener('keydown', onEnterVerify);
+        if (submit) submit.addEventListener('click', (event) => { event.preventDefault(); submitAuthStart(); });
+        if (verify) verify.addEventListener('click', (event) => { event.preventDefault(); verifyAuthCode(); });
+        if (resend) resend.addEventListener('click', (event) => { event.preventDefault(); resendAuthCode(); });
+        updateAuthButtons();
+    }
+
+    function bootStorageIntegration() {
+        try {
+            installUi();
+            bindAuthUi();
+            installCloudHooks();
+            updateStorageBadge();
+            
+            // Re-check after 300ms in case the DOM elements were still rendering
+            setTimeout(() => {
+                installUi();
+                updateStorageBadge();
+            }, 300);
+
+            Promise.resolve(initAfterOriginalLoad()).catch((error) => {
+                console.warn('[ArixAI] storage integration initialization failed:', error);
+                updateStorageBadge();
+            });
+        } catch (error) {
+            console.error('[ArixAI] storage/auth UI initialization failed:', error);
+        }
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootStorageIntegration, { once: true });
+    } else {
+        bootStorageIntegration();
+    }
+
+    // =========================================================================
+    // ADAPTIVE BURST-DECAY MULTI-DEVICE SENTINEL (FREE-TIER SAFE)
+    // =========================================================================
+    const localBroadcast = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('arix_local_sync') : null;
+    let autoSyncTimer = null;
+    let isAutoPulling = false;
+    let lastActivityTimestamp = Date.now();
+
+    // 1. Same-Device Tab Air-Gap (0 Network / 0 Redis / 0 Database Cost)
+    if (localBroadcast) {
+        localBroadcast.onmessage = (e) => {
+            if (e.data === 'REMOTE_UPDATE' && cloudEnabled()) {
+                loadCloudBootstrap({ migrateLocal: false }).then(() => {
+                    if (currentChatId) loadCloudChat(currentChatId, { background: true });
+                });
+            }
+        };
+    }
+
+    // Broadcast local outbound syncs to sibling tabs instantly
+    const originalSendSync = sendSync;
+    sendSync = async function(...args) {
+        const result = await originalSendSync.apply(this, args);
+        if (localBroadcast) localBroadcast.postMessage('REMOTE_UPDATE');
+        registerActivityBurst();
+        return result;
+    };
+
+    // Track user presence to adapt cadence
+    function registerActivityBurst() {
+        lastActivityTimestamp = Date.now();
+        scheduleNextPulse();
+    }
+
+    ['keydown', 'pointerdown', 'touchstart'].forEach(evt => {
+        window.addEventListener(evt, () => {
+            const now = Date.now();
+            if (now - lastActivityTimestamp > 15000) {
+                lastActivityTimestamp = now;
+            }
+        }, { passive: true });
+    });
+
+    // 2. The 1-Row Sentinel Micro-Probe
+    async function probeAndSync() {
+        if (!cloudEnabled() || isAutoPulling || bridge.busy || isProcessing) return;
+        if (document.visibilityState !== 'visible') return;
+
+        // Draft Interlock: Do not pull if the user has an unsubmitted prompt typed
+        const currentInput = document.getElementById('chat-input');
+        if (currentInput && currentInput.value.trim().length > 0) return;
+
+        isAutoPulling = true;
+        try {
+            // Ultra-lightweight 1-row probe
+            const probe = await apiJson('/api/storage', {
+                action: 'bootstrap',
+                chatLimit: 1,
+                projectLimit: 1,
+                taskLimit: 1,
+                pinLimit: 1,
+                artifactLimit: 1,
+                libraryLimit: 1
+            }, 8000);
+
+            const remoteTop = probe?.data?.chats?.[0];
+            if (!remoteTop) return;
+
+            const remoteTime = localTime(remoteTop.updatedAt || remoteTop.createdAt);
+            const localTimeCurrent = Math.max(...(chats || []).map(c => localTime(c.updatedAt || c.date || 0)), 0);
+
+            // True remote update detected from Device A
+            if (remoteTime > localTimeCurrent) {
+                const activeId = currentChatId;
+                await loadCloudBootstrap({ migrateLocal: false });
+                if (activeId && chats.some(c => c.id === activeId)) {
+                    await loadCloudChat(activeId, { background: true });
+                }
+            }
+        } catch (_) {
+            // Silently swallow transient network blips
+        } finally {
+            isAutoPulling = false;
+        }
+    }
+
+    // 3. Adaptive Decay Engine
+    function scheduleNextPulse() {
+        clearTimeout(autoSyncTimer);
+
+        if (document.visibilityState !== 'visible') {
+            // Tab hidden / phone locked: Full sleep (0 requests)
+            return;
+        }
+
+        const idleSeconds = (Date.now() - lastActivityTimestamp) / 1000;
+        let nextDelayMs;
+
+        if (idleSeconds < 60) {
+            // Active conversation burst: smooth 8-second sync
+            nextDelayMs = 8000;
+        } else if (idleSeconds < 180) {
+            // Slow reading: decay to 25 seconds
+            nextDelayMs = 25000;
+        } else if (idleSeconds < 600) {
+            // Passive idle: relax to 60 seconds
+            nextDelayMs = 60000;
+        } else {
+            // Deep idle (>10 minutes without touching): Sleep until interaction
+            return;
+        }
+
+        autoSyncTimer = setTimeout(async () => {
+            await probeAndSync();
+            scheduleNextPulse();
+        }, nextDelayMs);
+    }
+
+    // 4. Instant Glance-Wake Triggers
+    function handleGlanceWake() {
+        registerActivityBurst();
+        probeAndSync();
+    }
+
+    window.addEventListener('focus', handleGlanceWake);
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            handleGlanceWake();
+        } else {
+            clearTimeout(autoSyncTimer);
+        }
+    });
+
+    window.addEventListener('online', () => {
+        if (cloudEnabled() && localStorage.getItem('Arix_cloud_dirty')) scheduleFullSync(50);
+        if (cloudEnabled()) handleGlanceWake();
+    });
+
+    // Start engine on boot
+    scheduleNextPulse();
+})();
 
 </script>
 </body>
