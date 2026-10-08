@@ -16,7 +16,7 @@ const ENV = {
     redisToken: "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw",
     brevoApiKey: "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", 
     authSecret: "ARIX_SECRET_KEY_1234567890123456",
-    supabaseUrl: "https://vvcpdfdofihdmzshglxr.supabase.co",
+    supabaseUrl: "https://vvcpfdofihdmzshdglxr.supabase.co",
     supabaseKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ",
 };
 
