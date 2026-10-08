@@ -34,7 +34,7 @@
 import { authenticateArixSession } from './otp.js';
 
 export const config = {
-    runtime: 'nodejs',
+    runtime: 'edge',
     maxDuration: 30,
 };
 
