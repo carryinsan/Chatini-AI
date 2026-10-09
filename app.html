@@ -6243,12 +6243,6 @@ function renderPulseTodayWidget() {
     const list = document.getElementById('pulse-today-list');
     const countEl = document.getElementById('pulse-today-count');
     if (!widget || !list) return;
-
-    // Refresh from localStorage in case cloud sync resolved on boot
-    try {
-        const stored = localStorage.getItem('Arix_pulse_tasks');
-        if (stored) pulseTasks = JSON.parse(stored);
-    } catch(e) {}
     
     const now = new Date();
     const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -6295,11 +6289,6 @@ if (els && els.input) {
 function renderPulseVault() {
     const container = document.getElementById('pulse-vault-list');
     if (!container) return;
-
-    try {
-        const stored = localStorage.getItem('Arix_pulse_tasks');
-        if (stored) pulseTasks = JSON.parse(stored);
-    } catch(e) {}
 
     const activeTasks = pulseTasks.filter(t => t.status !== 'dismissed' && t.status !== 'done' && t.status !== 'completed');
 
@@ -6400,11 +6389,13 @@ function confirmPulseTask(cardId, item) {
 }
 
 function undoPulseTask(taskId, cardId) {
-    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
+    pulseTasks = pulseTasks.filter(t => String(t.id) !== String(taskId));
+    try { localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks)); } catch(e) {}
     syncPulseTasksToStorage(taskId, 'delete');
     dismissPulseTask(cardId);
     showToast("Task undone.");
     renderPulseTodayWidget();
+    renderPulseVault();
 }
 
 function dismissPulseTask(cardId) {
@@ -6413,19 +6404,21 @@ function dismissPulseTask(cardId) {
 }
 
 function markPulseTaskDone(taskId) {
-    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
+    pulseTasks = pulseTasks.filter(t => String(t.id) !== String(taskId));
+    try { localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks)); } catch(e) {}
+    syncPulseTasksToStorage(taskId, 'done');
     renderPulseTodayWidget();
     renderPulseVault();
     showToast("Task completed! 🎉");
-    syncPulseTasksToStorage(taskId, 'done');
 }
 
 function deletePulseTask(taskId) {
-    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
+    pulseTasks = pulseTasks.filter(t => String(t.id) !== String(taskId));
+    try { localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks)); } catch(e) {}
+    syncPulseTasksToStorage(taskId, 'delete');
     renderPulseVault();
     renderPulseTodayWidget();
     showToast("Task deleted.");
-    syncPulseTasksToStorage(taskId, 'delete');
 }
 
 // ====== GLOBAL EVENT LISTENERS ======
