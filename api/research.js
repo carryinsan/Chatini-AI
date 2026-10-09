@@ -33,18 +33,18 @@ export const config = {
 const HARD_FUNCTION_BUDGET_MS = 290_000;
 const DEFAULT_REQUEST_BUDGET_MS = 255_000;
 
-const MAX_INITIAL_QUERIES = 8;
-const MAX_FOLLOW_UP_QUERIES = 8;
-const MAX_SEARCH_RESULTS_PER_QUERY = 10;
-const MAX_INITIAL_SEARCHES = 8;
-const MAX_FOLLOW_UP_ROUNDS = 2;
-const MAX_REPORT_SOURCES = 40;
-const MAX_SOURCE_TEXT_CHARS = 12_000;
-const MAX_EVIDENCE_CHARS_PER_SOURCE = 4_500;
-const MAX_DOSSIER_CHARS = 125_000;
-const MAX_PLANNER_CHARS = 18_000;
-const MAX_AUDIT_CHARS = 50_000;
-const MAX_REPORT_WORDS = 7_000;
+const MAX_INITIAL_QUERIES = 24;
+const MAX_FOLLOW_UP_QUERIES = 16;
+const MAX_SEARCH_RESULTS_PER_QUERY = 90;
+const MAX_INITIAL_SEARCHES = 44;
+const MAX_FOLLOW_UP_ROUNDS = 3;
+const MAX_REPORT_SOURCES = 220;
+const MAX_SOURCE_TEXT_CHARS = 26_000;
+const MAX_EVIDENCE_CHARS_PER_SOURCE = 6_000;
+const MAX_DOSSIER_CHARS = 250_000;
+const MAX_PLANNER_CHARS = 25_000;
+const MAX_AUDIT_CHARS = 75_000;
+const MAX_REPORT_WORDS = 15_000;
 
 const encoder = new TextEncoder();
 
@@ -337,9 +337,8 @@ function envKeys(prefix, singles = []) {
     const key = process.env[`${prefix}_${i}`];
     if (key) keys.push(key);
   }
-  for (const name of ['GROQ_KEY_2', 'GROQ_KEY_3', 'GROQ_KEY_4', 'GROQ_KEY_5', 'TAVILY_KEY_2', 'TAVILY_KEY_3', 'TAVILY_KEY_4', 'TAVILY_KEY_5', 'TAVILY_KEY_6', 'TAVILY_KEY_7']) {
+  for (const name of ['GROQ_KEY_2', 'GROQ_KEY_3', 'GROQ_KEY_4', 'GROQ_KEY_5']) {
     if (prefix === 'GROQ' && process.env[name]) keys.push(process.env[name]);
-    if (prefix === 'TAVILY' && process.env[name]) keys.push(process.env[name]);
   }
   return dedupeStrings(keys, 20);
 }
@@ -526,8 +525,8 @@ Required JSON shape:
 }
 
 Rules:
-- search_queries: 4 to 8 concise web-search queries, each under ~350 characters.
-- counter_queries: 2 to 5 adversarial queries intended to find evidence against likely conclusions.
+- search_queries: 12 to 24 concise web-search queries, each under ~350 characters.
+- counter_queries: 4 to 8 adversarial queries intended to find evidence against likely conclusions.
 - primary_source_targets: source classes/domains, not fabricated URLs.
 - recency_requirement must reflect the question, not your memory.
 - Make queries complementary: definitions, primary documents, empirical data, independent analyses, counterarguments, and recent changes when relevant.
@@ -583,38 +582,151 @@ Rules:
   };
 }
 
-async function tavilySearch({ apiKey, query, profile, deadline, includeRaw = false, startDate, endDate }) {
-  const body = {
-    query: clampText(query, 380),
-    search_depth: profile.search_depth,
-    topic: profile.topic,
-    chunks_per_source: profile.chunks_per_source,
-    max_results: profile.max_results,
-    include_answer: false,
-    include_raw_content: includeRaw ? 'markdown' : false,
-  };
-  if (startDate) body.start_date = startDate;
-  if (endDate) body.end_date = endDate;
+const ARIX_CRAWLER_HOST = (process.env.ARIX_CRAWLER_URL || 'https://arix-web-crawler-chi.vercel.app').replace(/\/+\$/, '');
+const ARIX_SEARCH_FALLBACK = 'https://web-crawler-pink.vercel.app/api/crawler';
 
-  const result = await callJson(
-    'https://api.tavily.com/search',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-    },
-    18_000,
-    deadline
-  );
+const isAdultOrNoiseUrl = (url, title = '') => {
+  const lowerUrl = String(url || '').toLowerCase();
+  const lowerTitle = String(title || '').toLowerCase();
+  const badMarkers = [
+    'porn', 'sex', 'fuck', 'tube', 'desihole', 'adult', 'erotic', 'bule', 'aunty',
+    '.xxx', 'xvideos', 'xnxx', 'onlyfans', 'cloudflare', 'attention required', 'just a moment'
+  ];
+  return badMarkers.some(m => lowerUrl.includes(m) || lowerTitle.includes(m));
+};
 
-  if (!result.response.ok) {
-    throw new Error(`Tavily search failed with HTTP ${result.response.status}`);
+const isYouTubeUrl = (target) => {
+  try {
+    const h = new URL(target).hostname.toLowerCase().replace(/^www\./, '');
+    return h === 'youtube.com' || h === 'youtu.be' || h.endsWith('.youtube.com');
+  } catch { return true; }
+};
+
+const scoreCandidateMatch = (item, query) => {
+  if (typeof item.relevanceScore === 'number' && item.relevanceScore > 0) {
+    return item.relevanceScore;
+  }
+  const qWords = String(query || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(w => w.length >= 2);
+  if (!qWords.length) return 50;
+  const title = String(item.title || '').toLowerCase();
+  const snippet = String(item.snippet || item.extractedText || '').toLowerCase();
+  let hits = 0;
+  qWords.forEach(w => {
+    if (title.includes(w)) hits += 4;
+    else if (snippet.includes(w)) hits += 2;
+  });
+  const base = Math.min(100, Math.round((hits / (qWords.length * 4)) * 100));
+  const trust = Math.round(Number(item.trust || 0.6) * 10);
+  return Math.max(0, Math.min(100, base + trust + (item.verified ? 8 : 0)));
+};
+
+async function queryArixIntelligence(searchQuery, maxPages = 40, onStatus = null) {
+  if (!searchQuery || typeof searchQuery !== 'string') return [];
+  const cleanQuery = searchQuery.replace(/["']/g, ' ').replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!cleanQuery) return [];
+
+  let rawResults = [];
+
+  // STAGE 1: Discovery via web-crawler-pink with full depth (count=40)
+  const searchUrls = [
+    `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery)}&count=40&mode=auto&type=mixed&verify=true`,
+    `${ARIX_SEARCH_FALLBACK}?query=${encodeURIComponent(cleanQuery.split(' ').slice(0, 4).join(' '))}&count=40&mode=auto&type=mixed&verify=true`
+  ];
+
+  for (const sUrl of searchUrls) {
+    try {
+      if (onStatus) onStatus(`Arix Discovery: Searching index for "${cleanQuery}" (depth 40)...`);
+      const res = await fetch(sUrl, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: AbortSignal.timeout(9000)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data?.results) && data.results.length > 0) {
+          rawResults = data.results;
+          break;
+        }
+      }
+    } catch (_) {}
   }
 
-  return result.data || {};
+  // STAGE 2: Filter Noise and Weak Matches (< 20%)
+  const candidates = [];
+  for (const r of rawResults) {
+    if (!r?.url || isYouTubeUrl(r.url) || r.type === 'video') continue;
+    if (isAdultOrNoiseUrl(r.url, r.title)) continue;
+
+    const score = scoreCandidateMatch(r, cleanQuery);
+    if (score < 20) continue;
+
+    candidates.push({ ...r, _score: score });
+  }
+
+  if (!candidates.length) return [];
+
+  candidates.sort((a, b) => (b._score || 0) - (a._score || 0));
+  const topCandidates = candidates.slice(0, Math.max(10, maxPages));
+  const targetUrls = topCandidates.map(c => c.url);
+
+  // STAGE 3: Single-Batch Parallel Crawl via arix-web-crawler-chi (POST)
+  if (onStatus) onStatus(`Arix Rust Engine: Concurrently crawling ${targetUrls.length} pages...`);
+  const finalPages = [];
+
+  try {
+    const extractRes = await fetch(`${ARIX_CRAWLER_HOST}/api/crawler`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ urls: targetUrls, include_ai_context: true }),
+      signal: AbortSignal.timeout(25000)
+    });
+
+    if (extractRes.ok) {
+      const extractData = await extractRes.json();
+      const extractedList = Array.isArray(extractData?.results) ? extractData.results : [];
+      const extractedMap = new Map();
+
+      extractedList.forEach(item => {
+        if (item?.url) extractedMap.set(item.url, item);
+        if (item?.final_url) extractedMap.set(item.final_url, item);
+      });
+
+      for (const cand of topCandidates) {
+        const ext = extractedMap.get(cand.url);
+        const fullText = (ext?.ok && ext?.text && ext.text.length >= 60)
+          ? ext.text
+          : (cand.extractedText || cand.pageContent || cand.snippet || '');
+
+        if (isAdultOrNoiseUrl(cand.url, ext?.title || cand.title)) continue;
+        if (fullText.toLowerCase().includes('checking your browser') || fullText.toLowerCase().includes('enable javascript and cookies')) continue;
+
+        if (fullText && fullText.length >= 35) {
+          finalPages.push({
+            url: ext?.final_url || cand.url,
+            title: ext?.title || cand.title || 'Verified Document',
+            quality: ext?.quality || cand._score || 80,
+            wordCount: ext?.word_count || fullText.split(/\s+/).filter(Boolean).length,
+            content: fullText
+          });
+        }
+      }
+    }
+  } catch (postErr) {
+    for (const cand of topCandidates) {
+      const text = cand.extractedText || cand.pageContent || cand.snippet || '';
+      if (text && text.length >= 35 && !isAdultOrNoiseUrl(cand.url, cand.title)) {
+        finalPages.push({
+          url: cand.url,
+          title: cand.title || 'Verified Document',
+          quality: cand._score || 50,
+          wordCount: text.split(/\s+/).filter(Boolean).length,
+          content: text
+        });
+      }
+    }
+  }
+
+  return finalPages;
 }
 
 function buildSearchQueries(plan) {
@@ -625,9 +737,8 @@ function buildSearchQueries(plan) {
   ], MAX_INITIAL_QUERIES * 2);
 
   const counter = dedupeStrings(plan?.counter_queries || [], MAX_INITIAL_QUERIES);
-  return dedupeStrings([...base.slice(0, MAX_INITIAL_QUERIES), ...counter.slice(0, 2)], MAX_INITIAL_QUERIES);
+  return dedupeStrings([...base.slice(0, MAX_INITIAL_QUERIES), ...counter.slice(0, 6)], MAX_INITIAL_QUERIES);
 }
-
 function createEvidencePacket(sources) {
   return sources
     .slice(0, MAX_REPORT_SOURCES)
@@ -1160,9 +1271,7 @@ export default async function handler(req) {
 
         const geminiKeys = envKeys('GEMINI', ['GEMINI_API_KEY']);
         const groqKeys = envKeys('GROQ', ['GROQ_API_KEY']);
-        const tavilyKeys = envKeys('TAVILY', ['TAVILY_API_KEY']);
 
-        if (!tavilyKeys.length) return error('No Tavily API key is configured.');
         if (!geminiKeys.length && !groqKeys.length) return error('No research synthesis model API key is configured.');
 
         sendLog(controller, 'Initializing ArixAI evidence-first research engine.', {
@@ -1173,39 +1282,37 @@ export default async function handler(req) {
         const mode = typeof body?.mode === 'string' ? body.mode : 'deep';
         const plan = await planResearch({ query, groqKeys, geminiKeys, deadline });
 
-        const profile = chooseSearchProfile(query, mode);
         const initialQueries = buildSearchQueries(plan);
         sendLog(controller, `Research plan prepared: ${initialQueries.length} targeted discovery queries.`);
-        sendLog(controller, `Research profile: ${profile.topic}/${profile.search_depth}.`);
+        sendLog(controller, `Research engine: Arix Web Intelligence + Multi-Page Rust Crawler.`);
 
         const allResults = [];
         const completedQueries = [];
 
-        // Key rotation is treated as resilience, not a way to evade provider quotas.
-        // Bounded concurrency avoids hammering providers and keeps the function within
-        // its wall-clock budget.
-        sendThought(controller, `Running ${Math.min(initialQueries.length, MAX_INITIAL_SEARCHES)} parallel discovery searches.`);
+        sendThought(controller, `Running ${Math.min(initialQueries.length, MAX_INITIAL_SEARCHES)} parallel searches and full-page crawler passes. Waiting for crawler to extract all content...`);
         const searchJobs = initialQueries.slice(0, MAX_INITIAL_SEARCHES).map((searchQuery, index) => ({ searchQuery, index }));
 
         const searchOutputs = await parallelMap(
           searchJobs,
-          async ({ searchQuery, index }) => {
-            const apiKey = rotateKey(tavilyKeys, index);
-            const data = await tavilySearch({
-              apiKey,
-              query: searchQuery,
-              profile,
-              deadline,
-              includeRaw: false,
-            });
+          async ({ searchQuery }) => {
+            const pages = await queryArixIntelligence(searchQuery, 40, (msg) => sendThought(controller, msg));
             completedQueries.push(searchQuery);
-            return { searchQuery, data };
+            return {
+              searchQuery,
+              results: (pages || []).map((p) => ({
+                url: p.url,
+                title: p.title,
+                content: p.content,
+                raw_content: p.content,
+                score: (p.quality || 80) / 100,
+              }))
+            };
           },
           4
         );
 
         for (const item of searchOutputs) {
-          if (item?.data?.results) allResults.push(...item.data.results);
+          if (item?.results) allResults.push(...item.results);
         }
 
         let sources = dedupeResults(allResults);
@@ -1255,23 +1362,25 @@ export default async function handler(req) {
           const beforeUrlSet = new Set(sources.map((s) => s.url));
           const followOutputs = await parallelMap(
             followUpQueries.map((searchQuery, index) => ({ searchQuery, index })),
-            async ({ searchQuery, index }) => {
-              const apiKey = rotateKey(tavilyKeys, index + roundIndex * 3);
-              const data = await tavilySearch({
-                apiKey,
-                query: searchQuery,
-                profile,
-                deadline,
-                includeRaw: false,
-              });
-              return { searchQuery, data };
+            async ({ searchQuery }) => {
+              const pages = await queryArixIntelligence(searchQuery, 40, (msg) => sendThought(controller, msg));
+              return {
+                searchQuery,
+                results: (pages || []).map((p) => ({
+                  url: p.url,
+                  title: p.title,
+                  content: p.content,
+                  raw_content: p.content,
+                  score: (p.quality || 80) / 100,
+                }))
+              };
             },
             4
           );
 
           const roundResults = [];
           for (const item of followOutputs) {
-            if (item?.data?.results) roundResults.push(...item.data.results);
+            if (item?.results) roundResults.push(...item.results);
           }
 
           const merged = dedupeResults([...sources, ...roundResults]);
@@ -1308,8 +1417,8 @@ export default async function handler(req) {
             started_at: new Date(requestStarted).toISOString(),
             completed_at: new Date().toISOString(),
             elapsed_ms_before_synthesis: Date.now() - requestStarted,
-            search_depth: profile.search_depth,
-            topic: profile.topic,
+            search_depth: 'deep_crawler',
+            topic: mode || 'general',
             source_count: sources.length,
             coverage_score: calculateCoverage(evidence),
             non_simulation_policy: true,
