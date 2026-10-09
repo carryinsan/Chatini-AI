@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -9291,7 +9292,7 @@ window.downloadWorkspaceZip = async function() {
     window.loadCloudChat = loadCloudChat;
     async function loadCloudChat(chatId, { background = false } = {}) {
         const epoch = ++bridge.loadEpoch;
-        const chat = chats.find((c) => String(c.id) === String(id));
+        const chat = chats.find((c) => String(c.id) === String(chatId));
         if (!chat || !cloudEnabled()) return;
         currentChatId = chat.id;
         currentChatExtId = chat.extId || null;
@@ -9306,7 +9307,7 @@ window.downloadWorkspaceZip = async function() {
             const all = [];
             let pages = 0;
             do {
-                const payload = { action: 'chat', chatId: String(id), limit: 100 };
+                const payload = { action: 'chat', chatId: String(chatId), limit: 100 };
                 if (before) payload.before = before;
                 const response = await apiJson('/api/storage', payload, 45_000);
                 const page = response?.data || {};
@@ -9333,7 +9334,7 @@ window.downloadWorkspaceZip = async function() {
             messages = all.map(cloudMessageToLocal);
             chat.messages = messages;
             chat._cloudLoaded = true;
-            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => c.id === id ? c : { ...c, messages: [] }))); } catch {}
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => String(c.id) === String(chatId) ? c : { ...c, messages: [] }))); } catch {}
             renderMessagesToUI();
             renderHistoryList();
         } catch (error) {
