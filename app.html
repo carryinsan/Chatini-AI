@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -1599,6 +1600,17 @@ const els = {
     videoIcon: document.getElementById('video-icon')
 };
 
+function removeUrlParameter(parameterName) {
+    try {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete(parameterName);
+        const nextPath = nextUrl.pathname + (nextUrl.search ? nextUrl.search : '') + nextUrl.hash;
+        window.history.replaceState({}, document.title, nextPath);
+    } catch (error) {
+        console.warn('[ArixAI] Could not update shared-chat URL:', error);
+    }
+}
+
 window.onload = async () => {
     // --- NEW: Register Background Sentinel Agent ---
     if ('serviceWorker' in navigator) {
@@ -1608,14 +1620,25 @@ window.onload = async () => {
     updateUIState(); 
     refreshExtSelectors();
     checkNickname();
-    if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
-    renderHistoryList(); // Initialize chat history in sidebar on load
-    getDeviceId();
+
+    // Resolve deep links before opening the default conversation. This prevents
+    // an asynchronous default-chat/cloud load from replacing a shared chat after
+    // its messages have already rendered.
     const urlParams = new URLSearchParams(window.location.search);
     const shareId = urlParams.get('share');
     const roomId = urlParams.get('room');
     const fullChatId = urlParams.get('chat');
     const projectId = urlParams.get('project');
+    const isDeepLink = !!(shareId || roomId || fullChatId || projectId);
+    if (!isDeepLink) {
+        if (chats.length > 0) await loadChat(chats[0].id);
+        else createNewChat();
+    } else {
+        messages = [];
+        renderMessagesToUI();
+    }
+    renderHistoryList(); // Initialize chat history in sidebar on load
+    getDeviceId();
     
     if (projectId) {
         // --- NEW: Load Shared Custom Project & Import all its chats ---
@@ -1660,66 +1683,138 @@ window.onload = async () => {
     } else if (roomId) {
         joinMultiplayerRoom(roomId);
     } else if (fullChatId) {
-        // --- NEW: Load Shared Chat from Supabase Branch (Password Protected) ---
+        // Load a shared chat with a stable local/cloud ID. Keep the source URL
+        // until a cloud write is confirmed so a refresh can recover from the
+        // share database if local or cloud persistence is unavailable.
+        const sharedLocalId = ('shared_' + String(fullChatId)).slice(0, 150);
         try {
-            showToast("Loading Shared Branch...");
-            let pwd = null;
-            let res = await fetch(`/api/chatshare?id=${fullChatId}`);
+            showToast("Loading Shared Chat...");
+
+            let existingShared = chats.find(c =>
+                String(c.id) === sharedLocalId || String(c.shareSourceId || '') === String(fullChatId)
+            );
+
+            // Reuse the already-imported copy on reload instead of replacing it
+            // with the original share snapshot or creating another blank branch.
+            if (existingShared) {
+                currentChatId = String(existingShared.id);
+                messages = Array.isArray(existingShared.messages) ? existingShared.messages : [];
+                currentChatExtId = existingShared.extId || null;
+                if (els.extSelector) els.extSelector.value = currentChatExtId || '';
+
+                // If Cloud Sync was previously selected, try the database first.
+                if (localStorage.getItem('Arix_storage_mode') === 'cloud' && typeof window.loadCloudChat === 'function') {
+                    try { await window.loadCloudChat(currentChatId, { background: messages.length > 0 }); } catch (_) {}
+                    existingShared = chats.find(c => String(c.id) === String(currentChatId)) || existingShared;
+                    messages = Array.isArray(existingShared.messages) ? existingShared.messages : messages;
+                }
+
+                if (messages.length > 0) {
+                    existingShared.messages = messages;
+                    renderMessagesToUI();
+                    renderHistoryList();
+                    let persisted = false;
+                    try {
+                        if (window.ArixStorage && typeof window.ArixStorage.syncCurrentChat === 'function') {
+                            persisted = (await window.ArixStorage.syncCurrentChat()) === true;
+                        }
+                    } catch (_) {}
+                    if (persisted) removeUrlParameter('chat');
+                    else showToast('Shared chat restored from its saved copy.');
+                    return;
+                }
+            }
+
+            let res = await fetch(`/api/chatshare?id=${encodeURIComponent(fullChatId)}`, { cache: 'no-store' });
             let data = await res.json();
-            // Password Prompt Challenge
             if (!data.success && data.isPasswordProtected) {
-                pwd = prompt("This shared chat is password protected.\n\nEnter Password:");
+                const pwd = prompt("This shared chat is password protected.\n\nEnter Password:");
                 if (pwd) {
-                    res = await fetch(`/api/chatshare?id=${fullChatId}`, {
-                        headers: { 'x-chat-password': pwd.trim() }
+                    res = await fetch(`/api/chatshare?id=${encodeURIComponent(fullChatId)}`, {
+                        headers: { 'x-chat-password': pwd.trim() },
+                        cache: 'no-store'
                     });
                     data = await res.json();
                 }
             }
-            
-            if (data.success && data.chat) {
-                currentChatId = Date.now().toString(); 
-                messages = data.chat.messages || [];
-                messages.push({ role: 'assistant', content: '> *You have successfully cloned a shared chat branch. Your new messages here remain strictly private.*', id: 'sys_branch', modelId: 'oracle' });
-                
-                const importedTitle = data.chat.title || "Shared Conversation";
-                const clonedChat = {
-                    id: currentChatId,
-                    title: importedTitle,
-                    messages: messages,
-                    extId: null,
-                    date: Date.now(),
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    pinned: false,
-                    _cloudLoaded: true
-                };
 
-                // Add to chats list immediately so bootstrap merge will never purge it
-                const existingIdx = chats.findIndex(c => c.id === currentChatId);
-                if (existingIdx > -1) chats[existingIdx] = clonedChat;
-                else chats.unshift(clonedChat);
-
-                try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch(e){}
-                
-                renderMessagesToUI();
-                renderHistoryList();
-                
-                // Upload this newly opened shared chat straight to Supabase database!
-                if (typeof syncCurrentChat === 'function') {
-                    syncCurrentChat();
-                } else if (window.ArixStorage && window.ArixStorage.syncCurrentChat) {
-                    window.ArixStorage.syncCurrentChat();
-                }
-
-                // Strip the URL parameter so refreshing keeps you on the now-saved chat
-                window.history.replaceState({}, document.title, window.location.pathname);
-                showToast("Chat Branch imported & Saved to Database!");
-            } else {
-                showToast("Shared Chat Expired or Invalid");
-                createNewChat();
+            if (!data || !data.success || !data.chat || !Array.isArray(data.chat.messages)) {
+                showToast("Shared chat could not be loaded. The link has been kept so you can retry.");
+                return;
             }
-        } catch(e) { createNewChat(); }
+
+            // Normalize message IDs so retrying a sync cannot create duplicates.
+            messages = data.chat.messages.map((m, index) => ({
+                ...m,
+                id: String(m && m.id ? m.id : `shared_${String(fullChatId)}_${index}`),
+                role: String(m && m.role ? m.role : 'assistant'),
+                content: String(m && m.content != null ? m.content : ''),
+                attachmentsMeta: Array.isArray(m && m.attachmentsMeta) ? m.attachmentsMeta : (Array.isArray(m && m.attachments) ? m.attachments.map(a => ({ name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null })) : [])
+            }));
+            if (!messages.some(m => String(m.id) === 'sys_branch')) {
+                messages.push({ role: 'assistant', content: '> *You have opened a shared chat branch. Messages added here are saved separately from the original shared snapshot.*', id: 'sys_branch', modelId: 'oracle' });
+            }
+
+            const now = new Date().toISOString();
+            const clonedChat = {
+                id: sharedLocalId,
+                shareSourceId: String(fullChatId),
+                title: String(data.chat.title || 'Shared Conversation'),
+                messages: messages,
+                extId: null,
+                date: Date.now(),
+                createdAt: existingShared?.createdAt || now,
+                updatedAt: now,
+                pinned: !!existingShared?.pinned,
+                // Only the storage API may set this flag; the share endpoint is not
+                // the user's private cloud-chat store.
+                _cloudLoaded: false
+            };
+
+            const existingIdx = chats.findIndex(c => String(c.id) === sharedLocalId);
+            if (existingIdx > -1) chats[existingIdx] = clonedChat;
+            else chats.unshift(clonedChat);
+            currentChatId = sharedLocalId;
+            currentChatExtId = null;
+
+            // Persist locally first. If quota/privacy/network prevents a write,
+            // retain the query parameter so the share database remains a recovery path.
+            let localSaved = false;
+            try {
+                localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+                const verify = JSON.parse(localStorage.getItem('chatini_sessions') || '[]');
+                localSaved = verify.some(c => String(c.id) === sharedLocalId && Array.isArray(c.messages) && c.messages.length === messages.length);
+            } catch (error) {
+                console.warn('[ArixAI] Shared chat local backup failed:', error);
+            }
+
+            renderMessagesToUI();
+            renderHistoryList();
+
+            // Await the database write rather than navigating away optimistically.
+            let persisted = false;
+            try {
+                if (window.ArixStorage && typeof window.ArixStorage.syncCurrentChat === 'function') {
+                    persisted = (await window.ArixStorage.syncCurrentChat()) === true;
+                }
+            } catch (error) {
+                console.warn('[ArixAI] Shared chat cloud write failed:', error);
+            }
+
+            if (persisted) {
+                clonedChat._cloudLoaded = true;
+                try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (_) {}
+                removeUrlParameter('chat');
+                showToast('Shared chat saved to your cloud storage.');
+            } else if (localSaved) {
+                showToast('Shared chat loaded and saved on this device. Link retained for recovery.');
+            } else {
+                showToast('Shared chat is visible; the original link is retained for recovery.');
+            }
+        } catch (e) {
+            console.error('[ArixAI] Shared chat load failed:', e);
+            showToast('Could not load the shared chat. The link has been kept so you can retry.');
+        }
     } else if (shareId) {
         try {
             const res = await fetch(`/api/share?id=${shareId}`);
@@ -3194,6 +3289,8 @@ async function shareFullChat() {
         return;
     }
 
+    // Ensure the latest completed turn is part of the exact snapshot sent to the share API.
+    try { saveCurrentChat(); } catch (_) {}
     showToast("Generating Share Link...");
 
     const btn = document.querySelector('button[onclick="shareFullChat()"]');
@@ -3345,7 +3442,9 @@ function saveCurrentChat() {
             messages: safeMessages, 
             extId: currentChatExtId, 
             date: Date.now(),
-            pinned: chatIndex > -1 ? chats[chatIndex].pinned : false
+            pinned: chatIndex > -1 ? chats[chatIndex].pinned : false,
+            shareSourceId: chatIndex > -1 ? (chats[chatIndex].shareSourceId || null) : null,
+            _cloudLoaded: chatIndex > -1 ? !!chats[chatIndex]._cloudLoaded : false
         };
     
     if (chatIndex > -1) chats[chatIndex] = chatData; 
@@ -8574,6 +8673,8 @@ window.downloadWorkspaceZip = async function() {
         syncTimer: null,
         syncPromise: null,
         syncAgain: false,
+        chatSyncPromise: null,
+        chatSyncPendingIds: new Set(),
         challengeId: null,
         authMode: 'login'
     };
@@ -9178,26 +9279,69 @@ window.downloadWorkspaceZip = async function() {
         }, delay);
     }
 
-    async function syncCurrentChat() {
-        if (!cloudEnabled()) return;
-        const chat = chats.find((c) => String(c.id) === String(currentChatId));
-        if (!chat) return;
-        const saved = { ...chat, messages: Array.isArray(messages) ? messages : [] };
-        try {
-            await sendSync({
-                chats: [chatMeta(saved, String(chat.id))],
-                messages: (saved.messages || []).map((m, index) => {
-                    const stableTime = stableMessageTime(saved, index);
-                    return messagePayload({ ...m, createdAt: m?.createdAt || stableTime, updatedAt: m?.updatedAt || stableTime }, String(chat.id));
-                }),
-                pinned: pinPayload(saved),
-                artifacts: collectMediaArtifacts(saved.messages || []),
-            });
-            localStorage.removeItem('Arix_cloud_dirty');
-        } catch (error) {
-            console.error('[ArixAI] current chat sync failed:', error);
+    async function syncCurrentChat(targetChatId = currentChatId) {
+        if (!cloudEnabled()) return false;
+        const requestedId = String(targetChatId || '');
+        if (!requestedId) return false;
+        bridge.chatSyncPendingIds.add(requestedId);
+
+        // Serialize writes per active storage bridge. If a new message is saved
+        // while a request is in flight, its chat ID is queued for a second pass.
+        if (bridge.chatSyncPromise) return bridge.chatSyncPromise;
+
+        bridge.chatSyncPromise = (async () => {
+            let allSucceeded = true;
+            while (bridge.chatSyncPendingIds.size > 0) {
+                const pendingIds = [...bridge.chatSyncPendingIds];
+                bridge.chatSyncPendingIds.clear();
+                for (const chatId of pendingIds) {
+                    if (!cloudEnabled()) return false;
+                    const chat = chats.find((c) => String(c.id) === String(chatId));
+                    if (!chat) { allSucceeded = false; continue; }
+                    const isActiveChat = String(currentChatId) === String(chatId);
+                    const messageSource = isActiveChat && Array.isArray(messages)
+                        ? messages
+                        : (Array.isArray(chat.messages) ? chat.messages : []);
+                    const saved = { ...chat, messages: messageSource };
+                    try {
+                        const result = await sendSync({
+                            chats: [chatMeta(saved, String(chat.id))],
+                            messages: (saved.messages || []).map((m, index) => {
+                                const stableTime = stableMessageTime(saved, index);
+                                return messagePayload({ ...m, createdAt: m?.createdAt || stableTime, updatedAt: m?.updatedAt || stableTime }, String(chat.id));
+                            }),
+                            pinned: pinPayload(saved),
+                            artifacts: collectMediaArtifacts(saved.messages || []),
+                        });
+                        if (result?.skipped) {
+                            allSucceeded = false;
+                            localStorage.setItem('Arix_cloud_dirty', '1');
+                            continue;
+                        }
+                        chat.messages = saved.messages;
+                        chat._cloudLoaded = true;
+                        chat.updatedAt = nowIso();
+                        localStorage.removeItem('Arix_cloud_dirty');
+                    } catch (error) {
+                        allSucceeded = false;
+                        console.error('[ArixAI] current chat sync failed:', error);
+                        localStorage.setItem('Arix_cloud_dirty', '1');
+                    }
+                }
+            }
+
+            // Keep a full local recovery copy as well as the database copy.
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (_) {}
+            return allSucceeded;
+        })().catch((error) => {
+            console.error('[ArixAI] current chat sync queue failed:', error);
             localStorage.setItem('Arix_cloud_dirty', '1');
-        }
+            return false;
+        }).finally(() => {
+            bridge.chatSyncPromise = null;
+        });
+
+        return bridge.chatSyncPromise;
     }
 
     async function loadCloudBootstrap({ migrateLocal = false } = {}) {
@@ -9311,7 +9455,7 @@ window.downloadWorkspaceZip = async function() {
         bridge.mode = 'cloud';
 
         try {
-            localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => ({ ...c, messages: [] }))));
+            localStorage.setItem('chatini_sessions', JSON.stringify(chats));
             localStorage.setItem('Arix_custom_projects', JSON.stringify(customProjects));
             localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
             localStorage.setItem('Arix_sentinel_tasks', JSON.stringify(activeSentinelTasks));
@@ -9355,10 +9499,15 @@ window.downloadWorkspaceZip = async function() {
         currentChatId = chat.id;
         currentChatExtId = chat.extId || null;
         els.extSelector.value = currentChatExtId || '';
-        messages = [];
-        renderMessagesToUI();
-        if (!background) {
-            els.container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-500 font-medium w-full animate-pulse"><i class="ph-bold ph-spinner animate-spin text-4xl mb-3 text-theme-500"></i> Loading secure workspace...</div>';
+        const cachedMessages = Array.isArray(chat.messages) ? chat.messages : [];
+        messages = cachedMessages;
+        if (cachedMessages.length > 0) {
+            renderMessagesToUI();
+        } else {
+            renderMessagesToUI();
+            if (!background) {
+                els.container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-500 font-medium w-full animate-pulse"><i class="ph-bold ph-spinner animate-spin text-4xl mb-3 text-theme-500"></i> Loading secure workspace...</div>';
+            }
         }
         try {
             let before = null;
@@ -9378,24 +9527,67 @@ window.downloadWorkspaceZip = async function() {
                 if (Array.isArray(page.messages)) all.push(...page.messages);
                 before = page.nextBefore || null;
                 pages++;
-                // First page is immediately visible; older pages continue in the same request loop.
+                // First non-empty page is immediately visible; never replace a valid
+                // cached conversation with an empty response while pagination continues.
                 if (pages === 1) {
                     if (epoch !== bridge.loadEpoch) return;
-                    messages = all.map(cloudMessageToLocal);
-                    chat.messages = messages;
-                    chat._cloudLoaded = true;
-                    renderMessagesToUI();
+                    const firstPageMessages = all.map(cloudMessageToLocal);
+                    if (firstPageMessages.length > 0) {
+                        messages = firstPageMessages;
+                        chat.messages = messages;
+                        chat._cloudLoaded = true;
+                        renderMessagesToUI();
+                    }
                 }
                 if (pages > 200) break;
             } while (before);
             if (epoch !== bridge.loadEpoch) return;
-            messages = all.map(cloudMessageToLocal);
-            chat.messages = messages;
-            chat._cloudLoaded = true;
-            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => String(c.id) === String(chatId) ? c : { ...c, messages: [] }))); } catch {}
+            const remoteMessages = all.map(cloudMessageToLocal);
+            if (remoteMessages.length > 0) {
+                messages = remoteMessages;
+                chat.messages = remoteMessages;
+                chat._cloudLoaded = true;
+            } else if (cachedMessages.length > 0) {
+                // Recovery path: the chat row exists but its message rows do not.
+                // Keep the local copy and attempt to restore those messages to storage.
+                messages = cachedMessages;
+                chat.messages = cachedMessages;
+                try {
+                    const recoveryResult = await sendSync({
+                        chats: [chatMeta(chat, String(chat.id))],
+                        messages: cachedMessages.map((m, index) => {
+                            const stableTime = stableMessageTime(chat, index);
+                            return messagePayload({ ...m, createdAt: m?.createdAt || stableTime, updatedAt: m?.updatedAt || stableTime }, String(chat.id));
+                        }),
+                        pinned: pinPayload(chat),
+                        artifacts: collectMediaArtifacts(cachedMessages),
+                    });
+                    if (recoveryResult?.skipped) throw new Error('Cloud sync is not active');
+                    chat._cloudLoaded = true;
+                    localStorage.removeItem('Arix_cloud_dirty');
+                } catch (recoveryError) {
+                    chat._cloudLoaded = false;
+                    localStorage.setItem('Arix_cloud_dirty', '1');
+                    console.warn('[ArixAI] Cached chat recovery sync failed:', recoveryError);
+                }
+            } else {
+                messages = [];
+                chat.messages = [];
+                chat._cloudLoaded = true;
+            }
+            // Preserve message bodies in the local recovery cache rather than writing
+            // metadata-only rows that make a later refresh render an empty chat.
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch {}
             renderMessagesToUI();
             renderHistoryList();
         } catch (error) {
+            // A transient database/network failure must not blank a conversation
+            // that was already available from the local recovery cache.
+            if (epoch === bridge.loadEpoch && cachedMessages.length > 0) {
+                messages = cachedMessages;
+                chat.messages = cachedMessages;
+                try { renderMessagesToUI(); renderHistoryList(); } catch (_) {}
+            }
             if (error?.status === 401) {
                 bridge.authenticated = false;
                 setModeLocal('device');
@@ -9403,7 +9595,7 @@ window.downloadWorkspaceZip = async function() {
                 updateSettingsUi();
                 showToast('Cloud session expired. Reconnect from Settings > Data & Account > Cloud Sync.');
             } else if (!background) {
-                showToast(error?.message || 'Could not load cloud chat.');
+                showToast(error?.message || 'Could not load cloud chat. Showing the saved copy when available.');
             }
         }
     }
@@ -9681,8 +9873,12 @@ window.downloadWorkspaceZip = async function() {
         const original = window[name];
         if (typeof original !== 'function' || original.__arixWrapped) return;
         const wrapped = function(...args) {
+            const savedChatId = name === 'saveCurrentChat' ? String(currentChatId || '') : null;
             const result = original.apply(this, args);
-            Promise.resolve().then(() => after(...args, result)).catch(() => {});
+            Promise.resolve().then(() => {
+                if (name === 'saveCurrentChat') return after(savedChatId, result);
+                return after(...args, result);
+            }).catch(() => {});
             return result;
         };
         wrapped.__arixWrapped = true;
@@ -9690,7 +9886,7 @@ window.downloadWorkspaceZip = async function() {
     }
 
     function installCloudHooks() {
-        wrapFunction('saveCurrentChat', () => syncCurrentChat());
+        wrapFunction('saveCurrentChat', (chatId) => syncCurrentChat(chatId));
         wrapFunction('saveProjects', () => scheduleFullSync(150));
         wrapFunction('deleteChat', (id) => cloudEnabled() && sendSync({ deletes: [{ kind: 'chat', id: String(id) }] }).catch(() => {}));
         wrapFunction('renameChat', (id) => {
@@ -9737,9 +9933,9 @@ window.downloadWorkspaceZip = async function() {
         const wrappedLoadChat = function(id) {
             if (cloudEnabled()) {
                 const chat = chats.find((c) => String(c.id) === String(id));
-                if (chat && chat._cloudLoaded) {
+                if (chat && chat._cloudLoaded && Array.isArray(chat.messages) && chat.messages.length > 0) {
                     currentChatId = chat.id;
-                    messages = Array.isArray(chat.messages) ? chat.messages : [];
+                    messages = chat.messages;
                     currentChatExtId = chat.extId || null;
                     els.extSelector.value = currentChatExtId || '';
                     renderMessagesToUI();
