@@ -473,7 +473,7 @@ async function callGroqJSON(prompt, groqKeys, sendLog, schema, agentName) {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: process.env.GROQ_PRESENTATION_MODEL || 'llama-3.3-70b-versatile',
+          model: process.env.GROQ_PRESENTATION_MODEL || 'openai/gpt-oss-20b',
           messages: [
             {
               role: 'system',
