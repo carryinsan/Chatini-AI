@@ -2539,7 +2539,7 @@ function drawMath(canvas, ctx, payload, state) {
 
 function renderSlideHTML(s) {
     let html = `<div class="absolute top-3 left-3 text-[10px] bg-white/80 backdrop-blur-md px-2 py-1 rounded-md text-gray-600 font-medium z-20 border border-gray-200 shadow-sm">Slide ${s.slideNumber}</div>`;
-    const imgHtml = s.imageUrl ? `<img src="${s.imageUrl}" class="absolute inset-0 w-full h-full object-cover z-0" crossorigin="anonymous" onerror="this.style.display='none'" />` : "";
+    const imgHtml = s.imageUrl ? `<img src="${s.imageUrl}" class="absolute inset-0 w-full h-full object-contain p-2 z-0" crossorigin="anonymous" onerror="this.style.display='none'" />` : "";
     
     if (s.layout === 'title_slide') {
         html += imgHtml + `<div class="absolute inset-0 bg-black/50 z-10 flex flex-col justify-center items-center text-center p-8">
@@ -2553,7 +2553,7 @@ function renderSlideHTML(s) {
                 <h3 class="text-base sm:text-lg text-gray-500 mb-6 font-medium">${s.subtitle || ""}</h3>
                 <ul class="list-disc pl-5 space-y-2 sm:space-y-3 text-gray-700 text-sm sm:text-base font-medium">${(s.bullets||[]).map(b => `<li>${b}</li>`).join("")}</ul>
             </div>
-            <div class="w-1/2 relative bg-gray-100 border-l border-gray-200">${imgHtml}</div>
+            <div class="w-1/2 relative bg-slate-950/5 border-l border-gray-200 flex items-center justify-center">${imgHtml}</div>
         </div>`;
     } else if (s.layout === 'full_image_quote') {
         html += imgHtml + `<div class="absolute inset-x-8 sm:inset-x-16 bottom-8 sm:bottom-12 bg-white/90 backdrop-blur-xl p-6 sm:p-8 rounded-2xl z-10 text-center border border-gray-200 shadow-2xl">
@@ -3049,7 +3049,7 @@ async function downloadPPTX(artifactId) {
                 if(s.subtitle) slide.addText(s.subtitle, {x: 0.5, y: '55%', w: '90%', fontSize: 24, color: 'F0F0F0', align: 'center' });
             }
             else if (s.layout === 'split_image_text') {
-                if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: '50%', y: 0, w: '50%', h: '100%', sizing: { type: 'cover' } });
+                if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: '50%', y: 0, w: '50%', h: '100%', sizing: { type: 'contain' } });
                 slide.addShape(pptx.ShapeType.rect, {x: 0, y: 0, w: '50%', h: '100%', fill: { color: 'FFFFFF' } });
                 slide.addText(s.title, {x: 0.5, y: 1.0, w: '40%', fontSize: 32, bold: true, color: '363636' });
                 if(s.subtitle) slide.addText(s.subtitle, {x: 0.5, y: 2.0, w: '40%', fontSize: 18, color: '666666' });
