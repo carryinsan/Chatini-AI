@@ -483,7 +483,7 @@ async function callGroqJSON(prompt, groqKeys, sendLog, schema, agentName) {
           ],
           temperature: 0.2,
           response_format: { type: 'json_object' }
-        });
+        })
 
       if (res.ok) {
         const data = await res.json();
