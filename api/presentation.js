@@ -21,8 +21,8 @@ const MAX_SLIDES = 24;
 const MAX_TOPIC_CHARS = 2400;
 const MAX_CONTEXT_CHARS = 14000;
 const MAX_PROMPT_CHARS = 26000;
-const GEMINI_MODEL_PRIMARY = process.env.GEMINI_PRESENTATION_MODEL || 'gemini-2.5-flash';
-const GEMINI_MODEL_FALLBACK = process.env.GEMINI_PRESENTATION_FALLBACK_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL_PRIMARY = process.env.GEMINI_PRESENTATION_MODEL || 'gemini-3.5-flash';
+const GEMINI_MODEL_FALLBACK = process.env.GEMINI_PRESENTATION_FALLBACK_MODEL || 'gemini-3.5-flash';
 const REQUEST_TIMEOUT_MS = 75_000;
 
 const LAYOUTS = Object.freeze([
