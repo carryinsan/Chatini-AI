@@ -538,12 +538,10 @@ const GEMINI_SCHEMA = {
             visualMood: { type: 'string' }
           },
           required: ['slideNumber', 'layout', 'title', 'subtitle', 'bullets', 'visualMood'],
-          additionalProperties: false
         }
       }
     },
     required: ['slides'],
-    additionalProperties: false
   }
 };
 
@@ -651,12 +649,10 @@ const OUTLINE_SCHEMA = {
             visualMood: { type: 'string' }
           },
           required: ['slideNumber', 'intent', 'layout', 'visualMood'],
-          additionalProperties: false
         }
       }
     },
     required: ['presentationTitle', 'audience', 'narrativeArc', 'slides'],
-    additionalProperties: false
   }
 };
 
