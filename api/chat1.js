@@ -563,6 +563,15 @@ telemetry.model = modelId || 'unknown';
           } catch { return true; }
         };
 
+        const isBraveUrl = (target) => {
+          try {
+            const h = new URL(target).hostname.toLowerCase().replace(/^www\./, '');
+            return h === 'brave.com' || h.endsWith('.brave.com');
+          } catch {
+            return String(target || '').toLowerCase().includes('brave.com');
+          }
+        };
+
         // Relevance Scorer preserving 2-letter tokens (e.g. AI, ML, IT)
         const scoreCandidateMatch = (item, query) => {
           if (typeof item.relevanceScore === 'number' && item.relevanceScore > 0) {
@@ -614,9 +623,12 @@ telemetry.model = modelId || 'unknown';
           }
 
           // STAGE 2: Filter Noise and Weak Matches (< 20%)
+          const hasBraveTerm = /\bbrave\b/i.test(cleanQuery);
           const candidates = [];
           for (const r of rawResults) {
             if (!r?.url || isYouTubeUrl(r.url) || r.type === 'video') continue;
+            // Blacklist .brave.com unless the search query explicitly requested "brave"
+            if (!hasBraveTerm && isBraveUrl(r.url)) continue;
             if (isAdultOrNoiseUrl(r.url, r.title)) continue;
 
             const score = scoreCandidateMatch(r, cleanQuery);
