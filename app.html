@@ -1743,14 +1743,40 @@ window.onload = async () => {
                 return;
             }
 
-            // Normalize message IDs so retrying a sync cannot create duplicates.
-            messages = data.chat.messages.map((m, index) => ({
-                ...m,
-                id: String(m && m.id ? m.id : `shared_${String(fullChatId)}_${index}`),
-                role: String(m && m.role ? m.role : 'assistant'),
-                content: String(m && m.content != null ? m.content : ''),
-                attachmentsMeta: Array.isArray(m && m.attachmentsMeta) ? m.attachmentsMeta : (Array.isArray(m && m.attachments) ? m.attachments.map(a => ({ name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null })) : [])
-            }));
+            // Normalize message IDs and populate global source memory so shared chats keep them
+            window.MSG_SOURCES = window.MSG_SOURCES || {};
+            messages = data.chat.messages.map((m, index) => {
+                const normId = String(m && m.id ? m.id : `shared_${String(fullChatId)}_${index}`);
+                const srcList = Array.isArray(m?.sources) ? m.sources : ((m?.extra && Array.isArray(m.extra.sources)) ? m.extra.sources : []);
+                if (srcList.length > 0) {
+                    window.MSG_SOURCES[normId] = srcList;
+                }
+                return {
+                    ...m,
+                    id: normId,
+                    role: String(m && m.role ? m.role : 'assistant'),
+                    content: String(m && m.content != null ? m.content : ''),
+                    sources: srcList,
+                    attachmentsMeta: Array.isArray(m && m.attachmentsMeta) ? m.attachmentsMeta : (Array.isArray(m && m.attachments) ? m.attachments.map(a => ({ name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null })) : [])
+                };
+            });
+            // Normalize message IDs and populate global source memory so shared chats keep them
+            window.MSG_SOURCES = window.MSG_SOURCES || {};
+            messages = data.chat.messages.map((m, index) => {
+                const normId = String(m && m.id ? m.id : `shared_${String(fullChatId)}_${index}`);
+                const srcList = Array.isArray(m?.sources) ? m.sources : ((m?.extra && Array.isArray(m.extra.sources)) ? m.extra.sources : []);
+                if (srcList.length > 0) {
+                    window.MSG_SOURCES[normId] = srcList;
+                }
+                return {
+                    ...m,
+                    id: normId,
+                    role: String(m && m.role ? m.role : 'assistant'),
+                    content: String(m && m.content != null ? m.content : ''),
+                    sources: srcList,
+                    attachmentsMeta: Array.isArray(m && m.attachmentsMeta) ? m.attachmentsMeta : (Array.isArray(m && m.attachments) ? m.attachments.map(a => ({ name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null })) : [])
+                };
+            });
             if (!messages.some(m => String(m.id) === 'sys_branch')) {
                 messages.push({ role: 'assistant', content: '> *You have opened a shared chat branch. Messages added here are saved separately from the original shared snapshot.*', id: 'sys_branch', modelId: 'oracle' });
             }
@@ -3427,14 +3453,21 @@ function saveCurrentChat() {
     const firstUserMsg = messages.find(m => m.role === 'user'); 
     if (firstUserMsg) title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : "");
     
-    const safeMessages = messages.map(m => ({ 
-        id: m.id, 
-        role: m.role, 
-        content: m.content,
-        modelId: m.modelId, 
-        sources: m.sources || (window.MSG_SOURCES && window.MSG_SOURCES[m.id] ? window.MSG_SOURCES[m.id] : undefined),
-        attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) 
-    }));
+    const safeMessages = messages.map(m => {
+        const boundSources = (Array.isArray(m.sources) && m.sources.length) 
+            ? m.sources 
+            : ((window.MSG_SOURCES && Array.isArray(window.MSG_SOURCES[m.id]) && window.MSG_SOURCES[m.id].length) 
+                ? window.MSG_SOURCES[m.id] 
+                : undefined);
+        return {
+            id: m.id, 
+            role: m.role, 
+            content: m.content,
+            modelId: m.modelId, 
+            sources: boundSources,
+            attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) 
+        };
+    });
     
     const chatData = { 
             id: currentChatId, 
@@ -5369,9 +5402,25 @@ if (
                 }
 
                 contentContainer.classList.remove('typing-cursor');
-                contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
+        contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
+
+        // Permanently bundle all sources inside fullResponse & message object
+        const finalSources = (window.MSG_SOURCES && window.MSG_SOURCES[assistantMsgObj.id]) ? window.MSG_SOURCES[assistantMsgObj.id] : [];
+        if (finalSources.length > 0 && !fullResponse.includes('<sources>')) {
+            fullResponse += `\n\n<sources>${JSON.stringify(finalSources)}</sources>`;
+        }
+
+        messages.push({ 
+            role: 'assistant', 
+            content: fullResponse, 
+            id: assistantMsgObj.id, 
+            modelId: activeModelId, 
+            sources: finalSources 
+        });
+        saveCurrentChat();
+        if (typeof syncCurrentChat === 'function') {
+            syncCurrentChat(currentChatId);
+        }
                 isProcessing = false; updateUIState(); return; // Exit cleanly without calling cloud API
 
             } catch (err) {
@@ -9003,6 +9052,13 @@ window.downloadWorkspaceZip = async function() {
         for (const key of ['name', 'fileName', 'tool', 'mode', 'sources']) {
             if (msg && msg[key] != null) extra[key] = msg[key];
         }
+        // Always preserve authoritative source references in extra metadata
+        const activeSrc = (msg && Array.isArray(msg.sources) && msg.sources.length) 
+            ? msg.sources 
+            : (window.MSG_SOURCES && window.MSG_SOURCES[msg?.id] ? window.MSG_SOURCES[msg.id] : null);
+        if (activeSrc && activeSrc.length) {
+            extra.sources = activeSrc;
+        }
         return {
             id: String(`${idPrefix}${msg?.id || randomId('msg')}`).slice(0, 160),
             chatId: String(chatId).slice(0, 160),
@@ -9601,6 +9657,11 @@ window.downloadWorkspaceZip = async function() {
     }
 
     function cloudMessageToLocal(m) {
+        const rawSources = (m?.extra && Array.isArray(m.extra.sources)) ? m.extra.sources : (Array.isArray(m?.sources) ? m.sources : []);
+        if (rawSources.length > 0) {
+            window.MSG_SOURCES = window.MSG_SOURCES || {};
+            window.MSG_SOURCES[String(m.id)] = rawSources;
+        }
         return {
             id: String(m.id),
             chatId: String(m.chatId || currentChatId),
@@ -9609,12 +9670,12 @@ window.downloadWorkspaceZip = async function() {
             modelId: m.modelId || null,
             createdAt: m.createdAt,
             updatedAt: m.updatedAt,
+            sources: rawSources,
             attachmentsMeta: Array.isArray(m.attachments) ? m.attachments.map((a) => ({
                 name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null
             })) : []
         };
     }
-
     async function migrateToCloud() {
         const hint = (localStorage.getItem('Arix_arixName') || localStorage.getItem('Arix_nickname') || 'account').toLowerCase();
         if (localStorage.getItem(`${MIGRATED_KEY_PREFIX}${shortHash(hint)}`) === '1') return false;
