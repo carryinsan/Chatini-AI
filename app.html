@@ -1536,6 +1536,24 @@ function changeNickname() {
 // Global Application State Variables
 let activeModelId = localStorage.getItem('Arix_active_model') || 'spark';
 let isProcessing = false;
+let activeAbortController = null;
+let activeStreamReader = null;
+
+function stopGeneration() {
+    if (!isProcessing) return;
+    if (activeAbortController) {
+        try { activeAbortController.abort(); } catch(e) {}
+    }
+    if (activeStreamReader) {
+        try { activeStreamReader.cancel(); } catch(e) {}
+    }
+    isProcessing = false;
+    document.querySelectorAll('.typing-cursor').forEach(el => el.classList.remove('typing-cursor'));
+    if (els.indicator) els.indicator.classList.add('hidden');
+    updateUIState();
+    showToast("Generation stopped");
+}
+
 let isWorkspaceMode = false;
 let isDeepResearchOn = false;
 let isPresentationMode = false;
@@ -3712,12 +3730,18 @@ function updateUIState() {
     els.input.placeholder = `Message ArixAI (${model.name})...`;
 }
     
-    if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { 
+    if (isProcessing) { 
+        els.sendBtn.className = 'bg-gray-900 hover:bg-black text-white p-2.5 sm:p-3 rounded-full shadow-md transition-all duration-300 flex items-center justify-center cursor-pointer transform hover:scale-105';
+        els.sendBtn.title = "Stop generation";
+        els.sendIcon.className = 'ph-fill ph-stop text-base transition-transform'; 
+    } else if (els.input.value.trim() || pendingFiles.length > 0) { 
         els.sendBtn.className = 'bg-theme-600 text-white p-2.5 sm:p-3 rounded-full shadow-md shadow-theme-200 transition-all duration-300 flex items-center justify-center cursor-pointer hover:bg-theme-700 transform hover:scale-105';
-        els.sendIcon.classList.add('translate-x-[1px]', '-translate-y-[1px]'); 
+        els.sendBtn.title = "Send message";
+        els.sendIcon.className = 'ph-bold ph-paper-plane-right text-lg transition-transform translate-x-[1px] -translate-y-[1px]'; 
     } else { 
         els.sendBtn.className = 'bg-gray-100 text-gray-400 p-2.5 sm:p-3 rounded-full shadow-none transition-all duration-300 flex items-center justify-center cursor-not-allowed';
-        els.sendIcon.classList.remove('translate-x-[1px]', '-translate-y-[1px]'); 
+        els.sendBtn.title = "";
+        els.sendIcon.className = 'ph-bold ph-paper-plane-right text-lg transition-transform'; 
     }
 }
 
@@ -4279,6 +4303,8 @@ async function handleSend() {
     pendingFiles = []; 
     renderStagingArea();
     isProcessing = true; 
+    activeAbortController = new AbortController();
+    activeStreamReader = null;
     updateUIState();
     triggerPulseDetection(text);
     msgCountForMemory++;
@@ -5436,6 +5462,7 @@ if (
         const response = await fetch('/api/chat1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: activeAbortController?.signal,
             body: JSON.stringify({ 
                 messages: contextMessages.slice(-1000), 
                 modelId: activeModelId,
@@ -5452,6 +5479,7 @@ if (
         contentContainer.classList.add('typing-cursor');
         
         const reader = response.body.getReader(); 
+        activeStreamReader = reader; 
         const decoder = new TextDecoder();
         let fullResponse = ""; 
         let buffer = "";
@@ -5507,7 +5535,9 @@ if (
                 if (done) break;
             }
         } catch (streamErr) {
-            if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") {
+            if (streamErr.name === 'AbortError' || activeAbortController?.signal.aborted) {
+                console.log("Stream aborted by user");
+            } else if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") {
                 console.warn("Stream Auto-Completed (Watchdog)");
             } else { 
                 uiErrFlag = true; 
@@ -5516,6 +5546,7 @@ if (
             }
         } finally { 
             clearTimeout(streamTimeout); 
+            activeStreamReader = null;
         }
         
         contentContainer.classList.remove('typing-cursor');
@@ -5534,14 +5565,18 @@ if (
         
     } catch (error) {
         els.indicator.classList.add('hidden');
-        const errObj = appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
-        messages.push({ role: 'assistant', content: `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, id: errObj.id, modelId: activeModelId });
-        saveCurrentChat(); // <-- FIX: Saves the error state so history chain isn't broken
-        sendTelemetry(currentAction, activeModelId, 'error', error.message);
+        if (error.name !== 'AbortError' && !activeAbortController?.signal.aborted) {
+            const errObj = appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+            messages.push({ role: 'assistant', content: `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, id: errObj.id, modelId: activeModelId });
+            saveCurrentChat();
+            sendTelemetry(currentAction, activeModelId, 'error', error.message);
+        }
+    } finally {
+        activeAbortController = null;
+        activeStreamReader = null;
+        isProcessing = false; 
+        updateUIState();
     }
-    
-    isProcessing = false; 
-    updateUIState();
 }
 
 // ============================================================================
@@ -6584,7 +6619,13 @@ els.input.addEventListener('keydown', (e) => {
 }); 
 
 if (els && els.sendBtn) {
-    els.sendBtn.addEventListener('click', handleSend);
+    els.sendBtn.addEventListener('click', () => {
+        if (isProcessing) {
+            stopGeneration();
+        } else {
+            handleSend();
+        }
+    });
 }
 
 // ====== GLOBAL DEEP SEARCH ENGINE ======
