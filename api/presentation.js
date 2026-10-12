@@ -582,7 +582,7 @@ async function callGeminiSlides(prompt, geminiKeys, sendLog) {
               responseMimeType: 'application/json',
               responseSchema: GEMINI_SCHEMA.schema,
               temperature: 0.42,
-              maxOutputTokens: 14000
+              maxOutputTokens: 10000
             }
           })
         });
@@ -595,16 +595,27 @@ async function callGeminiSlides(prompt, geminiKeys, sendLog) {
           return parsed;
         }
 
-        lastError = cleanString(await res.text(), 1600) || `HTTP_${res.status}`;
-        if (res.status === 429 || res.status === 503 || res.status >= 500) {
-          sendLog(`> [Content Studio] ${model} capacity issue on key ${i + 1}; rotating.`);
-          continue;
-        }
-        if (res.status === 404 && model !== models[models.length - 1]) {
-          sendLog(`> [Content Studio] ${model} is unavailable; switching to fallback model.`);
-          break;
-        }
-        throw new Error(`GEMINI_HTTP_${res.status}`);
+        const errorResponseText = await res.text();
+lastError = cleanString(errorResponseText, 1600) || `HTTP_${res.status}`;
+
+if (res.status === 400) {
+  // For HTTP 400, log the full error details as they are crucial for diagnosis.
+  // A 400 is a client-side error, so rotating keys/models won't fix it.
+  sendLog(`> [Content Studio] Received HTTP 400 Bad Request from Gemini for model <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>m</mi><mi>o</mi><mi>d</mi><mi>e</mi><mi>l</mi></mrow><mi mathvariant="normal">.</mi><mi>R</mi><mi>a</mi><mi>w</mi><mi>E</mi><mi>r</mi><mi>r</mi><mi>o</mi><mi>r</mi><mo>:</mo></mrow><annotation encoding="application/x-tex">{model}. Raw Error: </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6944em;"></span><span class="mord"><span class="mord mathnormal">m</span><span class="mord mathnormal">o</span><span class="mord mathnormal">d</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span></span><span class="mord">.</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.05764em;">wE</span><span class="mord mathnormal" style="margin-right:0.02778em;">rror</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">:</span></span></span></span>{lastError}`);
+  throw new Error(`GEMINI_HTTP_400_BAD_REQUEST: ${lastError}`);
+}
+if (res.status === 429 || res.status === 503 || res.status >= 500) {
+  // These are transient or server-side issues; attempt key rotation.
+  sendLog(`> [Content Studio] <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>m</mi><mi>o</mi><mi>d</mi><mi>e</mi><mi>l</mi></mrow><mi>c</mi><mi>a</mi><mi>p</mi><mi>a</mi><mi>c</mi><mi>i</mi><mi>t</mi><mi>y</mi><mi>i</mi><mi>s</mi><mi>s</mi><mi>u</mi><mi>e</mi><mi>o</mi><mi>n</mi><mi>k</mi><mi>e</mi><mi>y</mi></mrow><annotation encoding="application/x-tex">{model} capacity issue on key </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">m</span><span class="mord mathnormal">o</span><span class="mord mathnormal">d</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span></span><span class="mord mathnormal">c</span><span class="mord mathnormal">a</span><span class="mord mathnormal">p</span><span class="mord mathnormal">a</span><span class="mord mathnormal">c</span><span class="mord mathnormal">i</span><span class="mord mathnormal">t</span><span class="mord mathnormal" style="margin-right:0.03588em;">y</span><span class="mord mathnormal">i</span><span class="mord mathnormal">ss</span><span class="mord mathnormal">u</span><span class="mord mathnormal">eo</span><span class="mord mathnormal" style="margin-right:0.03148em;">nk</span><span class="mord mathnormal" style="margin-right:0.03588em;">ey</span></span></span></span>{i + 1}; rotating securely. Raw Error: ${lastError}`);
+  continue;
+}
+if (res.status === 404 && model !== models[models.length - 1]) {
+  // Model not found; try fallback model.
+  sendLog(`> [Content Studio] <span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>m</mi><mi>o</mi><mi>d</mi><mi>e</mi><mi>l</mi></mrow><mi>i</mi><mi>s</mi><mi>u</mi><mi>n</mi><mi>a</mi><mi>v</mi><mi>a</mi><mi>i</mi><mi>l</mi><mi>a</mi><mi>b</mi><mi>l</mi><mi>e</mi><mo separator="true">;</mo><mi>s</mi><mi>w</mi><mi>i</mi><mi>t</mi><mi>c</mi><mi>h</mi><mi>i</mi><mi>n</mi><mi>g</mi><mi>t</mi><mi>o</mi><mi>f</mi><mi>a</mi><mi>l</mi><mi>l</mi><mi>b</mi><mi>a</mi><mi>c</mi><mi>k</mi><mi>m</mi><mi>o</mi><mi>d</mi><mi>e</mi><mi>l</mi><mi mathvariant="normal">.</mi><mi>R</mi><mi>a</mi><mi>w</mi><mi>E</mi><mi>r</mi><mi>r</mi><mi>o</mi><mi>r</mi><mo>:</mo></mrow><annotation encoding="application/x-tex">{model} is unavailable; switching to fallback model. Raw Error: </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.8889em;vertical-align:-0.1944em;"></span><span class="mord"><span class="mord mathnormal">m</span><span class="mord mathnormal">o</span><span class="mord mathnormal">d</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span></span><span class="mord mathnormal">i</span><span class="mord mathnormal">s</span><span class="mord mathnormal">u</span><span class="mord mathnormal">na</span><span class="mord mathnormal" style="margin-right:0.03588em;">v</span><span class="mord mathnormal">ai</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">ab</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord mathnormal">e</span><span class="mpunct">;</span><span class="mspace" style="margin-right:0.1667em;"></span><span class="mord mathnormal">s</span><span class="mord mathnormal" style="margin-right:0.02691em;">w</span><span class="mord mathnormal">i</span><span class="mord mathnormal">t</span><span class="mord mathnormal">c</span><span class="mord mathnormal">hin</span><span class="mord mathnormal" style="margin-right:0.03588em;">g</span><span class="mord mathnormal">t</span><span class="mord mathnormal">o</span><span class="mord mathnormal" style="margin-right:0.10764em;">f</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.01968em;">ll</span><span class="mord mathnormal">ba</span><span class="mord mathnormal">c</span><span class="mord mathnormal">km</span><span class="mord mathnormal">o</span><span class="mord mathnormal">d</span><span class="mord mathnormal">e</span><span class="mord mathnormal" style="margin-right:0.01968em;">l</span><span class="mord">.</span><span class="mord mathnormal" style="margin-right:0.00773em;">R</span><span class="mord mathnormal">a</span><span class="mord mathnormal" style="margin-right:0.05764em;">wE</span><span class="mord mathnormal" style="margin-right:0.02778em;">rror</span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">:</span></span></span></span>{lastError}`);
+  break;
+}
+// For any other unexpected HTTP status, throw with the gathered error.
+throw new Error(`GEMINI_UNEXPECTED_HTTP_<span class="katex"><span class="katex-mathml"><math xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi>r</mi><mi>e</mi><mi>s</mi><mi mathvariant="normal">.</mi><mi>s</mi><mi>t</mi><mi>a</mi><mi>t</mi><mi>u</mi><mi>s</mi></mrow><mo>:</mo></mrow><annotation encoding="application/x-tex">{res.status}: </annotation></semantics></math></span><span class="katex-html" aria-hidden="true"><span class="base"><span class="strut" style="height:0.6151em;"></span><span class="mord"><span class="mord mathnormal">res</span><span class="mord">.</span><span class="mord mathnormal">s</span><span class="mord mathnormal">t</span><span class="mord mathnormal">a</span><span class="mord mathnormal">t</span><span class="mord mathnormal">u</span><span class="mord mathnormal">s</span></span><span class="mspace" style="margin-right:0.2778em;"></span><span class="mrel">:</span></span></span></span>{lastError}`);
       } catch (error) {
         lastError = error?.name === 'AbortError' ? 'GEMINI_TIMEOUT' : (error?.message || String(error));
         if (i < geminiKeys.length - 1) {
