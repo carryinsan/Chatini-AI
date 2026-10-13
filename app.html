@@ -4136,10 +4136,7 @@ ${marked.parse(unclosedContent.trim())}
         }
     }
 
-    // Consolidated list used by both inline citations and bottom source accordion
-    const consolidatedSources = Array.from(sourcesMap.values());
-
-    // Consolidated list of resolved sources
+    // Consolidated list declared once for both inline citations and bottom source accordion
     const consolidatedSources = Array.from(sourcesMap.values());
 
     // Safe escaping helpers defined directly in scope
@@ -4220,7 +4217,7 @@ ${marked.parse(unclosedContent.trim())}
             return -1;
         };
 
-        // 1. Match and convert parenthetical publisher names like "(BBC News)", "(The Guardian, Hindustan Times)", "(Hindustan Times, Daily Excelsior, Aaj Tak)"
+        // 1. Match and convert parenthetical publisher names like "(BBC News)", "(The Guardian, Hindustan Times)"
         markdownContent = markdownContent.replace(/\(([A-Za-z0-9\s,&.\-_/]{2,100})\)/g, (fullMatch, innerText) => {
             const rawParts = innerText.split(/[,/]/).map(p => p.trim()).filter(Boolean);
             if (rawParts.length === 0) return fullMatch;
