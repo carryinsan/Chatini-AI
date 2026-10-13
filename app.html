@@ -230,6 +230,72 @@ body {
 .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; color: #374151; }
 .terminal-text { font-family: 'Courier New', Courier, monospace; }
 
+/* Inline Claim-Level Citations & Popover */
+.cite-badge-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 3px;
+    vertical-align: baseline;
+    position: relative;
+}
+.cite-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #4f46e5;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    text-decoration: none !important;
+}
+.cite-pill:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+    transform: translateY(-1px);
+}
+.cite-popover {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 290px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    padding: 10px 12px;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    text-align: left;
+}
+.cite-badge-group:hover .cite-popover,
+.cite-badge-group:focus-within .cite-popover {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(-2px);
+}
+.cite-popover::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #ffffff transparent transparent transparent;
+}
+
 /* Animations & Special Elements */
 .animate-wave { transform-origin: 70% 70%; display: inline-block; }
 #workspace-canvas { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), width 0.4s ease; }
@@ -3943,7 +4009,7 @@ ${marked.parse(unclosedContent.trim())}
     
     
     // ====================================================================
-    // ARIX ALGORITHMIC SOURCE DEDUPLICATION & SCRUBBER ENGINE
+    // ARIX ALGORITHMIC SOURCE DEDUPLICATION & CLAIM CITATION ENGINE
     // ====================================================================
     window.MSG_SOURCES = window.MSG_SOURCES || {};
 
@@ -3964,6 +4030,23 @@ ${marked.parse(unclosedContent.trim())}
     };
 
     const sourcesMap = new Map();
+
+    // Ingest App/Crawler-level sources streamed from backend
+    if (msgId && Array.isArray(window.MSG_SOURCES[msgId])) {
+        window.MSG_SOURCES[msgId].forEach(s => {
+            const u = cleanSafeUrl(s.url || s.link);
+            if (u) {
+                const domain = getCleanDomain(u);
+                sourcesMap.set(u.toLowerCase(), {
+                    url: u,
+                    title: s.title && s.title !== u ? s.title : domain,
+                    domain: domain,
+                    snippet: s.snippet || s.text || s.excerpt || null,
+                    timestamp: s.timestamp || s.date || null
+                });
+            }
+        });
+    }
 
     // 1. Ingest App/Crawler-level sources streamed from backend
     if (msgId && Array.isArray(window.MSG_SOURCES[msgId])) {
@@ -3996,7 +4079,9 @@ ${marked.parse(unclosedContent.trim())}
                             sourcesMap.set(norm, {
                                 url: u,
                                 title: (item.title && item.title !== u) ? item.title : (existing?.title || domain),
-                                domain: domain
+                                domain: domain,
+                                snippet: item.snippet || item.text || item.excerpt || existing?.snippet || null,
+                                timestamp: item.timestamp || item.date || existing?.timestamp || null
                             });
                         }
                     });
@@ -4062,8 +4147,48 @@ ${marked.parse(unclosedContent.trim())}
         }
     }
 
-    // 4. Render EXACTLY ONE consolidated sources accordion
-    const consolidatedSources = Array.from(sourcesMap.values());
+    // ====================================================================
+    // INLINE CLAIM CITATION REPLACER (Pure algorithmic find-and-replace)
+    // ====================================================================
+    const sourceList = Array.from(sourcesMap.values());
+
+    if (sourceList.length > 0 && !isStreaming) {
+        const createCiteBadge = (idx) => {
+            const src = sourceList[idx - 1];
+            if (!src) return '';
+            const domain = src.domain || getCleanDomain(src.url);
+            const fav = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+            const timeTag = src.timestamp ? `<div class="text-[9px] text-gray-400 mt-1 font-mono">${escapeHtml(src.timestamp)}</div>` : '';
+            const excerpt = src.snippet ? `<div class="text-[11px] text-gray-600 italic mt-1 line-clamp-3 bg-gray-50 p-1.5 rounded border border-gray-100 font-normal">"${escapeHtml(src.snippet.slice(0, 180))}..."</div>` : '';
+
+            return `<span class="cite-badge-group">
+                <a href="${src.url}" target="_blank" rel="noopener noreferrer" class="cite-pill" title="${escapeAttr(src.title)}">${idx}</a>
+                <span class="cite-popover">
+                    <span class="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-gray-100">
+                        <img src="${fav}" class="w-3.5 h-3.5 object-contain" alt="">
+                        <span class="text-[11px] font-bold text-gray-900 truncate">${escapeHtml(domain)}</span>
+                    </span>
+                    <span class="text-[11px] font-semibold text-theme-600 block leading-snug line-clamp-2">${escapeHtml(src.title)}</span>
+                    ${excerpt}
+                    ${timeTag}
+                </span>
+            </span>`;
+        };
+
+        // 1. Convert standard academic tags:[cite: 1, 2] or[cite: 1]
+        markdownContent = markdownContent.replace(/\[cite:\s*([0-9,\s]+)\]/gi, (match, nums) => {
+            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= sourceList.length);
+            if (parsedNums.length === 0) return '';
+            return parsedNums.map(n => createCiteBadge(n)).join('');
+        });
+
+        // 2. Convert standard markdown numerical citations [1] or [1, 2] at sentence ends
+        markdownContent = markdownContent.replace(/\[([0-9]+(?:\s*,\s*[0-9]+)*)\](?!\()/g, (match, nums) => {
+            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= sourceList.length);
+            if (parsedNums.length === 0) return match;
+            return parsedNums.map(n => createCiteBadge(n)).join('');
+        });
+    }
     if (msgId && consolidatedSources.length > 0) {
         window.MSG_SOURCES = window.MSG_SOURCES || {};
         window.MSG_SOURCES[msgId] = consolidatedSources;
