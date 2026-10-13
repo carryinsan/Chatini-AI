@@ -4139,33 +4139,119 @@ ${marked.parse(unclosedContent.trim())}
     // Consolidated list used by both inline citations and bottom source accordion
     const consolidatedSources = Array.from(sourcesMap.values());
 
+    // Consolidated list of resolved sources
+    const consolidatedSources = Array.from(sourcesMap.values());
+
+    // Safe escaping helpers defined directly in scope
+    const safeEscHtml = (val) => String(val ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const safeEscAttr = (val) => safeEscHtml(val).replace(/\n/g, '&#10;');
+
     // ====================================================================
-    // INLINE CLAIM CITATION REPLACER (Pure algorithmic find-and-replace)
+    // INLINE CLAIM CITATION REPLACER (Supports Named Publishers + Numbers)
     // ====================================================================
     if (consolidatedSources.length > 0 && !isStreaming) {
+        // Generates the interactive badge with direct link and preview popover
         const createCiteBadge = (idx) => {
             const src = consolidatedSources[idx - 1];
             if (!src) return '';
             const domain = src.domain || getCleanDomain(src.url);
             const fav = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+            const letter = (domain.charAt(0) || 'W').toUpperCase();
             const timeTag = src.timestamp ? `<div class="text-[9px] text-gray-400 mt-1 font-mono">${safeEscHtml(src.timestamp)}</div>` : '';
-            const excerpt = src.snippet ? `<div class="text-[11px] text-gray-600 italic mt-1 bg-gray-50 p-1.5 rounded border border-gray-100 font-normal truncate">"${safeEscHtml(src.snippet.slice(0, 180))}..."</div>` : '';
+            const excerpt = src.snippet 
+                ? `<div class="text-[11px] text-gray-600 italic mt-1 line-clamp-3 bg-gray-50 p-1.5 rounded border border-gray-100 font-normal">"${safeEscHtml(src.snippet.slice(0, 180))}..."</div>`
+                : `<div class="text-[10px] text-gray-400 mt-1 flex items-center gap-1 font-medium"><i class="ph-bold ph-globe text-xs"></i> Verified Source #${idx}</div>`;
 
-            return `<span class="cite-badge-group"><a href="${src.url}" target="_blank" rel="noopener noreferrer" class="cite-pill" title="${safeEscAttr(src.title)}">${idx}</a><span class="cite-popover"><span class="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-gray-100"><img src="${fav}" class="w-3.5 h-3.5 object-contain" alt=""><span class="text-[11px] font-bold text-gray-900 truncate">${safeEscHtml(domain)}</span></span><span class="text-[11px] font-semibold text-theme-600 block leading-snug truncate">${safeEscHtml(src.title)}</span>${excerpt}${timeTag}</span></span>`;
+            return `<span class="cite-badge-group">` +
+                `<a href="${src.url}" target="_blank" rel="noopener noreferrer" class="cite-pill" title="${safeEscAttr(src.title || domain)}">${idx}</a>` +
+                `<span class="cite-popover">` +
+                    `<span class="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-gray-100">` +
+                        `<img src="${fav}" class="w-3.5 h-3.5 object-contain" alt="" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-flex';">` +
+                        `<span class="w-3.5 h-3.5 rounded bg-indigo-50 text-indigo-700 font-bold text-[9px] items-center justify-center hidden">${letter}</span>` +
+                        `<span class="text-[11px] font-bold text-gray-900 truncate">${safeEscHtml(domain)}</span>` +
+                    `</span>` +
+                    `<span class="text-[11px] font-semibold text-theme-600 block leading-snug line-clamp-2">${safeEscHtml(src.title || domain)}</span>` +
+                    excerpt +
+                    timeTag +
+                `</span>` +
+            `</span>`;
         };
 
-        // 1. Convert standard academic tags:[cite: 1, 2] or[cite: 1]
+        // Algorithmic publisher matching engine (maps "BBC News" -> bbc.com, "Aaj Tak" -> aajtak.in, etc.)
+        const findSourceIndexByPublisher = (name) => {
+            if (!name || typeof name !== 'string') return -1;
+            const clean = name.trim().toLowerCase();
+            if (clean.length < 2) return -1;
+
+            // Block common acronyms/words that appear in parentheses so they aren't converted
+            const blocklist = new Set([
+                'ltcg', 'mdr', 'cbt', 'fir', 'ias', 'bjp', 'jnu', 'rbi', 'md', 'pm', 'cm',
+                'mp', 'mps', 'sec', 'gst', 'ai', 'api', 'pdf', 'url', 'uk', 'us', 'usa',
+                'india', 'kashmir', 'jammu', 'delhi', 'punjab', 'yemen', 'riyadh', 'kyiv'
+            ]);
+            if (blocklist.has(clean)) return -1;
+
+            const normalizedClean = clean.replace(/[^a-z0-9]/g, '');
+
+            for (let i = 0; i < consolidatedSources.length; i++) {
+                const s = consolidatedSources[i];
+                const domain = (s.domain || getCleanDomain(s.url)).toLowerCase();
+                const title = (s.title || '').toLowerCase();
+                const domainBase = domain.replace(/\.[a-z.]+\$/, '').replace(/[^a-z0-9]/g, '');
+
+                // 1. Matches domain root (e.g. "bbc news" -> "bbc", "hindustan times" -> "hindustantimes")
+                if (domainBase && (normalizedClean.includes(domainBase) || domainBase.includes(normalizedClean))) {
+                    return i + 1;
+                }
+
+                // 2. Matches title text (e.g. "The Guardian" in "Latest news from around the world | The Guardian")
+                if (title) {
+                    const normTitle = title.replace(/[^a-z0-9]/g, '');
+                    if (normTitle.includes(normalizedClean) || normalizedClean.includes(normTitle)) {
+                        return i + 1;
+                    }
+                    const titleWords = title.split(/[\s|•\-_:,.]+/).filter(w => w.length > 2);
+                    const queryWords = clean.split(/[\s|•\-_:,.]+/).filter(w => w.length > 2);
+                    if (queryWords.length > 0 && queryWords.every(qw => titleWords.includes(qw))) {
+                        return i + 1;
+                    }
+                }
+            }
+            return -1;
+        };
+
+        // 1. Match and convert parenthetical publisher names like "(BBC News)", "(The Guardian, Hindustan Times)", "(Hindustan Times, Daily Excelsior, Aaj Tak)"
+        markdownContent = markdownContent.replace(/\(([A-Za-z0-9\s,&.\-_/]{2,100})\)/g, (fullMatch, innerText) => {
+            const rawParts = innerText.split(/[,/]/).map(p => p.trim()).filter(Boolean);
+            if (rawParts.length === 0) return fullMatch;
+
+            const matchedIndices = [];
+            for (const part of rawParts) {
+                const idx = findSourceIndexByPublisher(part);
+                if (idx > 0 && !matchedIndices.includes(idx)) {
+                    matchedIndices.push(idx);
+                }
+            }
+
+            // Only replace if all non-empty parts successfully resolved to web sources
+            if (matchedIndices.length > 0 && matchedIndices.length >= rawParts.length) {
+                return matchedIndices.map(n => createCiteBadge(n)).join('');
+            }
+            return fullMatch;
+        });
+
+        // 2. Match standard academic tags:[cite: 1, 2] or[cite: 1]
         markdownContent = markdownContent.replace(/\[cite:\s*([0-9,\s]+)\]/gi, (match, nums) => {
             const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= consolidatedSources.length);
             if (parsedNums.length === 0) return '';
-            return parsedNums.map(n => createCiteBadge(n)).join('');
+            return [...new Set(parsedNums)].map(n => createCiteBadge(n)).join('');
         });
 
-        // 2. Convert standard markdown numerical citations [1] or [1, 2] at sentence ends
+        // 3. Match standard numeric bracket citations: [1] or [1, 2]
         markdownContent = markdownContent.replace(/\[([0-9]+(?:\s*,\s*[0-9]+)*)\](?!\()/g, (match, nums) => {
             const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= consolidatedSources.length);
             if (parsedNums.length === 0) return match;
-            return parsedNums.map(n => createCiteBadge(n)).join('');
+            return [...new Set(parsedNums)].map(n => createCiteBadge(n)).join('');
         });
     }
     if (msgId && consolidatedSources.length > 0) {
