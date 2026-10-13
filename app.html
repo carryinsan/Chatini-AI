@@ -4031,6 +4031,10 @@ ${marked.parse(unclosedContent.trim())}
 
     const sourcesMap = new Map();
 
+    // Define localized safe escaping helpers for citation attributes and tooltips
+    const safeEscHtml = (val) => String(val ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const safeEscAttr = (val) => safeEscHtml(val).replace(/\n/g, '&#10;');
+
     // Ingest App/Crawler-level sources streamed from backend
     if (msgId && Array.isArray(window.MSG_SOURCES[msgId])) {
         window.MSG_SOURCES[msgId].forEach(s => {
@@ -4048,26 +4052,11 @@ ${marked.parse(unclosedContent.trim())}
         });
     }
 
-    // 1. Ingest App/Crawler-level sources streamed from backend
-    if (msgId && Array.isArray(window.MSG_SOURCES[msgId])) {
-        window.MSG_SOURCES[msgId].forEach(s => {
-            const u = cleanSafeUrl(s.url || s.link);
-            if (u) {
-                const domain = getCleanDomain(u);
-                sourcesMap.set(u.toLowerCase(), {
-                    url: u,
-                    title: s.title && s.title !== u ? s.title : domain,
-                    domain: domain
-                });
-            }
-        });
-    }
-
     // 2. Extract and remove all <sources> tags (JSON or raw URLs)
-    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(?:<\/sources>|$)/gi, (match, rawInner) => {
+    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(?:<\/sources>|\$)/gi, (match, rawInner) => {
         if (rawInner) {
             try {
-                const cleaned = rawInner.replace(/^```json/gi, '').replace(/```$/g, '').trim();
+                const cleaned = rawInner.replace(/^```json/gi, '').replace(/```\$/g, '').trim();
                 const parsed = JSON.parse(cleaned);
                 if (Array.isArray(parsed)) {
                     parsed.forEach(item => {
@@ -4103,7 +4092,7 @@ ${marked.parse(unclosedContent.trim())}
     });
 
     // 3. Remove AI-written "Sources" / "References" section at end of text and harvest links
-    const aiTrailingSourcesRegex = /(?:^|\n)(?:[-*_]{3,}\s*\n)?(?:#{1,4}\s+|\*{2})?(?:Sources|References|Citations|Web Sources|Sources Consulted|External Links)\*{0,2}\s*:?\s*[\n\r]+([\s\S]*)$/i;
+    const aiTrailingSourcesRegex = /(?:^|\n)(?:[-*_]{3,}\s*\n)?(?:#{1,4}\s+|\*{2})?(?:Sources|References|Citations|Web Sources|Sources Consulted|External Links)\*{0,2}\s*:?\s*[\n\r]+([\s\S]*)\$/i;
     const aiSectionMatch = markdownContent.match(aiTrailingSourcesRegex);
     if (aiSectionMatch) {
         const body = aiSectionMatch[1] || '';
@@ -4147,44 +4136,34 @@ ${marked.parse(unclosedContent.trim())}
         }
     }
 
+    // Consolidated list used by both inline citations and bottom source accordion
+    const consolidatedSources = Array.from(sourcesMap.values());
+
     // ====================================================================
     // INLINE CLAIM CITATION REPLACER (Pure algorithmic find-and-replace)
     // ====================================================================
-    const sourceList = Array.from(sourcesMap.values());
-
-    if (sourceList.length > 0 && !isStreaming) {
+    if (consolidatedSources.length > 0 && !isStreaming) {
         const createCiteBadge = (idx) => {
-            const src = sourceList[idx - 1];
+            const src = consolidatedSources[idx - 1];
             if (!src) return '';
             const domain = src.domain || getCleanDomain(src.url);
             const fav = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
-            const timeTag = src.timestamp ? `<div class="text-[9px] text-gray-400 mt-1 font-mono">${escapeHtml(src.timestamp)}</div>` : '';
-            const excerpt = src.snippet ? `<div class="text-[11px] text-gray-600 italic mt-1 line-clamp-3 bg-gray-50 p-1.5 rounded border border-gray-100 font-normal">"${escapeHtml(src.snippet.slice(0, 180))}..."</div>` : '';
+            const timeTag = src.timestamp ? `<div class="text-[9px] text-gray-400 mt-1 font-mono">${safeEscHtml(src.timestamp)}</div>` : '';
+            const excerpt = src.snippet ? `<div class="text-[11px] text-gray-600 italic mt-1 bg-gray-50 p-1.5 rounded border border-gray-100 font-normal truncate">"${safeEscHtml(src.snippet.slice(0, 180))}..."</div>` : '';
 
-            return `<span class="cite-badge-group">
-                <a href="${src.url}" target="_blank" rel="noopener noreferrer" class="cite-pill" title="${escapeAttr(src.title)}">${idx}</a>
-                <span class="cite-popover">
-                    <span class="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-gray-100">
-                        <img src="${fav}" class="w-3.5 h-3.5 object-contain" alt="">
-                        <span class="text-[11px] font-bold text-gray-900 truncate">${escapeHtml(domain)}</span>
-                    </span>
-                    <span class="text-[11px] font-semibold text-theme-600 block leading-snug line-clamp-2">${escapeHtml(src.title)}</span>
-                    ${excerpt}
-                    ${timeTag}
-                </span>
-            </span>`;
+            return `<span class="cite-badge-group"><a href="${src.url}" target="_blank" rel="noopener noreferrer" class="cite-pill" title="${safeEscAttr(src.title)}">${idx}</a><span class="cite-popover"><span class="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-gray-100"><img src="${fav}" class="w-3.5 h-3.5 object-contain" alt=""><span class="text-[11px] font-bold text-gray-900 truncate">${safeEscHtml(domain)}</span></span><span class="text-[11px] font-semibold text-theme-600 block leading-snug truncate">${safeEscHtml(src.title)}</span>${excerpt}${timeTag}</span></span>`;
         };
 
         // 1. Convert standard academic tags:[cite: 1, 2] or[cite: 1]
         markdownContent = markdownContent.replace(/\[cite:\s*([0-9,\s]+)\]/gi, (match, nums) => {
-            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= sourceList.length);
+            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= consolidatedSources.length);
             if (parsedNums.length === 0) return '';
             return parsedNums.map(n => createCiteBadge(n)).join('');
         });
 
         // 2. Convert standard markdown numerical citations [1] or [1, 2] at sentence ends
         markdownContent = markdownContent.replace(/\[([0-9]+(?:\s*,\s*[0-9]+)*)\](?!\()/g, (match, nums) => {
-            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= sourceList.length);
+            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= consolidatedSources.length);
             if (parsedNums.length === 0) return match;
             return parsedNums.map(n => createCiteBadge(n)).join('');
         });
