@@ -1,0 +1,396 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <meta name="theme-color" content="#0a1020">
+  <meta name="description" content="ArixAI Beta Tester Program Terms: complimentary test access, tester responsibilities, privacy, data improvement, feedback, and withdrawal rights.">
+  <title>ArixAI — Beta Tester Terms</title>
+  <link rel="icon" type="image/png" href="https://lexis-ai-chatini.vercel.app/favicon.png?v=2">
+  <style>
+    :root {
+      --bg: #080d19;
+      --bg-2: #0d1426;
+      --panel: rgba(18, 27, 48, .84);
+      --panel-solid: #111a2d;
+      --text: #eff4ff;
+      --muted: #acb8d0;
+      --line: rgba(173, 194, 235, .16);
+      --accent: #8ba8ff;
+      --accent-2: #74ead7;
+      --accent-ink: #071320;
+      --note: rgba(116, 234, 215, .09);
+      --warning: rgba(255, 196, 112, .09);
+      --warning-line: rgba(255, 196, 112, .35);
+      --shadow: 0 18px 55px rgba(0, 0, 0, .24);
+      --radius: 20px;
+      --content: 1120px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 30px; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 12% 0%, rgba(75, 108, 220, .16), transparent 38rem),
+        radial-gradient(ellipse at 100% 22%, rgba(50, 197, 176, .09), transparent 33rem),
+        var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.7;
+      font-size: 15px;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #b9caff; text-decoration: underline; text-underline-offset: 3px; }
+    a:hover { color: var(--accent-2); }
+    button, input { font: inherit; }
+    .wrap { width: min(var(--content), calc(100% - 36px)); margin-inline: auto; }
+    .topbar { border-bottom: 1px solid var(--line); background: rgba(8, 13, 25, .72); }
+    .topbar-inner { min-height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+    .brand-mark { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 12px; font-weight: 900; letter-spacing: -.06em; color: #071320; background: linear-gradient(135deg, var(--accent-2), var(--accent)); box-shadow: 0 6px 24px rgba(116, 234, 215, .16); }
+    .brand-name { font-weight: 800; letter-spacing: -.035em; font-size: 17px; }
+    .brand-sub { display: block; color: var(--muted); font-size: 10px; line-height: 1.3; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; }
+    .top-actions { display: flex; align-items: center; gap: 10px; }
+    .pill { border: 1px solid var(--line); background: rgba(255,255,255,.035); color: var(--muted); padding: 7px 11px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+    .button { cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 42px; border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; background: rgba(255,255,255,.04); color: var(--text); text-decoration: none; font-size: 13px; font-weight: 750; transition: transform .16s ease, border-color .16s ease, background .16s ease; }
+    .button:hover { transform: translateY(-1px); border-color: rgba(139,168,255,.5); background: rgba(139,168,255,.08); color: var(--text); }
+    .hero { padding: 64px 0 34px; }
+    .eyebrow { display: inline-flex; align-items: center; gap: 8px; color: var(--accent-2); text-transform: uppercase; letter-spacing: .15em; font-size: 11px; font-weight: 850; }
+    .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent-2); box-shadow: 0 0 15px rgba(116,234,215,.6); }
+    h1 { font-size: clamp(34px, 5.7vw, 60px); line-height: 1.04; letter-spacing: -.06em; font-weight: 820; max-width: 820px; margin: 18px 0 18px; }
+    .gradient-text { background: linear-gradient(105deg, #f5f7ff 15%, #aebfff 54%, #74ead7 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .hero-copy { max-width: 730px; color: var(--muted); font-size: 17px; line-height: 1.75; margin: 0; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: 9px 18px; margin-top: 24px; color: var(--muted); font-size: 12px; }
+    .hero-meta span { display: inline-flex; align-items: center; gap: 7px; }
+    .hero-meta b { color: var(--text); font-weight: 700; }
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 22px 0 34px; }
+    .summary-card { border: 1px solid var(--line); background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018)); border-radius: 16px; padding: 16px; min-height: 118px; }
+    .summary-icon { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 9px; background: rgba(139,168,255,.12); color: var(--accent); font-size: 15px; margin-bottom: 11px; }
+    .summary-card strong { display: block; font-size: 13px; margin-bottom: 4px; }
+    .summary-card p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .layout { display: grid; grid-template-columns: 235px minmax(0, 1fr); gap: 28px; align-items: start; padding-bottom: 65px; }
+    .toc { position: sticky; top: 22px; border: 1px solid var(--line); border-radius: 17px; background: rgba(14, 21, 38, .79); padding: 17px 12px; max-height: calc(100vh - 44px); overflow: auto; }
+    .toc-title { color: var(--muted); font-size: 10px; letter-spacing: .15em; text-transform: uppercase; font-weight: 850; padding: 0 10px 11px; }
+    .toc a { display: block; padding: 7px 10px; border-radius: 9px; font-size: 12px; line-height: 1.45; text-decoration: none; color: #bac5dc; }
+    .toc a:hover, .toc a:focus-visible { background: rgba(139,168,255,.1); color: var(--text); outline: none; }
+    .toc .toc-divider { height: 1px; background: var(--line); margin: 10px; }
+    main { min-width: 0; }
+    .notice { border: 1px solid var(--warning-line); background: var(--warning); border-radius: 15px; padding: 15px 17px; margin-bottom: 17px; color: #f5e4c8; font-size: 13px; }
+    .notice strong { color: #fff0d6; }
+    .section { border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); border-radius: var(--radius); padding: clamp(20px, 3vw, 30px); margin-bottom: 15px; }
+    .section-head { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 14px; }
+    .section-num { flex: 0 0 34px; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: rgba(139,168,255,.12); border: 1px solid rgba(139,168,255,.2); color: var(--accent); font-size: 12px; font-weight: 850; }
+    h2 { font-size: 19px; line-height: 1.35; letter-spacing: -.025em; margin: 4px 0 0; }
+    h3 { font-size: 14px; margin: 20px 0 7px; letter-spacing: -.01em; }
+    p { margin: 10px 0; color: #d0d8e9; }
+    ul, ol { padding-left: 22px; margin: 9px 0 13px; color: #d0d8e9; }
+    li { padding-left: 3px; margin: 6px 0; }
+    .small { color: var(--muted); font-size: 12px; }
+    .callout { border-left: 3px solid var(--accent-2); background: var(--note); padding: 12px 15px; border-radius: 0 11px 11px 0; margin: 14px 0; }
+    .callout p { margin: 0; }
+    .data-table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+    .data-table th, .data-table td { padding: 11px 12px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .data-table th { color: var(--text); background: rgba(255,255,255,.035); font-weight: 750; }
+    .data-table td { color: #d0d8e9; }
+    .consent { background: linear-gradient(145deg, rgba(36,60,90,.55), rgba(18,27,48,.92)); border-color: rgba(116,234,215,.23); }
+    .consent-intro { color: var(--muted); margin-top: 0; }
+    .check-row { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--line); background: rgba(5,10,20,.26); padding: 14px; border-radius: 13px; margin: 11px 0; }
+    .check-row input { flex: 0 0 auto; width: 18px; height: 18px; margin-top: 3px; accent-color: var(--accent-2); }
+    .check-row label { color: #e5ebf8; font-size: 13px; line-height: 1.65; cursor: pointer; }
+    .check-row label span { display: block; color: var(--muted); font-size: 12px; margin-top: 4px; }
+    .optional { display: inline-block; border: 1px solid rgba(116,234,215,.28); border-radius: 999px; padding: 2px 7px; color: var(--accent-2); text-transform: uppercase; letter-spacing: .07em; font-size: 9px; font-weight: 850; margin-left: 5px; vertical-align: 2px; }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .contact-box { border: 1px solid var(--line); border-radius: 13px; padding: 14px; background: rgba(255,255,255,.025); }
+    .contact-box .label { display: block; color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: .12em; font-weight: 800; margin-bottom: 5px; }
+    .contact-box .value { overflow-wrap: anywhere; color: var(--text); font-size: 13px; font-weight: 700; }
+    .todo { border-bottom: 1px dashed rgba(255,196,112,.75); color: #ffdda5; }
+    footer { border-top: 1px solid var(--line); padding: 25px 0 35px; color: var(--muted); font-size: 11px; }
+    .footer-inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: center; }
+    .footer-links { display: flex; flex-wrap: wrap; gap: 14px; }
+    .footer-links a { color: var(--muted); }
+    .back-top { white-space: nowrap; }
+    :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; }
+    @media (max-width: 850px) {
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; gap: 16px; }
+      .toc { position: relative; top: auto; max-height: none; }
+      .toc-links { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 2px; }
+      .toc .toc-divider { display: none; }
+    }
+    @media (max-width: 560px) {
+      .wrap { width: min(var(--content), calc(100% - 22px)); }
+      .topbar-inner { min-height: 65px; }
+      .pill { display: none; }
+      .hero { padding-top: 42px; }
+      .hero-copy { font-size: 15px; }
+      .summary-grid { gap: 8px; }
+      .summary-card { padding: 13px; min-height: 108px; }
+      .section { border-radius: 15px; padding: 18px 16px; }
+      .contact-grid { grid-template-columns: 1fr; }
+      .toc-links { grid-template-columns: 1fr; }
+      .data-table { display: block; overflow-x: auto; }
+    }
+    @media print {
+      :root { --text: #111; --muted: #444; --line: #d5d5d5; }
+      body { background: #fff !important; color: #111; font-size: 11pt; }
+      .topbar, .top-actions, .toc, .summary-grid, .print-button, .back-top { display: none !important; }
+      .wrap { width: 100%; }
+      .hero { padding: 0 0 20px; }
+      h1, h2, h3, p, li, .small, .data-table td, .check-row label { color: #111 !important; }
+      .gradient-text { color: #111; background: none; }
+      .hero-copy, .hero-meta { color: #333; }
+      .layout { display: block; padding: 0; }
+      .section { background: #fff !important; box-shadow: none; border-color: #ccc; break-inside: avoid; padding: 18px; }
+      .notice, .callout, .consent, .contact-box, .check-row { background: #fff !important; color: #111 !important; }
+      .notice strong { color: #111; }
+      footer { color: #444; }
+      a { color: #111; }
+    }
+  </style>
+</head>
+<body>
+  <!--
+    PUBLISHING CHECKLIST (remove or complete before public launch):
+    1) Replace [OPERATOR LEGAL NAME / ENTITY] and [PRIVACY CONTACT EMAIL] below.
+    2) Verify the retention and provider statements match actual ArixAI storage, logs, backups, APIs and vendor settings.
+    3) Connect the invitation/signup flow to server-side consent logging. This static HTML deliberately does not claim to record legal consent.
+    4) Confirm the linked general Terms and Privacy Notice paths exist (or update them).
+    5) Because tester content is personal data and some testers may be minors, obtain appropriate privacy/legal review and use a verified guardian-consent process where required.
+  -->
+  <header class="topbar" id="top">
+    <div class="wrap topbar-inner">
+      <a class="brand" href="/" aria-label="ArixAI home">
+        <span class="brand-mark" aria-hidden="true">A</span>
+        <span><span class="brand-name">ArixAI</span><span class="brand-sub">Early Access Program</span></span>
+      </a>
+      <div class="top-actions">
+        <span class="pill">Program-specific agreement</span>
+        <button class="button print-button" type="button" onclick="window.print()" aria-label="Print or save this agreement as a PDF">↗ &nbsp; Print / Save PDF</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="eyebrow">ArixAI · Tester Program</div>
+      <h1 id="page-title"><span class="gradient-text">Beta Tester</span><br>Terms & Data Consent</h1>
+      <p class="hero-copy">A clear agreement for people helping test and improve ArixAI. It explains your temporary complimentary plan, how test interactions may be used, what we ask from testers, and the choices you keep.</p>
+      <div class="hero-meta">
+        <span>▣ <b>Version 1.0</b></span>
+        <span>◷ Effective date: <b>13 October 2026</b></span>
+        <span>⌁ Applies only to the tester program</span>
+      </div>
+      <div class="summary-grid" aria-label="Agreement highlights">
+        <div class="summary-card"><div class="summary-icon" aria-hidden="true">＋</div><strong>Complimentary access</strong><p>Paid-plan features for the dates stated in your tester invitation, with no automatic charge.</p></div>
+        <div class="summary-card"><div class="summary-icon" aria-hidden="true">◎</div><strong>Clear data use</strong><p>Test chats, uploads, outputs and feedback may be used for evaluation and product improvement.</p></div>
+        <div class="summary-card"><div class="summary-icon" aria-hidden="true">↗</div><strong>You can leave</strong><p>Participation is voluntary. You can stop testing and withdraw future data-use consent.</p></div>
+        <div class="summary-card"><div class="summary-icon" aria-hidden="true">◇</div><strong>Optional model training</strong><p>Direct training or fine-tuning with selected test content has a separate opt-in below.</p></div>
+      </div>
+    </section>
+
+    <div class="layout">
+      <nav class="toc" aria-label="On this page">
+        <div class="toc-title">On this page</div>
+        <div class="toc-links">
+          <a href="#scope">01 · Scope</a>
+          <a href="#eligibility">02 · Eligibility</a>
+          <a href="#access">03 · Complimentary plan</a>
+          <a href="#beta">04 · Experimental service</a>
+          <a href="#data">05 · Data collected</a>
+          <a href="#improvement">06 · Improving ArixAI</a>
+          <a href="#providers">07 · Service providers</a>
+          <a href="#privacy">08 · Privacy choices</a>
+          <a href="#responsibilities">09 · Tester responsibilities</a>
+          <a href="#confidentiality">10 · Confidentiality</a>
+          <a href="#feedback">11 · Feedback & ownership</a>
+          <a href="#security">12 · Security reporting</a>
+          <a href="#ending">13 · Leaving the program</a>
+          <a href="#legal">14 · Legal terms</a>
+          <div class="toc-divider"></div>
+          <a href="#consent">Consent checklist</a>
+          <a href="#contact">Contact</a>
+        </div>
+      </nav>
+
+      <main>
+        <div class="notice" role="note">
+          <strong>Before you join:</strong> Do not upload passwords, payment or banking details, Aadhaar/PAN numbers, private medical records, confidential work, trade secrets, or another person's personal information. Use synthetic or redacted examples wherever possible. AI test content can be reviewed and may be difficult to remove from datasets once legitimately de-identified or used in an opted-in model-training run.
+        </div>
+
+        <section class="section" id="scope">
+          <div class="section-head"><div class="section-num">01</div><h2>What this agreement covers</h2></div>
+          <p>These ArixAI Beta Tester Program Terms (“Agreement”) apply when you accept an invitation to test pre-release, trial, experimental, or specially enabled ArixAI features (“Program”). They are separate from ArixAI's general Terms of Service and Privacy Notice. Those documents continue to apply to your ordinary account and use of ArixAI.</p>
+          <p>This Agreement adds the rules and consent choices that specifically relate to testing. It does not remove rights that cannot legally be waived. If a term conflicts with mandatory law, mandatory law controls. If there is a conflict with the general ArixAI terms, this Agreement controls only for the specific tester-program subject it addresses, unless the law requires otherwise.</p>
+        </section>
+
+        <section class="section" id="eligibility">
+          <div class="section-head"><div class="section-num">02</div><h2>Eligibility and permission</h2></div>
+          <ul>
+            <li>You must have received a genuine ArixAI tester invitation and provide accurate information reasonably needed to administer the Program.</li>
+            <li>You must be legally able to accept this Agreement. If you are under 18, do not join unless your parent or legal guardian has reviewed and agreed through the verified process ArixAI specifies, and ArixAI has confirmed your participation. A simple click by a minor is not a substitute for any legally required verified guardian consent.</li>
+            <li>You must have authority to submit any material you upload. Do not test with another person's account or use data you are not authorised to share.</li>
+            <li>Participation is voluntary. You may decline without being required to explain why; declining this Program does not itself cancel your ordinary ArixAI account.</li>
+          </ul>
+        </section>
+
+        <section class="section" id="access">
+          <div class="section-head"><div class="section-num">03</div><h2>Complimentary paid-plan access</h2></div>
+          <p>In exchange for participating in testing and providing honest feedback, ArixAI may enable paid-plan features for a limited period (“Tester Access”). The specific plan, start date, expiry date, feature limits and any special instructions will be stated in your invitation or confirmed in writing by ArixAI.</p>
+          <ul>
+            <li>Tester Access is complimentary, temporary, non-transferable, and has no cash value. It is not a promise of a permanent subscription, lifetime access, or a future discount.</li>
+            <li>Tester Access expires on the stated end date unless ArixAI confirms an extension in writing. It does not automatically convert to a paid subscription, and ArixAI must not charge you for it merely because the test period ends.</li>
+            <li>You do not need to provide a payment card solely to receive Tester Access. Any later paid purchase must be a separate, clearly presented choice.</li>
+            <li>Normal plan limits, fair-use controls, safety rules and provider availability continue to apply. ArixAI may temporarily limit a feature when reasonably necessary for security, reliability, cost control, or testing.</li>
+            <li>Unless separately agreed in writing, the benefit is access to ArixAI features, not cash compensation, wages, employment, or guaranteed rewards.</li>
+          </ul>
+          <div class="callout"><p><strong>Duration:</strong> Your invitation sets the actual testing period. This Agreement does not invent a default number of free days.</p></div>
+        </section>
+
+        <section class="section" id="beta">
+          <div class="section-head"><div class="section-num">04</div><h2>Experimental features and test risks</h2></div>
+          <p>Tester features may be incomplete, change without notice, produce incorrect or inconsistent results, lose work, experience outages, or be withdrawn. Features and usage limits may differ from the standard paid plan. A feature that works during one test may not remain available.</p>
+          <p>AI responses can be inaccurate, outdated, biased, incomplete, or unsafe. Independently verify important information before relying on it. Do not use a test result as the sole basis for medical, legal, financial, safety-critical, employment, educational assessment, or other high-impact decisions. Keep your own backup of anything important.</p>
+          <p>To the extent permitted by applicable law, pre-release features are provided on an “as available” and experimental basis. Nothing in this section removes a consumer or statutory right that cannot lawfully be excluded.</p>
+        </section>
+
+        <section class="section" id="data">
+          <div class="section-head"><div class="section-num">05</div><h2>What tester data may be processed</h2></div>
+          <p>Depending on the features you use and the information you choose to provide, ArixAI may process the following categories (“Tester Data”):</p>
+          <table class="data-table">
+            <thead><tr><th scope="col">Category</th><th scope="col">Examples</th><th scope="col">Why it is needed</th></tr></thead>
+            <tbody>
+              <tr><td>Account and program data</td><td>Account ID, contact details, plan, invitation status, consent choices</td><td>To manage access, eligibility, communications and your choices</td></tr>
+              <tr><td>Test interactions</td><td>Prompts, conversation context, uploaded files/images, generated responses, edits and ratings</td><td>To reproduce issues, evaluate outputs and improve tested features</td></tr>
+              <tr><td>Feedback and reports</td><td>Bug reports, surveys, suggestions, feature requests and support messages</td><td>To prioritise fixes and understand tester experience</td></tr>
+              <tr><td>Technical and usage data</td><td>Feature events, error traces, latency, model/provider selected, approximate usage and security logs</td><td>To diagnose failures, measure reliability, prevent abuse and control costs</td></tr>
+            </tbody>
+          </table>
+          <p>We aim to use data reasonably relevant to testing, rather than collecting unrelated information. Technical logs may sometimes contain snippets of submitted content if the relevant service or error trace captures them; ArixAI should configure logging to avoid unnecessary prompt or file contents wherever practicable.</p>
+        </section>
+
+        <section class="section" id="improvement">
+          <div class="section-head"><div class="section-num">06</div><h2>How Tester Data may improve ArixAI</h2></div>
+          <p>By joining the Program and giving the specific consent in the enrolment flow, you authorise ArixAI to process Tester Data for these defined purposes:</p>
+          <ul>
+            <li>Evaluate answer quality, usefulness, accuracy, latency, cost, reliability, safety and user experience.</li>
+            <li>Find bugs, reproduce failures, fix code, tune prompts and workflows, improve retrieval and tool use, and design or assess features.</li>
+            <li>Prepare test cases, quality benchmarks, error categories, and aggregated or de-identified analysis to measure improvements over time.</li>
+            <li>Allow appropriately authorised team members or reviewers, subject to confidentiality and access controls, to inspect relevant test material when reasonably necessary for evaluation, debugging, safety review or support.</li>
+          </ul>
+          <p><strong>Model training is a separate choice.</strong> Using content to evaluate or improve a product does not automatically mean it will be used to train or fine-tune a model. ArixAI may use selected Tester Data for direct training or fine-tuning of models under ArixAI's control only if you separately opt in to that use in the consent flow. The optional choice should not be pre-selected.</p>
+          <p>If you opt in to model training, selected content may be filtered, redacted or de-identified where reasonably feasible before use. However, model training can produce model parameters or derived artefacts from which an individual contribution may not be readily identifiable or removable. Please do not opt in—or submit the material—if that possibility is unacceptable to you.</p>
+          <p>ArixAI may retain and use properly aggregated or de-identified statistics for longer-term product analysis where they no longer identify you and are not reasonably usable to identify you. ArixAI should not intentionally publish your identifiable prompts, files, conversations, or account identity without separate permission, unless disclosure is required or permitted by law.</p>
+          <div class="callout"><p><strong>No blanket ownership transfer:</strong> Submitting Tester Data does not transfer ownership of your original content to ArixAI. You grant only the limited processing permission described here and any separate model-training permission you choose to give.</p></div>
+        </section>
+
+        <section class="section" id="providers">
+          <div class="section-head"><div class="section-num">07</div><h2>Hosting, AI vendors and other service providers</h2></div>
+          <p>ArixAI may use external service providers for hosting, storage, security, model inference, web search, OCR, analytics, email or error monitoring. When a feature needs one of these providers, relevant portions of your input or file may be sent to that provider to deliver the feature, maintain security or troubleshoot a problem.</p>
+          <p>Those providers may process data under their own applicable contracts, privacy notices, retention practices and technical settings. ArixAI should select and configure providers responsibly and restrict provider training or secondary use where a suitable control is available. Unless ArixAI expressly confirms it in its current Privacy Notice, do not assume that every provider has zero retention, processes data only in India, or can immediately delete all copies.</p>
+          <p>Some providers or infrastructure may operate outside your state or country. The actual vendors, locations and safeguards must be described in the applicable Privacy Notice or other notice given at enrolment. Do not use the Program for content whose confidentiality requirements prohibit this processing.</p>
+        </section>
+
+        <section class="section" id="privacy">
+          <div class="section-head"><div class="section-num">08</div><h2>Your privacy choices and requests</h2></div>
+          <p>You can stop participating at any time and withdraw consent for future optional processing by using the official contact channel below or the channel through which you were invited. ArixAI should make withdrawal reasonably straightforward and should not require you to justify it.</p>
+          <p>After a valid withdrawal or deletion request, ArixAI will stop the relevant future processing and take reasonable steps to delete or anonymise identifiable Tester Data under its control, subject to applicable law and legitimate security or recordkeeping needs. Some information may remain temporarily in protected backups, security logs, records needed to resolve a dispute or comply with law, or with service providers under their retention rules. Properly de-identified aggregate statistics may not be traceable back to you.</p>
+          <p>Content already used in a model-training run with your separate opt-in may not be individually removable from resulting model parameters. That limitation does not remove any right that applicable law gives you. Contact ArixAI promptly if you want to withdraw before your data is used for a training run.</p>
+          <p>Data is kept only for as long as reasonably necessary for the purposes disclosed in this Agreement, the applicable Privacy Notice, and legal or security needs. The operator must set and follow a concrete retention schedule for raw chats, uploads, logs, backups and provider copies; do not publish a retention promise that the actual systems cannot meet.</p>
+          <p>Depending on applicable law, you may have rights to access information about your personal data, correct it, request deletion, withdraw consent, or raise a complaint. Requests should be sent to the privacy contact listed below. The applicable Privacy Notice explains the full process.</p>
+        </section>
+
+        <section class="section" id="responsibilities">
+          <div class="section-head"><div class="section-num">09</div><h2>Your responsibilities as a tester</h2></div>
+          <ul>
+            <li>Use ArixAI lawfully and honestly, and report actual results—including failures. Do not invent test outcomes or submit intentionally misleading feedback.</li>
+            <li>Use synthetic or redacted examples. Do not submit passwords, one-time passcodes, API keys, financial credentials, government identity numbers, sensitive personal data, private health information, or confidential information belonging to another person or organisation.</li>
+            <li>Do not share your account, tokens, tester invitation, or non-public access with another person unless ArixAI authorises it.</li>
+            <li>Do not attempt unauthorised access, steal or expose other users' data, bypass security or usage controls, interfere with the service, overload systems, or test production systems beyond the scope ArixAI has explicitly authorised.</li>
+            <li>Respect intellectual-property rights and obtain permission before uploading third-party materials. Do not use the Program to create unlawful, abusive, deceptive or harmful material.</li>
+            <li>Tell ArixAI if you believe your account or test content has been exposed, or if you accidentally submitted sensitive information.</li>
+          </ul>
+        </section>
+
+        <section class="section" id="confidentiality">
+          <div class="section-head"><div class="section-num">10</div><h2>Confidentiality and public comments</h2></div>
+          <p>Some invitations may expose non-public features, interface designs, roadmaps, test credentials, internal documentation or unreleased results. Unless ArixAI has made them public or has given permission, keep such non-public material confidential and use it only for the Program. Report security issues privately through the agreed channel rather than publishing exploit details or other users' data.</p>
+          <p>This section does not prevent you from making truthful statements about your own experience with publicly available features, reporting suspected unlawful conduct to an appropriate authority, obtaining independent advice, or exercising a legal right that cannot be restricted by contract.</p>
+        </section>
+
+        <section class="section" id="feedback">
+          <div class="section-head"><div class="section-num">11</div><h2>Feedback, suggestions and intellectual property</h2></div>
+          <p>You retain rights you already own in your original content, subject to the limited permissions you give for processing under this Agreement. You must have the right to provide any material you submit.</p>
+          <p>If you voluntarily send suggestions, ideas, ratings or recommendations specifically about ArixAI (“Feedback”), you grant ArixAI a worldwide, non-exclusive, royalty-free right to use, reproduce, adapt and implement that Feedback to develop, test, maintain and improve ArixAI, without owing you payment or attribution. This does not grant ArixAI ownership of your unrelated work or permission to disclose your identity publicly.</p>
+          <p>ArixAI retains its rights in its existing services, code, designs, systems, trademarks and independently developed improvements, subject to your rights and applicable law. Nothing in this clause grants ArixAI a licence to use your submitted conversations for direct model training unless you separately opt in as described in Section 06.</p>
+        </section>
+
+        <section class="section" id="security">
+          <div class="section-head"><div class="section-num">12</div><h2>Security and responsible disclosure</h2></div>
+          <p>ArixAI should use reasonable technical and organisational safeguards appropriate to the nature of the data and the stage of the service, but no internet service can promise absolute security. You are responsible for safeguarding your own device, account and credentials.</p>
+          <p>If you discover a vulnerability, stop testing the affected path once you have enough evidence to report it safely. Do not access, alter, retain or disclose another person's data, and do not exploit the issue further without written authorisation. Send a concise report using the privacy/support contact or the private reporting channel provided in your invitation.</p>
+        </section>
+
+        <section class="section" id="ending">
+          <div class="section-head"><div class="section-num">13</div><h2>Withdrawal, suspension and end of access</h2></div>
+          <p>You may leave the Program at any time. ArixAI may end or pause your Tester Access or the Program when reasonably necessary for security, abuse prevention, technical issues, a change in product direction, or completion of the test. Where practical, ArixAI will provide notice, especially when access ends earlier than the invitation stated.</p>
+          <p>When the stated test period ends or participation stops, complimentary features may be disabled. This does not by itself create a payment obligation. Provisions that reasonably need to continue—such as confidentiality for non-public information, rights in Feedback already granted, lawful recordkeeping, and the handling of already de-identified data—may continue to the extent permitted by law.</p>
+        </section>
+
+        <section class="section" id="legal">
+          <div class="section-head"><div class="section-num">14</div><h2>Legal terms and changes</h2></div>
+          <p><strong>No employment or endorsement.</strong> Participation does not make you an employee, agent, partner or spokesperson for ArixAI. You must not claim that ArixAI endorses you or your views unless separately authorised.</p>
+          <p><strong>Governing terms.</strong> The governing-law and dispute-resolution provisions in the applicable general ArixAI Terms continue to apply to the extent permitted by law. Mandatory rights under applicable law remain unaffected.</p>
+          <p><strong>Updates.</strong> ArixAI may update this Agreement for a future test cycle. If a change materially expands how already-collected Tester Data may be used, ArixAI should give notice and obtain any additional consent required before applying that expanded use. The version and consent choices shown at the time you join should be retained in the enrolment record.</p>
+          <p><strong>Severability.</strong> If one part of this Agreement is unenforceable, the remaining parts continue to the extent they can lawfully operate. ArixAI's failure to enforce a provision once does not automatically waive it later.</p>
+        </section>
+
+        <section class="section consent" id="consent">
+          <div class="section-head"><div class="section-num">✓</div><h2>Tester consent checklist</h2></div>
+          <p class="consent-intro">Read these choices carefully. The required data-improvement consent explains the main reason for collecting tester interactions. Direct model training is a separate, optional permission and should not be pre-selected when this page is used in an enrolment flow.</p>
+          <div class="check-row">
+            <input id="ack-terms" type="checkbox" autocomplete="off">
+            <label for="ack-terms"><strong>I have read and understood the ArixAI Beta Tester Program Terms.</strong><span>I understand the plan is temporary, the service is experimental, participation is voluntary, and I should not upload sensitive or confidential information.</span></label>
+          </div>
+          <div class="check-row">
+            <input id="ack-improvement" type="checkbox" autocomplete="off">
+            <label for="ack-improvement"><strong>I consent to the processing of my tester interactions and feedback for evaluation, debugging, safety, and ArixAI product improvement as described in Section 06.</strong><span>This may involve authorised human review and configured service providers as described in this Agreement and the applicable Privacy Notice. This consent is specific to the tester program.</span></label>
+          </div>
+          <div class="check-row">
+            <input id="ack-training" type="checkbox" autocomplete="off">
+            <label for="ack-training"><strong>I separately consent to selected, filtered or de-identified tester content being used to train or fine-tune models under ArixAI's control.</strong><span>This is optional. I understand that material used in a training run may not be individually removable from resulting model parameters. Leaving this unchecked must not be treated as consent to direct model training.</span><span class="optional">Optional</span></label>
+          </div>
+          <div class="callout"><p><strong>Important technical note:</strong> These checkboxes are acknowledgements on this document page only; this static HTML does not send, save or prove your consent. Accept the Agreement through the official invitation/enrolment flow. Before launch, ArixAI must record the tester/account ID, agreement version, timestamp, the required improvement consent, and the optional training choice on the server. If the Program accepts minors, it must also use and record an appropriate verified parent/guardian consent process where required.</p></div>
+          <p class="small">The optional training choice can be changed for future use by contacting ArixAI. Such a change may not undo a training run already completed, as explained above.</p>
+        </section>
+
+        <section class="section" id="contact">
+          <div class="section-head"><div class="section-num">✉</div><h2>Who operates the Program and how to contact us</h2></div>
+          <p>Contact the operator about this Agreement, a privacy request, withdrawal of consent, suspected exposure, or a security report. Before publication, the operator must replace the highlighted setup fields with accurate details and ensure testers can actually reach that contact.</p>
+          <div class="contact-grid">
+            <div class="contact-box"><span class="label">Program operator</span><span class="value todo">[OPERATOR LEGAL NAME / ENTITY]</span></div>
+            <div class="contact-box"><span class="label">Privacy and tester support</span><span class="value todo">[PRIVACY CONTACT EMAIL]</span></div>
+          </div>
+          <p class="small">Version 1.0 · Effective 13 October 2026 · ArixAI Beta Tester Program</p>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <footer>
+    <div class="wrap footer-inner">
+      <span>© <span id="year">2026</span> ArixAI · Beta Tester Program</span>
+      <div class="footer-links">
+        <a href="/terms.html">General Terms</a>
+        <a href="/privacy.html">Privacy Notice</a>
+        <a href="#top" class="back-top">Back to top ↑</a>
+      </div>
+    </div>
+  </footer>
+  <script>
+    // Display the current year in the footer. This does not collect or transmit data.
+    document.getElementById('year').textContent = String(new Date().getFullYear());
+  </script>
+</body>
+</html>
