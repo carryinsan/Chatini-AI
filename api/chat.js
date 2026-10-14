@@ -17,8 +17,8 @@ const ARIX_CRAWLER_HOST = (process.env.ARIX_CRAWLER_URL || 'https://arix-web-cra
 const ARIX_SEARCH_FALLBACK = process.env.ARIX_SEARCH_FALLBACK_URL || 'https://web-crawler-pink.vercel.app/api/crawler';
 const MISTRAL_KEY = process.env.MISTRAL_API_KEY ? process.env.MISTRAL_API_KEY.replace(/[\r\n\s]/g, '') : null;
 const LLM7_API_KEY = process.env.LLM7_API_KEY ? process.env.LLM7_API_KEY.replace(/[\r\n\s]/g, '') : null;
-const GEMINI_DEFAULT_MODEL = process.env.ARIX_GEMINI_MODEL || 'gemini-3.8-flash';
-const GEMINI_ORACLE_MODEL = process.env.ARIX_ORACLE_GEMINI_MODEL || 'gemini-4-argon';
+const GEMINI_DEFAULT_MODEL = process.env.ARIX_GEMINI_MODEL || 'gemini-3.5-flash';
+const GEMINI_ORACLE_MODEL = process.env.ARIX_ORACLE_GEMINI_MODEL || 'gemini-3.5-flash';
 const GEMINI_TASK_MODEL = process.env.ARIX_TASK_GEMINI_MODEL || GEMINI_DEFAULT_MODEL;
 
 const GROQ_KEYS = [
