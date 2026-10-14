@@ -390,7 +390,7 @@ function getGptConfig() {
   ];
   const key = getRandomKey(groqKeys);
   const baseUrl = (env("PARALLAX_GPT_BASE_URL") || "https://api.groq.com/openai/v1").replace(/\/+$/, "");
-  const model = env("PARALLAX_GPT_MODEL", "llama-3.3-70b-versatile");
+  const model = env("PARALLAX_GPT_MODEL", "openai/gpt-oss-20b");
   return { key, baseUrl, model };
 }
 
