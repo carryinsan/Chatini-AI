@@ -870,7 +870,7 @@ if (taskMode === true) {
                     try {
                       const encoded = this.parentElement.dataset.arixDownload;
                       const filename = this.parentElement.dataset.arixFilename;
-                      const mime = this.parentElement.dataset.arixMime || 'application/octet-stream';
+                      const mime = this.parentElement.dataset.arixMime;
                       const binary = atob(encoded);
                       const bytes = new Uint8Array(binary.length);
                       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
