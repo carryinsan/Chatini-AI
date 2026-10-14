@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ArixAI Workspace</title>
+<link rel="icon" type="image/png" href="https://lexis-ai-chatini.vercel.app/favicon.png?v=2">
 
 <!-- External Scripts & Libraries -->
 <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
@@ -226,6 +227,105 @@ body {
 .prose strong { color: #111827 !important; }
 .prose p, .prose ul, .prose ol { margin-bottom: 0.75em; color: #374151; }
 .terminal-text { font-family: 'Courier New', Courier, monospace; }
+
+/* Responsive Wide & Horizontally Scrollable Chat Tables */
+.prose table {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-collapse: collapse !important;
+    margin: 1.25rem 0 !important;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.75rem;
+}
+.prose th,
+.prose td {
+    word-break: normal !important;
+    overflow-wrap: normal !important;
+    white-space: normal;
+    min-width: 150px;
+    padding: 10px 14px !important;
+    border: 1px solid #e5e7eb !important;
+    vertical-align: top;
+    text-align: left;
+}
+.prose th {
+    background-color: #f8fafc !important;
+    color: #0f172a !important;
+    font-weight: 700 !important;
+    white-space: nowrap !important;
+}
+.prose tr:hover td {
+    background-color: #f9fafb;
+}
+
+/* Inline Claim-Level Citations & Popover */
+.cite-badge-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: 3px;
+    vertical-align: baseline;
+    position: relative;
+}
+.cite-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #4f46e5;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+    text-decoration: none !important;
+}
+.cite-pill:hover {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #3730a3;
+    transform: translateY(-1px);
+}
+.cite-popover {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 290px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    padding: 10px 12px;
+    z-index: 50;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    text-align: left;
+}
+.cite-badge-group:hover .cite-popover,
+.cite-badge-group:focus-within .cite-popover {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(-2px);
+}
+.cite-popover::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #ffffff transparent transparent transparent;
+}
 
 /* Animations & Special Elements */
 .animate-wave { transform-origin: 70% 70%; display: inline-block; }
@@ -842,9 +942,9 @@ body {
     <!-- Header / Logo -->
     <div class="p-5 flex items-center justify-between">
         <div class="flex items-center gap-3">
-            <div class="w-8 h-8 rounded-lg bg-theme-50 flex items-center justify-center transition-colors duration-500">
-                <i class="ph-fill ph-hexagon text-theme-600 text-xl transition-colors duration-500"></i>
-            </div>
+            <div class="w-8 h-8 rounded-lg bg-theme-50 flex items-center justify-center overflow-hidden transition-colors duration-500">
+    <img src="https://lexis-ai-chatini.vercel.app/favicon.png?v=2" alt="ArixAI Logo" class="w-6 h-6 object-contain" />
+</div>
             <div>
                 <h1 class="font-semibold text-gray-900 text-lg leading-tight">ArixAI</h1>
                 <p class="text-[11px] text-gray-400 font-medium" id="sidebar-username-display">Anonymous</p>
@@ -1357,6 +1457,7 @@ const CONFIG = {
         spark: { id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-500', bg: 'bg-amber-50', glow: 'bg-amber-100' },
         flux: { id: 'flux', name: 'Flux 1.5', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100' },
         oracle: { id: 'oracle', name: 'Oracle 2.0', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' },
+        parallax: { id: 'parallax', name: 'Parallax Ω', icon: 'ph-shield-check', color: 'text-purple-600', bg: 'bg-purple-50', glow: 'bg-purple-200' },
         sparker: { id: 'sparker', name: 'SPARKer', icon: 'ph-cpu', color: 'text-emerald-500', bg: 'bg-emerald-50', glow: 'bg-emerald-100', mlcId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC' },
         FLiX: { id: 'FLiX', name: 'FLiX', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' }
     }
@@ -1534,6 +1635,24 @@ function changeNickname() {
 // Global Application State Variables
 let activeModelId = localStorage.getItem('Arix_active_model') || 'spark';
 let isProcessing = false;
+let activeAbortController = null;
+let activeStreamReader = null;
+
+function stopGeneration() {
+    if (!isProcessing) return;
+    if (activeAbortController) {
+        try { activeAbortController.abort(); } catch(e) {}
+    }
+    if (activeStreamReader) {
+        try { activeStreamReader.cancel(); } catch(e) {}
+    }
+    isProcessing = false;
+    document.querySelectorAll('.typing-cursor').forEach(el => el.classList.remove('typing-cursor'));
+    if (els.indicator) els.indicator.classList.add('hidden');
+    updateUIState();
+    showToast("Generation stopped");
+}
+
 let isWorkspaceMode = false;
 let isDeepResearchOn = false;
 let isPresentationMode = false;
@@ -1598,6 +1717,17 @@ const els = {
     videoIcon: document.getElementById('video-icon')
 };
 
+function removeUrlParameter(parameterName) {
+    try {
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete(parameterName);
+        const nextPath = nextUrl.pathname + (nextUrl.search ? nextUrl.search : '') + nextUrl.hash;
+        window.history.replaceState({}, document.title, nextPath);
+    } catch (error) {
+        console.warn('[ArixAI] Could not update shared-chat URL:', error);
+    }
+}
+
 window.onload = async () => {
     // --- NEW: Register Background Sentinel Agent ---
     if ('serviceWorker' in navigator) {
@@ -1607,14 +1737,25 @@ window.onload = async () => {
     updateUIState(); 
     refreshExtSelectors();
     checkNickname();
-    if(chats.length > 0) loadChat(chats[0].id); else createNewChat();
-    renderHistoryList(); // Initialize chat history in sidebar on load
-    getDeviceId();
+
+    // Resolve deep links before opening the default conversation. This prevents
+    // an asynchronous default-chat/cloud load from replacing a shared chat after
+    // its messages have already rendered.
     const urlParams = new URLSearchParams(window.location.search);
     const shareId = urlParams.get('share');
     const roomId = urlParams.get('room');
     const fullChatId = urlParams.get('chat');
     const projectId = urlParams.get('project');
+    const isDeepLink = !!(shareId || roomId || fullChatId || projectId);
+    if (!isDeepLink) {
+        if (chats.length > 0) await loadChat(chats[0].id);
+        else createNewChat();
+    } else {
+        messages = [];
+        renderMessagesToUI();
+    }
+    renderHistoryList(); // Initialize chat history in sidebar on load
+    getDeviceId();
     
     if (projectId) {
         // --- NEW: Load Shared Custom Project & Import all its chats ---
@@ -1659,66 +1800,164 @@ window.onload = async () => {
     } else if (roomId) {
         joinMultiplayerRoom(roomId);
     } else if (fullChatId) {
-        // --- NEW: Load Shared Chat from Supabase Branch (Password Protected) ---
+        // Load a shared chat with a stable local/cloud ID. Keep the source URL
+        // until a cloud write is confirmed so a refresh can recover from the
+        // share database if local or cloud persistence is unavailable.
+        const sharedLocalId = ('shared_' + String(fullChatId)).slice(0, 150);
         try {
-            showToast("Loading Shared Branch...");
-            let pwd = null;
-            let res = await fetch(`/api/chatshare?id=${fullChatId}`);
+            showToast("Loading Shared Chat...");
+
+            let existingShared = chats.find(c =>
+                String(c.id) === sharedLocalId || String(c.shareSourceId || '') === String(fullChatId)
+            );
+
+            // Reuse the already-imported copy on reload instead of replacing it
+            // with the original share snapshot or creating another blank branch.
+            if (existingShared) {
+                currentChatId = String(existingShared.id);
+                messages = Array.isArray(existingShared.messages) ? existingShared.messages : [];
+                currentChatExtId = existingShared.extId || null;
+                if (els.extSelector) els.extSelector.value = currentChatExtId || '';
+
+                // If Cloud Sync was previously selected, try the database first.
+                if (localStorage.getItem('Arix_storage_mode') === 'cloud' && typeof window.loadCloudChat === 'function') {
+                    try { await window.loadCloudChat(currentChatId, { background: messages.length > 0 }); } catch (_) {}
+                    existingShared = chats.find(c => String(c.id) === String(currentChatId)) || existingShared;
+                    messages = Array.isArray(existingShared.messages) ? existingShared.messages : messages;
+                }
+
+                if (messages.length > 0) {
+                    existingShared.messages = messages;
+                    renderMessagesToUI();
+                    renderHistoryList();
+                    let persisted = false;
+                    try {
+                        if (window.ArixStorage && typeof window.ArixStorage.syncCurrentChat === 'function') {
+                            persisted = (await window.ArixStorage.syncCurrentChat()) === true;
+                        }
+                    } catch (_) {}
+                    if (persisted) removeUrlParameter('chat');
+                    else showToast('Shared chat restored from its saved copy.');
+                    return;
+                }
+            }
+
+            let res = await fetch(`/api/chatshare?id=${encodeURIComponent(fullChatId)}`, { cache: 'no-store' });
             let data = await res.json();
-            // Password Prompt Challenge
             if (!data.success && data.isPasswordProtected) {
-                pwd = prompt("This shared chat is password protected.\n\nEnter Password:");
+                const pwd = prompt("This shared chat is password protected.\n\nEnter Password:");
                 if (pwd) {
-                    res = await fetch(`/api/chatshare?id=${fullChatId}`, {
-                        headers: { 'x-chat-password': pwd.trim() }
+                    res = await fetch(`/api/chatshare?id=${encodeURIComponent(fullChatId)}`, {
+                        headers: { 'x-chat-password': pwd.trim() },
+                        cache: 'no-store'
                     });
                     data = await res.json();
                 }
             }
-            
-            if (data.success && data.chat) {
-                currentChatId = Date.now().toString(); 
-                messages = data.chat.messages || [];
-                messages.push({ role: 'assistant', content: '> *You have successfully cloned a shared chat branch. Your new messages here remain strictly private.*', id: 'sys_branch', modelId: 'oracle' });
-                
-                const importedTitle = data.chat.title || "Shared Conversation";
-                const clonedChat = {
-                    id: currentChatId,
-                    title: importedTitle,
-                    messages: messages,
-                    extId: null,
-                    date: Date.now(),
-                    createdAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString(),
-                    pinned: false,
-                    _cloudLoaded: true
-                };
 
-                // Add to chats list immediately so bootstrap merge will never purge it
-                const existingIdx = chats.findIndex(c => c.id === currentChatId);
-                if (existingIdx > -1) chats[existingIdx] = clonedChat;
-                else chats.unshift(clonedChat);
-
-                try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch(e){}
-                
-                renderMessagesToUI();
-                renderHistoryList();
-                
-                // Upload this newly opened shared chat straight to Supabase database!
-                if (typeof syncCurrentChat === 'function') {
-                    syncCurrentChat();
-                } else if (window.ArixStorage && window.ArixStorage.syncCurrentChat) {
-                    window.ArixStorage.syncCurrentChat();
-                }
-
-                // Strip the URL parameter so refreshing keeps you on the now-saved chat
-                window.history.replaceState({}, document.title, window.location.pathname);
-                showToast("Chat Branch imported & Saved to Database!");
-            } else {
-                showToast("Shared Chat Expired or Invalid");
-                createNewChat();
+            if (!data || !data.success || !data.chat || !Array.isArray(data.chat.messages)) {
+                showToast("Shared chat could not be loaded. The link has been kept so you can retry.");
+                return;
             }
-        } catch(e) { createNewChat(); }
+
+            // Normalize message IDs and populate global source memory so shared chats keep them
+            window.MSG_SOURCES = window.MSG_SOURCES || {};
+            messages = data.chat.messages.map((m, index) => {
+                const normId = String(m && m.id ? m.id : `shared_${String(fullChatId)}_${index}`);
+                const srcList = Array.isArray(m?.sources) ? m.sources : ((m?.extra && Array.isArray(m.extra.sources)) ? m.extra.sources : []);
+                if (srcList.length > 0) {
+                    window.MSG_SOURCES[normId] = srcList;
+                }
+                return {
+                    ...m,
+                    id: normId,
+                    role: String(m && m.role ? m.role : 'assistant'),
+                    content: String(m && m.content != null ? m.content : ''),
+                    sources: srcList,
+                    attachmentsMeta: Array.isArray(m && m.attachmentsMeta) ? m.attachmentsMeta : (Array.isArray(m && m.attachments) ? m.attachments.map(a => ({ name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null })) : [])
+                };
+            });
+            // Normalize message IDs and populate global source memory so shared chats keep them
+            window.MSG_SOURCES = window.MSG_SOURCES || {};
+            messages = data.chat.messages.map((m, index) => {
+                const normId = String(m && m.id ? m.id : `shared_${String(fullChatId)}_${index}`);
+                const srcList = Array.isArray(m?.sources) ? m.sources : ((m?.extra && Array.isArray(m.extra.sources)) ? m.extra.sources : []);
+                if (srcList.length > 0) {
+                    window.MSG_SOURCES[normId] = srcList;
+                }
+                return {
+                    ...m,
+                    id: normId,
+                    role: String(m && m.role ? m.role : 'assistant'),
+                    content: String(m && m.content != null ? m.content : ''),
+                    sources: srcList,
+                    attachmentsMeta: Array.isArray(m && m.attachmentsMeta) ? m.attachmentsMeta : (Array.isArray(m && m.attachments) ? m.attachments.map(a => ({ name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null })) : [])
+                };
+            });
+            if (!messages.some(m => String(m.id) === 'sys_branch')) {
+                messages.push({ role: 'assistant', content: '> *You have opened a shared chat branch. Messages added here are saved separately from the original shared snapshot.*', id: 'sys_branch', modelId: 'oracle' });
+            }
+
+            const now = new Date().toISOString();
+            const clonedChat = {
+                id: sharedLocalId,
+                shareSourceId: String(fullChatId),
+                title: String(data.chat.title || 'Shared Conversation'),
+                messages: messages,
+                extId: null,
+                date: Date.now(),
+                createdAt: existingShared?.createdAt || now,
+                updatedAt: now,
+                pinned: !!existingShared?.pinned,
+                // Only the storage API may set this flag; the share endpoint is not
+                // the user's private cloud-chat store.
+                _cloudLoaded: false
+            };
+
+            const existingIdx = chats.findIndex(c => String(c.id) === sharedLocalId);
+            if (existingIdx > -1) chats[existingIdx] = clonedChat;
+            else chats.unshift(clonedChat);
+            currentChatId = sharedLocalId;
+            currentChatExtId = null;
+
+            // Persist locally first. If quota/privacy/network prevents a write,
+            // retain the query parameter so the share database remains a recovery path.
+            let localSaved = false;
+            try {
+                localStorage.setItem('chatini_sessions', JSON.stringify(chats));
+                const verify = JSON.parse(localStorage.getItem('chatini_sessions') || '[]');
+                localSaved = verify.some(c => String(c.id) === sharedLocalId && Array.isArray(c.messages) && c.messages.length === messages.length);
+            } catch (error) {
+                console.warn('[ArixAI] Shared chat local backup failed:', error);
+            }
+
+            renderMessagesToUI();
+            renderHistoryList();
+
+            // Await the database write rather than navigating away optimistically.
+            let persisted = false;
+            try {
+                if (window.ArixStorage && typeof window.ArixStorage.syncCurrentChat === 'function') {
+                    persisted = (await window.ArixStorage.syncCurrentChat()) === true;
+                }
+            } catch (error) {
+                console.warn('[ArixAI] Shared chat cloud write failed:', error);
+            }
+
+            if (persisted) {
+                clonedChat._cloudLoaded = true;
+                try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (_) {}
+                removeUrlParameter('chat');
+                showToast('Shared chat saved to your cloud storage.');
+            } else if (localSaved) {
+                showToast('Shared chat loaded and saved on this device. Link retained for recovery.');
+            } else {
+                showToast('Shared chat is visible; the original link is retained for recovery.');
+            }
+        } catch (e) {
+            console.error('[ArixAI] Shared chat load failed:', e);
+            showToast('Could not load the shared chat. The link has been kept so you can retry.');
+        }
     } else if (shareId) {
         try {
             const res = await fetch(`/api/share?id=${shareId}`);
@@ -2399,7 +2638,7 @@ function drawMath(canvas, ctx, payload, state) {
 
 function renderSlideHTML(s) {
     let html = `<div class="absolute top-3 left-3 text-[10px] bg-white/80 backdrop-blur-md px-2 py-1 rounded-md text-gray-600 font-medium z-20 border border-gray-200 shadow-sm">Slide ${s.slideNumber}</div>`;
-    const imgHtml = s.imageUrl ? `<img src="${s.imageUrl}" class="absolute inset-0 w-full h-full object-cover z-0" crossorigin="anonymous" onerror="this.style.display='none'" />` : "";
+    const imgHtml = s.imageUrl ? `<img src="${s.imageUrl}" class="absolute inset-0 w-full h-full object-contain p-2 z-0" crossorigin="anonymous" onerror="this.style.display='none'" />` : "";
     
     if (s.layout === 'title_slide') {
         html += imgHtml + `<div class="absolute inset-0 bg-black/50 z-10 flex flex-col justify-center items-center text-center p-8">
@@ -2413,7 +2652,7 @@ function renderSlideHTML(s) {
                 <h3 class="text-base sm:text-lg text-gray-500 mb-6 font-medium">${s.subtitle || ""}</h3>
                 <ul class="list-disc pl-5 space-y-2 sm:space-y-3 text-gray-700 text-sm sm:text-base font-medium">${(s.bullets||[]).map(b => `<li>${b}</li>`).join("")}</ul>
             </div>
-            <div class="w-1/2 relative bg-gray-100 border-l border-gray-200">${imgHtml}</div>
+            <div class="w-1/2 relative bg-slate-950/5 border-l border-gray-200 flex items-center justify-center">${imgHtml}</div>
         </div>`;
     } else if (s.layout === 'full_image_quote') {
         html += imgHtml + `<div class="absolute inset-x-8 sm:inset-x-16 bottom-8 sm:bottom-12 bg-white/90 backdrop-blur-xl p-6 sm:p-8 rounded-2xl z-10 text-center border border-gray-200 shadow-2xl">
@@ -2909,7 +3148,7 @@ async function downloadPPTX(artifactId) {
                 if(s.subtitle) slide.addText(s.subtitle, {x: 0.5, y: '55%', w: '90%', fontSize: 24, color: 'F0F0F0', align: 'center' });
             }
             else if (s.layout === 'split_image_text') {
-                if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: '50%', y: 0, w: '50%', h: '100%', sizing: { type: 'cover' } });
+                if(s.imageUrl) slide.addImage({ path: s.imageUrl, x: '50%', y: 0, w: '50%', h: '100%', sizing: { type: 'contain' } });
                 slide.addShape(pptx.ShapeType.rect, {x: 0, y: 0, w: '50%', h: '100%', fill: { color: 'FFFFFF' } });
                 slide.addText(s.title, {x: 0.5, y: 1.0, w: '40%', fontSize: 32, bold: true, color: '363636' });
                 if(s.subtitle) slide.addText(s.subtitle, {x: 0.5, y: 2.0, w: '40%', fontSize: 18, color: '666666' });
@@ -3193,6 +3432,8 @@ async function shareFullChat() {
         return;
     }
 
+    // Ensure the latest completed turn is part of the exact snapshot sent to the share API.
+    try { saveCurrentChat(); } catch (_) {}
     showToast("Generating Share Link...");
 
     const btn = document.querySelector('button[onclick="shareFullChat()"]');
@@ -3329,14 +3570,21 @@ function saveCurrentChat() {
     const firstUserMsg = messages.find(m => m.role === 'user'); 
     if (firstUserMsg) title = firstUserMsg.content.substring(0, 35) + (firstUserMsg.content.length > 35 ? '...' : "");
     
-    const safeMessages = messages.map(m => ({ 
-        id: m.id, 
-        role: m.role, 
-        content: m.content,
-        modelId: m.modelId, 
-        sources: m.sources || (window.MSG_SOURCES && window.MSG_SOURCES[m.id] ? window.MSG_SOURCES[m.id] : undefined),
-        attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) 
-    }));
+    const safeMessages = messages.map(m => {
+        const boundSources = (Array.isArray(m.sources) && m.sources.length) 
+            ? m.sources 
+            : ((window.MSG_SOURCES && Array.isArray(window.MSG_SOURCES[m.id]) && window.MSG_SOURCES[m.id].length) 
+                ? window.MSG_SOURCES[m.id] 
+                : undefined);
+        return {
+            id: m.id, 
+            role: m.role, 
+            content: m.content,
+            modelId: m.modelId, 
+            sources: boundSources,
+            attachmentsMeta: m.attachments ? m.attachments.map(a => ({name: a.name, type: a.type})) : (m.attachmentsMeta || []) 
+        };
+    });
     
     const chatData = { 
             id: currentChatId, 
@@ -3344,7 +3592,9 @@ function saveCurrentChat() {
             messages: safeMessages, 
             extId: currentChatExtId, 
             date: Date.now(),
-            pinned: chatIndex > -1 ? chats[chatIndex].pinned : false
+            pinned: chatIndex > -1 ? chats[chatIndex].pinned : false,
+            shareSourceId: chatIndex > -1 ? (chats[chatIndex].shareSourceId || null) : null,
+            _cloudLoaded: chatIndex > -1 ? !!chats[chatIndex]._cloudLoaded : false
         };
     
     if (chatIndex > -1) chats[chatIndex] = chatData; 
@@ -3534,6 +3784,7 @@ function updateUIState() {
     if (activeModelId === 'oracle') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-theme-400`;
     else if (activeModelId === 'spark') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-amber-400`;
     else if (activeModelId === 'flux') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-20 transition duration-1000 -z-10 bg-cyan-400`;
+    else if (activeModelId === 'parallax') els.inputGlow.className = `absolute -inset-1 rounded-3xl blur-lg opacity-25 transition duration-1000 -z-10 bg-purple-500`;
 
     if (isImageMode || isVideoMode) {
     const visualControls = document.getElementById('visual-controls');
@@ -3579,12 +3830,18 @@ function updateUIState() {
     els.input.placeholder = `Message ArixAI (${model.name})...`;
 }
     
-    if ((els.input.value.trim() || pendingFiles.length > 0) && !isProcessing) { 
+    if (isProcessing) { 
+        els.sendBtn.className = 'bg-gray-900 hover:bg-black text-white p-2.5 sm:p-3 rounded-full shadow-md transition-all duration-300 flex items-center justify-center cursor-pointer transform hover:scale-105';
+        els.sendBtn.title = "Stop generation";
+        els.sendIcon.className = 'ph-fill ph-stop text-base transition-transform'; 
+    } else if (els.input.value.trim() || pendingFiles.length > 0) { 
         els.sendBtn.className = 'bg-theme-600 text-white p-2.5 sm:p-3 rounded-full shadow-md shadow-theme-200 transition-all duration-300 flex items-center justify-center cursor-pointer hover:bg-theme-700 transform hover:scale-105';
-        els.sendIcon.classList.add('translate-x-[1px]', '-translate-y-[1px]'); 
+        els.sendBtn.title = "Send message";
+        els.sendIcon.className = 'ph-bold ph-paper-plane-right text-lg transition-transform translate-x-[1px] -translate-y-[1px]'; 
     } else { 
         els.sendBtn.className = 'bg-gray-100 text-gray-400 p-2.5 sm:p-3 rounded-full shadow-none transition-all duration-300 flex items-center justify-center cursor-not-allowed';
-        els.sendIcon.classList.remove('translate-x-[1px]', '-translate-y-[1px]'); 
+        els.sendBtn.title = "";
+        els.sendIcon.className = 'ph-bold ph-paper-plane-right text-lg transition-transform'; 
     }
 }
 
@@ -3785,7 +4042,7 @@ ${marked.parse(unclosedContent.trim())}
     
     
     // ====================================================================
-    // ARIX ALGORITHMIC SOURCE DEDUPLICATION & SCRUBBER ENGINE
+    // ARIX ALGORITHMIC SOURCE DEDUPLICATION & CLAIM CITATION ENGINE
     // ====================================================================
     window.MSG_SOURCES = window.MSG_SOURCES || {};
 
@@ -3807,7 +4064,11 @@ ${marked.parse(unclosedContent.trim())}
 
     const sourcesMap = new Map();
 
-    // 1. Ingest App/Crawler-level sources streamed from backend
+    // Define localized safe escaping helpers for citation attributes and tooltips
+    const safeEscHtml = (val) => String(val ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const safeEscAttr = (val) => safeEscHtml(val).replace(/\n/g, '&#10;');
+
+    // Ingest App/Crawler-level sources streamed from backend
     if (msgId && Array.isArray(window.MSG_SOURCES[msgId])) {
         window.MSG_SOURCES[msgId].forEach(s => {
             const u = cleanSafeUrl(s.url || s.link);
@@ -3816,17 +4077,19 @@ ${marked.parse(unclosedContent.trim())}
                 sourcesMap.set(u.toLowerCase(), {
                     url: u,
                     title: s.title && s.title !== u ? s.title : domain,
-                    domain: domain
+                    domain: domain,
+                    snippet: s.snippet || s.text || s.excerpt || null,
+                    timestamp: s.timestamp || s.date || null
                 });
             }
         });
     }
 
     // 2. Extract and remove all <sources> tags (JSON or raw URLs)
-    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(?:<\/sources>|$)/gi, (match, rawInner) => {
+    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(?:<\/sources>|\$)/gi, (match, rawInner) => {
         if (rawInner) {
             try {
-                const cleaned = rawInner.replace(/^```json/gi, '').replace(/```$/g, '').trim();
+                const cleaned = rawInner.replace(/^```json/gi, '').replace(/```\$/g, '').trim();
                 const parsed = JSON.parse(cleaned);
                 if (Array.isArray(parsed)) {
                     parsed.forEach(item => {
@@ -3838,7 +4101,9 @@ ${marked.parse(unclosedContent.trim())}
                             sourcesMap.set(norm, {
                                 url: u,
                                 title: (item.title && item.title !== u) ? item.title : (existing?.title || domain),
-                                domain: domain
+                                domain: domain,
+                                snippet: item.snippet || item.text || item.excerpt || existing?.snippet || null,
+                                timestamp: item.timestamp || item.date || existing?.timestamp || null
                             });
                         }
                     });
@@ -3860,7 +4125,7 @@ ${marked.parse(unclosedContent.trim())}
     });
 
     // 3. Remove AI-written "Sources" / "References" section at end of text and harvest links
-    const aiTrailingSourcesRegex = /(?:^|\n)(?:[-*_]{3,}\s*\n)?(?:#{1,4}\s+|\*{2})?(?:Sources|References|Citations|Web Sources|Sources Consulted|External Links)\*{0,2}\s*:?\s*[\n\r]+([\s\S]*)$/i;
+    const aiTrailingSourcesRegex = /(?:^|\n)(?:[-*_]{3,}\s*\n)?(?:#{1,4}\s+|\*{2})?(?:Sources|References|Citations|Web Sources|Sources Consulted|External Links)\*{0,2}\s*:?\s*[\n\r]+([\s\S]*)\$/i;
     const aiSectionMatch = markdownContent.match(aiTrailingSourcesRegex);
     if (aiSectionMatch) {
         const body = aiSectionMatch[1] || '';
@@ -3904,8 +4169,38 @@ ${marked.parse(unclosedContent.trim())}
         }
     }
 
-    // 4. Render EXACTLY ONE consolidated sources accordion
+    // Consolidated list used by both inline citations and bottom source accordion
     const consolidatedSources = Array.from(sourcesMap.values());
+
+    // ====================================================================
+    // INLINE CLAIM CITATION REPLACER (Pure algorithmic find-and-replace)
+    // ====================================================================
+    if (consolidatedSources.length > 0 && !isStreaming) {
+        const createCiteBadge = (idx) => {
+            const src = consolidatedSources[idx - 1];
+            if (!src) return '';
+            const domain = src.domain || getCleanDomain(src.url);
+            const fav = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=32`;
+            const timeTag = src.timestamp ? `<div class="text-[9px] text-gray-400 mt-1 font-mono">${safeEscHtml(src.timestamp)}</div>` : '';
+            const excerpt = src.snippet ? `<div class="text-[11px] text-gray-600 italic mt-1 bg-gray-50 p-1.5 rounded border border-gray-100 font-normal truncate">"${safeEscHtml(src.snippet.slice(0, 180))}..."</div>` : '';
+
+            return `<span class="cite-badge-group"><a href="${src.url}" target="_blank" rel="noopener noreferrer" class="cite-pill" title="${safeEscAttr(src.title)}">${idx}</a><span class="cite-popover"><span class="flex items-center gap-2 mb-1.5 pb-1.5 border-b border-gray-100"><img src="${fav}" class="w-3.5 h-3.5 object-contain" alt=""><span class="text-[11px] font-bold text-gray-900 truncate">${safeEscHtml(domain)}</span></span><span class="text-[11px] font-semibold text-theme-600 block leading-snug truncate">${safeEscHtml(src.title)}</span>${excerpt}${timeTag}</span></span>`;
+        };
+
+        // 1. Convert standard academic tags:[cite: 1, 2] or[cite: 1]
+        markdownContent = markdownContent.replace(/\[cite:\s*([0-9,\s]+)\]/gi, (match, nums) => {
+            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= consolidatedSources.length);
+            if (parsedNums.length === 0) return '';
+            return parsedNums.map(n => createCiteBadge(n)).join('');
+        });
+
+        // 2. Convert standard markdown numerical citations [1] or [1, 2] at sentence ends
+        markdownContent = markdownContent.replace(/\[([0-9]+(?:\s*,\s*[0-9]+)*)\](?!\()/g, (match, nums) => {
+            const parsedNums = nums.split(',').map(n => parseInt(n.trim(), 10)).filter(n => !isNaN(n) && n >= 1 && n <= consolidatedSources.length);
+            if (parsedNums.length === 0) return match;
+            return parsedNums.map(n => createCiteBadge(n)).join('');
+        });
+    }
     if (msgId && consolidatedSources.length > 0) {
         window.MSG_SOURCES = window.MSG_SOURCES || {};
         window.MSG_SOURCES[msgId] = consolidatedSources;
@@ -4146,6 +4441,8 @@ async function handleSend() {
     pendingFiles = []; 
     renderStagingArea();
     isProcessing = true; 
+    activeAbortController = new AbortController();
+    activeStreamReader = null;
     updateUIState();
     triggerPulseDetection(text);
     msgCountForMemory++;
@@ -5199,9 +5496,11 @@ if (
     }
     
     if (!isDeepResearchOn) {
-        const currentModel = CONFIG.models[activeModelId];
-        els.indicatorIcon.className = `ph-bold text-lg text-theme-600 transition-colors duration-500 ${currentModel.icon}`;
-        els.indicatorText.textContent = currentChatExtId ? "Analyzing Extension Data..." : "ArixAI is analyzing...";
+        const currentModel = CONFIG.models[activeModelId] || CONFIG.models.oracle;
+        els.indicatorIcon.className = `ph-bold text-lg text-purple-600 transition-colors duration-500 ${currentModel.icon}`;
+        els.indicatorText.textContent = currentChatExtId 
+            ? "Analyzing Extension Data..." 
+            : (activeModelId === 'parallax' ? "PARALLAX Ω: Dual-model adversarial verification in progress..." : "ArixAI is analyzing...");
         els.indicator.classList.remove('hidden'); 
         els.canvas.scrollTop = els.canvas.scrollHeight;
     }
@@ -5269,9 +5568,25 @@ if (
                 }
 
                 contentContainer.classList.remove('typing-cursor');
-                contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
-                messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
-                saveCurrentChat();
+        contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
+
+        // Permanently bundle all sources inside fullResponse & message object
+        const finalSources = (window.MSG_SOURCES && window.MSG_SOURCES[assistantMsgObj.id]) ? window.MSG_SOURCES[assistantMsgObj.id] : [];
+        if (finalSources.length > 0 && !fullResponse.includes('<sources>')) {
+            fullResponse += `\n\n<sources>${JSON.stringify(finalSources)}</sources>`;
+        }
+
+        messages.push({ 
+            role: 'assistant', 
+            content: fullResponse, 
+            id: assistantMsgObj.id, 
+            modelId: activeModelId, 
+            sources: finalSources 
+        });
+        saveCurrentChat();
+        if (typeof syncCurrentChat === 'function') {
+            syncCurrentChat(currentChatId);
+        }
                 isProcessing = false; updateUIState(); return; // Exit cleanly without calling cloud API
 
             } catch (err) {
@@ -5284,9 +5599,79 @@ if (
         }
         // ==========================================
 
+        // ==========================================
+        // PARALLAX Ω DUAL-ENGINE VERIFICATION PIPELINE
+        // ==========================================
+        if (activeModelId === 'parallax') {
+            const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+            const contentContainer = assistantMsgObj.container;
+            contentContainer.classList.add('typing-cursor');
+            contentContainer.innerHTML = `<span class="text-purple-600 font-semibold"><i class="ph-bold ph-spinner animate-spin"></i> PARALLAX Ω is orchestrating multi-pass cognitive verification...</span>`;
+
+            try {
+                const response = await fetch('/api/parallax', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    signal: activeAbortController?.signal,
+                    body: JSON.stringify({
+                        messages: contextMessages.slice(-24),
+                        modelId: 'parallax',
+                        parallaxMode: 'auto',
+                        researchContext: compiledResearchContext,
+                        userProfile: typeof userProfile === 'string' ? userProfile : JSON.stringify(userProfile)
+                    })
+                });
+
+                els.indicator.classList.add('hidden');
+                const data = await response.json();
+
+                if (!response.ok || data.error) {
+                    const errDetail = data?.error?.detail || data?.error?.message || `HTTP ${response.status}`;
+                    contentContainer.classList.remove('typing-cursor');
+                    contentContainer.innerHTML = `<div class="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm font-semibold flex items-center gap-2"><i class="ph-bold ph-warning-circle text-lg"></i> <span>PARALLAX Verification Error: ${String(errDetail).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</span></div>`;
+                    messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                    saveCurrentChat();
+                    sendTelemetry('chat', activeModelId, 'error', errDetail);
+                    isProcessing = false;
+                    updateUIState();
+                    return;
+                }
+
+                let fullResponse = data.answer || data.choices?.[0]?.message?.content || data.text || "";
+
+                if (data.parallax && data.parallax.status === 'checks_passed') {
+                    const durationSec = ((data.parallax.durationMs || 0) / 1000).toFixed(1);
+                    fullResponse += `\n\n<div class="mt-4 flex items-center gap-2 text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-xl w-fit shadow-sm"><i class="ph-bold ph-shield-check text-sm text-purple-600"></i> Verified by PARALLAX Ω (${durationSec}s • Double-Audit Passed)</div>`;
+                }
+
+                contentContainer.classList.remove('typing-cursor');
+                contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
+                messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
+                saveCurrentChat();
+                sendTelemetry('chat', activeModelId, 'success');
+            } catch (err) {
+                els.indicator.classList.add('hidden');
+                contentContainer.classList.remove('typing-cursor');
+                if (err.name !== 'AbortError' && !activeAbortController?.signal.aborted) {
+                    contentContainer.innerHTML = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> PARALLAX Upstream Error: ${err.message}</span>`;
+                    messages.push({ role: 'assistant', content: contentContainer.innerHTML, id: assistantMsgObj.id, modelId: activeModelId });
+                    saveCurrentChat();
+                    sendTelemetry('chat', activeModelId, 'error', err.message);
+                }
+            } finally {
+                activeAbortController = null;
+                activeStreamReader = null;
+                isProcessing = false;
+                updateUIState();
+            }
+            return;
+        }
+        // ==========================================
+
         const response = await fetch('/api/chat1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            signal: activeAbortController?.signal,
             body: JSON.stringify({ 
                 messages: contextMessages.slice(-1000), 
                 modelId: activeModelId,
@@ -5303,6 +5688,7 @@ if (
         contentContainer.classList.add('typing-cursor');
         
         const reader = response.body.getReader(); 
+        activeStreamReader = reader; 
         const decoder = new TextDecoder();
         let fullResponse = ""; 
         let buffer = "";
@@ -5358,7 +5744,9 @@ if (
                 if (done) break;
             }
         } catch (streamErr) {
-            if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") {
+            if (streamErr.name === 'AbortError' || activeAbortController?.signal.aborted) {
+                console.log("Stream aborted by user");
+            } else if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") {
                 console.warn("Stream Auto-Completed (Watchdog)");
             } else { 
                 uiErrFlag = true; 
@@ -5367,6 +5755,7 @@ if (
             }
         } finally { 
             clearTimeout(streamTimeout); 
+            activeStreamReader = null;
         }
         
         contentContainer.classList.remove('typing-cursor');
@@ -5385,14 +5774,18 @@ if (
         
     } catch (error) {
         els.indicator.classList.add('hidden');
-        const errObj = appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
-        messages.push({ role: 'assistant', content: `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, id: errObj.id, modelId: activeModelId });
-        saveCurrentChat(); // <-- FIX: Saves the error state so history chain isn't broken
-        sendTelemetry(currentAction, activeModelId, 'error', error.message);
+        if (error.name !== 'AbortError' && !activeAbortController?.signal.aborted) {
+            const errObj = appendMessage('assistant', `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, activeModelId);
+            messages.push({ role: 'assistant', content: `<span class="text-red-500 font-semibold">Network Error. Failed to generate response.</span>`, id: errObj.id, modelId: activeModelId });
+            saveCurrentChat();
+            sendTelemetry(currentAction, activeModelId, 'error', error.message);
+        }
+    } finally {
+        activeAbortController = null;
+        activeStreamReader = null;
+        isProcessing = false; 
+        updateUIState();
     }
-    
-    isProcessing = false; 
-    updateUIState();
 }
 
 // ============================================================================
@@ -6187,6 +6580,56 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ====== Arix PULSE FRONTEND ENGINE (TARGET UI BOUND) ======
+async function syncPulseTasksToStorage(taskId = null, action = 'delete') {
+    try {
+        localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
+    } catch(e) {}
+
+    // 1. ArixStorage / Cloud Sync Engine (paid.js)
+    try {
+        if (typeof syncPulseTasks === 'function') {
+            await syncPulseTasks(pulseTasks, taskId, action);
+        } else if (window.ArixStorage) {
+            if (action === 'done' && typeof window.ArixStorage.markPulseTaskDone === 'function') {
+                await window.ArixStorage.markPulseTaskDone(taskId);
+            } else if (action === 'delete' && typeof window.ArixStorage.deletePulseTask === 'function') {
+                await window.ArixStorage.deletePulseTask(taskId);
+            } else if (typeof window.ArixStorage.deleteTask === 'function' && taskId) {
+                await window.ArixStorage.deleteTask(taskId);
+            }
+
+            if (typeof window.ArixStorage.syncPulseTasks === 'function') {
+                await window.ArixStorage.syncPulseTasks(pulseTasks);
+            } else if (typeof window.ArixStorage.syncTasks === 'function') {
+                await window.ArixStorage.syncTasks(pulseTasks);
+            } else if (typeof window.ArixStorage.savePulseTasks === 'function') {
+                await window.ArixStorage.savePulseTasks(pulseTasks);
+            } else if (typeof window.ArixStorage.saveTasks === 'function') {
+                await window.ArixStorage.saveTasks(pulseTasks);
+            }
+        }
+    } catch(e) {
+        console.warn('ArixStorage task sync error:', e);
+    }
+
+    // 2. Direct Supabase Client sync fallback
+    try {
+        const sb = window.supabase || (window.ArixStorage && (window.ArixStorage.supabase || window.ArixStorage.client));
+        if (sb && taskId) {
+            if (action === 'done') {
+                await sb.from('pulse_tasks').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', taskId);
+            } else if (action === 'delete') {
+                await sb.from('pulse_tasks').delete().eq('id', taskId);
+            }
+        }
+    } catch(e) {}
+
+    // 3. Dispatch storage event for other active tabs
+    try {
+        window.dispatchEvent(new CustomEvent('arix:tasks_updated', { detail: { pulseTasks, taskId, action } }));
+    } catch(e) {}
+}
+
 function renderPulseTodayWidget() {
     const widget = document.getElementById('pulse-today-widget');
     const list = document.getElementById('pulse-today-list');
@@ -6197,7 +6640,7 @@ function renderPulseTodayWidget() {
     const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     
     const todayTasks = pulseTasks.filter(t => {
-        const isNotDismissed = t.status !== 'dismissed';
+        const isNotDismissed = t.status !== 'dismissed' && t.status !== 'done' && t.status !== 'completed';
         const taskCreatedToday = t.createdAt && t.createdAt.startsWith(localTodayStr);
         const taskDueToday = t.due === localTodayStr;
         return isNotDismissed && (taskDueToday || (!t.due && taskCreatedToday));
@@ -6238,12 +6681,15 @@ if (els && els.input) {
 function renderPulseVault() {
     const container = document.getElementById('pulse-vault-list');
     if (!container) return;
-    if (pulseTasks.length === 0) {
+
+    const activeTasks = pulseTasks.filter(t => t.status !== 'dismissed' && t.status !== 'done' && t.status !== 'completed');
+
+    if (activeTasks.length === 0) {
         container.innerHTML = `<div class="text-center text-gray-500 text-xs font-medium py-10">No tasks saved in Pulse vault.</div>`;
         return;
     }
     const iconMap = { DO: '🔥', DECIDE: '🧠', REMEMBER: '📌', REPLY: '💬' };
-    container.innerHTML = pulseTasks.map(t => `
+    container.innerHTML = activeTasks.map(t => `
         <div class="p-4 bg-white border border-gray-100 rounded-2xl flex items-start justify-between group shadow-sm hover:border-cyan-200 transition-colors">
             <div class="flex items-start gap-4 overflow-hidden pr-2">
                 <div class="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-xl flex-shrink-0 border border-gray-100">${iconMap[t.type] || '📌'}</div>
@@ -6324,7 +6770,7 @@ function renderPulseSuggestionCard(item) {
 function confirmPulseTask(cardId, item) {
     item.status = 'confirmed';
     pulseTasks.push(item);
-    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
+    syncPulseTasksToStorage(item.id, 'add');
     const card = document.getElementById(cardId);
     if (card) {
         card.className = "mt-4 p-3 border border-emerald-100 bg-emerald-50 rounded-2xl flex items-center justify-between text-[11px] text-emerald-700 font-bold ml-auto max-w-sm mr-4 shadow-sm";
@@ -6335,11 +6781,13 @@ function confirmPulseTask(cardId, item) {
 }
 
 function undoPulseTask(taskId, cardId) {
-    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
-    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
+    pulseTasks = pulseTasks.filter(t => String(t.id) !== String(taskId));
+    try { localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks)); } catch(e) {}
+    syncPulseTasksToStorage(taskId, 'delete');
     dismissPulseTask(cardId);
     showToast("Task undone.");
     renderPulseTodayWidget();
+    renderPulseVault();
 }
 
 function dismissPulseTask(cardId) {
@@ -6348,15 +6796,18 @@ function dismissPulseTask(cardId) {
 }
 
 function markPulseTaskDone(taskId) {
-    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
-    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
+    pulseTasks = pulseTasks.filter(t => String(t.id) !== String(taskId));
+    try { localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks)); } catch(e) {}
+    syncPulseTasksToStorage(taskId, 'done');
     renderPulseTodayWidget();
+    renderPulseVault();
     showToast("Task completed! 🎉");
 }
 
 function deletePulseTask(taskId) {
-    pulseTasks = pulseTasks.filter(t => t.id !== taskId);
-    localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
+    pulseTasks = pulseTasks.filter(t => String(t.id) !== String(taskId));
+    try { localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks)); } catch(e) {}
+    syncPulseTasksToStorage(taskId, 'delete');
     renderPulseVault();
     renderPulseTodayWidget();
     showToast("Task deleted.");
@@ -6377,7 +6828,13 @@ els.input.addEventListener('keydown', (e) => {
 }); 
 
 if (els && els.sendBtn) {
-    els.sendBtn.addEventListener('click', handleSend);
+    els.sendBtn.addEventListener('click', () => {
+        if (isProcessing) {
+            stopGeneration();
+        } else {
+            handleSend();
+        }
+    });
 }
 
 // ====== GLOBAL DEEP SEARCH ENGINE ======
@@ -8515,6 +8972,8 @@ window.downloadWorkspaceZip = async function() {
         syncTimer: null,
         syncPromise: null,
         syncAgain: false,
+        chatSyncPromise: null,
+        chatSyncPendingIds: new Set(),
         challengeId: null,
         authMode: 'login'
     };
@@ -8843,6 +9302,13 @@ window.downloadWorkspaceZip = async function() {
         for (const key of ['name', 'fileName', 'tool', 'mode', 'sources']) {
             if (msg && msg[key] != null) extra[key] = msg[key];
         }
+        // Always preserve authoritative source references in extra metadata
+        const activeSrc = (msg && Array.isArray(msg.sources) && msg.sources.length) 
+            ? msg.sources 
+            : (window.MSG_SOURCES && window.MSG_SOURCES[msg?.id] ? window.MSG_SOURCES[msg.id] : null);
+        if (activeSrc && activeSrc.length) {
+            extra.sources = activeSrc;
+        }
         return {
             id: String(`${idPrefix}${msg?.id || randomId('msg')}`).slice(0, 160),
             chatId: String(chatId).slice(0, 160),
@@ -9119,26 +9585,69 @@ window.downloadWorkspaceZip = async function() {
         }, delay);
     }
 
-    async function syncCurrentChat() {
-        if (!cloudEnabled()) return;
-        const chat = chats.find((c) => String(c.id) === String(currentChatId));
-        if (!chat) return;
-        const saved = { ...chat, messages: Array.isArray(messages) ? messages : [] };
-        try {
-            await sendSync({
-                chats: [chatMeta(saved, String(chat.id))],
-                messages: (saved.messages || []).map((m, index) => {
-                    const stableTime = stableMessageTime(saved, index);
-                    return messagePayload({ ...m, createdAt: m?.createdAt || stableTime, updatedAt: m?.updatedAt || stableTime }, String(chat.id));
-                }),
-                pinned: pinPayload(saved),
-                artifacts: collectMediaArtifacts(saved.messages || []),
-            });
-            localStorage.removeItem('Arix_cloud_dirty');
-        } catch (error) {
-            console.error('[ArixAI] current chat sync failed:', error);
+    async function syncCurrentChat(targetChatId = currentChatId) {
+        if (!cloudEnabled()) return false;
+        const requestedId = String(targetChatId || '');
+        if (!requestedId) return false;
+        bridge.chatSyncPendingIds.add(requestedId);
+
+        // Serialize writes per active storage bridge. If a new message is saved
+        // while a request is in flight, its chat ID is queued for a second pass.
+        if (bridge.chatSyncPromise) return bridge.chatSyncPromise;
+
+        bridge.chatSyncPromise = (async () => {
+            let allSucceeded = true;
+            while (bridge.chatSyncPendingIds.size > 0) {
+                const pendingIds = [...bridge.chatSyncPendingIds];
+                bridge.chatSyncPendingIds.clear();
+                for (const chatId of pendingIds) {
+                    if (!cloudEnabled()) return false;
+                    const chat = chats.find((c) => String(c.id) === String(chatId));
+                    if (!chat) { allSucceeded = false; continue; }
+                    const isActiveChat = String(currentChatId) === String(chatId);
+                    const messageSource = isActiveChat && Array.isArray(messages)
+                        ? messages
+                        : (Array.isArray(chat.messages) ? chat.messages : []);
+                    const saved = { ...chat, messages: messageSource };
+                    try {
+                        const result = await sendSync({
+                            chats: [chatMeta(saved, String(chat.id))],
+                            messages: (saved.messages || []).map((m, index) => {
+                                const stableTime = stableMessageTime(saved, index);
+                                return messagePayload({ ...m, createdAt: m?.createdAt || stableTime, updatedAt: m?.updatedAt || stableTime }, String(chat.id));
+                            }),
+                            pinned: pinPayload(saved),
+                            artifacts: collectMediaArtifacts(saved.messages || []),
+                        });
+                        if (result?.skipped) {
+                            allSucceeded = false;
+                            localStorage.setItem('Arix_cloud_dirty', '1');
+                            continue;
+                        }
+                        chat.messages = saved.messages;
+                        chat._cloudLoaded = true;
+                        chat.updatedAt = nowIso();
+                        localStorage.removeItem('Arix_cloud_dirty');
+                    } catch (error) {
+                        allSucceeded = false;
+                        console.error('[ArixAI] current chat sync failed:', error);
+                        localStorage.setItem('Arix_cloud_dirty', '1');
+                    }
+                }
+            }
+
+            // Keep a full local recovery copy as well as the database copy.
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch (_) {}
+            return allSucceeded;
+        })().catch((error) => {
+            console.error('[ArixAI] current chat sync queue failed:', error);
             localStorage.setItem('Arix_cloud_dirty', '1');
-        }
+            return false;
+        }).finally(() => {
+            bridge.chatSyncPromise = null;
+        });
+
+        return bridge.chatSyncPromise;
     }
 
     async function loadCloudBootstrap({ migrateLocal = false } = {}) {
@@ -9252,7 +9761,7 @@ window.downloadWorkspaceZip = async function() {
         bridge.mode = 'cloud';
 
         try {
-            localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => ({ ...c, messages: [] }))));
+            localStorage.setItem('chatini_sessions', JSON.stringify(chats));
             localStorage.setItem('Arix_custom_projects', JSON.stringify(customProjects));
             localStorage.setItem('Arix_pulse_tasks', JSON.stringify(pulseTasks));
             localStorage.setItem('Arix_sentinel_tasks', JSON.stringify(activeSentinelTasks));
@@ -9291,22 +9800,27 @@ window.downloadWorkspaceZip = async function() {
     window.loadCloudChat = loadCloudChat;
     async function loadCloudChat(chatId, { background = false } = {}) {
         const epoch = ++bridge.loadEpoch;
-        const chat = chats.find((c) => String(c.id) === String(id));
+        const chat = chats.find((c) => String(c.id) === String(chatId));
         if (!chat || !cloudEnabled()) return;
         currentChatId = chat.id;
         currentChatExtId = chat.extId || null;
         els.extSelector.value = currentChatExtId || '';
-        messages = [];
-        renderMessagesToUI();
-        if (!background) {
-            els.container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-500 font-medium w-full animate-pulse"><i class="ph-bold ph-spinner animate-spin text-4xl mb-3 text-theme-500"></i> Loading secure workspace...</div>';
+        const cachedMessages = Array.isArray(chat.messages) ? chat.messages : [];
+        messages = cachedMessages;
+        if (cachedMessages.length > 0) {
+            renderMessagesToUI();
+        } else {
+            renderMessagesToUI();
+            if (!background) {
+                els.container.innerHTML = '<div class="flex flex-col items-center justify-center py-20 text-gray-500 font-medium w-full animate-pulse"><i class="ph-bold ph-spinner animate-spin text-4xl mb-3 text-theme-500"></i> Loading secure workspace...</div>';
+            }
         }
         try {
             let before = null;
             const all = [];
             let pages = 0;
             do {
-                const payload = { action: 'chat', chatId: String(id), limit: 100 };
+                const payload = { action: 'chat', chatId: String(chatId), limit: 100 };
                 if (before) payload.before = before;
                 const response = await apiJson('/api/storage', payload, 45_000);
                 const page = response?.data || {};
@@ -9319,24 +9833,67 @@ window.downloadWorkspaceZip = async function() {
                 if (Array.isArray(page.messages)) all.push(...page.messages);
                 before = page.nextBefore || null;
                 pages++;
-                // First page is immediately visible; older pages continue in the same request loop.
+                // First non-empty page is immediately visible; never replace a valid
+                // cached conversation with an empty response while pagination continues.
                 if (pages === 1) {
                     if (epoch !== bridge.loadEpoch) return;
-                    messages = all.map(cloudMessageToLocal);
-                    chat.messages = messages;
-                    chat._cloudLoaded = true;
-                    renderMessagesToUI();
+                    const firstPageMessages = all.map(cloudMessageToLocal);
+                    if (firstPageMessages.length > 0) {
+                        messages = firstPageMessages;
+                        chat.messages = messages;
+                        chat._cloudLoaded = true;
+                        renderMessagesToUI();
+                    }
                 }
                 if (pages > 200) break;
             } while (before);
             if (epoch !== bridge.loadEpoch) return;
-            messages = all.map(cloudMessageToLocal);
-            chat.messages = messages;
-            chat._cloudLoaded = true;
-            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats.map((c) => c.id === id ? c : { ...c, messages: [] }))); } catch {}
+            const remoteMessages = all.map(cloudMessageToLocal);
+            if (remoteMessages.length > 0) {
+                messages = remoteMessages;
+                chat.messages = remoteMessages;
+                chat._cloudLoaded = true;
+            } else if (cachedMessages.length > 0) {
+                // Recovery path: the chat row exists but its message rows do not.
+                // Keep the local copy and attempt to restore those messages to storage.
+                messages = cachedMessages;
+                chat.messages = cachedMessages;
+                try {
+                    const recoveryResult = await sendSync({
+                        chats: [chatMeta(chat, String(chat.id))],
+                        messages: cachedMessages.map((m, index) => {
+                            const stableTime = stableMessageTime(chat, index);
+                            return messagePayload({ ...m, createdAt: m?.createdAt || stableTime, updatedAt: m?.updatedAt || stableTime }, String(chat.id));
+                        }),
+                        pinned: pinPayload(chat),
+                        artifacts: collectMediaArtifacts(cachedMessages),
+                    });
+                    if (recoveryResult?.skipped) throw new Error('Cloud sync is not active');
+                    chat._cloudLoaded = true;
+                    localStorage.removeItem('Arix_cloud_dirty');
+                } catch (recoveryError) {
+                    chat._cloudLoaded = false;
+                    localStorage.setItem('Arix_cloud_dirty', '1');
+                    console.warn('[ArixAI] Cached chat recovery sync failed:', recoveryError);
+                }
+            } else {
+                messages = [];
+                chat.messages = [];
+                chat._cloudLoaded = true;
+            }
+            // Preserve message bodies in the local recovery cache rather than writing
+            // metadata-only rows that make a later refresh render an empty chat.
+            try { localStorage.setItem('chatini_sessions', JSON.stringify(chats)); } catch {}
             renderMessagesToUI();
             renderHistoryList();
         } catch (error) {
+            // A transient database/network failure must not blank a conversation
+            // that was already available from the local recovery cache.
+            if (epoch === bridge.loadEpoch && cachedMessages.length > 0) {
+                messages = cachedMessages;
+                chat.messages = cachedMessages;
+                try { renderMessagesToUI(); renderHistoryList(); } catch (_) {}
+            }
             if (error?.status === 401) {
                 bridge.authenticated = false;
                 setModeLocal('device');
@@ -9344,12 +9901,17 @@ window.downloadWorkspaceZip = async function() {
                 updateSettingsUi();
                 showToast('Cloud session expired. Reconnect from Settings > Data & Account > Cloud Sync.');
             } else if (!background) {
-                showToast(error?.message || 'Could not load cloud chat.');
+                showToast(error?.message || 'Could not load cloud chat. Showing the saved copy when available.');
             }
         }
     }
 
     function cloudMessageToLocal(m) {
+        const rawSources = (m?.extra && Array.isArray(m.extra.sources)) ? m.extra.sources : (Array.isArray(m?.sources) ? m.sources : []);
+        if (rawSources.length > 0) {
+            window.MSG_SOURCES = window.MSG_SOURCES || {};
+            window.MSG_SOURCES[String(m.id)] = rawSources;
+        }
         return {
             id: String(m.id),
             chatId: String(m.chatId || currentChatId),
@@ -9358,12 +9920,12 @@ window.downloadWorkspaceZip = async function() {
             modelId: m.modelId || null,
             createdAt: m.createdAt,
             updatedAt: m.updatedAt,
+            sources: rawSources,
             attachmentsMeta: Array.isArray(m.attachments) ? m.attachments.map((a) => ({
                 name: a?.name || '', type: a?.type || '', id: a?.id || '', url: a?.url || null, size: a?.size ?? null
             })) : []
         };
     }
-
     async function migrateToCloud() {
         const hint = (localStorage.getItem('Arix_arixName') || localStorage.getItem('Arix_nickname') || 'account').toLowerCase();
         if (localStorage.getItem(`${MIGRATED_KEY_PREFIX}${shortHash(hint)}`) === '1') return false;
@@ -9622,8 +10184,12 @@ window.downloadWorkspaceZip = async function() {
         const original = window[name];
         if (typeof original !== 'function' || original.__arixWrapped) return;
         const wrapped = function(...args) {
+            const savedChatId = name === 'saveCurrentChat' ? String(currentChatId || '') : null;
             const result = original.apply(this, args);
-            Promise.resolve().then(() => after(...args, result)).catch(() => {});
+            Promise.resolve().then(() => {
+                if (name === 'saveCurrentChat') return after(savedChatId, result);
+                return after(...args, result);
+            }).catch(() => {});
             return result;
         };
         wrapped.__arixWrapped = true;
@@ -9631,7 +10197,7 @@ window.downloadWorkspaceZip = async function() {
     }
 
     function installCloudHooks() {
-        wrapFunction('saveCurrentChat', () => syncCurrentChat());
+        wrapFunction('saveCurrentChat', (chatId) => syncCurrentChat(chatId));
         wrapFunction('saveProjects', () => scheduleFullSync(150));
         wrapFunction('deleteChat', (id) => cloudEnabled() && sendSync({ deletes: [{ kind: 'chat', id: String(id) }] }).catch(() => {}));
         wrapFunction('renameChat', (id) => {
@@ -9678,9 +10244,9 @@ window.downloadWorkspaceZip = async function() {
         const wrappedLoadChat = function(id) {
             if (cloudEnabled()) {
                 const chat = chats.find((c) => String(c.id) === String(id));
-                if (chat && chat._cloudLoaded) {
+                if (chat && chat._cloudLoaded && Array.isArray(chat.messages) && chat.messages.length > 0) {
                     currentChatId = chat.id;
-                    messages = Array.isArray(chat.messages) ? chat.messages : [];
+                    messages = chat.messages;
                     currentChatExtId = chat.extId || null;
                     els.extSelector.value = currentChatExtId || '';
                     renderMessagesToUI();
