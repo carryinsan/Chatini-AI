@@ -7375,12 +7375,10 @@ function renderPulseSuggestionCard(item) {
                 </div>
                 <span class="text-[10px] bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded-full font-bold border border-cyan-100 shadow-sm">${Math.round(item.confidence * 100)}% match</span>
             </div>
-            
             <p class="text-[14px] font-bold text-gray-900 leading-snug">${item.title}</p>
-            ${item.due ? `<p class="text-[11px] text-gray-500 font-medium">Target Date: <strong class="text-gray-900">${item.due}</strong></p>` : ''}
-            
-            <div class="text-[11px] text-gray-500 border-t border-gray-100 pt-3 mt-1">
-                <span class="font-semibold text-gray-700">Auto-Detected Task</span>
+            ${item.due ? `<p class="text-[11px] text-gray-500 font-medium">Target Date: <strong class="text-gray-900">\${item.due}</strong></p>` : ''}
+            <div class="text-[11px] text-gray-500 border-t border-gray-100 pt-3 mt-1 flex items-center justify-between">
+                <span>Add this to your tasks?</span>
             </div>
         </div>
     `;
@@ -7662,7 +7660,7 @@ window.Arix3D = {
         }
     }
 };
-            <span Add this to your tasks?</span>
+            <span> Add this to your tasks?</span>
                 <div class="flex items-center gap-2">
                     <button onclick="confirmPulseTask('${cardId}', ${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-cyan-200">
                         ✓ Add
