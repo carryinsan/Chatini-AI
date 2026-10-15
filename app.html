@@ -4858,7 +4858,6 @@ ${marked.parse(unclosedContent.trim())}
         const uid = 'v3d_' + (msgId || 'm') + '_' + Math.random().toString(36).substr(2, 6);
         let safeJsonStr = trimmed.replace(/^```(?:json|3d)?/i, '').replace(/```\$/i, '').trim();
         
-        // Auto-heal common JSON syntax issues if present
         try {
             JSON.parse(safeJsonStr);
         } catch (_) {
@@ -4888,10 +4887,10 @@ ${marked.parse(unclosedContent.trim())}
                         <button type="button" onclick="window.Arix3D.toggleWireframe('${uid}')" id="btn-wire-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Toggle Wireframe">
                             <i class="ph-bold ph-grid-four text-sm"></i>
                         </button>
-                        <button type="button" onclick="window.Arix3D.resetCamera('${uid}')" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Reset View">
+                        <button type="button" onclick="window.Arix3D.resetCamera('${uid}')" id="btn-reset-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Reset View">
                             <i class="ph-bold ph-arrows-counter-clockwise text-sm"></i>
                         </button>
-                        <button type="button" onclick="window.Arix3D.toggleFullscreen('${uid}')" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Maximize View">
+                        <button type="button" onclick="window.Arix3D.toggleFullscreen('${uid}')" id="btn-full-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Maximize View">
                             <i class="ph-bold ph-arrows-out-simple text-sm"></i>
                         </button>
                     </div>
@@ -4923,7 +4922,7 @@ ${marked.parse(unclosedContent.trim())}
     if (!isStreaming && markdownContent.includes('<arix_ui>') && !markdownContent.includes('</arix_ui>')) {
         markdownContent += '</arix_ui>';
     }
-    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(?:<\/arix_ui>|$)/gi, (match, rawJson) => {
+    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(?:<\/arix_ui>|\$)/gi, (match, rawJson) => {
         const trimmedJson = rawJson ? rawJson.trim() : '';
         if (!trimmedJson) return '';
         const idx = arixWidgets.length;
@@ -4939,7 +4938,7 @@ ${marked.parse(unclosedContent.trim())}
     });
 
     // Process <chart> into modern target UI blocks
-    markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|$)/g, (match, jsonStr, closeTag) => {
+    markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|\$)/g, (match, jsonStr, closeTag) => {
         if (!closeTag) return `<div class="mt-4 p-4 border border-cyan-200 bg-cyan-50 rounded-xl text-cyan-700 text-xs font-semibold flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin text-lg"></i> Rendering Data Model...</div>`;
         try {
             const data = JSON.parse(jsonStr.replace(/```json/gi, "").replace(/```/g, "").trim()); 
@@ -4983,6 +4982,7 @@ ${marked.parse(unclosedContent.trim())}
     });
 
     return `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group">${renderedProse}</div>${extractedHtml}${actionBarHtml}`;
+}
 
 // ====== APPEND MESSAGES (TARGET UI CHAT BUBBLES) ======
 function appendMessage(role, content, modelId, specificId = null, attachmentsMeta = [], senderName = null) {
