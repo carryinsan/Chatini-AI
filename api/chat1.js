@@ -610,7 +610,7 @@ telemetry.model = modelId || 'unknown';
               const res = await fetch(sUrl, {
                 method: 'GET',
                 headers: { 'Accept': 'application/json' },
-                signal: AbortSignal.timeout(9000)
+                signal: AbortSignal.timeout(4500)
               });
               if (res.ok) {
                 const data = await res.json();
@@ -1561,38 +1561,61 @@ Output strictly JSON:
         });
 
         // ====================================================================
-        // PHASE 5: THE VANISHING ACT
-        // Instantly hides the continuous thought-stream before SSE generation
+        // PHASE 5 & 6: FINAL SYNTHESIS, FAILOVER & IRONCLAD SSE STREAMING
         // ====================================================================
-        sendUIChunk(`<style>.think-step, #Arix-persistent-loader { display: none !important; opacity: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: none; position: absolute; }</style>`);
-
-        // ====================================================================
-        // PHASE 6: FINAL SYNTHESIS & REAL-TIME STREAMING
-        // ====================================================================
-        let llmRes;
+        let llmRes = null;
         let isGroq = false;
         let isMistral = false;
 
-        if (modelId === 'spark' && GROQ_KEYS.length > 0) {
-          isGroq = true;
-          let lastErr = "";
-          const dynamicGroqMessages = processedMessages.length > 30 ? processedMessages.slice(-30) : processedMessages;
+        const hideLoaderOnce = (() => {
+          let hidden = false;
+          return () => {
+            if (!hidden) {
+              hidden = true;
+              sendUIChunk(`<style>.think-step, #Arix-persistent-loader { display: none !important; opacity: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: none; position: absolute; }</style>`);
+            }
+          };
+        })();
 
+        const tryGroqStream = async () => {
+          const dynamicGroqMessages = processedMessages.length > 30 ? processedMessages.slice(-30) : processedMessages;
+          let errText = "";
           for (const groqModel of GROQ_MODELS_FALLBACK) {
             for (let i = 0; i < GROQ_KEYS.length; i++) {
-              const payload = { model: groqModel, messages: [{ role: 'system', content: systemPrompt }, ...dynamicGroqMessages], stream: true, temperature: 0.2 };
-              llmRes = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-              if (llmRes.ok) break;
-              lastErr = await llmRes.text();
+              try {
+                const payload = {
+                  model: groqModel,
+                  messages: [{ role: 'system', content: systemPrompt }, ...dynamicGroqMessages],
+                  stream: true,
+                  temperature: 0.2
+                };
+                const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                  method: 'POST',
+                  headers: { 'Authorization': `Bearer ${GROQ_KEYS[i]}`, 'Content-Type': 'application/json' },
+                  body: JSON.stringify(payload),
+                  signal: AbortSignal.timeout(15000)
+                });
+                if (res.ok && res.body) return { res, isOpenAIFormat: true, errText: "" };
+                errText = await res.text();
+                if (res.status === 400 || res.status === 404) break;
+              } catch (e) {
+                errText = e.message || "Groq connection timeout";
+              }
             }
-            if (llmRes && llmRes.ok) break;
           }
-          if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All Groq API keys exhausted.");
-        } else {
+          return { res: null, isOpenAIFormat: true, errText };
+        };
+
+        const tryGeminiStream = async () => {
           const finalPayload = {
             systemInstruction: { parts: [{ text: systemPrompt }] },
             contents: geminiMessages,
-            generationConfig: { maxOutputTokens: modelId === 'oracle' ? 16384 : 8192, temperature: modelId === 'oracle' ? 0.3 : 0.7 },
+            generationConfig: {
+              maxOutputTokens: modelId === 'oracle' ? 16384 : 8192,
+              temperature: modelId === 'oracle' ? 0.3 : 0.7,
+              // Disable native Gemini 2.5 internal thinking so it doesn't starve maxOutputTokens or emit empty thought parts
+              thinkingConfig: { thinkingBudget: 0 }
+            },
             safetySettings: [
               { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
               { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
@@ -1601,68 +1624,102 @@ Output strictly JSON:
             ]
           };
 
-          let lastErr = "";
-          for (let i = 0; i < GEMINI_KEYS.length; i++) {
-            llmRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse&key=${GEMINI_KEYS[i]}`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(finalPayload)
-            });
-            if (llmRes.ok) break;
-            lastErr = await llmRes.text();
-            if (llmRes.status >= 400 && llmRes.status < 500 && llmRes.status !== 429) break;
+          let errText = "";
+          const geminiModelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+
+          for (const gModel of geminiModelsToTry) {
+            for (let i = 0; i < GEMINI_KEYS.length; i++) {
+              try {
+                const bodyPayload = gModel === 'gemini-2.5-flash'
+                  ? finalPayload
+                  : { ...finalPayload, generationConfig: { maxOutputTokens: finalPayload.generationConfig.maxOutputTokens, temperature: finalPayload.generationConfig.temperature } };
+
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gModel}:streamGenerateContent?alt=sse&key=${GEMINI_KEYS[i]}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(bodyPayload),
+                  signal: AbortSignal.timeout(20000)
+                });
+                if (res.ok && res.body) return { res, isOpenAIFormat: false, errText: "" };
+                errText = await res.text();
+                // Do NOT break on 400/403/524 — rotate through all remaining keys first
+              } catch (e) {
+                errText = e.message || "Gemini connection timeout";
+              }
+            }
+          }
+          return { res: null, isOpenAIFormat: false, errText };
+        };
+
+        let lastErr = "";
+
+        if (modelId === 'spark' && GROQ_KEYS.length > 0) {
+          const groqAttempt = await tryGroqStream();
+          llmRes = groqAttempt.res;
+          isGroq = groqAttempt.isOpenAIFormat;
+          lastErr = groqAttempt.errText;
+
+          // Fallback to Gemini if all Groq keys fail
+          if (!llmRes) {
+            const gemFallback = await tryGeminiStream();
+            llmRes = gemFallback.res;
+            isGroq = false;
+            lastErr = gemFallback.errText || lastErr;
+          }
+        } else {
+          const gemAttempt = await tryGeminiStream();
+          llmRes = gemAttempt.res;
+          isGroq = false;
+          lastErr = gemAttempt.errText;
+
+          if (!llmRes && modelId === 'flux' && MISTRAL_KEY) {
+            try {
+              const mistralPayload = {
+                model: 'mistral-large-latest',
+                messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
+                stream: true,
+                temperature: 0.7
+              };
+              const mRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${MISTRAL_KEY}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify(mistralPayload),
+                signal: AbortSignal.timeout(15000)
+              });
+              if (mRes.ok && mRes.body) {
+                llmRes = mRes;
+                isMistral = true;
+              } else {
+                lastErr = await mRes.text();
+              }
+            } catch (e) {
+              lastErr = e.message;
+            }
           }
 
-          if ((!llmRes || !llmRes.ok) && modelId === 'flux' && MISTRAL_KEY) {
-            isMistral = true;
-            const mistralPayload = {
-              model: 'mistral-large-latest',
-              messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
-              stream: true,
-              temperature: 0.7
-            };
-            llmRes = await fetch('https://api.mistral.ai/v1/chat/completions', {
-              method: 'POST',
-              headers: { 'Authorization': `Bearer ${MISTRAL_KEY}`, 'Content-Type': 'application/json' },
-              body: JSON.stringify(mistralPayload)
-            });
-            if (!llmRes.ok) lastErr = await llmRes.text();
+          if (!llmRes && GROQ_KEYS.length > 0 && !hasAttachments) {
+            const groqFallback = await tryGroqStream();
+            if (groqFallback.res) {
+              llmRes = groqFallback.res;
+              isGroq = true;
+            }
           }
+        }
 
-          // ================================================================
-          // LLM7 API FALLBACK: DEEPSEEK (FREE TIER) (LAST OPTION FOR FLUX)
-          // ================================================================
-          if ((!llmRes || !llmRes.ok) && modelId === 'flux') {
-            isMistral = true; // Tricks the existing SSE loop below into using OpenAI-format chunk parsing
-            
-            const LLM7_API_KEY = "ler4WjM+7b6gecL3uxWMn/ZaPfLr5l3wMwLzfsjFB47GMNuaM6VJXVqR8YJCZ0HJOAVlhxcRdYXSV5I5NK6FFsyb1LcqK0FyINFTDCBPPIOe9Q9GjrDtI5XMmN0Ya0jecwJpoWvcolW3JvH6cXZ1+0D2F+bWBSoU5AqYjtM=";
-
-            const llm7Payload = {
-              model: 'DeepSeek-V4-Flash-0731', // Free 'turbo' tier model on LLM7
-              messages: [{ role: 'system', content: systemPrompt }, ...processedMessages],
-              stream: true,
-              temperature: 0.7
-            };
-            
-            llmRes = await fetch('https://api.llm7.io/v1/chat/completions', {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${LLM7_API_KEY}`
-              },
-              body: JSON.stringify(llm7Payload)
-            });
-            
-            if (!llmRes.ok) lastErr = await llmRes.text();
-          }
-            if (!llmRes || !llmRes.ok) throw new Error(lastErr || "All API keys exhausted or rate-limited.");
+        if (!llmRes || !llmRes.ok) {
+          hideLoaderOnce();
+          const cleanErr = String(lastErr || "All API keys exhausted or rate-limited.").includes('524')
+            ? "Upstream AI provider timed out (HTTP 524). Please retry."
+            : (lastErr || "All API keys exhausted or rate-limited.");
+          throw new Error(cleanErr);
         }
 
         // ================================================================
-        // CORE BUG FIX: THE IRONCLAD SSE PARSER WITH REAL-TIME DETOKENIZATION & ANTI-LAG AGGREGATION
+        // CORE BUG FIX: LINE-BY-LINE SSE PARSER + MULTI-PART EXTRACTOR
         // ================================================================
-        const reader = llmRes.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
         let streamTextBuffer = "";
+        let completeRawResponse = "";
+        let blockReasonDetected = null;
 
         const flushStreamBuffer = (force = false) => {
           if (!streamTextBuffer) return;
@@ -1672,6 +1729,7 @@ Output strictly JSON:
           }
 
           if (force || streamTextBuffer.length >= 12 || streamTextBuffer.includes('\n') || streamTextBuffer.includes(' ')) {
+            hideLoaderOnce();
             const sanitizedText = KaTeXFailSafe.sanitizeStreamChunk(streamTextBuffer);
 
             const cleanPayload = {
@@ -1689,50 +1747,45 @@ Output strictly JSON:
           }
         };
 
-        let completeRawResponse = "";
+        const consumeSSEStream = async (responseStream, useOpenAIFormat) => {
+          const reader = responseStream.body.getReader();
+          const decoder = new TextDecoder();
+          let lineBuffer = "";
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) {
-            if (buffer.trim()) {
-              const jsonStr = buffer.replace(/^data:\s*/gm, '').trim();
-              if (jsonStr && jsonStr !== '[DONE]') {
-                try {
-                  const rawData = JSON.parse(jsonStr);
-                  let cleanText = (isGroq || isMistral)
-                    ? rawData.choices?.[0]?.delta?.content || ""
-                    : rawData.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                  if (cleanText) {
-                    cleanText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
-                    completeRawResponse += cleanText;
-                    streamTextBuffer += cleanText;
-                    flushStreamBuffer(false);
-                  }
-                } catch (e) {}
-              }
-            }
-            break;
-          }
+          const processJsonLine = (rawLine) => {
+            const trimmed = rawLine.trim();
+            if (!trimmed || !trimmed.startsWith('data:')) return;
+            const jsonStr = trimmed.replace(/^data:\s*/, '').trim();
+            if (!jsonStr || jsonStr === '[DONE]') return;
 
-          buffer += decoder.decode(value, { stream: true });
-          const chunks = buffer.split(/\r?\n\r?\n/);
-          buffer = chunks.pop();
-
-          for (const chunk of chunks) {
-            const jsonStr = chunk.replace(/^data:\s*/gm, '').trim();
-            if (!jsonStr || jsonStr === '[DONE]') continue;
             try {
               const rawData = JSON.parse(jsonStr);
-              let cleanText = "";
-              if (isGroq || isMistral) {
-                if (rawData.choices?.[0]?.delta?.content) {
-                  cleanText = rawData.choices[0].delta.content;
-                }
-              } else {
-                if (rawData.candidates?.[0]?.content?.parts?.[0]?.text) {
-                  cleanText = rawData.candidates[0].content.parts[0].text;
+
+              // Check for silent Gemini prompt/candidate block reasons
+              if (!useOpenAIFormat) {
+                const pBlock = rawData?.promptFeedback?.blockReason;
+                const cFinish = rawData?.candidates?.[0]?.finishReason;
+                if (pBlock) blockReasonDetected = pBlock;
+                else if (cFinish && cFinish !== 'STOP' && cFinish !== 'MAX_TOKENS') {
+                  blockReasonDetected = cFinish;
                 }
               }
+
+              let cleanText = "";
+              if (useOpenAIFormat) {
+                cleanText = rawData?.choices?.[0]?.delta?.content
+                  || rawData?.choices?.[0]?.message?.content
+                  || "";
+              } else {
+                const parts = rawData?.candidates?.[0]?.content?.parts;
+                if (Array.isArray(parts)) {
+                  cleanText = parts
+                    .filter(p => p && typeof p.text === 'string' && !p.thought)
+                    .map(p => p.text)
+                    .join('');
+                }
+              }
+
               if (cleanText) {
                 const restoredText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
                 completeRawResponse += restoredText;
@@ -1740,12 +1793,61 @@ Output strictly JSON:
                 flushStreamBuffer(false);
               }
             } catch (e) {}
-          }
-        } // <-- End of while(true) loop
+          };
 
-        // Force flush the remaining buffer to prevent truncated responses.
-        // This replaces the removed repair engine and verification UI block.
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) {
+              if (lineBuffer.trim()) {
+                const remainingLines = lineBuffer.split(/\r?\n/);
+                for (const l of remainingLines) processJsonLine(l);
+              }
+              break;
+            }
+
+            lineBuffer += decoder.decode(value, { stream: true });
+            const lines = lineBuffer.split(/\r?\n/);
+            lineBuffer = lines.pop() || "";
+
+            for (const line of lines) {
+              processJsonLine(line);
+            }
+          }
+        };
+
+        await consumeSSEStream(llmRes, isGroq || isMistral);
         flushStreamBuffer(true);
+
+        // ================================================================
+        // ZERO-BLANK-RESPONSE GUARANTEE: AUTOMATIC STREAM RECOVERY
+        // If the primary provider closed the stream with 0 visible characters
+        // (e.g. silent Gemini PROHIBITED_CONTENT block or empty stream),
+        // automatically fail over so the user NEVER sees a blank screen.
+        // ================================================================
+        if (!completeRawResponse.trim()) {
+          if (!isGroq && GROQ_KEYS.length > 0 && !hasAttachments) {
+            const rescueGroq = await tryGroqStream();
+            if (rescueGroq.res) {
+              await consumeSSEStream(rescueGroq.res, true);
+              flushStreamBuffer(true);
+            }
+          } else if (isGroq && GEMINI_KEYS.length > 0) {
+            const rescueGem = await tryGeminiStream();
+            if (rescueGem.res) {
+              await consumeSSEStream(rescueGem.res, false);
+              flushStreamBuffer(true);
+            }
+          }
+        }
+
+        hideLoaderOnce();
+
+        if (!completeRawResponse.trim()) {
+          const reason = blockReasonDetected
+            ? `Response blocked by upstream safety/policy filter (${blockReasonDetected}). Please rephrase your prompt.`
+            : `The AI model returned an empty response. Please try again.`;
+          sendError(reason);
+        }
 
       } catch (err) {
         let safeErr = err.message;
