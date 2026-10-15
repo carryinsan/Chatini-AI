@@ -1592,12 +1592,17 @@ Output strictly JSON:
           const finalPayload = {
             systemInstruction: { parts: [{ text: systemPrompt }] },
             contents: geminiMessages,
-            generationConfig: { maxOutputTokens: modelId === 'oracle' ? 16384 : 8192, temperature: modelId === 'oracle' ? 0.3 : 0.7 },
+            generationConfig: { 
+              maxOutputTokens: modelId === 'oracle' ? 16384 : 8192, 
+              temperature: modelId === 'oracle' ? 0.3 : 0.7,
+              thinkingConfig: { thinkingBudget: 0 } // Prevents empty thought-part suppression
+            },
             safetySettings: [
               { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
               { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
               { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+              { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+              { category: "HARM_CATEGORY_CIVIC_INTEGRITY", threshold: "BLOCK_NONE" }
             ]
           };
 
@@ -1724,15 +1729,32 @@ Output strictly JSON:
             try {
               const rawData = JSON.parse(jsonStr);
               let cleanText = "";
+
               if (isGroq || isMistral) {
-                if (rawData.choices?.[0]?.delta?.content) {
-                  cleanText = rawData.choices[0].delta.content;
-                }
+                cleanText = rawData.choices?.[0]?.delta?.content || "";
               } else {
-                if (rawData.candidates?.[0]?.content?.parts?.[0]?.text) {
-                  cleanText = rawData.candidates[0].content.parts[0].text;
+                // Check for prompt level blocks
+                if (rawData.promptFeedback?.blockReason) {
+                  sendError(`[Gemini Blocked] Prompt flagged: ${rawData.promptFeedback.blockReason}`);
+                  return;
+                }
+
+                const candidate = rawData.candidates?.[0];
+                if (candidate) {
+                  // Catch silent finish blocks when no tokens have been received
+                  if (candidate.finishReason && !['STOP', 'MAX_TOKENS'].includes(candidate.finishReason) && !completeRawResponse) {
+                    sendError(`[Gemini Filtered] Generation stopped: ${candidate.finishReason}`);
+                    return;
+                  }
+
+                  // Extract all text parts (including non-thought parts)
+                  const parts = candidate.content?.parts;
+                  if (Array.isArray(parts)) {
+                    cleanText = parts.map(p => p.text || '').join('');
+                  }
                 }
               }
+
               if (cleanText) {
                 const restoredText = PrivacyEngine.deanonymize(cleanText, ephemeralTokenMap);
                 completeRawResponse += restoredText;
@@ -1743,9 +1765,13 @@ Output strictly JSON:
           }
         } // <-- End of while(true) loop
 
-        // Force flush the remaining buffer to prevent truncated responses.
-        // This replaces the removed repair engine and verification UI block.
+        // Force flush the remaining buffer
         flushStreamBuffer(true);
+
+        // Fail-safe: if the stream closed successfully without generating any text, notify the user
+        if (!completeRawResponse.trim()) {
+          sendError("[Gemini Error] Model returned an empty response. Verify token limits or check content safety parameters.");
+        }
 
       } catch (err) {
         let safeErr = err.message;
