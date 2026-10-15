@@ -4828,17 +4828,21 @@ ${marked.parse(unclosedContent.trim())}
     };
 
     // Intercept <arix_ui> blocks (Auto-heals incomplete/malformed JSON)
+    const arixWidgets = [];
     if (!isStreaming && markdownContent.includes('<arix_ui>') && !markdownContent.includes('</arix_ui>')) {
         markdownContent += '</arix_ui>';
     }
-    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(<\/arix_ui>|$)/gi, (match, rawJson, closeTag) => {
+    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(<\/arix_ui>|\$)/gi, (match, rawJson, closeTag) => {
+        const idx = arixWidgets.length;
         if (!closeTag && isStreaming) {
-            return '\n\n<div class="my-4 p-4 rounded-2xl border border-theme-200 bg-theme-50/50 text-theme-700 text-xs font-bold flex items-center justify-between animate-pulse not-prose"><div class="flex items-center gap-2.5"><i class="ph-bold ph-cube-transparent animate-spin text-lg"></i> <span>Synthesizing Interactive Holographic Module...</span></div><span class="text-[10px] uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-theme-100">Live Stream</span></div>\n\n';
+            arixWidgets.push('<div class="my-4 p-4 rounded-2xl border border-theme-200 bg-theme-50/50 text-theme-700 text-xs font-bold flex items-center justify-between animate-pulse not-prose"><div class="flex items-center gap-2.5"><i class="ph-bold ph-cube-transparent animate-spin text-lg"></i> <span>Synthesizing Interactive Holographic Module...</span></div><span class="text-[10px] uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-theme-100">Live Stream</span></div>');
+            return `\n\n%%ARIX_UI_BLOCK_${idx}%%\n\n`;
         }
         const parsed = healAndParseArixJSON(rawJson);
         if (!parsed) return "";
         const uid = (msgId || 'w') + '_' + Math.random().toString(36).substr(2, 6);
-        return '\n\n' + renderArixWidgetHTML(parsed, uid) + '\n\n';
+        arixWidgets.push(renderArixWidgetHTML(parsed, uid));
+        return `\n\n%%ARIX_UI_BLOCK_${idx}%%\n\n`;
     });
 
     // Process <chart> into modern target UI blocks
@@ -4872,7 +4876,14 @@ ${marked.parse(unclosedContent.trim())}
             <button onclick="openPdfModal('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-red-600 shadow-sm"><i class="ph-bold ph-file-pdf text-sm text-red-500"></i> Export PDF</button>
         </div>` : "";
         
-    return `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group">${renderMathAndMarkdown(markdownContent)}</div>${extractedHtml}${actionBarHtml}`;
+    let renderedProse = renderMathAndMarkdown(markdownContent);
+    arixWidgets.forEach((widgetHtml, idx) => {
+        const placeholder = `%%ARIX_UI_BLOCK_${idx}%%`;
+        const regex = new RegExp(`<p>\\s*${placeholder}\\s*<\\/p>|${placeholder}`, 'g');
+        renderedProse = renderedProse.replace(regex, widgetHtml);
+    });
+
+    return `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group">${renderedProse}</div>${extractedHtml}${actionBarHtml}`;
 }
 
 // ====== APPEND MESSAGES (TARGET UI CHAT BUBBLES) ======
