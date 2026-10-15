@@ -4837,7 +4837,7 @@ ${marked.parse(unclosedContent.trim())}
     if (!isStreaming && markdownContent.includes('<arix_3d>') && !markdownContent.includes('</arix_3d>')) {
         markdownContent += '</arix_3d>';
     }
-    markdownContent = markdownContent.replace(/<arix_3d>([\s\S]*?)(?:<\/arix_3d>|\$)/gi, (match, rawJson) => {
+    markdownContent = markdownContent.replace(/<arix_3d>([\s\S]*?)(?:<\/arix_3d>|$)/gi, (match, rawJson) => {
         const trimmed = (rawJson || '').trim();
         if (!trimmed) return '';
         const idx = arix3dWidgets.length;
@@ -11441,6 +11441,183 @@ window.downloadWorkspaceZip = async function() {
     // Start engine on boot
     scheduleNextPulse();
 })();
+
+// ====== 3D VIEWER ENGINE ======
+window.Arix3D = {
+    instances: {},
+    init: function(uid, jsonSpec) {
+        if (!window.THREE || !window.THREE.OrbitControls) {
+            setTimeout(() => window.Arix3D.init(uid, jsonSpec), 80);
+            return;
+        }
+        const canvas = document.getElementById('canvas-' + uid);
+        const wrap = document.getElementById('canvas-wrap-' + uid);
+        const loader = document.getElementById('loader-' + uid);
+        if (!canvas || !wrap) return;
+
+        if (this.instances[uid]) {
+            try {
+                this.instances[uid].disposed = true;
+                cancelAnimationFrame(this.instances[uid].animId);
+                this.instances[uid].renderer.dispose();
+            } catch (_) {}
+            delete this.instances[uid];
+        }
+
+        let sceneData = null;
+        try {
+            sceneData = typeof jsonSpec === 'string' ? JSON.parse(jsonSpec) : jsonSpec;
+            if (sceneData.scene) sceneData = sceneData.scene;
+        } catch (e) {
+            if (loader) loader.innerHTML = `<span class="text-red-400">Invalid 3D data</span>`;
+            return;
+        }
+
+        const titleEl = document.getElementById('title-' + uid);
+        if (titleEl && sceneData.title) titleEl.innerText = sceneData.title;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(sceneData.environment?.background || '#0f172a');
+
+        const cam = sceneData.camera || {};
+        const pos = cam.position || [6, 5, 8];
+        const target = cam.target || [0, 0, 0];
+        const width = wrap.clientWidth || 400;
+        const height = wrap.clientHeight || 360;
+
+        const camera = new THREE.PerspectiveCamera(cam.fov || 45, width / height, cam.near || 0.1, cam.far || 10000);
+        camera.position.set(pos[0], pos[1], pos[2]);
+
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+        const controls = new THREE.OrbitControls(camera, canvas);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(target[0], target[1], target[2]);
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.5;
+
+        const lights = Array.isArray(sceneData.lights) && sceneData.lights.length > 0 ? sceneData.lights : [
+            { type: "ambient", intensity: 0.7, color: "#ffffff" },
+            { type: "directional", intensity: 1.4, position: [5, 8, 6] }
+        ];
+        lights.forEach(l => {
+            const col = new THREE.Color(l.color || "#ffffff");
+            const intens = Number(l.intensity ?? 1);
+            if (l.type === "ambient") scene.add(new THREE.AmbientLight(col, intens));
+            else if (l.type === "point") {
+                const pl = new THREE.PointLight(col, intens, l.distance || 0, l.decay || 2);
+                pl.position.set(...(l.position || [0, 5, 0]));
+                scene.add(pl);
+            } else {
+                const dl = new THREE.DirectionalLight(col, intens);
+                dl.position.set(...(l.position || [5, 8, 6]));
+                scene.add(dl);
+            }
+        });
+
+        if (sceneData.environment?.grid !== false) {
+            const grid = new THREE.GridHelper(20, 20, 0x6366f1, 0x334155);
+            grid.position.y = sceneData.environment?.ground?.y || 0;
+            scene.add(grid);
+        }
+
+        const materialsMap = { default: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.2 }) };
+        if (Array.isArray(sceneData.materials)) {
+            sceneData.materials.forEach(m => {
+                materialsMap[m.id] = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(m.color || '#94a3b8'),
+                    roughness: Number(m.roughness ?? 0.5),
+                    metalness: Number(m.metalness ?? 0.2),
+                    wireframe: Boolean(m.wireframe)
+                });
+            });
+        }
+
+        function createGeom(primitive, g) {
+            g = g || {};
+            switch ((primitive || 'box').toLowerCase()) {
+                case 'box': return new THREE.BoxGeometry(g.width || 1, g.height || 1, g.depth || 1);
+                case 'sphere': return new THREE.SphereGeometry(g.radius || 1, g.widthSegments || 32, g.heightSegments || 16);
+                case 'cylinder': return new THREE.CylinderGeometry(g.radiusTop ?? 1, g.radiusBottom ?? 1, g.height || 2, g.radialSegments || 32);
+                case 'cone': return new THREE.ConeGeometry(g.radius || 1, g.height || 2, g.radialSegments || 32);
+                case 'torus': return new THREE.TorusGeometry(g.radius || 1, g.tube || 0.3, g.radialSegments || 16, g.tubularSegments || 64);
+                case 'plane': return new THREE.PlaneGeometry(g.width || 5, g.height || 5);
+                case 'capsule': return THREE.CapsuleGeometry ? new THREE.CapsuleGeometry(g.radius || 0.5, g.length || 1, 4, 16) : new THREE.CylinderGeometry(g.radius || 0.5, g.radius || 0.5, g.length || 1, 16);
+                default: return new THREE.BoxGeometry(1, 1, 1);
+            }
+        }
+
+        const meshStore = {};
+        (sceneData.objects || []).forEach(obj => {
+            const mesh = new THREE.Mesh(createGeom(obj.primitive, obj.geometry), materialsMap[obj.material] || materialsMap.default);
+            mesh.position.set(...(obj.position || [0, 0, 0]));
+            mesh.rotation.set(...(obj.rotation || [0, 0, 0]));
+            mesh.scale.set(...(obj.scale || [1, 1, 1]));
+            scene.add(mesh);
+            if (obj.id) meshStore[obj.id] = mesh;
+        });
+
+        const inst = { uid, scene, camera, renderer, controls, wrap, initialCamPos: [...pos], initialTarget: [...target], materialsMap, wireframeState: false, disposed: false };
+        const clock = new THREE.Clock();
+        function animate() {
+            if (inst.disposed) return;
+            inst.animId = requestAnimationFrame(animate);
+            const elapsed = clock.getElapsedTime();
+            (sceneData.animations || []).forEach(anim => {
+                const m = meshStore[anim.objectId];
+                if (!m) return;
+                const dur = (anim.duration || 2000) / 1000;
+                const val = THREE.MathUtils.lerp(anim.from || 0, anim.to || 1, (elapsed % dur) / dur);
+                if (anim.property === 'rotation.y') m.rotation.y = val;
+                else if (anim.property === 'rotation.x') m.rotation.x = val;
+                else if (anim.property === 'rotation.z') m.rotation.z = val;
+            });
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+        this.instances[uid] = inst;
+        if (loader) loader.classList.add('hidden');
+
+        const resizeObs = new ResizeObserver(() => {
+            if (inst.disposed || !wrap.clientWidth || !wrap.clientHeight) return;
+            camera.aspect = wrap.clientWidth / wrap.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+        });
+        resizeObs.observe(wrap);
+        inst.resizeObs = resizeObs;
+    },
+    toggleAutoRotate: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.controls.autoRotate = !inst.controls.autoRotate;
+        document.getElementById('btn-spin-' + uid)?.classList.toggle('text-indigo-600', inst.controls.autoRotate);
+    },
+    toggleWireframe: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.wireframeState = !inst.wireframeState;
+        Object.values(inst.materialsMap).forEach(m => m.wireframe = inst.wireframeState);
+        document.getElementById('btn-wire-' + uid)?.classList.toggle('text-indigo-600', inst.wireframeState);
+    },
+    resetCamera: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.camera.position.set(...inst.initialCamPos);
+        inst.controls.target.set(...inst.initialTarget);
+        inst.controls.update();
+    },
+    toggleFullscreen: function(uid) {
+        const wrap = document.getElementById('canvas-wrap-' + uid);
+        if (!wrap) return;
+        if (!document.fullscreenElement) wrap.requestFullscreen().catch(() => {});
+        else document.exitFullscreen().catch(() => {});
+    }
+};
 
 </script>
 </body>
