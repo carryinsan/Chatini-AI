@@ -4312,10 +4312,20 @@ ${marked.parse(unclosedContent.trim())}
 
     
     // ====================================================================
-    // ARIX SELF-HEALING HOLOGRAPHIC INTERACTIVE UI ENGINE (<arix_ui>)
+    // ARIX SELF-HEALING HOLOGRAPHIC INTERACTIVE UI ENGINE (<arix_ui> v2.0)
     // ====================================================================
     if (!window.ARIX_UI_INTERACTIONS) {
         window.ARIX_UI_INTERACTIONS = {
+            askFollowUp: function(promptText) {
+                const inputEl = document.getElementById('chat-input');
+                if (!inputEl) return;
+                inputEl.value = promptText;
+                inputEl.focus();
+                inputEl.style.height = 'auto';
+                inputEl.style.height = inputEl.scrollHeight + 'px';
+                if (typeof updateUIState === 'function') updateUIState();
+                if (typeof showToast === 'function') showToast('Prompt loaded! Press Enter or Send.');
+            },
             toggleNode: function(uid, idx) {
                 const detailEl = document.getElementById('arix-node-detail-' + uid + '-' + idx);
                 const cardEl = document.getElementById('arix-node-card-' + uid + '-' + idx);
@@ -4324,6 +4334,13 @@ ${marked.parse(unclosedContent.trim())}
                 const isHidden = detailEl.classList.toggle('hidden');
                 if (cardEl) cardEl.classList.toggle('active-node', !isHidden);
                 if (caretEl) caretEl.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+            },
+            expandAllNodes: function(uid) {
+                const shell = document.getElementById('arix-shell-' + uid);
+                if (!shell) return;
+                const details = shell.querySelectorAll('[id^="arix-node-detail-' + uid + '-"]');
+                const anyHidden = Array.from(details).some(el => el.classList.contains('hidden'));
+                details.forEach(el => el.classList.toggle('hidden', !anyHidden));
             },
             selectMode: function(uid, stepIdx, modeIdx, specsText) {
                 const container = document.getElementById('arix-modes-' + uid + '-' + stepIdx);
@@ -4361,6 +4378,77 @@ ${marked.parse(unclosedContent.trim())}
                 root.querySelectorAll('.arix-matrix-pane').forEach((p, i) => {
                     p.classList.toggle('hidden', i !== tabIdx);
                 });
+            },
+            updateSimulator: function(uid, formulaStr, unitStr) {
+                const root = document.getElementById('arix-sim-' + uid);
+                if (!root) return;
+                const vars = {};
+                root.querySelectorAll('input[type="range"]').forEach(inp => {
+                    const k = inp.getAttribute('data-var');
+                    const v = parseFloat(inp.value) || 0;
+                    vars[k] = v;
+                    const lbl = document.getElementById('arix-sim-val-' + uid + '-' + k);
+                    if (lbl) lbl.innerText = v.toLocaleString();
+                });
+                let result = 0;
+                try {
+                    const keys = Object.keys(vars);
+                    const vals = Object.values(vars);
+                    const safeExpr = String(formulaStr || '0').replace(/[^a-zA-Z0-9_+\-*/().\s]/g, '');
+                    const fn = new Function(...keys, 'return (' + safeExpr + ');');
+                    result = fn(...vals);
+                } catch (e) {
+                    result = Object.values(vars).reduce((acc, n) => acc + n, 0);
+                }
+                const outEl = document.getElementById('arix-sim-out-' + uid);
+                if (outEl) {
+                    const formatted = Number.isFinite(result) ? Number(result.toFixed(2)).toLocaleString() : '0';
+                    outEl.innerText = formatted + (unitStr ? ' ' + unitStr : '');
+                }
+            },
+            answerQuiz: function(uid, qIdx, optIdx, correctIdx) {
+                const qBox = document.getElementById('arix-quiz-q-' + uid + '-' + qIdx);
+                if (!qBox || qBox.getAttribute('data-answered') === '1') return;
+                qBox.setAttribute('data-answered', '1');
+                const buttons = qBox.querySelectorAll('.arix-quiz-opt');
+                buttons.forEach((btn, i) => {
+                    btn.disabled = true;
+                    if (i === correctIdx) {
+                        btn.className = 'arix-quiz-opt w-full text-left p-3 rounded-xl border border-emerald-400 bg-emerald-50 text-emerald-950 text-xs font-bold flex items-center justify-between';
+                        btn.insertAdjacentHTML('beforeend', '<i class="ph-fill ph-check-circle text-emerald-600 text-base"></i>');
+                    } else if (i === optIdx && optIdx !== correctIdx) {
+                        btn.className = 'arix-quiz-opt w-full text-left p-3 rounded-xl border border-red-300 bg-red-50 text-red-900 text-xs font-semibold flex items-center justify-between';
+                        btn.insertAdjacentHTML('beforeend', '<i class="ph-fill ph-x-circle text-red-500 text-base"></i>');
+                    }
+                });
+                const expEl = document.getElementById('arix-quiz-exp-' + uid + '-' + qIdx);
+                if (expEl) expEl.classList.remove('hidden');
+            },
+            toggleCheck: function(uid, idx) {
+                const root = document.getElementById('arix-check-' + uid);
+                if (!root) return;
+                const row = document.getElementById('arix-check-row-' + uid + '-' + idx);
+                const box = document.getElementById('arix-check-box-' + uid + '-' + idx);
+                const title = document.getElementById('arix-check-title-' + uid + '-' + idx);
+                if (!row) return;
+                const done = row.getAttribute('data-done') === '1' ? '0' : '1';
+                row.setAttribute('data-done', done);
+                if (box) {
+                    box.className = done === '1'
+                        ? 'w-5 h-5 rounded-md bg-emerald-500 text-white flex items-center justify-center text-xs shrink-0 transition-all'
+                        : 'w-5 h-5 rounded-md border-2 border-gray-300 bg-white flex items-center justify-center text-xs shrink-0 transition-all';
+                    box.innerHTML = done === '1' ? '<i class="ph-bold ph-check"></i>' : '';
+                }
+                if (title) title.classList.toggle('line-through', done === '1');
+                if (title) title.classList.toggle('text-gray-400', done === '1');
+
+                const allRows = root.querySelectorAll('[id^="arix-check-row-' + uid + '-"]');
+                const doneCount = Array.from(allRows).filter(r => r.getAttribute('data-done') === '1').length;
+                const pct = allRows.length ? Math.round((doneCount / allRows.length) * 100) : 0;
+                const bar = document.getElementById('arix-check-bar-' + uid);
+                const pctTxt = document.getElementById('arix-check-pct-' + uid);
+                if (bar) bar.style.width = pct + '%';
+                if (pctTxt) pctTxt.innerText = doneCount + '/' + allRows.length + ' (' + pct + '%)';
             }
         };
     }
@@ -4372,21 +4460,15 @@ ${marked.parse(unclosedContent.trim())}
             .replace(/```$/i, '')
             .trim();
 
-        // Stage 1: Direct parse
         try { return JSON.parse(s); } catch (e) {}
 
-        // Stage 2: Extract first { to last } or auto-balance truncated stream braces
         let start = s.indexOf('{');
         if (start === -1) return null;
         s = s.slice(start);
-        
-        // Remove trailing commas before closing brackets
         s = s.replace(/,\s*([\]}])/g, '$1');
-        // Replace smart quotes
         s = s.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
         try { return JSON.parse(s); } catch (e) {}
 
-        // Stage 3: Auto-close unclosed quotes, arrays, and objects
         let balanced = s;
         const quoteCount = (balanced.match(/(?<!\\)"/g) || []).length;
         if (quoteCount % 2 !== 0) balanced += '"';
@@ -4409,7 +4491,6 @@ ${marked.parse(unclosedContent.trim())}
         balanced = balanced.replace(/,\s*([\]}])/g, '$1');
         try { return JSON.parse(balanced); } catch (e) {}
 
-        // Stage 4: Fallback regex extraction so it never crashes
         const titleMatch = s.match(/"title"\s*:\s*"([^"]+)"/);
         const summaryMatch = s.match(/"summary"\s*:\s*"([^"]+)"/) || s.match(/"subtitle"\s*:\s*"([^"]+)"/);
         if (titleMatch) {
@@ -4417,7 +4498,7 @@ ${marked.parse(unclosedContent.trim())}
                 type: 'pipeline',
                 title: titleMatch[1],
                 subtitle: summaryMatch ? summaryMatch[1] : 'Interactive Module',
-                steps: [{ id: '1', title: titleMatch[1], badge: 'Arix', summary: summaryMatch ? summaryMatch[1] : 'Interactive View Ready' }]
+                steps: [{ id: '1', title: titleMatch[1], badge: 'Auto-Healed', summary: summaryMatch ? summaryMatch[1] : 'Interactive View Ready' }]
             };
         }
         return null;
@@ -4456,7 +4537,9 @@ ${marked.parse(unclosedContent.trim())}
                     '</div>';
                 }
 
+                const stepTitle = esc(st.title || st.name || 'Stage ' + (idx + 1));
                 const badgeHtml = st.badge ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full bg-theme-50 text-theme-700 border border-theme-200">' + esc(st.badge) + '</span>' : '';
+                const askBtn = '<button onclick="event.stopPropagation(); window.ARIX_UI_INTERACTIONS.askFollowUp(\'Deep-dive into ' + stepTitle + ' and explain its edge cases\')" class="text-[10px] font-bold text-gray-400 hover:text-theme-600 px-1.5 py-0.5 rounded hover:bg-theme-50 transition-colors" title="Ask Arix about this step"><i class="ph-bold ph-chat-Plus"></i> Explore</button>';
                 const caretHtml = st.details ? '<i id="arix-node-caret-' + uid + '-' + idx + '" class="ph-bold ph-caret-down text-gray-400 text-xs transition-transform duration-200"></i>' : '';
                 const detailHtml = st.details ? '<div id="arix-node-detail-' + uid + '-' + idx + '" class="hidden mt-3 pt-3 border-t border-dashed border-gray-200 text-xs text-gray-700 bg-white/80 p-3 rounded-xl leading-relaxed">' + esc(st.details) + '</div>' : '';
                 const connLine = idx < steps.length - 1 ? '<div class="arix-connector-line my-1"></div>' : '';
@@ -4466,19 +4549,19 @@ ${marked.parse(unclosedContent.trim())}
                         '<div class="flex items-center gap-2.5">' +
                             '<span class="w-6 h-6 rounded-lg bg-theme-600 text-white text-[11px] font-bold flex items-center justify-center shrink-0 shadow-sm">' + esc(st.id || (idx + 1)) + '</span>' +
                             '<div>' +
-                                '<h5 class="text-sm font-bold text-gray-900 leading-snug">' + esc(st.title || st.name || 'Stage ' + (idx + 1)) + '</h5>' +
+                                '<h5 class="text-sm font-bold text-gray-900 leading-snug">' + stepTitle + '</h5>' +
                                 '<p class="text-xs text-gray-500 mt-0.5">' + esc(st.summary || st.desc || '') + '</p>' +
                             '</div>' +
                         '</div>' +
-                        '<div class="flex items-center gap-2 shrink-0">' +
-                            badgeHtml + caretHtml +
+                        '<div class="flex items-center gap-1.5 shrink-0">' +
+                            askBtn + badgeHtml + caretHtml +
                         '</div>' +
                     '</div>' +
                     detailHtml + modesHtml +
                 '</div>' + connLine;
             }).join('');
 
-            return '<div class="arix-widget-shell not-prose">' +
+            return '<div id="arix-shell-' + uid + '" class="arix-widget-shell not-prose">' +
                 '<div class="px-5 py-3.5 bg-gradient-to-r from-theme-50/80 via-white to-theme-50/40 border-b border-gray-100 flex items-center justify-between">' +
                     '<div class="flex items-center gap-2.5">' +
                         '<div class="w-8 h-8 rounded-xl bg-theme-600 text-white flex items-center justify-center shadow-sm"><i class="ph-bold ph-flow-arrow text-base"></i></div>' +
@@ -4487,13 +4570,170 @@ ${marked.parse(unclosedContent.trim())}
                             '<p class="text-[11px] text-gray-500 font-medium">' + esc(data.subtitle || 'Click any node to inspect state & toggle modes') + '</p>' +
                         '</div>' +
                     '</div>' +
-                    '<span class="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-white text-theme-700 border border-theme-200 shadow-sm">Interactive</span>' +
+                    '<button onclick="window.ARIX_UI_INTERACTIONS.expandAllNodes(\'' + uid + '\')" class="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-lg bg-white text-theme-700 border border-theme-200 hover:bg-theme-50 shadow-sm transition-colors">Expand All</button>' +
                 '</div>' +
                 '<div class="p-5">' + stepsHtml + '</div>' +
             '</div>';
         }
 
-        // 2. BENCHMARK / TELEMETRY BARS
+        // 2. LIVE WHAT-IF SIMULATOR / CALCULATOR
+        if (type === 'simulator' || Array.isArray(data.inputs)) {
+            const inputs = Array.isArray(data.inputs) ? data.inputs : [];
+            const formula = esc(data.formula || 'a * b');
+            const unit = esc(data.unit || '');
+            let initVars = {};
+            inputs.forEach((inp, i) => { initVars[inp.id || ('v' + i)] = Number(inp.default ?? inp.min ?? 1); });
+            let initResult = 0;
+            try {
+                const fn = new Function(...Object.keys(initVars), 'return (' + (data.formula || '0') + ');');
+                initResult = fn(...Object.values(initVars));
+            } catch (e) {}
+            const initFormatted = (Number.isFinite(initResult) ? Number(initResult.toFixed(2)).toLocaleString() : '0') + (unit ? ' ' + unit : '');
+
+            const slidersHtml = inputs.map((inp, i) => {
+                const vid = esc(inp.id || ('v' + i));
+                const defVal = Number(inp.default ?? inp.min ?? 1);
+                return '<div class="p-3.5 rounded-xl bg-white border border-gray-100 shadow-sm">' +
+                    '<div class="flex justify-between items-center text-xs font-bold text-gray-800 mb-2">' +
+                        '<span>' + esc(inp.label || vid) + '</span>' +
+                        '<span id="arix-sim-val-' + uid + '-' + vid + '" class="px-2 py-0.5 rounded bg-theme-50 text-theme-700 font-mono">' + defVal.toLocaleString() + '</span>' +
+                    '</div>' +
+                    '<input type="range" data-var="' + vid + '" min="' + (inp.min ?? 0) + '" max="' + (inp.max ?? 100) + '" step="' + (inp.step ?? 1) + '" value="' + defVal + '" oninput="window.ARIX_UI_INTERACTIONS.updateSimulator(\'' + uid + '\', \'' + formula + '\', \'' + unit + '\')" class="w-full accent-theme-600 h-1.5 bg-gray-200 rounded-lg cursor-pointer">' +
+                '</div>';
+            }).join('');
+
+            return '<div id="arix-sim-' + uid + '" class="arix-widget-shell not-prose">' +
+                '<div class="px-5 py-3.5 bg-white border-b border-gray-100 flex items-center justify-between">' +
+                    '<div class="flex items-center gap-2.5">' +
+                        '<div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center justify-center"><i class="ph-bold ph-sliders text-base"></i></div>' +
+                        '<div>' +
+                            '<h4 class="text-sm font-extrabold text-gray-900">' + esc(data.title || 'Interactive Simulator') + '</h4>' +
+                            '<p class="text-[11px] text-gray-500">' + esc(data.subtitle || 'Drag sliders to test live scenarios') + '</p>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="text-right">' +
+                        '<span class="text-[10px] uppercase tracking-wider font-bold text-gray-400 block">Live Output</span>' +
+                        '<span id="arix-sim-out-' + uid + '" class="text-base font-black text-theme-600 font-mono">' + initFormatted + '</span>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">' + slidersHtml + '</div>' +
+                (data.note ? '<div class="px-5 pb-4 text-[11px] text-gray-500 font-mono">' + esc(data.note) + '</div>' : '') +
+            '</div>';
+        }
+
+        // 3. INTERACTIVE QUIZ / DIAGNOSTIC
+        if (type === 'quiz' || Array.isArray(data.questions)) {
+            const questions = Array.isArray(data.questions) ? data.questions : [];
+            const qHtml = questions.map((q, qIdx) => {
+                const opts = Array.isArray(q.options) ? q.options : [];
+                const ans = Number(q.answer ?? 0);
+                const optsHtml = opts.map((opt, oIdx) => {
+                    return '<button onclick="window.ARIX_UI_INTERACTIONS.answerQuiz(\'' + uid + '\', ' + qIdx + ', ' + oIdx + ', ' + ans + ')" class="arix-quiz-opt w-full text-left p-3 rounded-xl border border-gray-200 bg-white hover:border-theme-300 hover:bg-theme-50/30 text-xs font-medium text-gray-800 transition-all flex items-center justify-between">' +
+                        '<span>' + esc(opt) + '</span>' +
+                    '</button>';
+                }).join('');
+
+                return '<div id="arix-quiz-q-' + uid + '-' + qIdx + '" class="p-4 rounded-2xl bg-white border border-gray-100 shadow-sm space-y-2.5">' +
+                    '<div class="text-xs font-bold text-gray-900">Q' + (qIdx + 1) + '. ' + esc(q.q || q.question) + '</div>' +
+                    '<div class="space-y-2">' + optsHtml + '</div>' +
+                    '<div id="arix-quiz-exp-' + uid + '-' + qIdx + '" class="hidden mt-2 p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-950 font-medium">' +
+                        '<strong>Explanation:</strong> ' + esc(q.explanation || 'Correct answer verified.') +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            return '<div class="arix-widget-shell not-prose">' +
+                '<div class="px-5 py-3.5 bg-white border-b border-gray-100 flex items-center gap-2.5">' +
+                    '<div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 border border-amber-200 flex items-center justify-center"><i class="ph-bold ph-Seal-Question text-base"></i></div>' +
+                    '<div><h4 class="text-sm font-extrabold text-gray-900">' + esc(data.title || 'Interactive Knowledge Check') + '</h4><p class="text-[11px] text-gray-500">Select an option to verify immediately</p></div>' +
+                '</div>' +
+                '<div class="p-5 space-y-4">' + qHtml + '</div>' +
+            '</div>';
+        }
+
+        // 4. INTERACTIVE TIMELINE / ROADMAP
+        if (type === 'timeline' || Array.isArray(data.events)) {
+            const events = Array.isArray(data.events) ? data.events : [];
+            const evHtml = events.map((ev, i) => {
+                const st = String(ev.status || 'Upcoming').toLowerCase();
+                const badgeCls = st.includes('comp') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : (st.includes('act') ? 'bg-theme-50 text-theme-700 border-theme-200' : 'bg-gray-100 text-gray-600 border-gray-200');
+                const delivs = Array.isArray(ev.deliverables) ? '<div class="flex flex-wrap gap-1.5 mt-2.5">' + ev.deliverables.map(d => '<span class="px-2 py-0.5 rounded-md bg-gray-50 border border-gray-200 text-[10px] font-semibold text-gray-700">' + esc(d) + '</span>').join('') + '</div>' : '';
+                return '<div class="relative pl-6 pb-5 last:pb-0 border-l-2 border-theme-200">' +
+                    '<div class="absolute -left-[7px] top-1 w-3 h-3 rounded-full bg-theme-600 ring-4 ring-theme-50"></div>' +
+                    '<div class="p-3.5 rounded-2xl bg-white border border-gray-100 shadow-sm">' +
+                        '<div class="flex items-center justify-between gap-2 mb-1">' +
+                            '<span class="text-[10px] font-bold uppercase tracking-wider text-theme-600">' + esc(ev.phase || ('Step ' + (i + 1))) + '</span>' +
+                            '<span class="px-2 py-0.5 text-[10px] font-bold rounded-full border ' + badgeCls + '">' + esc(ev.status || 'Planned') + '</span>' +
+                        '</div>' +
+                        '<h5 class="text-xs font-bold text-gray-900">' + esc(ev.title) + '</h5>' +
+                        '<p class="text-xs text-gray-500 mt-0.5">' + esc(ev.desc || '') + '</p>' +
+                        delivs +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            return '<div class="arix-widget-shell not-prose">' +
+                '<div class="px-5 py-3.5 bg-white border-b border-gray-100 flex items-center gap-2.5">' +
+                    '<div class="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 border border-purple-200 flex items-center justify-center"><i class="ph-bold ph-git-commit text-base"></i></div>' +
+                    '<div><h4 class="text-sm font-extrabold text-gray-900">' + esc(data.title || 'Interactive Roadmap') + '</h4><p class="text-[11px] text-gray-500">' + esc(data.subtitle || 'Milestone progression & deliverables') + '</p></div>' +
+                '</div>' +
+                '<div class="p-5">' + evHtml + '</div>' +
+            '</div>';
+        }
+
+        // 5. INTERACTIVE ACTION CHECKLIST
+        if (type === 'checklist') {
+            const items = Array.isArray(data.items) ? data.items : [];
+            const rowsHtml = items.map((it, idx) => {
+                return '<div id="arix-check-row-' + uid + '-' + idx + '" data-done="0" onclick="window.ARIX_UI_INTERACTIONS.toggleCheck(\'' + uid + '\', ' + idx + ')" class="p-3.5 rounded-xl bg-white border border-gray-100 hover:border-theme-300 shadow-sm flex items-start gap-3 cursor-pointer select-none transition-all">' +
+                    '<div id="arix-check-box-' + uid + '-' + idx + '" class="w-5 h-5 rounded-md border-2 border-gray-300 bg-white flex items-center justify-center text-xs shrink-0 mt-0.5 transition-all"></div>' +
+                    '<div class="flex-1 min-w-0">' +
+                        '<div class="flex items-center justify-between gap-2">' +
+                            '<span id="arix-check-title-' + uid + '-' + idx + '" class="text-xs font-bold text-gray-900 transition-all">' + esc(it.title || it.name) + '</span>' +
+                            (it.tag ? '<span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-gray-100 text-gray-600">' + esc(it.tag) + '</span>' : '') +
+                        '</div>' +
+                        (it.desc ? '<p class="text-[11px] text-gray-500 mt-0.5">' + esc(it.desc) + '</p>' : '') +
+                    '</div>' +
+                '</div>';
+            }).join('');
+
+            return '<div id="arix-check-' + uid + '" class="arix-widget-shell not-prose">' +
+                '<div class="px-5 py-3.5 bg-white border-b border-gray-100">' +
+                    '<div class="flex items-center justify-between mb-2">' +
+                        '<h4 class="text-sm font-extrabold text-gray-900 flex items-center gap-2"><i class="ph-bold ph-check-square-offset text-emerald-600"></i> ' + esc(data.title || 'Action Checklist') + '</h4>' +
+                        '<span id="arix-check-pct-' + uid + '" class="text-xs font-mono font-bold text-emerald-600">0/' + items.length + ' (0%)</span>' +
+                    '</div>' +
+                    '<div class="w-full h-2 bg-gray-100 rounded-full overflow-hidden"><div id="arix-check-bar-' + uid + '" class="h-full bg-emerald-500 transition-all duration-300" style="width:0%"></div></div>' +
+                '</div>' +
+                '<div class="p-5 space-y-2.5">' + rowsHtml + '</div>' +
+            '</div>';
+        }
+
+        // 6. INTERACTIVE 3D FLASHCARDS
+        if (type === 'flashcards' || Array.isArray(data.cards)) {
+            const cards = Array.isArray(data.cards) ? data.cards : [];
+            const cardsHtml = cards.map((c, i) => {
+                return '<div onclick="this.querySelector(\'.arix-fc-back\').classList.toggle(\'hidden\'); this.querySelector(\'.arix-fc-front\').classList.toggle(\'hidden\');" class="p-4 rounded-2xl bg-white border border-gray-200 hover:border-theme-400 shadow-sm cursor-pointer select-none transition-all min-h-[110px] flex flex-col justify-between">' +
+                    '<div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-gray-400">' +
+                        '<span>Card ' + (i + 1) + '</span>' +
+                        '<span class="text-theme-600">' + esc(c.tag || 'Tap to flip') + '</span>' +
+                    '</div>' +
+                    '<div class="arix-fc-front my-2 text-xs font-bold text-gray-900 text-center">' + esc(c.front || c.q) + '</div>' +
+                    '<div class="arix-fc-back hidden my-2 text-xs font-medium text-theme-800 bg-theme-50/70 p-2.5 rounded-xl text-center">' + esc(c.back || c.a) + '</div>' +
+                    '<div class="text-[10px] text-center text-gray-400"><i class="ph-bold ph-arrows-clockwise"></i> Click to flip</div>' +
+                '</div>';
+            }).join('');
+
+            return '<div class="arix-widget-shell not-prose">' +
+                '<div class="px-5 py-3.5 bg-white border-b border-gray-100 flex items-center gap-2">' +
+                    '<i class="ph-bold ph-cards text-indigo-600 text-lg"></i>' +
+                    '<h4 class="text-sm font-extrabold text-gray-900">' + esc(data.title || 'Interactive Concept Cards') + '</h4>' +
+                '</div>' +
+                '<div class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3">' + cardsHtml + '</div>' +
+            '</div>';
+        }
+
+        // 7. BENCHMARK / TELEMETRY BARS
         if (type === 'benchmark' || Array.isArray(data.items)) {
             const items = Array.isArray(data.items) ? data.items : [];
             const tabs = Array.isArray(data.FilterTabs) ? data.FilterTabs : [];
@@ -4550,7 +4790,7 @@ ${marked.parse(unclosedContent.trim())}
             '</div>';
         }
 
-        // 3. DECISION MATRIX TABS
+        // 8. DECISION MATRIX TABS
         const tabs = Array.isArray(data.tabs) ? data.tabs : [];
         const tabBtns = tabs.map((t, i) => {
             const cls = i === 0 ? 'bg-theme-600 text-white shadow-sm' : 'bg-gray-100 text-gray-600 hover:bg-gray-200';
@@ -4596,7 +4836,7 @@ ${marked.parse(unclosedContent.trim())}
             return '\n\n<div class="my-4 p-4 rounded-2xl border border-theme-200 bg-theme-50/50 text-theme-700 text-xs font-bold flex items-center justify-between animate-pulse not-prose"><div class="flex items-center gap-2.5"><i class="ph-bold ph-cube-transparent animate-spin text-lg"></i> <span>Synthesizing Interactive Holographic Module...</span></div><span class="text-[10px] uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-theme-100">Live Stream</span></div>\n\n';
         }
         const parsed = healAndParseArixJSON(rawJson);
-        if (!parsed) return ""; // Silent fail-safe: hides broken code rather than dumping raw syntax
+        if (!parsed) return "";
         const uid = (msgId || 'w') + '_' + Math.random().toString(36).substr(2, 6);
         return '\n\n' + renderArixWidgetHTML(parsed, uid) + '\n\n';
     });
