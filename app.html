@@ -4150,10 +4150,10 @@ ${marked.parse(unclosedContent.trim())}
     }
 
     // 2. Extract and remove all <sources> tags (JSON or raw URLs)
-    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(?:<\/sources>|\$)/gi, (match, rawInner) => {
+    markdownContent = markdownContent.replace(/<sources>([\s\S]*?)(?:<\/sources>|$)/gi, (match, rawInner) => {
         if (rawInner) {
             try {
-                const cleaned = rawInner.replace(/^```json/gi, '').replace(/```\$/g, '').trim();
+                const cleaned = rawInner.replace(/^```json/gi, '').replace(/```$/g, '').trim();
                 const parsed = JSON.parse(cleaned);
                 if (Array.isArray(parsed)) {
                     parsed.forEach(item => {
@@ -4189,7 +4189,7 @@ ${marked.parse(unclosedContent.trim())}
     });
 
     // 3. Remove AI-written "Sources" / "References" section at end of text and harvest links
-    const aiTrailingSourcesRegex = /(?:^|\n)(?:[-*_]{3,}\s*\n)?(?:#{1,4}\s+|\*{2})?(?:Sources|References|Citations|Web Sources|Sources Consulted|External Links)\*{0,2}\s*:?\s*[\n\r]+([\s\S]*)\$/i;
+    const aiTrailingSourcesRegex = /(?:^|\n)(?:[-*_]{3,}\s*\n)?(?:#{1,4}\s+|\*{2})?(?:Sources|References|Citations|Web Sources|Sources Consulted|External Links)\*{0,2}\s*:?\s*[\n\r]+([\s\S]*)$/i;
     const aiSectionMatch = markdownContent.match(aiTrailingSourcesRegex);
     if (aiSectionMatch) {
         const body = aiSectionMatch[1] || '';
@@ -4832,7 +4832,7 @@ ${marked.parse(unclosedContent.trim())}
     if (!isStreaming && markdownContent.includes('<arix_ui>') && !markdownContent.includes('</arix_ui>')) {
         markdownContent += '</arix_ui>';
     }
-    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(?:<\/arix_ui>|\$)/gi, (match, rawJson) => {
+    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(?:<\/arix_ui>|$)/gi, (match, rawJson) => {
         const trimmedJson = rawJson ? rawJson.trim() : '';
         if (!trimmedJson) return '';
         const idx = arixWidgets.length;
