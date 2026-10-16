@@ -265,7 +265,7 @@ function secAutoAction(level) {
 
 async function classifySecurityIntent(query) {
   const GROQ_KEYS = [
-    process.env.GROQ_API_KEY,
+    process.env.GROQ_API_KEY, process.env.GROQ_API_KEY,
     process.env.GROQ_KEY_2, process.env.GROQ_API_KEY_2,
     process.env.GROQ_KEY_3, process.env.GROQ_API_KEY_3,
     process.env.GROQ_KEY_4, process.env.GROQ_API_KEY_4,
