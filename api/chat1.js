@@ -267,7 +267,10 @@ async function classifySecurityIntent(query) {
   const GROQ_KEYS = [
     process.env.GROQ_API_KEY,
     process.env.GROQ_KEY_2, process.env.GROQ_API_KEY_2,
-    process.env.GROQ_KEY_3, process.env.GROQ_API_KEY_3
+    process.env.GROQ_KEY_3, process.env.GROQ_API_KEY_3,
+    process.env.GROQ_KEY_4, process.env.GROQ_API_KEY_4,
+    process.env.GROQ_KEY_5, process.env.GROQ_API_KEY_5,
+    process.env.GROQ_KEY_6, process.env.GROQ_API_KEY_6
   ].filter(Boolean);
 
   if (!GROQ_KEYS.length || !query) return { isMalicious: false, reason: 'unclassified' };
