@@ -16,6 +16,9 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- Three.js 3D Engine & OrbitControls -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <!-- Arix Freemium Engine -->
 <script type="module" src="./lib/paid.js"></script>
 
@@ -1546,23 +1549,72 @@ const DB = {
                 db.createObjectStore('extensions', { keyPath: 'id' }); 
             }
         };
-        req.onsuccess = e => { DB.db = e.target.result; resolve(); }; 
-        req.onerror = e => reject(e);
+        req.onsuccess = e => {
+            DB.db = e.target.result;
+            DB.db.onversionchange = () => {
+                try { DB.db.close(); } catch (_) {}
+                DB.db = null;
+            };
+            resolve(DB.db);
+        };
+        req.onerror = e => reject(e.target.error || new Error('IndexedDB open failed'));
+        req.onblocked = () => console.warn('[ArixAI] IndexedDB upgrade is blocked by another open tab.');
     }),
-    getAll: () => new Promise(resolve => { 
-        const tx = DB.db.transaction('extensions', 'readonly');
-        const req = tx.objectStore('extensions').getAll(); 
-        req.onsuccess = () => resolve(req.result || []); 
+    getAll: () => new Promise(resolve => {
+        const fallback = () => safeLocalJSON('Arix_extensions_fallback', []);
+        if (!DB.db) return resolve(fallback());
+        try {
+            const tx = DB.db.transaction('extensions', 'readonly');
+            const req = tx.objectStore('extensions').getAll();
+            req.onsuccess = () => {
+                const rows = Array.isArray(req.result) ? req.result : [];
+                try { localStorage.setItem('Arix_extensions_fallback', JSON.stringify(rows)); } catch (_) {}
+                resolve(rows);
+            };
+            req.onerror = () => resolve(fallback());
+            tx.onerror = () => resolve(fallback());
+            tx.onabort = () => resolve(fallback());
+        } catch (error) {
+            console.warn('[ArixAI] IndexedDB read failed; using local extension cache:', error);
+            resolve(fallback());
+        }
     }),
-    put: (ext) => new Promise(resolve => { 
-        const tx = DB.db.transaction('extensions', 'readwrite');
-        tx.objectStore('extensions').put(ext); 
-        tx.oncomplete = () => resolve(); 
+    put: (ext) => new Promise((resolve, reject) => {
+        const fallbackPut = () => {
+            const rows = safeLocalJSON('Arix_extensions_fallback', []).filter(row => String(row?.id) !== String(ext?.id));
+            rows.push(ext);
+            try { localStorage.setItem('Arix_extensions_fallback', JSON.stringify(rows)); } catch (_) {}
+        };
+        if (!DB.db) { fallbackPut(); return resolve(); }
+        try {
+            const tx = DB.db.transaction('extensions', 'readwrite');
+            tx.objectStore('extensions').put(ext);
+            tx.oncomplete = () => { fallbackPut(); resolve(); };
+            tx.onerror = () => { fallbackPut(); resolve(); };
+            tx.onabort = () => { fallbackPut(); resolve(); };
+        } catch (error) {
+            console.warn('[ArixAI] IndexedDB write failed; using local extension cache:', error);
+            fallbackPut();
+            resolve();
+        }
     }),
-    delete: (id) => new Promise(resolve => { 
-        const tx = DB.db.transaction('extensions', 'readwrite');
-        tx.objectStore('extensions').delete(id); 
-        tx.oncomplete = () => resolve(); 
+    delete: (id) => new Promise(resolve => {
+        const fallbackDelete = () => {
+            const rows = safeLocalJSON('Arix_extensions_fallback', []).filter(row => String(row?.id) !== String(id));
+            try { localStorage.setItem('Arix_extensions_fallback', JSON.stringify(rows)); } catch (_) {}
+        };
+        if (!DB.db) { fallbackDelete(); return resolve(); }
+        try {
+            const tx = DB.db.transaction('extensions', 'readwrite');
+            tx.objectStore('extensions').delete(id);
+            tx.oncomplete = () => { fallbackDelete(); resolve(); };
+            tx.onerror = () => { fallbackDelete(); resolve(); };
+            tx.onabort = () => { fallbackDelete(); resolve(); };
+        } catch (error) {
+            console.warn('[ArixAI] IndexedDB delete failed; using local extension cache:', error);
+            fallbackDelete();
+            resolve();
+        }
     })
 };
 
@@ -1606,7 +1658,23 @@ function sendTelemetry(action, model, status, errorDetails = "") {
     } catch(e) {}
 }
 
-let userProfile = JSON.parse(localStorage.getItem('Arix_user_profile')) || {};
+function safeLocalJSON(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return fallback;
+        const value = JSON.parse(raw);
+        if (Array.isArray(fallback)) return Array.isArray(value) ? value : fallback;
+        if (fallback && typeof fallback === 'object') {
+            return value && typeof value === 'object' && !Array.isArray(value) ? value : fallback;
+        }
+        return value ?? fallback;
+    } catch (error) {
+        console.warn(`[ArixAI] Ignoring invalid local data for ${key}; using a safe default.`, error);
+        return fallback;
+    }
+}
+
+let userProfile = safeLocalJSON('Arix_user_profile', {});
 let msgCountForMemory = 0;
 
 async function updateMemoryAsync() {
@@ -1730,7 +1798,7 @@ let isCanvasMaximized = false;
 let isImageMode = false;
 let isVideoMode = false; isWorkspaceMode = false;
 let currentChatId = Date.now().toString();
-let chats = JSON.parse(localStorage.getItem('chatini_sessions')) || [];
+let chats = safeLocalJSON('chatini_sessions', []);
 let messages = [];
 let pendingFiles = [];
 let currentChatExtId = null;
@@ -1738,8 +1806,8 @@ let extForm = { id: "", name: "", links: [], files: [] };
 let currentMultiplayerRoom = null;
 let pollInterval = null;
 let lastMessageTs = 0;
-let pulseTasks = JSON.parse(localStorage.getItem('Arix_pulse_tasks')) || [];
-let customProjects = JSON.parse(localStorage.getItem('Arix_custom_projects')) || [];
+let pulseTasks = safeLocalJSON('Arix_pulse_tasks', []);
+let customProjects = safeLocalJSON('Arix_custom_projects', []);
 
 window.ARTIFACT_STORE = {};
 window.CURRENT_CANVAS_ID = null;
@@ -1799,8 +1867,12 @@ window.onload = async () => {
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(err => console.error("Sentinel Reg failed:", err));
     }
-    await DB.init(); 
-    updateUIState(); 
+    try {
+        await DB.init();
+    } catch (dbError) {
+        console.warn('[ArixAI] IndexedDB is unavailable; continuing with local/cloud chat storage:', dbError);
+    }
+    updateUIState();
     refreshExtSelectors();
     checkNickname();
 
@@ -2231,7 +2303,7 @@ async function importDriveFile(id, name) {
 
 
 // ====== SENTINEL TASK ENGINE (OS-LEVEL INTEGRATION) ======
-let activeSentinelTasks = JSON.parse(localStorage.getItem('Arix_sentinel_tasks')) || [];
+let activeSentinelTasks = safeLocalJSON('Arix_sentinel_tasks', []);
 
 function renderSentinelTasks() {
     const list = document.getElementById('sentinel-task-list');
@@ -4828,12 +4900,99 @@ ${marked.parse(unclosedContent.trim())}
         '</div>';
     };
 
+    // ====================================================================
+    // ARIX 3D INTERACTIVE SCENE COMPILER & RENDERER (<arix_3d>)
+    // ====================================================================
+    const arix3dWidgets = [];
+    if (!isStreaming && markdownContent.includes('<arix_3d>') && !markdownContent.includes('</arix_3d>')) {
+        markdownContent += '</arix_3d>';
+    }
+    markdownContent = markdownContent.replace(/<arix_3d>([\s\S]*?)(?:<\/arix_3d>|\$)/gi, (match, rawJson) => {
+        const trimmed = (rawJson || '').trim();
+        if (!trimmed) return '';
+        const idx = arix3dWidgets.length;
+
+        if (isStreaming && !match.includes('</arix_3d>')) {
+            arix3dWidgets.push(`
+                <div class="my-4 p-4 rounded-2xl border border-indigo-200 bg-indigo-50/60 text-indigo-700 text-xs font-bold flex items-center justify-between animate-pulse not-prose">
+                    <div class="flex items-center gap-2.5">
+                        <i class="ph-bold ph-cube animate-spin text-lg"></i>
+                        <span>Compiling 3D Parametric Mesh...</span>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-indigo-100">Live 3D Stream</span>
+                </div>
+            `);
+            return `\n\n%%ARIX_3D_BLOCK_${idx}%%\n\n`;
+        }
+
+        const uid = 'v3d_' + (msgId || 'm') + '_' + Math.random().toString(36).substr(2, 6);
+        let safeJsonStr = trimmed.replace(/^```(?:json|3d)?/i, '').replace(/```\$/i, '').trim();
+        
+        try {
+            JSON.parse(safeJsonStr);
+        } catch (_) {
+            safeJsonStr = safeJsonStr.replace(/,\s*([}\]])/g, '\$1');
+        }
+
+        window.__ARIX_3D_DATA__ = window.__ARIX_3D_DATA__ || {};
+        window.__ARIX_3D_DATA__[uid] = safeJsonStr;
+
+        const widgetHtml = `
+            <div id="shell-${uid}" class="my-5 not-prose rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md hover:border-indigo-300">
+                <!-- 3D Header Toolbar -->
+                <div class="px-4 py-3 bg-gray-50/90 border-b border-gray-200 flex items-center justify-between select-none">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm shadow-sm">
+                            <i class="ph-bold ph-cube"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <span id="title-${uid}" class="text-xs font-extrabold text-gray-900 truncate block">3D Scene</span>
+                            <span class="text-[10px] text-gray-400 font-medium">Drag to rotate • Scroll to zoom • Right-click to pan</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" onclick="window.Arix3D.toggleAutoRotate('${uid}')" id="btn-spin-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Toggle Auto-Rotation">
+                            <i class="ph-bold ph-arrows-clockwise text-sm"></i>
+                        </button>
+                        <button type="button" onclick="window.Arix3D.toggleWireframe('${uid}')" id="btn-wire-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Toggle Wireframe">
+                            <i class="ph-bold ph-grid-four text-sm"></i>
+                        </button>
+                        <button type="button" onclick="window.Arix3D.resetCamera('${uid}')" id="btn-reset-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Reset View">
+                            <i class="ph-bold ph-arrows-counter-clockwise text-sm"></i>
+                        </button>
+                        <button type="button" onclick="window.Arix3D.toggleFullscreen('${uid}')" id="btn-full-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Maximize View">
+                            <i class="ph-bold ph-arrows-out-simple text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- WebGL Viewport Container -->
+                <div id="canvas-wrap-${uid}" class="relative w-full h-[360px] bg-slate-900 cursor-grab active:cursor-grabbing overflow-hidden">
+                    <canvas id="canvas-${uid}" class="w-full h-full block outline-none" style="touch-action: none;"></canvas>
+                    <div id="loader-${uid}" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2 text-indigo-400 text-xs font-semibold">
+                        <i class="ph-bold ph-spinner animate-spin text-2xl"></i>
+                        <span>Rendering 3D Mesh...</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        arix3dWidgets.push(widgetHtml);
+        setTimeout(() => {
+            if (window.Arix3D && typeof window.Arix3D.init === 'function') {
+                window.Arix3D.init(uid, safeJsonStr);
+            }
+        }, 50);
+
+        return `\n\n%%ARIX_3D_BLOCK_${idx}%%\n\n`;
+    });
+
     // Intercept <arix_ui> blocks (Auto-heals incomplete/malformed JSON)
     const arixWidgets = [];
     if (!isStreaming && markdownContent.includes('<arix_ui>') && !markdownContent.includes('</arix_ui>')) {
         markdownContent += '</arix_ui>';
     }
-    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(?:<\/arix_ui>|$)/gi, (match, rawJson) => {
+    markdownContent = markdownContent.replace(/<arix_ui>([\s\S]*?)(?:<\/arix_ui>|\$)/gi, (match, rawJson) => {
         const trimmedJson = rawJson ? rawJson.trim() : '';
         if (!trimmedJson) return '';
         const idx = arixWidgets.length;
@@ -4849,7 +5008,7 @@ ${marked.parse(unclosedContent.trim())}
     });
 
     // Process <chart> into modern target UI blocks
-    markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|$)/g, (match, jsonStr, closeTag) => {
+    markdownContent = markdownContent.replace(/<chart>([\s\S]*?)(<\/chart>|\$)/g, (match, jsonStr, closeTag) => {
         if (!closeTag) return `<div class="mt-4 p-4 border border-cyan-200 bg-cyan-50 rounded-xl text-cyan-700 text-xs font-semibold flex items-center gap-2 animate-pulse"><i class="ph ph-circle-notch animate-spin text-lg"></i> Rendering Data Model...</div>`;
         try {
             const data = JSON.parse(jsonStr.replace(/```json/gi, "").replace(/```/g, "").trim()); 
@@ -4882,6 +5041,12 @@ ${marked.parse(unclosedContent.trim())}
     let renderedProse = renderMathAndMarkdown(markdownContent);
     arixWidgets.forEach((widgetHtml, idx) => {
         const placeholder = `%%ARIX_UI_BLOCK_${idx}%%`;
+        const regex = new RegExp(`<p>\\s*${placeholder}\\s*<\\/p>|${placeholder}`, 'g');
+        renderedProse = renderedProse.replace(regex, () => widgetHtml);
+    });
+
+    arix3dWidgets.forEach((widgetHtml, idx) => {
+        const placeholder = `%%ARIX_3D_BLOCK_${idx}%%`;
         const regex = new RegExp(`<p>\\s*${placeholder}\\s*<\\/p>|${placeholder}`, 'g');
         renderedProse = renderedProse.replace(regex, () => widgetHtml);
     });
@@ -6342,7 +6507,7 @@ const accessTools = [
 ];
 
 let activeAccessTool = localStorage.getItem('arix_active_access_tool') || "57";
-let accessToolChats = JSON.parse(localStorage.getItem('arix_access_tool_chats')) || {};
+let accessToolChats = safeLocalJSON('arix_access_tool_chats', {});
 let accessFileBuffer = null;
 let isAccessProcessing = false;
 
@@ -7284,25 +7449,291 @@ function renderPulseSuggestionCard(item) {
             <p class="text-[14px] font-bold text-gray-900 leading-snug">${item.title}</p>
             ${item.due ? `<p class="text-[11px] text-gray-500 font-medium">Target Date: <strong class="text-gray-900">${item.due}</strong></p>` : ''}
             
-            <div class="text-[11px] text-gray-500 border-t border-gray-100 pt-3 mt-1 flex items-center justify-between font-medium">
-                <span>Add this to your tasks?</span>
-                <div class="flex items-center gap-2">
-                    <button onclick="confirmPulseTask('${cardId}', ${JSON.stringify(item).replace(/"/g, '&quot;')})" class="bg-cyan-600 hover:bg-cyan-700 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1 shadow-md shadow-cyan-200">
-                        ✓ Add
-                    </button>
-                    <button onclick="dismissPulseTask('${cardId}')" class="bg-gray-100 hover:bg-gray-200 text-gray-600 text-[11px] font-bold px-3 py-1.5 rounded-lg transition-all">
-                        No
-                    </button>
-                </div>
+            <div class="text-[11px] text-gray-500 border-t border-gray-100 pt-3 mt-1">
+                <span class="font-semibold text-gray-700">Auto-Detected Task</span>
             </div>
         </div>
     `;
-    const lastMsgContainer = els.container.lastElementChild?.querySelector('.msg-content');
-    if (lastMsgContainer) {
-        lastMsgContainer.insertAdjacentHTML('beforeend', cardHtml);
-        els.canvas.scrollTop = els.canvas.scrollHeight;
-    }
+    const container = document.getElementById('message-container');
+    if (container) container.insertAdjacentHTML('beforeend', cardHtml);
 }
+
+// ====================================================================
+// ARIX 3D RUNTIME ENGINE (Three.js & OrbitControls Manager)
+// ====================================================================
+window.Arix3D = {
+    instances: {},
+
+    init: function(uid, jsonSpec) {
+        if (!window.THREE || !window.THREE.OrbitControls) {
+            setTimeout(() => window.Arix3D.init(uid, jsonSpec), 80);
+            return;
+        }
+
+        const canvas = document.getElementById('canvas-' + uid);
+        const wrap = document.getElementById('canvas-wrap-' + uid);
+        const loader = document.getElementById('loader-' + uid);
+        if (!canvas || !wrap) return;
+
+        // Clean up previous instance if re-rendering
+        if (this.instances[uid]) {
+            try {
+                this.instances[uid].disposed = true;
+                cancelAnimationFrame(this.instances[uid].animId);
+                this.instances[uid].renderer.dispose();
+            } catch (_) {}
+            delete this.instances[uid];
+        }
+
+        let sceneData = null;
+        try {
+            sceneData = typeof jsonSpec === 'string' ? JSON.parse(jsonSpec) : jsonSpec;
+            if (sceneData.scene) sceneData = sceneData.scene; // Unwrap if nested
+        } catch (e) {
+            if (loader) loader.innerHTML = `<span class="text-red-400">Failed to parse 3D scene specification.</span>`;
+            return;
+        }
+
+        // Title update
+        const titleEl = document.getElementById('title-' + uid);
+        if (titleEl && sceneData.title) titleEl.innerText = sceneData.title;
+
+        // 1. Scene & Background
+        const scene = new THREE.Scene();
+        const bgColor = sceneData.environment?.background || '#0f172a';
+        scene.background = new THREE.Color(bgColor);
+
+        // 2. Camera setup
+        const camData = sceneData.camera || {};
+        const pos = camData.position || [6, 5, 8];
+        const target = camData.target || [0, 0, 0];
+        const fov = camData.fov || 45;
+
+        const width = wrap.clientWidth || 400;
+        const height = wrap.clientHeight || 360;
+        const camera = new THREE.PerspectiveCamera(fov, width / height, camData.near || 0.1, camData.far || 10000);
+        camera.position.set(pos[0], pos[1], pos[2]);
+
+        // 3. WebGL Renderer
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // 4. OrbitControls
+        const controls = new THREE.OrbitControls(camera, canvas);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.target.set(target[0], target[1], target[2]);
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 1.5;
+
+        // 5. Lighting
+        const lights = Array.isArray(sceneData.lights) && sceneData.lights.length > 0 ? sceneData.lights : [
+            { type: "ambient", intensity: 0.7, color: "#ffffff" },
+            { type: "directional", intensity: 1.4, position: [5, 8, 6], castShadow: true }
+        ];
+
+        lights.forEach(l => {
+            const col = new THREE.Color(l.color || "#ffffff");
+            const intens = Number(l.intensity ?? 1);
+            if (l.type === "ambient") {
+                scene.add(new THREE.AmbientLight(col, intens));
+            } else if (l.type === "directional") {
+                const dirLight = new THREE.DirectionalLight(col, intens);
+                const lpos = l.position || [5, 8, 6];
+                dirLight.position.set(lpos[0], lpos[1], lpos[2]);
+                dirLight.castShadow = l.castShadow !== false;
+                scene.add(dirLight);
+            } else if (l.type === "point") {
+                const ptLight = new THREE.PointLight(col, intens, l.distance || 0, l.decay || 2);
+                const lpos = l.position || [0, 5, 0];
+                ptLight.position.set(lpos[0], lpos[1], lpos[2]);
+                scene.add(ptLight);
+            }
+        });
+
+        // 6. Grid and Ground Helpers
+        if (sceneData.environment?.grid !== false) {
+            const gridHelper = new THREE.GridHelper(20, 20, 0x6366f1, 0x334155);
+            gridHelper.position.y = sceneData.environment?.ground?.y || 0;
+            scene.add(gridHelper);
+        }
+
+        if (sceneData.environment?.axes) {
+            scene.add(new THREE.AxesHelper(5));
+        }
+
+        // 7. Materials Cache
+        const materialsMap = {
+            default: new THREE.MeshStandardMaterial({ color: 0x94a3b8, roughness: 0.5, metalness: 0.2 })
+        };
+
+        if (Array.isArray(sceneData.materials)) {
+            sceneData.materials.forEach(m => {
+                materialsMap[m.id] = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(m.color || '#94a3b8'),
+                    roughness: Number(m.roughness ?? 0.5),
+                    metalness: Number(m.metalness ?? 0.2),
+                    opacity: Number(m.opacity ?? 1),
+                    transparent: Boolean(m.transparent) || (m.opacity !== undefined && m.opacity < 1),
+                    wireframe: Boolean(m.wireframe),
+                    side: m.side === "double" ? THREE.DoubleSide : (m.side === "back" ? THREE.BackSide : THREE.FrontSide)
+                });
+            });
+        }
+
+        // 8. Geometry Generator
+        function createGeometry(primitive, geom) {
+            geom = geom || {};
+            switch ((primitive || 'box').toLowerCase()) {
+                case 'box':
+                    return new THREE.BoxGeometry(geom.width || 1, geom.height || 1, geom.depth || 1);
+                case 'sphere':
+                    return new THREE.SphereGeometry(geom.radius || 1, geom.widthSegments || 32, geom.heightSegments || 16);
+                case 'cylinder':
+                    return new THREE.CylinderGeometry(geom.radiusTop ?? 1, geom.radiusBottom ?? 1, geom.height || 2, geom.radialSegments || 32);
+                case 'cone':
+                    return new THREE.ConeGeometry(geom.radius || 1, geom.height || 2, geom.radialSegments || 32);
+                case 'torus':
+                    return new THREE.TorusGeometry(geom.radius || 1, geom.tube || 0.3, geom.radialSegments || 16, geom.tubularSegments || 64);
+                case 'plane':
+                    return new THREE.PlaneGeometry(geom.width || 5, geom.height || 5);
+                case 'capsule':
+                    if (THREE.CapsuleGeometry) {
+                        return new THREE.CapsuleGeometry(geom.radius || 0.5, geom.length || 1, geom.capSegments || 4, geom.radialSegments || 16);
+                    }
+                    return new THREE.CylinderGeometry(geom.radius || 0.5, geom.radius || 0.5, geom.length || 1, 16);
+                default:
+                    return new THREE.BoxGeometry(1, 1, 1);
+            }
+        }
+
+        // 9. Objects Placement
+        const objects = Array.isArray(sceneData.objects) ? sceneData.objects : [];
+        const meshStore = {};
+
+        objects.forEach(obj => {
+            const geom = createGeometry(obj.primitive, obj.geometry);
+            const mat = materialsMap[obj.material] || materialsMap.default;
+            const mesh = new THREE.Mesh(geom, mat);
+
+            const p = obj.position || [0, 0, 0];
+            const r = obj.rotation || [0, 0, 0];
+            const s = obj.scale || [1, 1, 1];
+
+            mesh.position.set(p[0], p[1], p[2]);
+            mesh.rotation.set(r[0], r[1], r[2]);
+            mesh.scale.set(s[0], s[1], s[2]);
+            mesh.castShadow = obj.castShadow !== false;
+            mesh.receiveShadow = Boolean(obj.receiveShadow);
+
+            scene.add(mesh);
+            if (obj.id) meshStore[obj.id] = mesh;
+        });
+
+        // 10. Animation Loop
+        const inst = {
+            uid,
+            scene,
+            camera,
+            renderer,
+            controls,
+            wrap,
+            initialCamPos: [...pos],
+            initialTarget: [...target],
+            materialsMap,
+            wireframeState: false,
+            disposed: false
+        };
+
+        const clock = new THREE.Clock();
+        function animate() {
+            if (inst.disposed) return;
+            inst.animId = requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const elapsed = clock.getElapsedTime();
+
+            // Run user-authored animation specs
+            if (Array.isArray(sceneData.animations)) {
+                sceneData.animations.forEach(anim => {
+                    const m = meshStore[anim.objectId];
+                    if (!m) return;
+                    const duration = (anim.duration || 2000) / 1000;
+                    const t = (elapsed % duration) / duration;
+                    const val = THREE.MathUtils.lerp(anim.from || 0, anim.to || 1, t);
+
+                    if (anim.property === 'rotation.y') m.rotation.y = val;
+                    else if (anim.property === 'rotation.x') m.rotation.x = val;
+                    else if (anim.property === 'rotation.z') m.rotation.z = val;
+                    else if (anim.property === 'position.y') m.position.y = val;
+                });
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        animate();
+        this.instances[uid] = inst;
+
+        // Hide loader once initial frame draws
+        if (loader) loader.classList.add('hidden');
+
+        // Responsive Resizing
+        const resizeObserver = new ResizeObserver(() => {
+            if (inst.disposed || !wrap.clientWidth || !wrap.clientHeight) return;
+            camera.aspect = wrap.clientWidth / wrap.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(wrap.clientWidth, wrap.clientHeight);
+        });
+        resizeObserver.observe(wrap);
+        inst.resizeObserver = resizeObserver;
+    },
+
+    toggleAutoRotate: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.controls.autoRotate = !inst.controls.autoRotate;
+        const btn = document.getElementById('btn-spin-' + uid);
+        if (btn) btn.classList.toggle('text-indigo-600', inst.controls.autoRotate);
+    },
+
+    toggleWireframe: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.wireframeState = !inst.wireframeState;
+        Object.values(inst.materialsMap).forEach(mat => {
+            mat.wireframe = inst.wireframeState;
+        });
+        const btn = document.getElementById('btn-wire-' + uid);
+        if (btn) btn.classList.toggle('text-indigo-600', inst.wireframeState);
+    },
+
+    resetCamera: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        const p = inst.initialCamPos;
+        const t = inst.initialTarget;
+        inst.camera.position.set(p[0], p[1], p[2]);
+        inst.controls.target.set(t[0], t[1], t[2]);
+        inst.controls.update();
+    },
+
+    toggleFullscreen: function(uid) {
+        const wrap = document.getElementById('canvas-wrap-' + uid);
+        if (!wrap) return;
+        if (!document.fullscreenElement) {
+            wrap.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen().catch(() => {});
+        }
+    }
+};
+
+    // Stray duplicate Pulse-card markup removed; renderPulseSuggestionCard above is complete.
 
 function confirmPulseTask(cardId, item) {
     item.status = 'confirmed';
