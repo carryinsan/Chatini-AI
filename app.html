@@ -4977,6 +4977,246 @@ ${marked.parse(unclosedContent.trim())}
             </div>
         `;
 
+        // ====================================================================
+// ARIX 3D PARAMETRIC ENGINE (FAILSAFE SYNCHRONIZED VIEWPORT)
+// ====================================================================
+window.Arix3D = {
+    instances: {},
+
+    init: function(uid, jsonSource) {
+        const wrap = document.getElementById('canvas-wrap-' + uid);
+        const canvas = document.getElementById('canvas-' + uid);
+        const loader = document.getElementById('loader-' + uid);
+        const titleEl = document.getElementById('title-' + uid);
+        if (!wrap || !canvas) return;
+
+        // Clean up any existing instance with this ID
+        if (this.instances[uid]) {
+            this.destroy(uid);
+        }
+
+        let data = null;
+        try {
+            data = typeof jsonSource === 'string' ? JSON.parse(jsonSource) : jsonSource;
+        } catch (e) {
+            console.error('[Arix3D] Invalid JSON specification:', e);
+            if (loader) loader.innerHTML = `<span class="text-rose-400 font-medium">Failed to parse 3D scene data.</span>`;
+            return;
+        }
+
+        if (titleEl && (data.title || data.name)) {
+            titleEl.textContent = data.title || data.name;
+        }
+
+        // 1. Scene, Camera, and Renderer Setup
+        const width = wrap.clientWidth || 600;
+        const height = wrap.clientHeight || 360;
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b1120);
+
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        renderer.setSize(width, height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+        // 2. Controls Configuration (Ensures 100% Lockstep Sync)
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.autoRotate = true;
+        controls.autoRotateSpeed = 2.5;
+        controls.target.set(0, 0, 0);
+
+        // 3. Lighting & Reference Grid
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+        scene.add(ambientLight);
+
+        const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.9);
+        dirLight1.position.set(15, 25, 20);
+        dirLight1.castShadow = true;
+        scene.add(dirLight1);
+
+        const dirLight2 = new THREE.DirectionalLight(0x6366f1, 0.4);
+        dirLight2.position.set(-15, -10, -15);
+        scene.add(dirLight2);
+
+        const gridHelper = new THREE.GridHelper(30, 30, 0x374151, 0x1f2937);
+        gridHelper.position.y = -0.01;
+        scene.add(gridHelper);
+
+        // 4. Unified Assembly Root Group
+        // Every single piece (chassis, wheels, lights, spoilers) mounts to modelGroup
+        const modelGroup = new THREE.Group();
+        scene.add(modelGroup);
+
+        const items = Array.isArray(data) 
+            ? data 
+            : (data.objects || data.meshes || data.parts || data.elements || data.items || data.primitives || []);
+
+        const parseVector = (v, fallback = [0, 0, 0]) => {
+            if (Array.isArray(v)) return [v[0] ?? fallback[0], v[1] ?? fallback[1], v[2] ?? fallback[2]];
+            if (v && typeof v === 'object') return [v.x ?? fallback[0], v.y ?? fallback[1], v.z ?? fallback[2]];
+            return fallback;
+        };
+
+        const materialsList = [];
+
+        items.forEach(obj => {
+            const type = (obj.type || obj.shape || obj.geometry || 'box').toLowerCase();
+            const color = obj.color || obj.hex || '#6366f1';
+            const size = parseVector(obj.size || obj.dimensions || obj.scale, [1, 1, 1]);
+            const pos = parseVector(obj.position || obj.pos, [0, 0, 0]);
+            const rot = parseVector(obj.rotation || obj.rot, [0, 0, 0]);
+
+            let geometry;
+            if (type.includes('cyl') || type.includes('wheel') || type.includes('tire')) {
+                const radiusTop = (size[0] || 1) / 2;
+                const radiusBottom = (size[0] || 1) / 2;
+                const height = size[1] || size[2] || 1;
+                geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 24);
+            } else if (type.includes('sphere') || type.includes('ball')) {
+                geometry = new THREE.SphereGeometry((size[0] || 1) / 2, 24, 24);
+            } else if (type.includes('cone')) {
+                geometry = new THREE.ConeGeometry((size[0] || 1) / 2, size[1] || 1, 24);
+            } else if (type.includes('torus') || type.includes('ring')) {
+                geometry = new THREE.TorusGeometry((size[0] || 1) / 2, (size[1] || 0.3) / 2, 16, 32);
+            } else {
+                geometry = new THREE.BoxGeometry(size[0] || 1, size[1] || 1, size[2] || 1);
+            }
+
+            const material = new THREE.MeshStandardMaterial({
+                color: new THREE.Color(color),
+                roughness: obj.roughness !== undefined ? obj.roughness : 0.35,
+                metalness: obj.metalness !== undefined ? obj.metalness : 0.2,
+                wireframe: false
+            });
+            materialsList.push(material);
+
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(pos[0], pos[1], pos[2]);
+            mesh.rotation.set(rot[0], rot[1], rot[2]);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+
+            // Strictly parent to the assembly group
+            modelGroup.add(mesh);
+        });
+
+        // 5. Compute Bounding Box & Re-center Pivot
+        const bbox = new THREE.Box3().setFromObject(modelGroup);
+        const center = new THREE.Vector3();
+        bbox.getCenter(center);
+        const sizeVec = new THREE.Vector3();
+        bbox.getSize(sizeVec);
+
+        // Center all vertices relative to origin (0, 0, 0)
+        modelGroup.position.x = -center.x;
+        modelGroup.position.z = -center.z;
+        modelGroup.position.y = -bbox.min.y; // Sit cleanly above the grid plane
+
+        const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 5;
+        const initialCamPos = new THREE.Vector3(maxDim * 1.5, maxDim * 1.0, maxDim * 1.7);
+        camera.position.copy(initialCamPos);
+        camera.lookAt(0, sizeVec.y / 2, 0);
+        controls.target.set(0, sizeVec.y / 2, 0);
+        controls.update();
+
+        // 6. Responsive Resize Handling
+        const resizeObserver = new ResizeObserver(() => {
+            const newW = wrap.clientWidth;
+            const newH = wrap.clientHeight;
+            if (newW > 0 && newH > 0) {
+                camera.aspect = newW / newH;
+                camera.updateProjectionMatrix();
+                renderer.setSize(newW, newH);
+            }
+        });
+        resizeObserver.observe(wrap);
+
+        // 7. Failsafe Render Loop
+        let animId = null;
+        const animate = () => {
+            animId = requestAnimationFrame(animate);
+            // controls.update() smoothly drives auto-rotation and seamlessly syncs user orbit drag
+            controls.update();
+            renderer.render(scene, camera);
+        };
+        animate();
+
+        // 8. Store Instance State
+        this.instances[uid] = {
+            scene,
+            camera,
+            renderer,
+            controls,
+            modelGroup,
+            materialsList,
+            initialCamPos,
+            initialTarget: new THREE.Vector3(0, sizeVec.y / 2, 0),
+            resizeObserver,
+            animId,
+            isWireframe: false
+        };
+
+        if (loader) loader.classList.add('hidden');
+    },
+
+    toggleAutoRotate: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.controls.autoRotate = !inst.controls.autoRotate;
+        const btn = document.getElementById('btn-spin-' + uid);
+        if (btn) {
+            btn.classList.toggle('text-indigo-600', inst.controls.autoRotate);
+            btn.classList.toggle('text-gray-500', !inst.controls.autoRotate);
+        }
+    },
+
+    toggleWireframe: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.isWireframe = !inst.isWireframe;
+        inst.materialsList.forEach(mat => {
+            mat.wireframe = inst.isWireframe;
+        });
+        const btn = document.getElementById('btn-wire-' + uid);
+        if (btn) {
+            btn.classList.toggle('text-indigo-600', inst.isWireframe);
+            btn.classList.toggle('text-gray-500', !inst.isWireframe);
+        }
+    },
+
+    resetCamera: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.camera.position.copy(inst.initialCamPos);
+        inst.controls.target.copy(inst.initialTarget);
+        inst.controls.update();
+    },
+
+    toggleFullscreen: function(uid) {
+        const wrap = document.getElementById('canvas-wrap-' + uid);
+        if (!wrap) return;
+        if (!document.fullscreenElement) {
+            wrap.requestFullscreen().catch(() => {});
+        } else {
+            document.exitFullscreen().catch(() => {});
+        }
+    },
+
+    destroy: function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        if (inst.animId) cancelAnimationFrame(inst.animId);
+        if (inst.resizeObserver) inst.resizeObserver.disconnect();
+        if (inst.renderer) inst.renderer.dispose();
+        delete this.instances[uid];
+    }
+};
+
         arix3dWidgets.push(widgetHtml);
         setTimeout(() => {
             if (window.Arix3D && typeof window.Arix3D.init === 'function') {
