@@ -536,7 +536,18 @@ telemetry.model = modelId || 'unknown';
           return;
         }
 
-
+        // 1. STRICT KEY SANITIZATION & AGGREGATION
+        const GROQ_KEYS = [
+          process.env.GROQ_API_KEY,
+          process.env.GROQ_API_KEY_1,
+          process.env.GROQ_API_KEY_2,
+          process.env.GROQ_API_KEY_3,
+          process.env.GROQ_API_KEY_4,
+          process.env.GROQ_KEY,
+          process.env.GROQ_KEY_1,
+          process.env.GROQ_KEY_2,
+          process.env.GROQ_KEY_3
+        ].filter(Boolean).map(k => String(k).replace(/[\r\n\s]/g, ''));
 
         // ====================================================================
         // ARIX WEB INTELLIGENCE SEARCH + FULL-PAGE DOM EXTRACTOR (HIGH YIELD)
