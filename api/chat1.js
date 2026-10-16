@@ -536,13 +536,7 @@ telemetry.model = modelId || 'unknown';
           return;
         }
 
-        // 1. STRICT KEY SANITIZATION & AGGREGATION
-        const GROQ_KEYS = [
-          "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",
-          "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",
-          "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",
-          "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"
-        ].filter(Boolean).map(k => k.replace(/[\r\n\s]/g, ''));
+
 
         // ====================================================================
         // ARIX WEB INTELLIGENCE SEARCH + FULL-PAGE DOM EXTRACTOR (HIGH YIELD)
