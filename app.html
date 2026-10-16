@@ -7330,6 +7330,17 @@ async function syncPulseTasksToStorage(taskId = null, action = 'delete') {
     try {
         window.dispatchEvent(new CustomEvent('arix:tasks_updated', { detail: { pulseTasks, taskId, action } }));
     } catch(e) {}
+
+    // 4. Persist accepted changes to the authenticated cloud snapshot as well.
+    // Device-only mode remains local and does not make a network request.
+    try {
+        if (localStorage.getItem('Arix_storage_mode') === 'cloud' &&
+            window.ArixStorage && typeof window.ArixStorage.sync === 'function') {
+            await window.ArixStorage.sync();
+        }
+    } catch (e) {
+        console.warn('Pulse task cloud sync deferred:', e);
+    }
 }
 
 function renderPulseTodayWidget() {
@@ -7433,29 +7444,105 @@ async function triggerPulseDetection(userMessage) {
 }
 
 function renderPulseSuggestionCard(item) {
+    if (!item || typeof item !== 'object') return;
+
+    const title = String(item.title || item.task || '').trim();
+    if (!title) return;
+
+    const escapePulseText = (value) => String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+    const validTypes = ['DO', 'DECIDE', 'REMEMBER', 'REPLY'];
+    const type = validTypes.includes(String(item.type || '').toUpperCase())
+        ? String(item.type).toUpperCase()
+        : 'DO';
+    const normalizedItem = {
+        ...item,
+        id: String(item.id || `pulse_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`).slice(0, 150),
+        title: title.slice(0, 500),
+        type,
+        status: 'pending'
+    };
+
+    // Use a DOM-safe ID and retain the suggested task only in memory until the
+    // user explicitly chooses Yes. A proposal is never silently added to Pulse.
+    const cardId = 'pulse_card_' + normalizedItem.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+    if (document.getElementById(cardId)) return;
+    if (!(window.__arixPendingPulseProposals instanceof Map)) {
+        window.__arixPendingPulseProposals = new Map();
+    }
+    window.__arixPendingPulseProposals.set(cardId, normalizedItem);
+
     const iconMap = { DO: '🔥', DECIDE: '🧠', REMEMBER: '📌', REPLY: '💬' };
-    const cardId = 'pulse_card_' + item.id;
+    let confidence = Number(normalizedItem.confidence);
+    if (!Number.isFinite(confidence)) confidence = 0;
+    if (confidence > 1 && confidence <= 100) confidence /= 100;
+    confidence = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
+    const due = normalizedItem.due
+        ? `<p class="text-[11px] text-gray-500 font-medium">Target Date: <strong class="text-gray-900">${escapePulseText(normalizedItem.due)}</strong></p>`
+        : '';
+
     const cardHtml = `
-        <div id="${cardId}" class="mt-4 p-4 border border-cyan-100 bg-white rounded-2xl flex flex-col gap-3 shadow-[0_4px_20px_-4px_rgba(6,182,212,0.15)] ml-auto max-w-sm mr-4 relative overflow-hidden group">
+        <div id="${cardId}" class="mt-4 p-4 border border-cyan-100 bg-white rounded-2xl flex flex-col gap-3 shadow-[0_4px_20px_-4px_rgba(6,182,212,0.15)] ml-auto max-w-sm mr-4 relative overflow-hidden group" role="group" aria-label="Pulse task proposal">
             <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-400 to-blue-500"></div>
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="text-lg bg-gray-50 rounded-md p-1">${iconMap[item.type] || '📌'}</span>
+            <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                    <span class="text-lg bg-gray-50 rounded-md p-1">${iconMap[type] || '📌'}</span>
                     <span class="text-[11px] font-bold text-cyan-600 uppercase tracking-wider">Pulse Proposal</span>
                 </div>
-                <span class="text-[10px] bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded-full font-bold border border-cyan-100 shadow-sm">${Math.round(item.confidence * 100)}% match</span>
+                <span class="text-[10px] bg-cyan-50 text-cyan-700 px-2 py-0.5 rounded-full font-bold border border-cyan-100 shadow-sm whitespace-nowrap">${confidence}% match</span>
             </div>
-            
-            <p class="text-[14px] font-bold text-gray-900 leading-snug">${item.title}</p>
-            ${item.due ? `<p class="text-[11px] text-gray-500 font-medium">Target Date: <strong class="text-gray-900">${item.due}</strong></p>` : ''}
-            
+            <p class="text-[14px] font-bold text-gray-900 leading-snug">${escapePulseText(normalizedItem.title)}</p>
+            ${due}
             <div class="text-[11px] text-gray-500 border-t border-gray-100 pt-3 mt-1">
                 <span class="font-semibold text-gray-700">Auto-Detected Task</span>
+                <p class="mt-1">Would you like to add this to your Pulse task list?</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-pulse-accept="${cardId}" class="pulse-proposal-yes inline-flex items-center justify-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-bold px-3 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2">
+                    <i class="ph-bold ph-check"></i> Yes, add task
+                </button>
+                <button type="button" data-pulse-dismiss="${cardId}" class="pulse-proposal-no inline-flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 text-xs font-bold px-3 py-2.5 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
+                    <i class="ph-bold ph-x"></i> No, dismiss
+                </button>
             </div>
         </div>
     `;
+
     const container = document.getElementById('message-container');
-    if (container) container.insertAdjacentHTML('beforeend', cardHtml);
+    if (!container) {
+        window.__arixPendingPulseProposals.delete(cardId);
+        return;
+    }
+    container.insertAdjacentHTML('beforeend', cardHtml);
+    const card = document.getElementById(cardId);
+    card?.querySelector('[data-pulse-accept]')?.addEventListener('click', () => acceptPulseProposal(cardId));
+    card?.querySelector('[data-pulse-dismiss]')?.addEventListener('click', () => rejectPulseProposal(cardId));
+}
+
+function acceptPulseProposal(cardId) {
+    const pending = window.__arixPendingPulseProposals;
+    const item = pending instanceof Map ? pending.get(cardId) : null;
+    if (!item) return;
+
+    const yesButton = document.querySelector(`#${cardId} .pulse-proposal-yes`);
+    const noButton = document.querySelector(`#${cardId} .pulse-proposal-no`);
+    if (yesButton) yesButton.disabled = true;
+    if (noButton) noButton.disabled = true;
+
+    pending.delete(cardId);
+    confirmPulseTask(cardId, item);
+}
+
+function rejectPulseProposal(cardId) {
+    const pending = window.__arixPendingPulseProposals;
+    if (pending instanceof Map) pending.delete(cardId);
+    const card = document.getElementById(cardId);
+    if (card) {
+        card.innerHTML = '<div class="flex items-center gap-2 text-xs font-semibold text-gray-500"><i class="ph-bold ph-x-circle"></i> Not added to Pulse.</div>';
+        card.className = 'mt-3 p-3 border border-gray-100 bg-gray-50 rounded-xl ml-auto max-w-sm mr-4';
+        setTimeout(() => card.remove(), 1600);
+    }
 }
 
 // ====================================================================
@@ -7736,16 +7823,26 @@ window.Arix3D = {
     // Stray duplicate Pulse-card markup removed; renderPulseSuggestionCard above is complete.
 
 function confirmPulseTask(cardId, item) {
-    item.status = 'confirmed';
-    pulseTasks.push(item);
-    syncPulseTasksToStorage(item.id, 'add');
+    if (!item || typeof item !== 'object') return;
+    const task = {
+        ...item,
+        id: String(item.id || `pulse_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`).slice(0, 150),
+        title: String(item.title || item.task || 'Pulse Task').trim().slice(0, 500),
+        status: 'confirmed'
+    };
+    const alreadySaved = pulseTasks.some(t => String(t?.id) === task.id);
+    if (!alreadySaved) pulseTasks.push(task);
+    syncPulseTasksToStorage(task.id, 'add');
+
     const card = document.getElementById(cardId);
     if (card) {
-        card.className = "mt-4 p-3 border border-emerald-100 bg-emerald-50 rounded-2xl flex items-center justify-between text-[11px] text-emerald-700 font-bold ml-auto max-w-sm mr-4 shadow-sm";
-        card.innerHTML = `<span class="flex items-center gap-1.5"><i class="ph-fill ph-check-circle text-emerald-500 text-lg"></i> Saved to Pulse: "${item.title}"</span> <button onclick="undoPulseTask('${item.id}', '${cardId}')" class="text-emerald-600 underline font-semibold text-[10px] hover:text-emerald-800 bg-white px-2 py-1 rounded shadow-sm">Undo</button>`;
+        card.className = 'mt-4 p-3 border border-emerald-100 bg-emerald-50 rounded-2xl flex items-center justify-between gap-3 text-[11px] text-emerald-700 font-bold ml-auto max-w-sm mr-4 shadow-sm';
+        card.innerHTML = `<span class="flex items-center gap-1.5 min-w-0"><i class="ph-fill ph-check-circle text-emerald-500 text-lg shrink-0"></i><span>Added to Pulse: ${String(task.title).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}</span></span><button type="button" class="pulse-task-undo text-emerald-600 underline font-semibold text-[10px] hover:text-emerald-800 bg-white px-2 py-1 rounded shadow-sm shrink-0">Undo</button>`;
+        card.querySelector('.pulse-task-undo')?.addEventListener('click', () => undoPulseTask(task.id, cardId));
     }
-    showToast("Added to Arix Pulse!");
+    showToast('Added to Arix Pulse!');
     renderPulseTodayWidget();
+    renderPulseVault();
 }
 
 function undoPulseTask(taskId, cardId) {
