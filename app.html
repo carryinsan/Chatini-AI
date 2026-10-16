@@ -4978,6 +4978,102 @@ ${marked.parse(unclosedContent.trim())}
         `;
 
         // ====================================================================
+    // ARIX 3D INTERACTIVE SCENE COMPILER & RENDERER (<arix_3d>)
+    // ====================================================================
+    const arix3dWidgets = [];
+    if (!isStreaming && markdownContent.includes('<arix_3d>') && !markdownContent.includes('</arix_3d>')) {
+        markdownContent += '</arix_3d>';
+    }
+
+    markdownContent = markdownContent.replace(/<arix_3d>([\s\S]*?)(?:<\/arix_3d>|\$)/gi, (match, rawJson) => {
+        const trimmed = (rawJson || '').trim();
+        if (!trimmed) return '';
+        const idx = arix3dWidgets.length;
+
+        if (isStreaming && !match.includes('</arix_3d>')) {
+            arix3dWidgets.push(`
+                <div class="my-4 p-4 rounded-2xl border border-indigo-200 bg-indigo-50/60 text-indigo-700 text-xs font-bold flex items-center justify-between animate-pulse not-prose">
+                    <div class="flex items-center gap-2.5">
+                        <i class="ph-bold ph-cube animate-spin text-lg"></i>
+                        <span>Compiling 3D Parametric Mesh...</span>
+                    </div>
+                    <span class="text-[10px] uppercase tracking-wider bg-white px-2 py-0.5 rounded border border-indigo-100">Live 3D Stream</span>
+                </div>
+            `);
+            return '\n\n%%ARIX_3D_BLOCK_' + idx + '%%\n\n';
+        }
+
+        const uid = 'v3d_' + (msgId || 'm') + '_' + Math.random().toString(36).substr(2, 6);
+        
+        // Robust JSON cleaning: strip backticks and trailing commas
+        let cleanJsonStr = trimmed
+            .replace(/^```(?:json|3d)?/i, '')
+            .replace(/```\$/i, '')
+            .trim();
+
+        cleanJsonStr = cleanJsonStr.replace(/,\s*([}\]])/g, '\$1');
+
+        window.__ARIX_3D_DATA__ = window.__ARIX_3D_DATA__ || {};
+        window.__ARIX_3D_DATA__[uid] = cleanJsonStr;
+
+        const widgetHtml = `
+            <div id="shell-${uid}" class="my-5 not-prose rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden flex flex-col transition-all duration-300 hover:shadow-md hover:border-indigo-300">
+                <!-- 3D Header Toolbar -->
+                <div class="px-4 py-3 bg-gray-50/90 border-b border-gray-200 flex items-center justify-between select-none">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-sm shadow-sm">
+                            <i class="ph-bold ph-cube"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <span id="title-${uid}" class="text-xs font-extrabold text-gray-900 truncate block">3D Scene</span>
+                            <span class="text-[10px] text-gray-400 font-medium">Drag to rotate • Scroll to zoom • Right-click to pan</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button type="button" onclick="window.Arix3D.toggleAutoRotate('${uid}')" id="btn-spin-${uid}" class="p-1.5 rounded-lg text-indigo-600 bg-white text-xs border border-gray-200 transition-colors shadow-sm" title="Toggle Auto-Rotation">
+                            <i class="ph-bold ph-arrows-clockwise text-sm"></i>
+                        </button>
+                        <button type="button" onclick="window.Arix3D.toggleWireframe('${uid}')" id="btn-wire-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Toggle Wireframe">
+                            <i class="ph-bold ph-grid-four text-sm"></i>
+                        </button>
+                        <button type="button" onclick="window.Arix3D.resetCamera('${uid}')" id="btn-reset-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Reset View">
+                            <i class="ph-bold ph-arrows-counter-clockwise text-sm"></i>
+                        </button>
+                        <button type="button" onclick="window.Arix3D.toggleFullscreen('${uid}')" id="btn-full-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Maximize View">
+                            <i class="ph-bold ph-arrows-out-simple text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- WebGL Viewport Container -->
+                <div id="canvas-wrap-${uid}" class="relative w-full h-[360px] bg-slate-900 cursor-grab active:cursor-grabbing overflow-hidden">
+                    <canvas id="canvas-${uid}" class="w-full h-full block outline-none" style="touch-action: none;"></canvas>
+                    <div id="loader-${uid}" class="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center gap-2 text-indigo-400 text-xs font-semibold z-10">
+                        <i class="ph-bold ph-spinner animate-spin text-2xl"></i>
+                        <span id="loader-msg-${uid}">Rendering 3D Mesh...</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        arix3dWidgets.push(widgetHtml);
+
+        // Safe poll that guarantees elements exist in DOM before compiling Three.js
+        const tryInit = (retries = 10) => {
+            const canvasEl = document.getElementById('canvas-' + uid);
+            const wrapEl = document.getElementById('canvas-wrap-' + uid);
+            if (canvasEl && wrapEl && window.Arix3D && typeof window.Arix3D.init === 'function') {
+                window.Arix3D.init(uid, cleanJsonStr);
+            } else if (retries > 0) {
+                setTimeout(() => tryInit(retries - 1), 50);
+            }
+        };
+        setTimeout(() => tryInit(), 60);
+
+        return '\n\n%%ARIX_3D_BLOCK_' + idx + '%%\n\n';
+    });
+
+// ====================================================================
 // ARIX 3D PARAMETRIC ENGINE (FAILSAFE SYNCHRONIZED VIEWPORT)
 // ====================================================================
 window.Arix3D = {
@@ -4987,20 +5083,37 @@ window.Arix3D = {
         const wrap = document.getElementById('canvas-wrap-' + uid);
         const canvas = document.getElementById('canvas-' + uid);
         const loader = document.getElementById('loader-' + uid);
+        const loaderMsg = document.getElementById('loader-msg-' + uid);
         const titleEl = document.getElementById('title-' + uid);
+
         if (!wrap || !canvas) return;
 
-        // Clean up any existing instance with this ID
         if (this.instances[uid]) {
             this.destroy(uid);
+        }
+
+        // Verify Three.js & OrbitControls are available
+        if (typeof THREE === 'undefined') {
+            if (loaderMsg) loaderMsg.innerHTML = '<span class="text-rose-400">Three.js not loaded. Check script tag.</span>';
+            return;
         }
 
         let data = null;
         try {
             data = typeof jsonSource === 'string' ? JSON.parse(jsonSource) : jsonSource;
         } catch (e) {
-            console.error('[Arix3D] Invalid JSON specification:', e);
-            if (loader) loader.innerHTML = `<span class="text-rose-400 font-medium">Failed to parse 3D scene data.</span>`;
+            console.warn('[Arix3D] Direct JSON parse failed, attempting loose eval sanitization:', e);
+            try {
+                // Failsafe parser for unquoted keys
+                data = new Function('return (' + jsonSource + ')')();
+            } catch (err2) {
+                if (loaderMsg) loaderMsg.innerHTML = '<span class="text-rose-400">Invalid 3D scene data syntax.</span>';
+                return;
+            }
+        }
+
+        if (!data) {
+            if (loaderMsg) loaderMsg.innerHTML = '<span class="text-rose-400">Empty 3D Scene Payload.</span>';
             return;
         }
 
@@ -5008,29 +5121,39 @@ window.Arix3D = {
             titleEl.textContent = data.title || data.name;
         }
 
-        // 1. Scene, Camera, and Renderer Setup
-        const width = wrap.clientWidth || 600;
+        const width = wrap.clientWidth || wrap.parentElement.clientWidth || 600;
         const height = wrap.clientHeight || 360;
 
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0b1120);
 
         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+        
+        let renderer;
+        try {
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true, powerPreference: 'high-performance' });
+        } catch (e) {
+            if (loaderMsg) loaderMsg.innerHTML = '<span class="text-rose-400">WebGL initialization error.</span>';
+            return;
+        }
+
         renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-        // 2. Controls Configuration (Ensures 100% Lockstep Sync)
-        const controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 2.5;
-        controls.target.set(0, 0, 0);
+        // Controls setup
+        let controls = null;
+        if (typeof THREE.OrbitControls === 'function') {
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 2.5;
+            controls.target.set(0, 0, 0);
+        }
 
-        // 3. Lighting & Reference Grid
+        // Lighting
         const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
         scene.add(ambientLight);
 
@@ -5047,106 +5170,114 @@ window.Arix3D = {
         gridHelper.position.y = -0.01;
         scene.add(gridHelper);
 
-        // 4. Unified Assembly Root Group
-        // Every single piece (chassis, wheels, lights, spoilers) mounts to modelGroup
+        // Core Grouping: Every single item is parented to modelGroup
         const modelGroup = new THREE.Group();
         scene.add(modelGroup);
 
-        const items = Array.isArray(data) 
-            ? data 
+        const items = Array.isArray(data)
+            ? data
             : (data.objects || data.meshes || data.parts || data.elements || data.items || data.primitives || []);
 
-        const parseVector = (v, fallback = [0, 0, 0]) => {
-            if (Array.isArray(v)) return [v[0] ?? fallback[0], v[1] ?? fallback[1], v[2] ?? fallback[2]];
-            if (v && typeof v === 'object') return [v.x ?? fallback[0], v.y ?? fallback[1], v.z ?? fallback[2]];
+        const parseVector = (v, fallback) => {
+            if (Array.isArray(v)) return [Number(v[0]) || fallback[0], Number(v[1]) || fallback[1], Number(v[2]) || fallback[2]];
+            if (v && typeof v === 'object') return [Number(v.x) || fallback[0], Number(v.y) || fallback[1], Number(v.z) || fallback[2]];
             return fallback;
         };
 
         const materialsList = [];
 
         items.forEach(obj => {
-            const type = (obj.type || obj.shape || obj.geometry || 'box').toLowerCase();
-            const color = obj.color || obj.hex || '#6366f1';
-            const size = parseVector(obj.size || obj.dimensions || obj.scale, [1, 1, 1]);
-            const pos = parseVector(obj.position || obj.pos, [0, 0, 0]);
-            const rot = parseVector(obj.rotation || obj.rot, [0, 0, 0]);
+            try {
+                const type = String(obj.type || obj.shape || obj.geometry || 'box').toLowerCase();
+                const color = obj.color || obj.hex || '#6366f1';
+                const size = parseVector(obj.size || obj.dimensions || obj.scale, [1, 1, 1]);
+                const pos = parseVector(obj.position || obj.pos, [0, 0, 0]);
+                const rot = parseVector(obj.rotation || obj.rot, [0, 0, 0]);
 
-            let geometry;
-            if (type.includes('cyl') || type.includes('wheel') || type.includes('tire')) {
-                const radiusTop = (size[0] || 1) / 2;
-                const radiusBottom = (size[0] || 1) / 2;
-                const height = size[1] || size[2] || 1;
-                geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 24);
-            } else if (type.includes('sphere') || type.includes('ball')) {
-                geometry = new THREE.SphereGeometry((size[0] || 1) / 2, 24, 24);
-            } else if (type.includes('cone')) {
-                geometry = new THREE.ConeGeometry((size[0] || 1) / 2, size[1] || 1, 24);
-            } else if (type.includes('torus') || type.includes('ring')) {
-                geometry = new THREE.TorusGeometry((size[0] || 1) / 2, (size[1] || 0.3) / 2, 16, 32);
-            } else {
-                geometry = new THREE.BoxGeometry(size[0] || 1, size[1] || 1, size[2] || 1);
+                let geometry;
+                if (type.includes('cyl') || type.includes('wheel') || type.includes('tire')) {
+                    const radiusTop = (size[0] || 1) / 2;
+                    const radiusBottom = (size[0] || 1) / 2;
+                    const h = size[1] || size[2] || 1;
+                    geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, h, 24);
+                } else if (type.includes('sphere') || type.includes('ball')) {
+                    geometry = new THREE.SphereGeometry((size[0] || 1) / 2, 24, 24);
+                } else if (type.includes('cone')) {
+                    geometry = new THREE.ConeGeometry((size[0] || 1) / 2, size[1] || 1, 24);
+                } else if (type.includes('torus') || type.includes('ring')) {
+                    geometry = new THREE.TorusGeometry((size[0] || 1) / 2, (size[1] || 0.3) / 2, 16, 32);
+                } else {
+                    geometry = new THREE.BoxGeometry(size[0] || 1, size[1] || 1, size[2] || 1);
+                }
+
+                const material = new THREE.MeshStandardMaterial({
+                    color: new THREE.Color(color),
+                    roughness: obj.roughness !== undefined ? Number(obj.roughness) : 0.35,
+                    metalness: obj.metalness !== undefined ? Number(obj.metalness) : 0.2,
+                    wireframe: false
+                });
+                materialsList.push(material);
+
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(pos[0], pos[1], pos[2]);
+                mesh.rotation.set(rot[0], rot[1], rot[2]);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+
+                modelGroup.add(mesh);
+            } catch (itemErr) {
+                console.warn('[Arix3D] Skipped invalid primitive:', itemErr);
             }
-
-            const material = new THREE.MeshStandardMaterial({
-                color: new THREE.Color(color),
-                roughness: obj.roughness !== undefined ? obj.roughness : 0.35,
-                metalness: obj.metalness !== undefined ? obj.metalness : 0.2,
-                wireframe: false
-            });
-            materialsList.push(material);
-
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.set(pos[0], pos[1], pos[2]);
-            mesh.rotation.set(rot[0], rot[1], rot[2]);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-
-            // Strictly parent to the assembly group
-            modelGroup.add(mesh);
         });
 
-        // 5. Compute Bounding Box & Re-center Pivot
+        // Compute Bounding Box and Recenter Pivot
         const bbox = new THREE.Box3().setFromObject(modelGroup);
         const center = new THREE.Vector3();
         bbox.getCenter(center);
         const sizeVec = new THREE.Vector3();
         bbox.getSize(sizeVec);
 
-        // Center all vertices relative to origin (0, 0, 0)
         modelGroup.position.x = -center.x;
         modelGroup.position.z = -center.z;
-        modelGroup.position.y = -bbox.min.y; // Sit cleanly above the grid plane
+        modelGroup.position.y = -bbox.min.y;
 
-        const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z) || 5;
+        const maxDim = Math.max(sizeVec.x, sizeVec.y, sizeVec.z, 2);
         const initialCamPos = new THREE.Vector3(maxDim * 1.5, maxDim * 1.0, maxDim * 1.7);
         camera.position.copy(initialCamPos);
-        camera.lookAt(0, sizeVec.y / 2, 0);
-        controls.target.set(0, sizeVec.y / 2, 0);
-        controls.update();
+        
+        const targetPoint = new THREE.Vector3(0, sizeVec.y / 2, 0);
+        camera.lookAt(targetPoint);
+        if (controls) {
+            controls.target.copy(targetPoint);
+            controls.update();
+        }
 
-        // 6. Responsive Resize Handling
-        const resizeObserver = new ResizeObserver(() => {
-            const newW = wrap.clientWidth;
-            const newH = wrap.clientHeight;
-            if (newW > 0 && newH > 0) {
-                camera.aspect = newW / newH;
-                camera.updateProjectionMatrix();
-                renderer.setSize(newW, newH);
-            }
-        });
-        resizeObserver.observe(wrap);
+        // Window / Container resize observer
+        let resizeObserver = null;
+        if (typeof ResizeObserver !== 'undefined') {
+            resizeObserver = new ResizeObserver(() => {
+                const newW = wrap.clientWidth;
+                const newH = wrap.clientHeight;
+                if (newW > 0 && newH > 0) {
+                    camera.aspect = newW / newH;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(newW, newH);
+                }
+            });
+            resizeObserver.observe(wrap);
+        }
 
-        // 7. Failsafe Render Loop
+        // Render Loop
         let animId = null;
         const animate = () => {
             animId = requestAnimationFrame(animate);
-            // controls.update() smoothly drives auto-rotation and seamlessly syncs user orbit drag
-            controls.update();
+            if (controls) {
+                controls.update();
+            }
             renderer.render(scene, camera);
         };
         animate();
 
-        // 8. Store Instance State
         this.instances[uid] = {
             scene,
             camera,
@@ -5155,22 +5286,27 @@ window.Arix3D = {
             modelGroup,
             materialsList,
             initialCamPos,
-            initialTarget: new THREE.Vector3(0, sizeVec.y / 2, 0),
+            initialTarget: targetPoint,
             resizeObserver,
             animId,
             isWireframe: false
         };
 
-        if (loader) loader.classList.add('hidden');
+        // Guarantee loader dismissal
+        if (loader) {
+            loader.classList.add('hidden');
+        }
     },
 
     toggleAutoRotate: function(uid) {
         const inst = this.instances[uid];
-        if (!inst) return;
+        if (!inst || !inst.controls) return;
         inst.controls.autoRotate = !inst.controls.autoRotate;
         const btn = document.getElementById('btn-spin-' + uid);
         if (btn) {
             btn.classList.toggle('text-indigo-600', inst.controls.autoRotate);
+            btn.classList.toggle('bg-white', inst.controls.autoRotate);
+            btn.classList.toggle('border-gray-200', inst.controls.autoRotate);
             btn.classList.toggle('text-gray-500', !inst.controls.autoRotate);
         }
     },
@@ -5193,8 +5329,10 @@ window.Arix3D = {
         const inst = this.instances[uid];
         if (!inst) return;
         inst.camera.position.copy(inst.initialCamPos);
-        inst.controls.target.copy(inst.initialTarget);
-        inst.controls.update();
+        if (inst.controls) {
+            inst.controls.target.copy(inst.initialTarget);
+            inst.controls.update();
+        }
     },
 
     toggleFullscreen: function(uid) {
@@ -5212,20 +5350,13 @@ window.Arix3D = {
         if (!inst) return;
         if (inst.animId) cancelAnimationFrame(inst.animId);
         if (inst.resizeObserver) inst.resizeObserver.disconnect();
-        if (inst.renderer) inst.renderer.dispose();
+        if (inst.renderer) {
+            inst.renderer.dispose();
+            inst.renderer.forceContextLoss();
+        }
         delete this.instances[uid];
     }
 };
-
-        arix3dWidgets.push(widgetHtml);
-        setTimeout(() => {
-            if (window.Arix3D && typeof window.Arix3D.init === 'function') {
-                window.Arix3D.init(uid, safeJsonStr);
-            }
-        }, 50);
-
-        return `\n\n%%ARIX_3D_BLOCK_${idx}%%\n\n`;
-    });
 
     // Intercept <arix_ui> blocks (Auto-heals incomplete/malformed JSON)
     const arixWidgets = [];
