@@ -499,7 +499,7 @@ function estimateComplexity(query) {
 // CLAMP: compile mechanically detectable hard requirements into compact invariant IDs.
 // More specialized constraints are represented explicitly; unknown semantic constraints stay with the conditional reviewer.
 function clampCompileContract(query) {
-  const q = String(query || '');
+  const rawQ = String(query || '').trim();
   const c = {
     rules: [], forbiddenTerms: [], requiredTerms: [],
     exactSentenceCount: null, exactWordCount: null, maxWords: null,
@@ -509,6 +509,13 @@ function clampCompileContract(query) {
     noBullets: false, jsonOnly: false, noMarkdown: false, codeOnly: false,
     hardSignal: false
   };
+
+  // Guard: Do not compile constraints if the user is asking a meta-question about a puzzle or rule
+  const isMetaQuery = /^(?:why|how\s+come|explain|what\s+does\s+it\s+mean|can\s+you\s+explain|is\s+it\s+true\s+that|why\s+would)\b/i.test(rawQ) 
+    && !/\b(?:write|generate|compose|create|rewrite|respond\s+with|output)\b/i.test(rawQ);
+  if (isMetaQuery) return c;
+
+  const q = rawQ;
   const add = (kind, label) => c.rules.push({ id: `#${kind}${c.rules.filter(r => r.kind === kind).length + 1}`, kind, label });
   const numberWords = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20 };
   const numberValue = value => /^\d+$/.test(String(value)) ? Number(value) : numberWords[String(value || '').toLowerCase()];
@@ -599,21 +606,30 @@ function clampCompileContract(query) {
   }
   for (let i = 0; i < c.requiredTerms.length; i++) add('I', `required_phrase_${i + 1}`);
 
-  // Lexical invariants: "Every word ... must contain the vowel 'o'".
-  const requiredVowelMatch = q.match(/\bevery\s+word\b[\s\S]{0,220}?\bmust\s+contain\s+the\s+vowel\s+["“'‘`]([a-z])["”'’`]/i)
-    || q.match(/\bevery\s+word\b[\s\S]{0,180}?\bcontain(?:s)?\s+the\s+vowel\s+["“'‘`]([a-z])["”'’`]/i);
+  // Lexical invariants: captures explicit vowels and natural paraphrases (e.g., "avoid the letter 'e'")
+  const requiredVowelMatch = q.match(/\b(?:every|each)\s+word\b[\s\S]{0,220}?\b(?:must\s+contain|contains?|with)\s+(?:the\s+vowel\s+)?["“'‘`]([a-z])["”'’`]/i);
   if (requiredVowelMatch) {
     c.requiredVowel = String(requiredVowelMatch[1]).toLowerCase();
     add('V', `every_word_has_${c.requiredVowel}`);
   }
+
   const forbiddenVowelMatch = q.match(/\bforbidden\s+from\s+containing\s+any\s+other\s+vowel\s*\(([^)]{1,140})\)/i)
     || q.match(/\bmust\s+not\s+contain\s+(?:any\s+)?other\s+vowels?\s*\(([^)]{1,140})\)/i);
   if (forbiddenVowelMatch) {
     const matches = [...forbiddenVowelMatch[1].matchAll(/["“'‘`]([a-z])["”'’`]/gi)];
     c.forbiddenVowels = [...new Set(matches.map(x => x[1].toLowerCase()))];
     if (!c.forbiddenVowels.length) c.forbiddenVowels = [...new Set((forbiddenVowelMatch[1].toLowerCase().match(/[a-z]/g) || []))];
-    add('V', `forbidden_vowels=${c.forbiddenVowels.join('')}`);
   }
+
+  // Support natural prohibitions: "avoid the letter 'e'", "without using the letter 'e'", "no words with 'e'"
+  const bannedLetterMatches = [...q.matchAll(/\b(?:avoid|exclude|without(?:\s+using)?|no|do\s+not\s+use)\s+(?:the\s+letter|letters|the\s+vowel)\s+["“'‘`]?([a-z])["”'’`]?\b/gi)];
+  for (const blm of bannedLetterMatches) {
+    const char = blm[1].toLowerCase();
+    if (['a', 'e', 'i', 'o', 'u'].includes(char) && !c.forbiddenVowels.includes(char)) {
+      c.forbiddenVowels.push(char);
+    }
+  }
+  if (c.forbiddenVowels.length) add('V', `forbidden_vowels=${c.forbiddenVowels.join('')}`);
 
   c.noPunctuationExceptPeriods = /\bno\s+commas?[\s\S]{0,100}\bother\s+punctuation\b/i.test(q)
     || /\bno\s+punctuation\s+other\s+than\s+periods?\b/i.test(q);
@@ -1345,11 +1361,21 @@ export default async function handler(req) {
         releaseAnswer = releaseCheck.answer;
         const finalFailures = releaseCheck.failures;
         if (finalFailures.length) {
-          telemetry.success = false;
-          telemetry.errorReason = `AIRLOCK release blocked: ${finalFailures.map(f => f.id).join(',')}`;
-          console.warn('[ArixAI AIRLOCK] Output withheld after bounded validation/repair.', { failures: finalFailures, repairAttempts: releaseCheck.attempts });
-          sendError('AIRLOCK could not validate a compliant answer after the available repair attempts. Please retry once or simplify any conflicting constraints.');
-          return;
+          // Hard violations that must never be released
+          const criticalFailures = finalFailures.filter(f => ['json_only', 'code_only', 'forbidden_term'].includes(f.id));
+
+          if (criticalFailures.length > 0) {
+            telemetry.success = false;
+            telemetry.errorReason = `AIRLOCK release blocked: ${criticalFailures.map(f => f.id).join(',')}`;
+            console.warn('[ArixAI AIRLOCK] Critical invariant failed. Output withheld.', { failures: criticalFailures });
+            sendError('AIRLOCK could not validate critical format/security constraints. Please retry or adjust the prompt.');
+            return;
+          }
+
+          // Soft degradation: release the closest repaired answer rather than returning a dead-end error
+          telemetry.success = true;
+          telemetry.errorReason = `AIRLOCK soft warning: non-critical failures remaining: ${finalFailures.map(f => f.id).join(',')}`;
+          console.warn('[ArixAI AIRLOCK] Releasing best-effort answer with minor constraint variance.', { failures: finalFailures });
         }
 
         emitValidatedAnswer(releaseAnswer);
