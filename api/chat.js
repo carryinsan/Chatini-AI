@@ -519,7 +519,10 @@ export default async function handler(req) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const heartbeat = setInterval(() => { try { controller.enqueue(encoder.encode(': ping\n\n')); } catch {} }, 15000);
+      // Immediate 2KB preamble flush forces HTTP 200 headers through Cloudflare instantly (eliminates Error 524)
+      try { controller.enqueue(encoder.encode(`: open\n: ${' '.repeat(2048)}\n\n`)); } catch {}
+      // 5-second pulse keeps Cloudflare, Vercel Edge, and browser connections persistent during long thinking phases
+      const heartbeat = setInterval(() => { try { controller.enqueue(encoder.encode(': ping\n\n')); } catch {} }, 5000);
       const telemetry = { startTime: Date.now(), success: true, errorReason: null, model: 'unknown', inputTokens: 0, outputTokens: 0, inputTokenSource: 'estimated', outputTokenSource: 'estimated', providerUsage: null };
       let streamClosed = false;
       const enqueue = value => { if (!streamClosed) { try { controller.enqueue(encoder.encode(value)); } catch {} } };
@@ -579,7 +582,7 @@ export default async function handler(req) {
           let lastError = '';
           for (const key of GEMINI_KEYS) {
             try {
-              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TASK_MODEL}:generateContent?key=${key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(45000) });
+              const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_TASK_MODEL}:generateContent?key=${key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: AbortSignal.timeout(180000) });
               if (!response.ok) { lastError = await response.text(); continue; }
               const data = await response.json();
               const text = data?.candidates?.[0]?.content?.parts?.map(p => p?.text || '').join('') || '';
@@ -769,7 +772,7 @@ export default async function handler(req) {
                 const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                   method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
                   body: JSON.stringify({ model: groqModel, messages: providerMessages, stream: true, stream_options: { include_usage: true }, temperature: 0.2, max_tokens: 8192 }),
-                  signal: AbortSignal.timeout(45000)
+                  signal: AbortSignal.timeout(300000)
                 });
                 if (response.ok) { llmRes = response; break; }
                 lastErr = await response.text();
@@ -794,7 +797,7 @@ export default async function handler(req) {
             for (const key of GEMINI_KEYS) {
               try {
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${isOracle ? GEMINI_ORACLE_MODEL : GEMINI_DEFAULT_MODEL}:streamGenerateContent?alt=sse&key=${key}`, {
-                  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(finalPayload), signal: AbortSignal.timeout(60000)
+                  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(finalPayload), signal: AbortSignal.timeout(300000)
                 });
                 if (response.ok) { llmRes = response; break; }
                 lastErr = await response.text();
@@ -819,7 +822,7 @@ export default async function handler(req) {
               llmRes = await fetch('https://api.llm7.io/v1/chat/completions', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${LLM7_API_KEY}` },
                 body: JSON.stringify({ model: process.env.LLM7_MODEL || 'DeepSeek-V4-Flash-0731', messages: [{ role: 'system', content: systemPrompt }, ...processedMessages.map(m => ({ role: m.role, content: m.content }))], stream: true, temperature: 0.45, max_tokens: 12288 }),
-                signal: AbortSignal.timeout(60000)
+                signal: AbortSignal.timeout(300000)
               });
               if (!llmRes.ok) lastErr = await llmRes.text();
             } catch (error) { lastErr = error?.message || 'LLM7 fallback failed.'; }
