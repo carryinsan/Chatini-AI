@@ -1877,11 +1877,11 @@ window.onload = async () => {
     try {
         if (window.AppUpdates && typeof window.AppUpdates.init === 'function') {
             window.AppUpdates.init({
-                // Replace with your Upstash REST credentials if not hardcoded inside lib/updates.js
-                redisUrl: window.UPSTASH_REDIS_REST_URL || undefined,
-                redisToken: window.UPSTASH_REDIS_REST_TOKEN || undefined,
-                key: 'app_latest_update',
-                settingsTarget: '#arix-settings-updates-slot'
+                redisUrl: window.UPSTASH_REDIS_REST_URL || 'https://immortal-eagle-36171.upstash.io',
+                redisToken: window.UPSTASH_REDIS_REST_TOKEN || 'AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw',
+                redisKey: 'app:system_update',
+                settingsMountSelector: '#arix-settings-updates-slot',
+                autoCheck: true
             });
         }
     } catch (updateErr) {
