@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App Updates Admin & Publisher</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbars for code editor */
+    textarea::-webkit-scrollbar,
+    div::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    textarea::-webkit-scrollbar-thumb,
+    div::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 4px;
+    }
+    textarea::-webkit-scrollbar-track,
+    div::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .line-numbers {
+      counter-reset: line;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-blue-600 selection:text-white">
+  <!-- Toast Notification Box (alert replacement) -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Confirm Dialog Modal (confirm replacement) -->
+  <div id="dialog-overlay" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center gap-3 text-amber-400">
+        <svg class="w-6 h-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <h3 id="dialog-title" class="font-bold text-lg text-white">Confirmation</h3>
+      </div>
+      <p id="dialog-message" class="text-slate-300 text-sm leading-relaxed"></p>
+      <div class="flex justify-end gap-3 pt-2">
+        <button id="dialog-btn-cancel" class="px-4 py-2 text-sm rounded-xl font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition">
+          Cancel
+        </button>
+        <button id="dialog-btn-confirm" class="px-4 py-2 text-sm rounded-xl font-semibold bg-rose-600 hover:bg-rose-500 text-white transition shadow-lg shadow-rose-900/40">
+          Confirm Action
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+    <!-- Top Navigation & Brand Header -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            App Updates Publisher
+            <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">Creator Desk</span>
+          </h1>
+          <p class="text-xs text-slate-400">Post rich HTML updates that popup in app.html every 24 hours</p>
+        </div>
+      </div>
+
+      <!-- Redis Quick Status & Configuration Toggle -->
+      <div class="flex items-center gap-3">
+        <button id="btn-toggle-config" class="px-3.5 py-2 text-xs font-medium bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl flex items-center gap-2 transition">
+          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+          Redis Settings
+        </button>
+        <button id="btn-fetch-current" class="px-3.5 py-2 text-xs font-semibold bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 rounded-xl flex items-center gap-1.5 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Sync from Redis
+        </button>
+      </div>
+    </header>
+
+    <!-- Collapsible Redis Credentials Configuration Drawer -->
+    <section id="config-drawer" class="hidden bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl transition-all">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-800/80 mb-4">
+        <div>
+          <h2 class="text-sm font-semibold text-white">Upstash Redis REST Credentials</h2>
+          <p class="text-xs text-slate-400">Values are stored in your browser's localStorage for convenience.</p>
+        </div>
+        <span id="redis-test-badge" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 font-medium">Unchecked</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Redis REST URL</label>
+          <input type="text" id="cfg-redis-url" placeholder="https://your-database-id.upstash.io" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Redis Bearer Token</label>
+          <input type="password" id="cfg-redis-token" placeholder="AX...==" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Redis Storage Key</label>
+          <input type="text" id="cfg-redis-key" value="app:system_update" 
+            class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500 font-mono">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 mt-4 pt-3 border-t border-slate-800/60">
+        <button id="btn-test-connection" class="px-3.5 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl transition">
+          Test Connection
+        </button>
+        <button id="btn-save-credentials" class="px-4 py-1.5 text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition shadow-md shadow-blue-500/20">
+          Save Configuration
+        </button>
+      </div>
+    </section>
+
+    <!-- Current Live Update Status Ribbon -->
+    <div id="live-status-bar" class="bg-slate-900 border border-slate-800/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div id="status-light" class="w-3 h-3 rounded-full bg-slate-600 animate-pulse shrink-0"></div>
+        <div>
+          <div class="text-xs text-slate-400">Current Live Update on Redis</div>
+          <div id="live-update-name" class="text-sm font-semibold text-slate-200">Checking cloud status...</div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+        <span id="live-update-date" class="text-xs text-slate-500 font-mono hidden sm:inline"></span>
+        <button id="btn-delete-live" disabled class="px-3 py-1.5 text-xs font-semibold bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl transition flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Delete from Redis
+        </button>
+      </div>
+    </div>
+
+    <main class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+      <!-- LEFT COLUMN: Post Builder and HTML Code Editor -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-base font-bold text-white flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+            Update Content Composer
+          </h2>
+          <span class="text-xs text-slate-400">Writes rich HTML</span>
+        </div>
+
+        <!-- Meta fields: Title & Badge/Category -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <label class="block text-xs font-medium text-slate-300 mb-1">Update Title</label>
+            <input type="text" id="update-title" placeholder="e.g., Version 2.4 - New AI Dashboard Released!" 
+              value="Exciting New Features: Version 2.4 is Live!"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-300 mb-1">Tag / Pill</label>
+            <input type="text" id="update-tag" placeholder="e.g., Major Release" 
+              value="Major Release"
+              class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition">
+          </div>
+        </div>
+
+        <!-- Quick HTML Toolbar Helpers -->
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1.5">Quick Snippet Inserts</label>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" data-insert="h2" class="snippet-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition font-mono">+ Heading</button>
+            <button type="button" data-insert="paragraph" class="snippet-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition font-mono">+ Paragraph</button>
+            <button type="button" data-insert="badge" class="snippet-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition font-mono">+ Badge</button>
+            <button type="button" data-insert="list" class="snippet-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition font-mono">+ Feature List</button>
+            <button type="button" data-insert="highlight" class="snippet-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition font-mono">+ Callout Box</button>
+            <button type="button" data-insert="button" class="snippet-btn px-2.5 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 transition font-mono">+ Link CTA</button>
+          </div>
+        </div>
+
+        <!-- HTML Code Editor with JetBrains Mono -->
+        <div class="space-y-1">
+          <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+            <span class="font-mono">HTML Source Code</span>
+            <span id="code-length" class="text-slate-500">0 characters</span>
+          </div>
+          <div class="relative rounded-xl overflow-hidden border border-slate-800 bg-slate-950 focus-within:border-blue-500 transition">
+            <textarea id="update-html" rows="15" spellcheck="false"
+              class="w-full bg-transparent p-4 font-mono text-xs sm:text-sm text-emerald-400 focus:outline-none resize-y leading-relaxed"
+              placeholder="Type your HTML update here... (<div>, <h2>, <ul>, etc.)"></textarea>
+          </div>
+        </div>
+
+        <!-- Action Bar: Publish, Update ID, Test View -->
+        <div class="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" id="chk-force-new" checked class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-700 bg-slate-900 cursor-pointer">
+            <label for="chk-force-new" class="text-xs text-slate-300 cursor-pointer select-none" title="Regenerating update ID makes the popup show to all users immediately, resetting their 24h timer">
+              New Update ID (resets user dismiss timers)
+            </label>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button id="btn-load-sample" type="button" class="px-3.5 py-2 text-xs font-semibold text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 rounded-xl transition">
+              Load Sample Template
+            </button>
+            <button id="btn-publish" type="button" class="px-5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 active:scale-95 rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+              </svg>
+              Publish to Redis
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT COLUMN: Accurate End-User Modal Preview -->
+      <section class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <h2 class="text-base font-bold text-white">Live User View (Preview)</h2>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 font-medium">Vertical Sandboxed Modal</span>
+          </div>
+        </div>
+
+        <p class="text-xs text-slate-400">
+          This preview renders the compiled HTML inside the exact isolated iframe sandbox your users will experience in <code class="text-blue-400">app.html</code>.
+        </p>
+
+        <!-- Simulated Screen Backdrop Containing the Vertical Notification Window -->
+        <div class="relative w-full rounded-2xl border border-slate-800 bg-slate-950/70 p-4 min-h-[580px] flex items-center justify-center overflow-hidden">
+          
+          <!-- Exact replica of .au-modal from lib/updates.js -->
+          <div class="w-full max-w-[500px] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100">
+            <!-- Modal Header -->
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+              <div class="flex items-center gap-3">
+                <span id="preview-modal-tag" class="bg-blue-500/15 text-blue-400 font-bold text-[11px] uppercase tracking-wider px-2.5 py-1 rounded-full border border-blue-500/20">
+                  Major Release
+                </span>
+                <div>
+                  <h3 id="preview-modal-title" class="font-bold text-sm sm:text-base text-white leading-tight line-clamp-1">
+                    Exciting New Features: Version 2.4 is Live!
+                  </h3>
+                  <div class="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5 font-mono">
+                    <span id="preview-modal-date">Today</span>
+                    <span>•</span>
+                    <span class="text-blue-400">System Notification</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Modal Sandboxed Body -->
+            <div class="h-[360px] bg-slate-950 w-full relative">
+              <iframe id="preview-iframe" 
+                class="w-full h-full border-none block" 
+                sandbox="allow-same-origin allow-popups"
+                title="Preview Sandboxed Update">
+              </iframe>
+            </div>
+
+            <!-- Modal Footer mimicking user interaction buttons -->
+            <div class="px-5 py-3.5 border-t border-slate-800 bg-slate-900 flex items-center justify-between text-xs">
+              <button type="button" class="text-slate-400 hover:text-rose-400 font-medium transition cursor-default">
+                Delete Notification
+              </button>
+              <button type="button" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-xl transition shadow-md shadow-blue-600/30 cursor-default">
+                OK, Understood
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Settings tab preview simulation -->
+        <div class="border-t border-slate-800/80 pt-3">
+          <div class="text-xs font-semibold text-slate-400 mb-2">How it appears in User's Settings Tab:</div>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+              <div>
+                <div id="preview-settings-title" class="text-xs font-semibold text-white">Exciting New Features: Version 2.4 is Live!</div>
+                <div class="text-[11px] text-slate-400">Active notification • Displays daily until dismissed</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-medium px-2.5 py-1 bg-slate-800 rounded-lg text-slate-300">View</span>
+              <span class="text-[11px] font-medium text-slate-500">Delete</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // Default sample HTML template for rich announcements
+      const SAMPLE_HTML = `<div style="font-family: inherit;">
+  <div style="background: linear-gradient(135deg, rgba(59,130,246,0.15), rgba(99,102,241,0.15)); border: 1px solid rgba(59,130,246,0.3); border-radius: 12px; padding: 14px 18px; margin-bottom: 16px;">
+    <h3 style="margin: 0 0 6px 0; color: #38bdf8; font-size: 16px;">⚡ What's New in this update</h3>
+    <p style="margin: 0; font-size: 13px; color: #cbd5e1;">We have rolled out significant improvements to make your app run faster and smoother.</p>
+  </div>
+
+  <h4 style="margin: 14px 0 8px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8;">Key Highlights</h4>
+  <ul style="padding-left: 20px; margin: 0 0 16px 0; font-size: 13.5px; line-height: 1.6;">
+    <li><strong>Upstash Redis Real-time Sync:</strong> Notifications now refresh seamlessly across all client sessions.</li>
+    <li><strong>Long Vertical Sandboxed Modal:</strong> Beautiful typography with zero interference with page styles.</li>
+    <li><strong>24-Hour Recurrence Cycle:</strong> Dismissed notifications take a pause and only resurface once per day.</li>
+    <li><strong>Settings Tab Integration:</strong> Re-open or permanently delete any release notes in one click.</li>
+  </ul>
+
+  <div style="text-align: center; margin-top: 20px; padding-top: 14px; border-top: 1px dashed rgba(148, 163, 184, 0.2);">
+    <p style="font-size: 12px; color: #94a3b8; margin-bottom: 10px;">Have feedback or encountered any glitches?</p>
+    <a href="#" style="display: inline-block; background: #3b82f6; color: #ffffff; text-decoration: none; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 8px;">View Detailed Changelog &rarr;</a>
+  </div>
+</div>`;
+
+      // Storage keys
+      const STORAGE_KEYS = {
+        URL: 'app_admin_redis_url',
+        TOKEN: 'app_admin_redis_token',
+        KEY: 'app_admin_redis_key'
+      };
+
+      // DOM Elements
+      const els = {
+        btnToggleConfig: document.getElementById('btn-toggle-config'),
+        configDrawer: document.getElementById('config-drawer'),
+        redisTestBadge: document.getElementById('redis-test-badge'),
+        cfgUrl: document.getElementById('cfg-redis-url'),
+        cfgToken: document.getElementById('cfg-redis-token'),
+        cfgKey: document.getElementById('cfg-redis-key'),
+        btnTestConn: document.getElementById('btn-test-connection'),
+        btnSaveCreds: document.getElementById('btn-save-credentials'),
+        btnFetchCurrent: document.getElementById('btn-fetch-current'),
+        liveUpdateName: document.getElementById('live-update-name'),
+        liveUpdateDate: document.getElementById('live-update-date'),
+        statusLight: document.getElementById('status-light'),
+        btnDeleteLive: document.getElementById('btn-delete-live'),
+        updateTitle: document.getElementById('update-title'),
+        updateTag: document.getElementById('update-tag'),
+        updateHtml: document.getElementById('update-html'),
+        codeLength: document.getElementById('code-length'),
+        chkForceNew: document.getElementById('chk-force-new'),
+        btnLoadSample: document.getElementById('btn-load-sample'),
+        btnPublish: document.getElementById('btn-publish'),
+        previewModalTitle: document.getElementById('preview-modal-title'),
+        previewModalTag: document.getElementById('preview-modal-tag'),
+        previewModalDate: document.getElementById('preview-modal-date'),
+        previewSettingsTitle: document.getElementById('preview-settings-title'),
+        previewIframe: document.getElementById('preview-iframe'),
+        toastContainer: document.getElementById('toast-container'),
+        dialogOverlay: document.getElementById('dialog-overlay'),
+        dialogTitle: document.getElementById('dialog-title'),
+        dialogMessage: document.getElementById('dialog-message'),
+        dialogBtnConfirm: document.getElementById('dialog-btn-confirm'),
+        dialogBtnCancel: document.getElementById('dialog-btn-cancel')
+      };
+
+      let activeCloudData = null;
+
+      // Toast Notification System
+      function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        const colors = {
+          success: 'bg-emerald-900/90 border-emerald-700 text-emerald-200',
+          error: 'bg-rose-900/90 border-rose-700 text-rose-200',
+          info: 'bg-slate-900/90 border-slate-700 text-slate-200'
+        }[type] || 'bg-slate-900 border-slate-700 text-slate-200';
+
+        toast.className = `${colors} border px-4 py-3 rounded-xl shadow-xl text-xs font-medium flex items-center gap-2 transform transition-all duration-300 pointer-events-auto translate-y-2 opacity-0`;
+        toast.innerHTML = `
+          <span>${message}</span>
+        `;
+        els.toastContainer.appendChild(toast);
+
+        requestAnimationFrame(() => {
+          toast.classList.remove('translate-y-2', 'opacity-0');
+        });
+
+        setTimeout(() => {
+          toast.classList.add('opacity-0', 'translate-y-2');
+          setTimeout(() => toast.remove(), 300);
+        }, 3600);
+      }
+
+      // Dialog confirmation modal (no alert/confirm)
+      function showConfirmDialog({ title, message, onConfirm }) {
+        els.dialogTitle.textContent = title || 'Confirmation';
+        els.dialogMessage.textContent = message || 'Are you sure?';
+        els.dialogOverlay.classList.remove('hidden');
+        els.dialogOverlay.classList.add('flex');
+
+        function cleanup() {
+          els.dialogOverlay.classList.add('hidden');
+          els.dialogOverlay.classList.remove('flex');
+          els.dialogBtnConfirm.removeEventListener('click', confirmHandler);
+          els.dialogBtnCancel.removeEventListener('click', cancelHandler);
+        }
+
+        function confirmHandler() {
+          cleanup();
+          if (onConfirm) onConfirm();
+        }
+
+        function cancelHandler() {
+          cleanup();
+        }
+
+        els.dialogBtnConfirm.addEventListener('click', confirmHandler);
+        els.dialogBtnCancel.addEventListener('click', cancelHandler);
+      }
+
+      // Credentials loading
+      function loadCredentials() {
+        const savedUrl = localStorage.getItem(STORAGE_KEYS.URL) || window.UPSTASH_REDIS_REST_URL || '';
+        const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN) || window.UPSTASH_REDIS_REST_TOKEN || '';
+        const savedKey = localStorage.getItem(STORAGE_KEYS.KEY) || 'app:system_update';
+
+        els.cfgUrl.value = savedUrl;
+        els.cfgToken.value = savedToken;
+        els.cfgKey.value = savedKey;
+
+        return { url: savedUrl, token: savedToken, key: savedKey };
+      }
+
+      function saveCredentials() {
+        const url = els.cfgUrl.value.trim().replace(/\/+$/, '');
+        const token = els.cfgToken.value.trim();
+        const key = els.cfgKey.value.trim() || 'app:system_update';
+
+        localStorage.setItem(STORAGE_KEYS.URL, url);
+        localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+        localStorage.setItem(STORAGE_KEYS.KEY, key);
+
+        showToast('Redis configuration saved locally.', 'success');
+      }
+
+      // Upstash REST API Helper
+      async function execRedisCommand(command, args = []) {
+        const url = els.cfgUrl.value.trim().replace(/\/+$/, '');
+        const token = els.cfgToken.value.trim();
+
+        if (!url || !token) {
+          throw new Error('Please enter both Redis REST URL and Bearer Token in settings.');
+        }
+
+        // Upstash supports command in url e.g. /get/key or POST for generic commands
+        const endpoint = `${url}`;
+        const reqBody = [command, ...args];
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(reqBody)
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Upstash HTTP ${res.status}: ${errText}`);
+        }
+
+        const data = await res.json();
+        if (data.error) {
+          throw new Error(`Redis Error: ${data.error}`);
+        }
+
+        return data.result;
+      }
+
+      // Test connection
+      async function testConnection() {
+        els.redisTestBadge.textContent = 'Testing...';
+        els.redisTestBadge.className = 'text-xs px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-400 font-medium';
+        try {
+          const res = await execRedisCommand('PING');
+          if (res === 'PONG') {
+            els.redisTestBadge.textContent = 'Connected (PONG)';
+            els.redisTestBadge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-medium';
+            showToast('Redis connection successful!', 'success');
+          } else {
+            throw new Error('Unexpected response: ' + res);
+          }
+        } catch (err) {
+          els.redisTestBadge.textContent = 'Failed';
+          els.redisTestBadge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-500/15 text-rose-400 font-medium';
+          showToast(err.message, 'error');
+        }
+      }
+
+      // Fetch active update
+      async function syncFromRedis() {
+        const key = els.cfgKey.value.trim() || 'app:system_update';
+        els.liveUpdateName.textContent = 'Fetching from Redis...';
+        els.statusLight.className = 'w-3 h-3 rounded-full bg-amber-500 animate-pulse shrink-0';
+
+        try {
+          const raw = await execRedisCommand('GET', [key]);
+          if (!raw) {
+            activeCloudData = null;
+            els.liveUpdateName.textContent = 'No update currently published (Key is empty).';
+            els.liveUpdateDate.textContent = '';
+            els.btnDeleteLive.disabled = true;
+            els.statusLight.className = 'w-3 h-3 rounded-full bg-slate-600 shrink-0';
+            return;
+          }
+
+          let parsed = raw;
+          if (typeof raw === 'string') {
+            try {
+              parsed = JSON.parse(raw);
+            } catch {
+              parsed = { id: 'legacy', title: 'Live Update', html: raw, timestamp: Date.now() };
+            }
+          }
+
+          activeCloudData = parsed;
+          els.liveUpdateName.textContent = parsed.title || 'Untitled Update';
+          els.btnDeleteLive.disabled = false;
+          els.statusLight.className = 'w-3 h-3 rounded-full bg-emerald-500 shrink-0';
+
+          if (parsed.timestamp) {
+            const d = new Date(parsed.timestamp);
+            els.liveUpdateDate.textContent = `ID: ${parsed.id.substring(0, 10)}... • ${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          }
+
+          showToast('Synchronized with live Redis key.', 'success');
+        } catch (err) {
+          els.liveUpdateName.textContent = 'Unable to read from Redis.';
+          els.statusLight.className = 'w-3 h-3 rounded-full bg-rose-500 shrink-0';
+          showToast(err.message, 'error');
+        }
+      }
+
+      // Delete active update from Redis
+      async function deleteLiveUpdate() {
+        const key = els.cfgKey.value.trim() || 'app:system_update';
+
+        showConfirmDialog({
+          title: 'Delete Active Update from Redis?',
+          message: 'This will completely remove the update key from Redis. The notification modal will no longer trigger for users, and their settings widget will clear.',
+          onConfirm: async () => {
+            try {
+              await execRedisCommand('DEL', [key]);
+              showToast('Active update removed from Redis.', 'success');
+              activeCloudData = null;
+              syncFromRedis();
+            } catch (err) {
+              showToast(err.message, 'error');
+            }
+          }
+        });
+      }
+
+      // Publish new or updated announcement
+      async function publishUpdate() {
+        const key = els.cfgKey.value.trim() || 'app:system_update';
+        const title = els.updateTitle.value.trim() || 'System Update';
+        const tag = els.updateTag.value.trim() || 'Notice';
+        const html = els.updateHtml.value.trim();
+
+        if (!html) {
+          showToast('Cannot publish an empty HTML body.', 'error');
+          return;
+        }
+
+        // Determine if we issue a brand new ID to reset client 24h timers
+        let updateId;
+        if (els.chkForceNew.checked || !activeCloudData || !activeCloudData.id) {
+          updateId = 'upd_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 7);
+        } else {
+          updateId = activeCloudData.id;
+        }
+
+        const payload = {
+          id: updateId,
+          title: title,
+          tag: tag,
+          html: html,
+          timestamp: Date.now()
+        };
+
+        const payloadStr = JSON.stringify(payload);
+
+        try {
+          els.btnPublish.disabled = true;
+          els.btnPublish.textContent = 'Publishing...';
+
+          await execRedisCommand('SET', [key, payloadStr]);
+          showToast('Update successfully published to Redis!', 'success');
+          await syncFromRedis();
+        } catch (err) {
+          showToast('Failed to publish: ' + err.message, 'error');
+        } finally {
+          els.btnPublish.disabled = false;
+          els.btnPublish.innerHTML = `
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            Publish to Redis
+          `;
+        }
+      }
+
+      // Update Preview Sandboxed Document
+      function updateSandboxPreview() {
+        const title = els.updateTitle.value || 'Update Title';
+        const tag = els.updateTag.value || 'New Update';
+        const content = els.updateHtml.value || '<p style="color: #64748b;">No HTML written yet.</p>';
+
+        els.previewModalTitle.textContent = title;
+        els.previewModalTag.textContent = tag;
+        els.previewSettingsTitle.textContent = title;
+        els.codeLength.textContent = `${els.updateHtml.value.length} characters`;
+
+        const iframeDoc = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <style>
+              * { box-sizing: border-box; }
+              body {
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                margin: 0;
+                padding: 18px 20px;
+                color: #e2e8f0;
+                background: #020617;
+                line-height: 1.6;
+                word-break: break-word;
+              }
+              h1, h2, h3, h4, h5, h6 { color: #f8fafc; margin-top: 0; }
+              p { margin: 0 0 12px 0; font-size: 13.5px; }
+              ul, ol { padding-left: 20px; margin: 0 0 14px 0; font-size: 13.5px; }
+              li { margin-bottom: 6px; }
+              a { color: #38bdf8; text-decoration: underline; }
+              code { background: rgba(148, 163, 184, 0.2); padding: 2px 6px; border-radius: 4px; font-size: 85%; font-family: monospace; }
+              img { max-width: 100%; height: auto; border-radius: 8px; }
+            </style>
+          </head>
+          <body>
+            ${content}
+          </body>
+          </html>
+        `;
+
+        els.previewIframe.srcdoc = iframeDoc;
+      }
+
+      // Quick snippet insertion tool
+      function insertSnippet(type) {
+        const textarea = els.updateHtml;
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        let snippet = '';
+
+        switch (type) {
+          case 'h2':
+            snippet = '<h2 style="color: #60a5fa; font-size: 16px; margin: 12px 0 6px 0;">✨ Next Feature Title</h2>\n';
+            break;
+          case 'paragraph':
+            snippet = '<p style="color: #94a3b8; font-size: 13.5px;">Describe the update details here with clear and concise language.</p>\n';
+            break;
+          case 'badge':
+            snippet = '<span style="display:inline-block; background:rgba(59,130,246,0.2); color:#60a5fa; font-weight:600; font-size:11px; padding:3px 8px; border-radius:6px; margin-bottom:8px;">NEW MODULE</span>\n';
+            break;
+          case 'list':
+            snippet = `<ul style="padding-left: 20px; margin: 10px 0; font-size: 13px;">
+  <li><strong>Feature A:</strong> Enhanced performance across components.</li>
+  <li><strong>Feature B:</strong> Added automatic recovery routines.</li>
+</ul>\n`;
+            break;
+          case 'highlight':
+            snippet = `<div style="background: rgba(30, 41, 59, 0.7); border-left: 4px solid #3b82f6; padding: 12px 14px; border-radius: 6px; margin: 12px 0;">
+  <strong style="color: #f8fafc; font-size: 13px;">💡 Pro Tip:</strong>
+  <p style="margin: 4px 0 0 0; font-size: 12.5px; color: #cbd5e1;">You can access these settings right inside the app settings tab anytime.</p>
+</div>\n`;
+            break;
+          case 'button':
+            snippet = `<div style="text-align: center; margin: 16px 0;">
+  <a href="https://example.com" target="_blank" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 12px; text-decoration: none;">Explore Documentation &rarr;</a>
+</div>\n`;
+            break;
+        }
+
+        const value = textarea.value;
+        textarea.value = value.substring(0, start) + snippet + value.substring(end);
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + snippet.length;
+
+        updateSandboxPreview();
+      }
+
+      // Event Listeners setup
+      function setupListeners() {
+        // Toggle Config Drawer
+        els.btnToggleConfig.addEventListener('click', () => {
+          els.configDrawer.classList.toggle('hidden');
+        });
+
+        // Config actions
+        els.btnSaveCreds.addEventListener('click', saveCredentials);
+        els.btnTestConn.addEventListener('click', testConnection);
+        els.btnFetchCurrent.addEventListener('click', syncFromRedis);
+        els.btnDeleteLive.addEventListener('click', deleteLiveUpdate);
+        els.btnPublish.addEventListener('click', publishUpdate);
+
+        // Load sample template
+        els.btnLoadSample.addEventListener('click', () => {
+          els.updateHtml.value = SAMPLE_HTML;
+          updateSandboxPreview();
+          showToast('Sample template loaded in editor.', 'info');
+        });
+
+        // Live input sync to preview
+        els.updateTitle.addEventListener('input', updateSandboxPreview);
+        els.updateTag.addEventListener('input', updateSandboxPreview);
+        els.updateHtml.addEventListener('input', updateSandboxPreview);
+
+        // Snippet buttons
+        document.querySelectorAll('.snippet-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const snippetType = btn.getAttribute('data-insert');
+            insertSnippet(snippetType);
+          });
+        });
+      }
+
+      // Initialize
+      window.addEventListener('DOMContentLoaded', () => {
+        loadCredentials();
+        els.updateHtml.value = SAMPLE_HTML;
+        updateSandboxPreview();
+        setupListeners();
+
+        // Attempt silent sync on load if credentials exist
+        const creds = loadCredentials();
+        if (creds.url && creds.token) {
+          syncFromRedis();
+        } else {
+          // Open settings drawer if credentials are empty
+          els.configDrawer.classList.remove('hidden');
+        }
+      });
+
+    })();
+  </script>
+</body>
+</html>
