@@ -22,6 +22,8 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <!-- Arix Freemium Engine -->
 <script type="module" src="./lib/paid.js"></script>
+<!-- Arix App Updates -->
+<script src="./lib/updates.js"></script>
 
 <!-- Global Quota Interceptor Logic. -->
 <script>
@@ -694,6 +696,9 @@ body {
                 <i class="ph-bold ph-caret-right text-gray-400"></i>
             </button>
 
+            <!-- App System Updates Widget -->
+            <div id="arix-settings-updates-slot"></div>
+
             <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
                 <div class="flex items-center gap-2 text-sm font-bold text-gray-800"><i class="ph-bold ph-sliders-horizontal text-theme-600"></i> Preferences</div>
                 <div class="mt-3 grid gap-2 text-xs text-gray-500">
@@ -1182,7 +1187,7 @@ body {
 
     <!-- User Profile Footer -->
     <div class="p-4 border-t border-gray-100 bg-white">
-        <button onclick="window.ArixSettings.open()" class="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
+        <button onclick="window.ArixSettings.open(); if(window.AppUpdates && typeof window.AppUpdates.mountSettingsWidget === 'function'){ window.AppUpdates.mountSettingsWidget('#arix-settings-updates-slot'); }" class="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-theme-600 text-white flex items-center justify-center font-medium text-sm transition-colors duration-500 shadow-sm">
                     <i class="ph-bold ph-user"></i>
@@ -1862,11 +1867,25 @@ function removeUrlParameter(parameterName) {
         console.warn('[ArixAI] Could not update shared-chat URL:', error);
     }
 }
-
 window.onload = async () => {
     // --- NEW: Register Background Sentinel Agent ---
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(err => console.error("Sentinel Reg failed:", err));
+    }
+
+    // --- Upstash App Updates Client Engine Initialization ---
+    try {
+        if (window.AppUpdates && typeof window.AppUpdates.init === 'function') {
+            window.AppUpdates.init({
+                // Replace with your Upstash REST credentials if not hardcoded inside lib/updates.js
+                redisUrl: window.UPSTASH_REDIS_REST_URL || undefined,
+                redisToken: window.UPSTASH_REDIS_REST_TOKEN || undefined,
+                key: 'app_latest_update',
+                settingsTarget: '#arix-settings-updates-slot'
+            });
+        }
+    } catch (updateErr) {
+        console.warn('[Updates] Failed to initialize update module gracefully:', updateErr);
     }
     try {
         await DB.init();
