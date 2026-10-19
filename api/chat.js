@@ -1212,8 +1212,9 @@ export default async function handler(req) {
           return { role: m.role === 'user' ? 'user' : 'model', parts };
         });
 
-        // Keep a minimal application loader, but never stream internal thoughts.
+        // Preamble keeps connection alive without injecting fake loader HTML into message history
         sendUIChunk('<div id="Arix-persistent-loader" class="flex items-center gap-2 text-[11px] text-gray-500 font-mono mb-3"><span class="animate-pulse">ArixAI is preparing your answer...</span></div>');
+        enqueue(': keep-alive\n\n');
         let llmRes; let isGroq = false; let isMistral = false; let lastErr = '';
         if (isSpark && GROQ_KEYS.length) {
           isGroq = true;
