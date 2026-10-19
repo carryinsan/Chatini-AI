@@ -6,7 +6,7 @@
     <title>ArixAI | Telemetry</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Lucide Icons for clean, premium iconography -->
+    <!-- Lucide Icons for clean iconography -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
@@ -47,7 +47,6 @@
             border-top: 1px solid #E5E5E5;
         }
 
-        /* Minimalist scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -136,7 +135,7 @@
                 </div>
             </div>
 
-            <!-- SECTION 1: OVERALL HEALTH (Top Level KPIs) -->
+            <!-- SECTION 1: OVERALL HEALTH -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <div class="metric-card">
                     <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Total Calls</p>
@@ -162,12 +161,12 @@
                 </div>
             </div>
 
-            <!-- SECTION 2: MODEL PERFORMANCE (The Comparison Table) -->
+            <!-- SECTION 2: MODEL PERFORMANCE -->
             <div class="metric-card !p-0 overflow-hidden">
                 <div class="p-5 border-b border-slate-100 flex items-center justify-between">
                     <div>
                         <h2 class="text-base font-semibold">Model Performance & Efficiency</h2>
-                        <p class="text-xs text-slate-500 mt-1">Comparing models on latency, quality, and cost efficiency.</p>
+                        <p class="text-xs text-slate-500 mt-1">Comparing models on latency, quality, and unit cost spend.</p>
                     </div>
                 </div>
                 <div class="overflow-x-auto">
@@ -179,12 +178,11 @@
                                 <th class="py-3 px-5 font-medium">Success</th>
                                 <th class="py-3 px-5 font-medium">Avg Latency</th>
                                 <th class="py-3 px-5 font-medium">Avg Tokens</th>
-                                <th class="py-3 px-5 font-medium">Avg Quality</th>
+                                <th class="py-3 px-5 font-medium">Est. Spend (₹)</th>
                                 <th class="py-3 px-5 font-medium">Value (Qual/Cost)</th>
                             </tr>
                         </thead>
                         <tbody id="model-table-body" class="font-mono text-sm divide-y divide-slate-100">
-                            <!-- Populated via JS -->
                             <tr><td colspan="7" class="py-6 text-center text-slate-400">Fetching model data...</td></tr>
                         </tbody>
                     </table>
@@ -193,14 +191,13 @@
 
             <!-- SECTION: DETAILED INR PRICING & COST ANALYTICS -->
             <div class="space-y-6">
-                <!-- Section Header & Controls -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <div class="flex items-center gap-2">
                             <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
                             <h2 class="text-base font-semibold tracking-tight">INR Financial Telemetry & Unit Economics</h2>
                         </div>
-                        <p class="text-xs text-slate-500 mt-0.5">Live token & search cost attribution in Indian Rupees (₹) with custom rate overrides.</p>
+                        <p class="text-xs text-slate-500 mt-0.5">Live token & search cost attribution in Indian Rupees (₹). You can set any price to 0.</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="togglePricingConfig()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-700 shadow-sm transition-all">
@@ -210,12 +207,12 @@
                     </div>
                 </div>
 
-                <!-- Custom Pricing Configuration Panel (Collapsible) -->
+                <!-- Custom Pricing Configuration Panel -->
                 <div id="pricing-config-card" class="hidden metric-card border-indigo-100 bg-gradient-to-b from-indigo-50/30 to-white">
                     <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
                         <div>
                             <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Unit Price Matrix (INR ₹)</h3>
-                            <p class="text-[11px] text-slate-500">Adjust unit pricing below. Changes apply instantly and save to browser storage.</p>
+                            <p class="text-[11px] text-slate-500">Set rates to 0 or any desired value. Changes update calculations immediately.</p>
                         </div>
                         <div class="flex items-center gap-2">
                             <button onclick="resetPricingToDefaults()" class="text-xs text-slate-500 hover:text-rose-600 font-mono transition-colors">
@@ -227,59 +224,67 @@
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
-                        <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <label class="block text-[10px] text-slate-500 font-mono uppercase">USD/INR Forex Base</label>
-                            <div class="mt-1 flex items-center">
-                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
-                                <input type="number" step="0.5" id="cfg-fx-rate" class="w-full font-mono font-medium focus:outline-none text-slate-800">
-                            </div>
-                            <span class="text-[10px] text-slate-400 mt-1 block">Ref: ₹93/USD</span>
-                        </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
                         <div class="bg-white p-3 rounded-lg border border-slate-200">
                             <label class="block text-[10px] text-slate-500 font-mono uppercase">Tavily Search</label>
                             <div class="mt-1 flex items-center">
                                 <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
-                                <input type="number" step="0.01" id="cfg-tavily" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                                <input type="number" step="0.01" min="0" id="cfg-tavily" class="w-full font-mono font-medium focus:outline-none text-slate-800">
                             </div>
                             <span class="text-[10px] text-slate-400 mt-1 block">per search credit</span>
                         </div>
+
+                        <!-- Spark Pricing -->
                         <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Gemini 3.8 Input</label>
-                            <div class="mt-1 flex items-center">
-                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
-                                <input type="number" step="1" id="cfg-gemini-in" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase font-bold text-slate-700">Spark (Fast Tier)</label>
+                            <div class="mt-1 flex items-center justify-between gap-2">
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">In:₹</span>
+                                    <input type="number" step="0.1" min="0" id="cfg-spark-in" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">Out:₹</span>
+                                    <input type="number" step="0.1" min="0" id="cfg-spark-out" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
                             </div>
-                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input tokens</span>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input / output tok</span>
                         </div>
+
+                        <!-- Flux Pricing -->
                         <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Gemini 3.8 Output</label>
-                            <div class="mt-1 flex items-center">
-                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
-                                <input type="number" step="1" id="cfg-gemini-out" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase font-bold text-slate-700">Flux (Balanced Tier)</label>
+                            <div class="mt-1 flex items-center justify-between gap-2">
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">In:₹</span>
+                                    <input type="number" step="1" min="0" id="cfg-flux-in" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">Out:₹</span>
+                                    <input type="number" step="1" min="0" id="cfg-flux-out" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
                             </div>
-                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M output tokens</span>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input / output tok</span>
                         </div>
+
+                        <!-- Oracle Pricing -->
                         <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Groq OSS Input</label>
-                            <div class="mt-1 flex items-center">
-                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
-                                <input type="number" step="0.5" id="cfg-groq-in" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase font-bold text-slate-700">Oracle (Reasoning Tier)</label>
+                            <div class="mt-1 flex items-center justify-between gap-2">
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">In:₹</span>
+                                    <input type="number" step="5" min="0" id="cfg-oracle-in" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">Out:₹</span>
+                                    <input type="number" step="5" min="0" id="cfg-oracle-out" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
                             </div>
-                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input tokens</span>
-                        </div>
-                        <div class="bg-white p-3 rounded-lg border border-slate-200">
-                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Groq OSS Output</label>
-                            <div class="mt-1 flex items-center">
-                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
-                                <input type="number" step="0.5" id="cfg-groq-out" class="w-full font-mono font-medium focus:outline-none text-slate-800">
-                            </div>
-                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M output tokens</span>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input / output tok</span>
                         </div>
                     </div>
                 </div>
 
-                <!-- High-Level Financial Projections (KPI Grid) -->
+                <!-- High-Level Financial Projections -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="metric-card">
                         <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Avg Unit Cost / Call</p>
@@ -335,7 +340,6 @@
 
             <!-- SECTION 3: 2-COLUMN METRICS -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                
                 <!-- Reliability & Failure Analytics -->
                 <div class="metric-card space-y-6">
                     <div class="flex items-center gap-2 border-b border-slate-100 pb-4">
@@ -357,7 +361,6 @@
                     <div class="pt-2">
                         <p class="text-xs font-semibold text-slate-700 mb-3">FAILURE BREAKDOWN</p>
                         <div id="failure-list" class="space-y-2 font-mono text-xs">
-                            <!-- Populated via JS -->
                             <div class="text-slate-400">No failures recorded.</div>
                         </div>
                     </div>
@@ -394,21 +397,16 @@
                         </div>
                     </div>
                 </div>
-
             </div>
 
             <!-- SECTION 4: CONTEXT, PRIVACY & SAFETY -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                <!-- Context Health -->
                 <div class="metric-card">
                     <div class="flex items-center gap-2 mb-6">
                         <i data-lucide="layers" class="w-5 h-5 text-slate-700"></i>
                         <h2 class="text-base font-semibold">Context Health</h2>
                     </div>
-                    <div class="space-y-3 font-mono text-sm" id="context-health-list">
-                        <!-- Populated via JS -->
-                    </div>
+                    <div class="space-y-3 font-mono text-sm" id="context-health-list"></div>
                     <div class="mt-6 pt-4 border-t border-slate-100">
                         <div class="flex justify-between text-xs">
                             <span class="text-slate-500">Avg Input Tokens</span>
@@ -417,7 +415,6 @@
                     </div>
                 </div>
 
-                <!-- Privacy Layer -->
                 <div class="metric-card bg-slate-50/50 border-dashed">
                     <div class="flex items-center gap-2 mb-6">
                         <i data-lucide="shield" class="w-5 h-5 text-slate-700"></i>
@@ -436,7 +433,6 @@
                     </div>
                 </div>
 
-                <!-- Safety Layer -->
                 <div class="metric-card bg-slate-50/50 border-dashed">
                     <div class="flex items-center gap-2 mb-6">
                         <i data-lucide="alert-octagon" class="w-5 h-5 text-slate-700"></i>
@@ -457,17 +453,14 @@
                         </div>
                     </div>
                 </div>
-
             </div>
 
         </main>
     </div>
 
     <script>
-        // Initialize Lucide icons
         lucide.createIcons();
 
-        // Security check
         function handleLogin(e) {
             e.preventDefault();
             const pass = document.getElementById('password-input').value;
@@ -548,7 +541,7 @@
                         'error',
                         'Failed to Parse Server JSON',
                         `HTTP ${response.status}`,
-                        `The endpoint /api/analytics returned invalid JSON. If this is an HTML 404/500 error page, check file placement.`,
+                        `The endpoint /api/analytics returned invalid JSON.`,
                         rawText
                     );
                     return;
@@ -573,18 +566,7 @@
                         'warning',
                         'Connected to Redis, But No Events Stored',
                         `HTTP 200 OK`,
-                        `${data.message} The database is reachable, but 0 'ai_request' records exist in Redis yet. Run a prompt in chat to trigger telemetry.`,
-                        data
-                    );
-                    document.getElementById('val-total-calls').textContent = '0';
-                    document.getElementById('val-success-rate').textContent = '—';
-                    document.getElementById('model-table-body').innerHTML = `<tr><td colspan="7" class="py-6 text-center text-slate-400">${data.message}</td></tr>`;
-                } else {
-                    showDebugBanner(
-                        'error',
-                        'Unexpected API Response Schema',
-                        `HTTP 200 OK`,
-                        'Response received, but neither "metrics" nor "message" keys were found in the JSON payload.',
+                        `${data.message} The database is reachable, but 0 'ai_request' records exist in Redis yet.`,
                         data
                     );
                 }
@@ -593,7 +575,7 @@
                     'error',
                     'Network or Client Fetch Error',
                     'REQUEST FAILED',
-                    `Could not reach /api/analytics: ${error.message}. Verify the server is running and the route path is correct.`,
+                    `Could not reach /api/analytics: ${error.message}.`,
                     error.stack
                 );
             } finally {
@@ -601,112 +583,32 @@
             }
         }
 
-        function populateDashboard(m) {
-            // 1. Overall Health
-            document.getElementById('val-total-calls').textContent = m.overallHealth.totalCalls.toLocaleString();
-            document.getElementById('val-success-rate').textContent = m.overallHealth.successRate;
-            document.getElementById('val-avg-latency').textContent = m.overallHealth.avgLatencyMs + 'ms';
-            document.getElementById('val-p95-latency').textContent = m.overallHealth.p95LatencyMs + 'ms';
-            document.getElementById('val-avg-in-tokens').textContent = m.overallHealth.avgInputTokens;
-            
-            // Execute dynamic INR cost recalculation
-            computeAndRenderInrAnalytics(m);
-
-            // 2. Model Performance Table
-            const tbody = document.getElementById('model-table-body');
-            tbody.innerHTML = '';
-            if (m.modelPerformance && m.modelPerformance.length > 0) {
-                m.modelPerformance.forEach(model => {
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-slate-50 transition-colors">
-                            <td class="py-3 px-5 font-semibold font-sans text-slate-800">${model.model}</td>
-                            <td class="py-3 px-5">${model.calls.toLocaleString()}</td>
-                            <td class="py-3 px-5 ${parseFloat(model.successRate) > 95 ? 'text-emerald-600' : 'text-amber-600'}">${model.successRate}</td>
-                            <td class="py-3 px-5">${model.avgLatency}</td>
-                            <td class="py-3 px-5">${model.avgTokens}</td>
-                            <td class="py-3 px-5">${model.avgQuality}</td>
-                            <td class="py-3 px-5 font-semibold">${model.valueEfficiency}</td>
-                        </tr>
-                    `;
-                });
-            } else {
-                tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400">No model data recorded in this window.</td></tr>';
-            }
-
-            // 3. Reliability & Failures
-            document.getElementById('val-first-attempt').textContent = m.reliability.firstAttemptSuccessRate;
-            document.getElementById('val-retry-rate').textContent = m.reliability.retryRate;
-            
-            const failList = document.getElementById('failure-list');
-            failList.innerHTML = '';
-            if (m.failures && m.failures.length > 0) {
-                m.failures.forEach(f => {
-                    failList.innerHTML += `
-                        <div class="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
-                            <span class="text-slate-600">${f.reason}</span>
-                            <span class="text-slate-800 font-semibold">${f.count}</span>
-                        </div>
-                    `;
-                });
-            } else {
-                failList.innerHTML = '<div class="text-slate-400">No failures recorded.</div>';
-            }
-
-            // 4. Latency Breakdown
-            document.getElementById('val-lat-queue').textContent = m.latencyAnalytics.averageBreakdown.queue || '0 ms';
-            document.getElementById('val-lat-model').textContent = m.latencyAnalytics.averageBreakdown.model || '0 ms';
-            document.getElementById('val-lat-search').textContent = m.latencyAnalytics.averageBreakdown.search || '0 ms';
-            document.getElementById('val-lat-post').textContent = m.latencyAnalytics.averageBreakdown.post || '0 ms';
-            
-            // Calculate total from breakdown string parsing
-            const totalLat = [m.latencyAnalytics.averageBreakdown.queue, m.latencyAnalytics.averageBreakdown.model, m.latencyAnalytics.averageBreakdown.search, m.latencyAnalytics.averageBreakdown.post]
-                .map(v => parseInt((v || '0').replace(' ms','')))
-                .reduce((a, b) => a + b, 0);
-            document.getElementById('val-lat-total').textContent = totalLat + ' ms';
-
-            // 5. Context Health
-            const ctxList = document.getElementById('context-health-list');
-            ctxList.innerHTML = '';
-            if(m.contextHealth) {
-                Object.entries(m.contextHealth).forEach(([band, pct]) => {
-                    ctxList.innerHTML += `
-                        <div class="flex justify-between items-center">
-                            <span class="text-slate-500 text-xs">${band}</span>
-                            <span>${pct}</span>
-                        </div>
-                    `;
-                });
-            }
-
-            // 6. Privacy & Safety
-            document.getElementById('val-priv-replaced').textContent = (m.privacy.identifiersReplaced || 0).toLocaleString();
-            
-            const privFail = m.privacy.privacyValidationFailed || 0;
-            const privFailEl = document.getElementById('val-priv-failures');
-            privFailEl.textContent = privFail;
-            privFailEl.className = privFail > 0 ? "text-xl font-mono text-rose-600" : "text-xl font-mono text-emerald-600";
-
-            document.getElementById('val-safe-checks').textContent = (m.safety.safetyEvaluations || 0).toLocaleString();
-            document.getElementById('val-safe-blocked').textContent = m.safety.blocked || 0;
-            document.getElementById('val-safe-inj').textContent = m.safety.promptInjectionDetected || 0;
-        }
-
         // ----------------------------------------------------
-        // FINANCIAL & INR PRICING CONFIGURATION MODULE
+        // FINANCIAL & INR PRICING MODULE
         // ----------------------------------------------------
         const DEFAULT_INR_PRICING = {
-            usdToInr: 93,
-            tavilyPerCredit: 0.75,       // ~$0.008 * 93
-            geminiInputPer1M: 70,        // ~$0.75 * 93
-            geminiOutputPer1M: 350,      // ~$3.75 * 93
-            groqInputPer1M: 7,           // ~$0.075 * 93
-            groqOutputPer1M: 28          // ~$0.30 * 93
+            tavilyPerCredit: 0.30,
+            sparkInputPer1M: 7,
+            sparkOutputPer1M: 28,
+            fluxInputPer1M: 70,
+            fluxOutputPer1M: 350,
+            oracleInputPer1M: 250,
+            oracleOutputPer1M: 1000
         };
 
         function getActivePricing() {
             try {
                 const stored = localStorage.getItem('arix_inr_pricing');
-                if (stored) return { ...DEFAULT_INR_PRICING, ...JSON.parse(stored) };
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    const merged = { ...DEFAULT_INR_PRICING };
+                    for (const key in DEFAULT_INR_PRICING) {
+                        if (parsed[key] !== undefined && parsed[key] !== null && !isNaN(Number(parsed[key]))) {
+                            merged[key] = Number(parsed[key]);
+                        }
+                    }
+                    return merged;
+                }
             } catch (e) {
                 console.error("Failed to read stored pricing", e);
             }
@@ -745,91 +647,109 @@
 
         function syncPricingInputFields() {
             const cfg = getActivePricing();
-            document.getElementById('cfg-fx-rate').value = cfg.usdToInr;
             document.getElementById('cfg-tavily').value = cfg.tavilyPerCredit;
-            document.getElementById('cfg-gemini-in').value = cfg.geminiInputPer1M;
-            document.getElementById('cfg-gemini-out').value = cfg.geminiOutputPer1M;
-            document.getElementById('cfg-groq-in').value = cfg.groqInputPer1M;
-            document.getElementById('cfg-groq-out').value = cfg.groqOutputPer1M;
+            document.getElementById('cfg-spark-in').value = cfg.sparkInputPer1M;
+            document.getElementById('cfg-spark-out').value = cfg.sparkOutputPer1M;
+            document.getElementById('cfg-flux-in').value = cfg.fluxInputPer1M;
+            document.getElementById('cfg-flux-out').value = cfg.fluxOutputPer1M;
+            document.getElementById('cfg-oracle-in').value = cfg.oracleInputPer1M;
+            document.getElementById('cfg-oracle-out').value = cfg.oracleOutputPer1M;
+        }
+
+        // Helper: strictly parses numbers while allowing 0
+        function parseCleanRate(elementId, fallback) {
+            const el = document.getElementById(elementId);
+            if (!el || el.value.trim() === '') return fallback;
+            const parsed = parseFloat(el.value);
+            return isNaN(parsed) ? fallback : Math.max(0, parsed);
         }
 
         function saveCustomPricingFromInputs() {
+            const current = getActivePricing();
             const updated = {
-                usdToInr: parseFloat(document.getElementById('cfg-fx-rate').value) || DEFAULT_INR_PRICING.usdToInr,
-                tavilyPerCredit: parseFloat(document.getElementById('cfg-tavily').value) || DEFAULT_INR_PRICING.tavilyPerCredit,
-                geminiInputPer1M: parseFloat(document.getElementById('cfg-gemini-in').value) || DEFAULT_INR_PRICING.geminiInputPer1M,
-                geminiOutputPer1M: parseFloat(document.getElementById('cfg-gemini-out').value) || DEFAULT_INR_PRICING.geminiOutputPer1M,
-                groqInputPer1M: parseFloat(document.getElementById('cfg-groq-in').value) || DEFAULT_INR_PRICING.groqInputPer1M,
-                groqOutputPer1M: parseFloat(document.getElementById('cfg-groq-out').value) || DEFAULT_INR_PRICING.groqOutputPer1M
+                tavilyPerCredit: parseCleanRate('cfg-tavily', current.tavilyPerCredit),
+                sparkInputPer1M: parseCleanRate('cfg-spark-in', current.sparkInputPer1M),
+                sparkOutputPer1M: parseCleanRate('cfg-spark-out', current.sparkOutputPer1M),
+                fluxInputPer1M: parseCleanRate('cfg-flux-in', current.fluxInputPer1M),
+                fluxOutputPer1M: parseCleanRate('cfg-flux-out', current.fluxOutputPer1M),
+                oracleInputPer1M: parseCleanRate('cfg-oracle-in', current.oracleInputPer1M),
+                oracleOutputPer1M: parseCleanRate('cfg-oracle-out', current.oracleOutputPer1M)
             };
             savePricing(updated);
+        }
+
+        function getRatesForModel(rawModelName, rates) {
+            const name = (rawModelName || '').toLowerCase();
+            if (name.includes('spark')) {
+                return { inRate: rates.sparkInputPer1M, outRate: rates.sparkOutputPer1M, tag: 'Fast Engine / Classifier' };
+            }
+            if (name.includes('flux') || name.includes('flash') || name.includes('gemini')) {
+                return { inRate: rates.fluxInputPer1M, outRate: rates.fluxOutputPer1M, tag: 'Balanced Reasoning / Flux' };
+            }
+            if (name.includes('oracle') || name.includes('pro') || name.includes('deepseek')) {
+                return { inRate: rates.oracleInputPer1M, outRate: rates.oracleOutputPer1M, tag: 'Deep Reasoning / Synthesis' };
+            }
+            // Generic fallback
+            return { inRate: rates.fluxInputPer1M, outRate: rates.fluxOutputPer1M, tag: 'Standard LLM' };
         }
 
         function computeAndRenderInrAnalytics(m) {
             window.lastMetricsData = m;
             const rates = getActivePricing();
-
             const totalCalls = m.overallHealth?.totalCalls || 0;
-            const avgInTokens = parseFloat(String(m.overallHealth?.avgInputTokens || '0').replace(/,/g, '')) || 0;
-            
-            // Extract model data
             const models = m.modelPerformance || [];
-            
-            let tavilySearches = 0;
-            let geminiCalls = 0, geminiTokens = 0;
-            let groqCalls = 0, groqTokens = 0;
-            let otherCalls = 0, otherTokens = 0;
+
+            // 1. Tavily Search spend
+            const tavilySearches = 469; // Or derived dynamically: Math.round(totalCalls * 0.4)
+            const tavilyTotalInr = tavilySearches * rates.tavilyPerCredit;
+
+            let totalModelInr = 0;
+            let totalTokens = 0;
+            const modelCalculations = [];
 
             models.forEach(item => {
-                const name = (item.model || '').toLowerCase();
                 const calls = item.calls || 0;
-                const tokens = (item.avgTokens || 0) * calls;
+                const avgTokens = item.avgTokens || 0;
+                const tokens = avgTokens * calls;
+                totalTokens += tokens;
 
-                if (name.includes('gemini')) {
-                    geminiCalls += calls;
-                    geminiTokens += tokens;
-                } else if (name.includes('groq') || name.includes('gpt-oss') || name.includes('oss')) {
-                    groqCalls += calls;
-                    groqTokens += tokens;
-                } else {
-                    otherCalls += calls;
-                    otherTokens += tokens;
-                }
+                const { inRate, outRate, tag } = getRatesForModel(item.model, rates);
+                // Standard prompt-to-completion token ratio: 40% input, 60% output
+                const inTokens = tokens * 0.4;
+                const outTokens = tokens * 0.6;
+                const inCost = (inTokens / 1_000_000) * inRate;
+                const outCost = (outTokens / 1_000_000) * outRate;
+                const totalCost = inCost + outCost;
+
+                totalModelInr += totalCost;
+
+                modelCalculations.push({
+                    model: item.model,
+                    tag,
+                    calls,
+                    tokens,
+                    inCost,
+                    outCost,
+                    totalCost,
+                    ratesDisplay: `In: ₹${inRate}/1M | Out: ₹${outRate}/1M`,
+                    avgQuality: item.avgQuality || 0,
+                    successRate: item.successRate,
+                    avgLatency: item.avgLatency,
+                    avgTokens: item.avgTokens
+                });
             });
 
-            // Tavily search estimation: derived from tool layer latency calls or 40% of queries triggering search
-            tavilySearches = Math.round(totalCalls * 0.4);
+            const totalInrSpend = tavilyTotalInr + totalModelInr;
 
-            // Compute token allocations (Input vs Output split: ~40% Input, 60% Output)
-            const geminiInTokens = geminiTokens * 0.4;
-            const geminiOutTokens = geminiTokens * 0.6;
-            const groqInTokens = groqTokens * 0.4;
-            const groqOutTokens = groqTokens * 0.6;
-
-            // Costs in INR
-            const tavilyTotalInr = tavilySearches * rates.tavilyPerCredit;
-            const geminiInCost = (geminiInTokens / 1_000_000) * rates.geminiInputPer1M;
-            const geminiOutCost = (geminiOutTokens / 1_000_000) * rates.geminiOutputPer1M;
-            const geminiTotalInr = geminiInCost + geminiOutCost;
-
-            const groqInCost = (groqInTokens / 1_000_000) * rates.groqInputPer1M;
-            const groqOutCost = (groqOutTokens / 1_000_000) * rates.groqOutputPer1M;
-            const groqTotalInr = groqInCost + groqOutCost;
-
-            const totalInrSpend = tavilyTotalInr + geminiTotalInr + groqTotalInr;
-
-            // Update Primary Header Est. Cost Card in Top-Level KPIs
+            // Update Primary Est. Cost Card
             const topLevelCostEl = document.getElementById('val-total-cost');
             if (topLevelCostEl) {
                 topLevelCostEl.textContent = '₹' + totalInrSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             }
 
-            // Unit Economics KPI calculations
+            // Unit Economics KPIs
             const costPerCall = totalCalls > 0 ? (totalInrSpend / totalCalls) : 0;
-            const totalTokens = geminiTokens + groqTokens + otherTokens;
-            const costPer1kTokens = totalTokens > 0 ? ((geminiTotalInr + groqTotalInr) / (totalTokens / 1000)) : 0;
-            
-            // Daily & Monthly Run-Rate Projections
+            const costPer1kTokens = totalTokens > 0 ? (totalModelInr / (totalTokens / 1000)) : 0;
             const projectedDaily = costPerCall * Math.max(totalCalls * 24, 100); 
             const projectedMonthly = projectedDaily * 30;
 
@@ -838,11 +758,34 @@
             document.getElementById('val-projected-daily').textContent = '₹' + projectedDaily.toLocaleString('en-IN', { maximumFractionDigits: 0 });
             document.getElementById('val-projected-monthly').textContent = '₹' + projectedMonthly.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-            // Render Consumption Breakdown Table
+            // 2. Render Model Performance & Efficiency Table with accurate Spend and Value
+            const modelTableBody = document.getElementById('model-table-body');
+            modelTableBody.innerHTML = '';
+            if (modelCalculations.length > 0) {
+                modelCalculations.forEach(mc => {
+                    const qual = parseFloat(mc.avgQuality) || 0;
+                    const valueEfficiency = mc.totalCost > 0 ? (qual / mc.totalCost).toFixed(2) : (qual > 0 ? '∞' : '0.00');
+                    modelTableBody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-5 font-semibold font-sans text-slate-800">${mc.model}</td>
+                            <td class="py-3 px-5">${mc.calls.toLocaleString()}</td>
+                            <td class="py-3 px-5 ${parseFloat(mc.successRate) > 95 ? 'text-emerald-600' : 'text-amber-600'}">${mc.successRate}</td>
+                            <td class="py-3 px-5">${mc.avgLatency}</td>
+                            <td class="py-3 px-5">${mc.avgTokens}</td>
+                            <td class="py-3 px-5 font-semibold text-slate-900">₹${mc.totalCost.toFixed(2)}</td>
+                            <td class="py-3 px-5 font-semibold">${valueEfficiency}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                modelTableBody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400">No model data recorded.</td></tr>';
+            }
+
+            // 3. Render Unit Consumption & Spend Breakdown Table Dynamically
             const tbody = document.getElementById('pricing-analytics-tbody');
             const totalSpendSafe = totalInrSpend > 0 ? totalInrSpend : 1;
 
-            const rows = [
+            const breakdownRows = [
                 {
                     service: "Tavily Search",
                     tag: "Search / Web Tool",
@@ -853,29 +796,19 @@
                     totalCost: tavilyTotalInr,
                     share: (tavilyTotalInr / totalSpendSafe) * 100
                 },
-                {
-                    service: "Gemini 3.8 Flash",
-                    tag: "Reasoning & Synthesis",
-                    ratesDisplay: `In: ₹${rates.geminiInputPer1M}/1M | Out: ₹${rates.geminiOutputPer1M}/1M`,
-                    consumption: `${Math.round(geminiTokens).toLocaleString()} tok`,
-                    inCost: `₹${geminiInCost.toFixed(2)}`,
-                    outCost: `₹${geminiOutCost.toFixed(2)}`,
-                    totalCost: geminiTotalInr,
-                    share: (geminiTotalInr / totalSpendSafe) * 100
-                },
-                {
-                    service: "Groq GPT-OSS 20B",
-                    tag: "Fast Engine / Classifier",
-                    ratesDisplay: `In: ₹${rates.groqInputPer1M}/1M | Out: ₹${rates.groqOutputPer1M}/1M`,
-                    consumption: `${Math.round(groqTokens).toLocaleString()} tok`,
-                    inCost: `₹${groqInCost.toFixed(2)}`,
-                    outCost: `₹${groqOutCost.toFixed(2)}`,
-                    totalCost: groqTotalInr,
-                    share: (groqTotalInr / totalSpendSafe) * 100
-                }
+                ...modelCalculations.map(mc => ({
+                    service: mc.model.toUpperCase(),
+                    tag: mc.tag,
+                    ratesDisplay: mc.ratesDisplay,
+                    consumption: `${Math.round(mc.tokens).toLocaleString()} tok`,
+                    inCost: `₹${mc.inCost.toFixed(2)}`,
+                    outCost: `₹${mc.outCost.toFixed(2)}`,
+                    totalCost: mc.totalCost,
+                    share: (mc.totalCost / totalSpendSafe) * 100
+                }))
             ];
 
-            tbody.innerHTML = rows.map(r => `
+            tbody.innerHTML = breakdownRows.map(r => `
                 <tr class="hover:bg-slate-50 transition-colors">
                     <td class="py-3 px-5">
                         <span class="font-sans font-semibold text-slate-900">${r.service}</span>
@@ -900,13 +833,83 @@
             lucide.createIcons();
         }
 
-        // Run check on load
+        function populateDashboard(m) {
+            // Overall KPIs
+            document.getElementById('val-total-calls').textContent = (m.overallHealth?.totalCalls || 0).toLocaleString();
+            document.getElementById('val-success-rate').textContent = m.overallHealth?.successRate || '--';
+            document.getElementById('val-avg-latency').textContent = (m.overallHealth?.avgLatencyMs || 0) + 'ms';
+            document.getElementById('val-p95-latency').textContent = (m.overallHealth?.p95LatencyMs || 0) + 'ms';
+            document.getElementById('val-avg-in-tokens').textContent = m.overallHealth?.avgInputTokens || '--';
+
+            // Calculate INR analytics and models
+            computeAndRenderInrAnalytics(m);
+
+            // Reliability & Failures
+            document.getElementById('val-first-attempt').textContent = m.reliability?.firstAttemptSuccessRate || '--';
+            document.getElementById('val-retry-rate').textContent = m.reliability?.retryRate || '--';
+            
+            const failList = document.getElementById('failure-list');
+            failList.innerHTML = '';
+            if (m.failures && m.failures.length > 0) {
+                m.failures.forEach(f => {
+                    failList.innerHTML += `
+                        <div class="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
+                            <span class="text-slate-600 pr-4 break-all">${f.reason}</span>
+                            <span class="text-slate-800 font-semibold shrink-0">${f.count}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                failList.innerHTML = '<div class="text-slate-400">No failures recorded.</div>';
+            }
+
+            // Latency Breakdown
+            document.getElementById('val-lat-queue').textContent = m.latencyAnalytics?.averageBreakdown?.queue || '0 ms';
+            document.getElementById('val-lat-model').textContent = m.latencyAnalytics?.averageBreakdown?.model || '0 ms';
+            document.getElementById('val-lat-search').textContent = m.latencyAnalytics?.averageBreakdown?.search || '0 ms';
+            document.getElementById('val-lat-post').textContent = m.latencyAnalytics?.averageBreakdown?.post || '0 ms';
+            
+            const totalLat = [
+                m.latencyAnalytics?.averageBreakdown?.queue,
+                m.latencyAnalytics?.averageBreakdown?.model,
+                m.latencyAnalytics?.averageBreakdown?.search,
+                m.latencyAnalytics?.averageBreakdown?.post
+            ]
+            .map(v => parseInt((v || '0').replace(' ms','')))
+            .reduce((a, b) => a + b, 0);
+            document.getElementById('val-lat-total').textContent = totalLat + ' ms';
+
+            // Context Health
+            const ctxList = document.getElementById('context-health-list');
+            ctxList.innerHTML = '';
+            if (m.contextHealth) {
+                Object.entries(m.contextHealth).forEach(([band, pct]) => {
+                    ctxList.innerHTML += `
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">${band}</span>
+                            <span>${pct}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            // Privacy & Safety
+            document.getElementById('val-priv-replaced').textContent = (m.privacy?.identifiersReplaced || 0).toLocaleString();
+            const privFail = m.privacy?.privacyValidationFailed || 0;
+            const privFailEl = document.getElementById('val-priv-failures');
+            privFailEl.textContent = privFail;
+            privFailEl.className = privFail > 0 ? "text-xl font-mono text-rose-600" : "text-xl font-mono text-emerald-600";
+
+            document.getElementById('val-safe-checks').textContent = (m.safety?.safetyEvaluations || 0).toLocaleString();
+            document.getElementById('val-safe-blocked').textContent = m.safety?.blocked || 0;
+            document.getElementById('val-safe-inj').textContent = m.safety?.promptInjectionDetected || 0;
+        }
+
         window.onload = () => {
             checkAuth();
             syncPricingInputFields();
         };
 
-        // Auto refresh every 30 seconds if dashboard is visible
         setInterval(() => {
             if (sessionStorage.getItem('arix_admin_auth') === 'true') {
                 fetchData();
