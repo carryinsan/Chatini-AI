@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -22,6 +23,8 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <!-- Arix Freemium Engine -->
 <script type="module" src="./lib/paid.js"></script>
+<!-- Arix App Updates -->
+<script src="./lib/updates.js"></script>
 
 <!-- Global Quota Interceptor Logic. -->
 <script>
@@ -694,6 +697,9 @@ body {
                 <i class="ph-bold ph-caret-right text-gray-400"></i>
             </button>
 
+            <!-- App System Updates Widget -->
+            <div id="arix-settings-updates-slot"></div>
+
             <div class="rounded-2xl border border-gray-100 bg-gray-50 p-4">
                 <div class="flex items-center gap-2 text-sm font-bold text-gray-800"><i class="ph-bold ph-sliders-horizontal text-theme-600"></i> Preferences</div>
                 <div class="mt-3 grid gap-2 text-xs text-gray-500">
@@ -1182,7 +1188,7 @@ body {
 
     <!-- User Profile Footer -->
     <div class="p-4 border-t border-gray-100 bg-white">
-        <button onclick="window.ArixSettings.open()" class="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
+        <button onclick="window.ArixSettings.open(); if(window.AppUpdates && typeof window.AppUpdates.mountSettingsWidget === 'function'){ window.AppUpdates.mountSettingsWidget('#arix-settings-updates-slot'); }" class="w-full flex items-center justify-between p-2 hover:bg-gray-50 rounded-xl transition-colors">
             <div class="flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full bg-theme-600 text-white flex items-center justify-center font-medium text-sm transition-colors duration-500 shadow-sm">
                     <i class="ph-bold ph-user"></i>
@@ -1525,9 +1531,9 @@ marked.setOptions({ breaks: true, gfm: true });
 // UI-Adapted Config for Light Theme Targeting
 const CONFIG = {
     models: {
-        spark: { id: 'spark', name: 'Spark', icon: 'ph-lightning', color: 'text-amber-500', bg: 'bg-amber-50', glow: 'bg-amber-100' },
-        flux: { id: 'flux', name: 'Flux 1.5', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100' },
-        oracle: { id: 'oracle', name: 'Oracle 2.0', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' },
+        spark: { id: 'spark', name: 'Spark 2', icon: 'ph-lightning', color: 'text-amber-500', bg: 'bg-amber-50', glow: 'bg-amber-100' },
+        flux: { id: 'flux', name: 'Flux 2', icon: 'ph-drop', color: 'text-cyan-500', bg: 'bg-cyan-50', glow: 'bg-cyan-100' },
+        oracle: { id: 'oracle', name: 'Oracle 3.0', icon: 'ph-hexagon', color: 'text-theme-600', bg: 'bg-theme-50', glow: 'bg-theme-100' },
         sparker: { id: 'sparker', name: 'SPARKer', icon: 'ph-cpu', color: 'text-emerald-500', bg: 'bg-emerald-50', glow: 'bg-emerald-100', mlcId: 'Llama-3.2-1B-Instruct-q4f16_1-MLC' },
         FLiX: { id: 'FLiX', name: 'FLiX', icon: 'ph-microchip', color: 'text-indigo-500', bg: 'bg-indigo-50', glow: 'bg-indigo-100', mlcId: 'Llama-3.2-3B-Instruct-q4f16_1-MLC' }
     }
@@ -1862,11 +1868,25 @@ function removeUrlParameter(parameterName) {
         console.warn('[ArixAI] Could not update shared-chat URL:', error);
     }
 }
-
 window.onload = async () => {
     // --- NEW: Register Background Sentinel Agent ---
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js').catch(err => console.error("Sentinel Reg failed:", err));
+    }
+
+    // --- Upstash App Updates Client Engine Initialization ---
+    try {
+        if (window.AppUpdates && typeof window.AppUpdates.init === 'function') {
+            window.AppUpdates.init({
+                redisUrl: window.UPSTASH_REDIS_REST_URL || 'https://immortal-eagle-36171.upstash.io',
+                redisToken: window.UPSTASH_REDIS_REST_TOKEN || 'AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw',
+                redisKey: 'app:system_update',
+                settingsMountSelector: '#arix-settings-updates-slot',
+                autoCheck: true
+            });
+        }
+    } catch (updateErr) {
+        console.warn('[Updates] Failed to initialize update module gracefully:', updateErr);
     }
     try {
         await DB.init();
@@ -2626,58 +2646,18 @@ function toggleStudyMode() {
 function renderMathAndMarkdown(text) {
     if (!text) return "";
     let processedText = text;
-
-    // 1. Remove any stray/orphaned span tags leaked in raw AI responses
-    processedText = processedText.replace(/<\/?span\s*>/gi, '');
-
-    const mathStash = [];
-    const stash = (math, displayMode) => {
-        const id = mathStash.length;
-        mathStash.push({ math: math.trim(), displayMode });
-        return `@@ARIX_MATH_${id}@@`;
-    };
-
-    // 2. Protect and stash display math: $$...$$ or [...]
-    processedText = processedText.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$\vert{}\\\])/g, (_, __, math) => stash(math, true));
-
-    // 3. Protect and stash LaTeX bracket math: \(...\)
-    processedText = processedText.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => stash(math, false));
-
-    // 4. Stash true inline LaTeX math ($...$) while strictly preserving currency
-    // Rules:
-    // - Must not match raw currency ranges (e.g., "\$18,000 to \$19,500")
-    // - Must not contain raw HTML tags (< or >)
-    // - Opening $cannot be followed by space; closing$ cannot be preceded by space
-    processedText = processedText.replace(/(^|[^\\])\$([^\s\$\n](?:[^\$\n]*?[^\s\$\n])?)\$/g, (match, prefix, math) => {
-        // Disqualify if it contains HTML tags or currency phrases
-        if (/<[^>]+>/.test(math) || /\b(?:to|and|or|-)\s*\$?\d/i.test(math)) {
-            return match;
-        }
-        // Disqualify lone currency amounts (e.g. \$19,500 or \$25,000 without math operators)
-        if (/^\s*[\d,]+(?:\.\d+)?%?\s*\$/.test(math) && !/[+\-*/=^_\\]/.test(math)) {
-            return match;
-        }
-        return prefix + stash(math, false);
+    
+    processedText = processedText.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, p1, math) => {
+        try { return katex.renderToString(math, { displayMode: true, throwOnError: false }); } catch(e) { return match; }
     });
-
-    // 5. Parse Markdown safely first — Marked will NEVER see or mangle KaTeX HTML
-    let html = marked.parse(processedText);
-
-    // 6. Compile and reinsert KaTeX HTML safely into final DOM structure
-    html = html.replace(/@@ARIX_MATH_(\d+)@@/g, (_, idStr) => {
-        const item = mathStash[parseInt(idStr, 10)];
-        if (!item) return "";
-        try {
-            return katex.renderToString(item.math, {
-                displayMode: item.displayMode,
-                throwOnError: false
-            });
-        } catch (e) {
-            return item.displayMode ? `$$${item.math}$$` : `$${item.math}$`;
-        }
+    processedText = processedText.replace(/\\\(([\s\S]*?)\\\)/g, (match, math) => {
+        try { return katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
     });
-
-    return html;
+    processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
+        try { return prefix + katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
+    });
+    
+    return marked.parse(processedText);
 }
 
 function renderMathUI(payload, artifactId) {
@@ -6411,7 +6391,7 @@ if (
         }
         // ==========================================
 
-        const response = await fetch('/api/chat', {
+        const response = await fetch('/api/chat1', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             signal: activeAbortController?.signal,
@@ -6440,8 +6420,7 @@ if (
         
         const startWatchdog = () => {
             clearTimeout(streamTimeout);
-            // 90s timeout gives complex reasoning, web searches, and audits sufficient time
-            streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 90000);
+            streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000);
         };
         
         try {
@@ -6490,10 +6469,8 @@ if (
         } catch (streamErr) {
             if (streamErr.name === 'AbortError' || activeAbortController?.signal.aborted) {
                 console.log("Stream aborted by user");
-            } else if (streamErr === "Stream Timeout" || streamErr?.message === "Stream Timeout") {
-                console.warn("Stream Timed Out");
-                uiErrFlag = true;
-                fullResponse = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Request timed out while generating response. Please retry.</span>`;
+            } else if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") {
+                console.warn("Stream Auto-Completed (Watchdog)");
             } else { 
                 uiErrFlag = true; 
                 sendTelemetry(currentAction, activeModelId, 'error', streamErr.message);
@@ -6504,13 +6481,6 @@ if (
             activeStreamReader = null;
         }
         
-        // Strip any stray persistent-loader markup if received
-        fullResponse = fullResponse.replace(/<div id="Arix-persistent-loader"[\s\S]*?<\/div>/gi, '').trim();
-
-        if (!fullResponse && !uiErrFlag) {
-            fullResponse = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> No response generated. Please retry.</span>`;
-        }
-
         contentContainer.classList.remove('typing-cursor');
         contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
         messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
