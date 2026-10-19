@@ -6400,7 +6400,8 @@ if (
         
         const startWatchdog = () => {
             clearTimeout(streamTimeout);
-            streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 20000);
+            // 90s timeout gives complex reasoning, web searches, and audits sufficient time
+            streamTimeout = setTimeout(() => { reader.cancel("Stream Timeout"); }, 90000);
         };
         
         try {
@@ -6449,8 +6450,10 @@ if (
         } catch (streamErr) {
             if (streamErr.name === 'AbortError' || activeAbortController?.signal.aborted) {
                 console.log("Stream aborted by user");
-            } else if (streamErr === "Stream Timeout" || streamErr.message === "Stream Timeout") {
-                console.warn("Stream Auto-Completed (Watchdog)");
+            } else if (streamErr === "Stream Timeout" || streamErr?.message === "Stream Timeout") {
+                console.warn("Stream Timed Out");
+                uiErrFlag = true;
+                fullResponse = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> Request timed out while generating response. Please retry.</span>`;
             } else { 
                 uiErrFlag = true; 
                 sendTelemetry(currentAction, activeModelId, 'error', streamErr.message);
@@ -6461,6 +6464,13 @@ if (
             activeStreamReader = null;
         }
         
+        // Strip any stray persistent-loader markup if received
+        fullResponse = fullResponse.replace(/<div id="Arix-persistent-loader"[\s\S]*?<\/div>/gi, '').trim();
+
+        if (!fullResponse && !uiErrFlag) {
+            fullResponse = `<span class="text-red-500 font-semibold"><i class="ph-bold ph-warning-circle"></i> No response generated. Please retry.</span>`;
+        }
+
         contentContainer.classList.remove('typing-cursor');
         contentContainer.innerHTML = parseRichText(fullResponse, false, assistantMsgObj.id);
         messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
