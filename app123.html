@@ -2626,18 +2626,58 @@ function toggleStudyMode() {
 function renderMathAndMarkdown(text) {
     if (!text) return "";
     let processedText = text;
-    
-    processedText = processedText.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, p1, math) => {
-        try { return katex.renderToString(math, { displayMode: true, throwOnError: false }); } catch(e) { return match; }
+
+    // 1. Remove any stray/orphaned span tags leaked in raw AI responses
+    processedText = processedText.replace(/<\/?span\s*>/gi, '');
+
+    const mathStash = [];
+    const stash = (math, displayMode) => {
+        const id = mathStash.length;
+        mathStash.push({ math: math.trim(), displayMode });
+        return `@@ARIX_MATH_${id}@@`;
+    };
+
+    // 2. Protect and stash display math: $$...$$ or [...]
+    processedText = processedText.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$\vert{}\\\])/g, (_, __, math) => stash(math, true));
+
+    // 3. Protect and stash LaTeX bracket math: \(...\)
+    processedText = processedText.replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => stash(math, false));
+
+    // 4. Stash true inline LaTeX math ($...$) while strictly preserving currency
+    // Rules:
+    // - Must not match raw currency ranges (e.g., "\$18,000 to \$19,500")
+    // - Must not contain raw HTML tags (< or >)
+    // - Opening $cannot be followed by space; closing$ cannot be preceded by space
+    processedText = processedText.replace(/(^|[^\\])\$([^\s\$\n](?:[^\$\n]*?[^\s\$\n])?)\$/g, (match, prefix, math) => {
+        // Disqualify if it contains HTML tags or currency phrases
+        if (/<[^>]+>/.test(math) || /\b(?:to|and|or|-)\s*\$?\d/i.test(math)) {
+            return match;
+        }
+        // Disqualify lone currency amounts (e.g. \$19,500 or \$25,000 without math operators)
+        if (/^\s*[\d,]+(?:\.\d+)?%?\s*\$/.test(math) && !/[+\-*/=^_\\]/.test(math)) {
+            return match;
+        }
+        return prefix + stash(math, false);
     });
-    processedText = processedText.replace(/\\\(([\s\S]*?)\\\)/g, (match, math) => {
-        try { return katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
+
+    // 5. Parse Markdown safely first — Marked will NEVER see or mangle KaTeX HTML
+    let html = marked.parse(processedText);
+
+    // 6. Compile and reinsert KaTeX HTML safely into final DOM structure
+    html = html.replace(/@@ARIX_MATH_(\d+)@@/g, (_, idStr) => {
+        const item = mathStash[parseInt(idStr, 10)];
+        if (!item) return "";
+        try {
+            return katex.renderToString(item.math, {
+                displayMode: item.displayMode,
+                throwOnError: false
+            });
+        } catch (e) {
+            return item.displayMode ? `$$${item.math}$$` : `$${item.math}$`;
+        }
     });
-    processedText = processedText.replace(/(^|[^\\])\$([^\$\n]+?)\$/g, (match, prefix, math) => {
-        try { return prefix + katex.renderToString(math, { displayMode: false, throwOnError: false }); } catch(e) { return match; }
-    });
-    
-    return marked.parse(processedText);
+
+    return html;
 }
 
 function renderMathUI(payload, artifactId) {
