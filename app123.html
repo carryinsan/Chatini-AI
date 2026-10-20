@@ -4017,6 +4017,13 @@ function updateUIState() {
 
 // ====== DYNAMIC MESSAGE PARSING & FORMATTING ======
 function parseRichText(content, isStreaming = false, msgId = null) {
+    // Stream render throttle: avoid re-parsing the entire growing answer for every tiny token.
+    // Final (non-streaming) render always bypasses this gate and is fully current.
+    if (isStreaming && msgId) {
+        const cache = window.__ARIX_STREAM_RENDER_CACHE || (window.__ARIX_STREAM_RENDER_CACHE = new Map());
+        const cached = cache.get(String(msgId));
+        if (cached && (performance.now() - cached.time) < 55) return cached.html;
+    }
     // Bypass Markdown parsing for Pixazo Visual Engine HTML widgets
     if (typeof content === 'string' && content.includes('bg-gray-900/60 border border-white/10')) {
         return content;
@@ -4945,7 +4952,8 @@ ${marked.parse(unclosedContent.trim())}
         if (!trimmed) return '';
         const idx = arix3dWidgets.length;
 
-        if (isStreaming && !match.includes('</arix_3d>')) {
+        // Never instantiate WebGL during token streaming; render a lightweight placeholder until the final pass.
+        if (isStreaming) {
             arix3dWidgets.push(`
                 <div class="my-4 p-4 rounded-2xl border border-indigo-200 bg-indigo-50/60 text-indigo-700 text-xs font-bold flex items-center justify-between animate-pulse not-prose">
                     <div class="flex items-center gap-2.5">
@@ -5069,7 +5077,7 @@ ${marked.parse(unclosedContent.trim())}
     });
 
     const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? 
-        `<div class="action-bar flex items-center gap-3 mt-4 pt-3 border-t border-gray-50/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        `<div class="action-bar flex items-center gap-3 mt-4 pt-3 border-t border-gray-50/0 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity duration-300">
             <button onclick="copyToClipboard('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-gray-900 shadow-sm"><i class="ph-bold ph-copy text-sm"></i> Copy Text</button>
             <button onclick="openPdfModal('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-red-600 shadow-sm"><i class="ph-bold ph-file-pdf text-sm text-red-500"></i> Export PDF</button>
         </div>` : "";
@@ -5087,7 +5095,13 @@ ${marked.parse(unclosedContent.trim())}
         renderedProse = renderedProse.replace(regex, () => widgetHtml);
     });
 
-    return `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group">${renderedProse}</div>${extractedHtml}${actionBarHtml}`;
+    const finalHtml = `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group">${renderedProse}</div>${extractedHtml}${actionBarHtml}`;
+    if (msgId) {
+        const cache = window.__ARIX_STREAM_RENDER_CACHE || (window.__ARIX_STREAM_RENDER_CACHE = new Map());
+        cache.set(String(msgId), { time: performance.now(), html: finalHtml });
+        if (cache.size > 80) cache.delete(cache.keys().next().value);
+    }
+    return finalHtml;
 }
 
 // ====== APPEND MESSAGES (TARGET UI CHAT BUBBLES) ======
@@ -7603,6 +7617,7 @@ window.Arix3D = {
             try {
                 this.instances[uid].disposed = true;
                 cancelAnimationFrame(this.instances[uid].animId);
+                clearTimeout(this.instances[uid].pauseTimer);
                 this.instances[uid].renderer.dispose();
             } catch (_) {}
             delete this.instances[uid];
@@ -7640,7 +7655,7 @@ window.Arix3D = {
         // 3. WebGL Renderer
         const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
         renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, window.innerWidth <= 720 ? 1.25 : ((navigator.hardwareConcurrency || 8) <= 4 ? 1.25 : 1.5)));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
@@ -7774,6 +7789,12 @@ window.Arix3D = {
         const clock = new THREE.Clock();
         function animate() {
             if (inst.disposed) return;
+            const rect = wrap.getBoundingClientRect();
+            const onScreen = rect.bottom > -40 && rect.top < window.innerHeight + 40 && rect.right > -40 && rect.left < window.innerWidth + 40;
+            if (document.visibilityState !== 'visible' || window.__arixWaitGameActive || !wrap.isConnected || !wrap.clientWidth || !wrap.clientHeight || !onScreen) {
+                inst.pauseTimer = setTimeout(() => { if (!inst.disposed) inst.animId = requestAnimationFrame(animate); }, 300);
+                return;
+            }
             inst.animId = requestAnimationFrame(animate);
 
             const delta = clock.getDelta();
@@ -8210,6 +8231,7 @@ window.Arix3D = {
                 try {
                     prior.disposed = true;
                     if (prior.animId) cancelAnimationFrame(prior.animId);
+                    clearTimeout(prior.pauseTimer);
                     prior.resizeObserver?.disconnect?.(); prior.controls?.dispose?.();
                     prior.renderer?.dispose?.();
                 } catch (_) {}
@@ -8235,7 +8257,7 @@ window.Arix3D = {
         const titleEl = document.getElementById('title-' + uid);
         if (titleEl) titleEl.textContent = String(sceneSpec.title || raw.title || 'ArixAI 3D Scene');
         const width = Math.max(1, wrap.clientWidth || 400), height = Math.max(1, wrap.clientHeight || 360);
-        const dprLimit = window.innerWidth <= 720 ? 1.5 : 2;
+        const dprLimit = window.innerWidth <= 720 ? 1.25 : ((navigator.hardwareConcurrency || 8) <= 4 ? 1.25 : 1.5);
         const requestedRenderer = sceneSpec.environment?.renderer || raw.environment?.renderer || 'auto';
         // Auto-select WebGPU on capable clients; an explicit scene preference for
         // WebGL always wins, and any initialization failure falls back to WebGL.
@@ -8368,6 +8390,7 @@ window.Arix3D = {
                 if (disposed) return;
                 disposed = true; inst.disposed = true;
                 if (animId) cancelAnimationFrame(animId);
+                clearTimeout(inst.pauseTimer);
                 resizeObserver?.disconnect?.(); controls.dispose?.();
                 for (const tween of tweens) { try { tween?.kill?.(); } catch (_) {} }
                 try { runtime.gsap?.killTweensOf?.(modelRoot); } catch (_) {}
@@ -8382,6 +8405,12 @@ window.Arix3D = {
         // First visible frame doesn't wait for network assets; placeholders cover any miss.
         const animate = (now) => {
             if (inst.disposed) return;
+            const rect = wrap.getBoundingClientRect();
+            const onScreen = rect.bottom > -40 && rect.top < window.innerHeight + 40 && rect.right > -40 && rect.left < window.innerWidth + 40;
+            if (document.visibilityState !== 'visible' || window.__arixWaitGameActive || !wrap.isConnected || !wrap.clientWidth || !wrap.clientHeight || !onScreen) {
+                inst.pauseTimer = setTimeout(() => { if (!inst.disposed) inst.animId = requestAnimationFrame(animate); }, 300);
+                return;
+            }
             inst.animId = requestAnimationFrame(animate);
             const delta = Math.min(0.05, Math.max(0, ((now || performance.now()) - lastFrame) / 1000));
             lastFrame = now || performance.now();
@@ -8461,31 +8490,151 @@ window.Arix3D = {
 
     API.exportGLB = async function(uid) {
         const inst = API.instances[uid];
-        if (!inst?.modelRoot || !inst?.runtime?.GLTFExporter) {
-            notify('GLB export needs the modern 3D module. Reopen the scene after the network is available.');
-            return;
-        }
         const button = document.getElementById('btn-export-' + uid);
         const oldLabel = button?.innerHTML;
+        let temporaryBundle = null;
+        let objectUrl = null;
         try {
             if (button) { button.disabled = true; button.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-sm"></i>'; }
-            const exporter = new inst.runtime.GLTFExporter();
-            const result = await new Promise((resolve, reject) => {
-                exporter.parse(inst.modelRoot, resolve, reject, { binary: true, onlyVisible: true, trs: false, embedImages: true });
-            });
+            let runtime = inst?.runtime || null;
+            let THREE = runtime?.THREE || null;
+            let GLTFExporter = runtime?.GLTFExporter || null;
+            let exportSource = inst?.modelRoot || null;
+
+            // Compatibility-renderer scenes don't carry the modern exporter. Rebuild their
+            // declarative model with the same pinned module stack, without touching the live view.
+            if (!THREE || !GLTFExporter || !exportSource) {
+                const [threeMod, exporterMod, compilerMod] = await Promise.all([
+                    import('three'),
+                    import('three/addons/exporters/GLTFExporter.js'),
+                    import('./lib/3d.js')
+                ]);
+                THREE = threeMod;
+                GLTFExporter = exporterMod.GLTFExporter;
+                const rawText = window.__ARIX_3D_DATA__?.[uid];
+                if (rawText) {
+                    const raw = typeof rawText === 'string' ? JSON.parse(rawText) : rawText;
+                    const compiled = compilerMod.compile3D(raw);
+                    if (compiled?.scene) {
+                        temporaryBundle = compilerMod.buildThreeScene(THREE, compiled.scene, {
+                            textureSize: window.innerWidth <= 720 ? 256 : 512,
+                            onWarning: (warning) => console.warn('[Arix3D export]', warning)
+                        });
+                        exportSource = temporaryBundle?.modelRoot || temporaryBundle?.scene || null;
+                    }
+                }
+                // Last-resort compatibility path: clone mesh content from the old renderer.
+                if (!exportSource && inst?.scene) exportSource = inst.scene;
+            }
+            if (!exportSource || !GLTFExporter) throw new Error('No exportable scene or GLB exporter is available.');
+
+            function makeExportClone(source, stripTextures) {
+                const root = source.clone(true);
+                const removeNodes = [];
+                root.traverse((node) => {
+                    if (node.isLight || node.isCamera || node.isHelper || node.isLine || node.isPoints || node.isSprite) {
+                        if (node !== root) removeNodes.push(node);
+                        return;
+                    }
+                    if (!(node.isMesh || node.isSkinnedMesh)) return;
+                    if (node.geometry?.isBufferGeometry) {
+                        node.geometry = node.geometry.clone();
+                        const position = node.geometry.attributes?.position;
+                        if (position && !node.geometry.attributes.normal && typeof node.geometry.computeVertexNormals === 'function') {
+                            try { node.geometry.computeVertexNormals(); } catch (_) {}
+                        }
+                    }
+                    const originals = Array.isArray(node.material) ? node.material : [node.material];
+                    const converted = originals.map((sourceMaterial) => {
+                        if (!sourceMaterial) return new THREE.MeshStandardMaterial({ color: 0xb8c4d8, roughness: 0.72, metalness: 0.08 });
+                        let mat;
+                        if (sourceMaterial.isMeshStandardMaterial || sourceMaterial.isMeshPhysicalMaterial || sourceMaterial.isMeshBasicMaterial) {
+                            mat = sourceMaterial.clone();
+                        } else {
+                            const color = sourceMaterial.color?.isColor ? sourceMaterial.color.clone() : new THREE.Color(0xb8c4d8);
+                            mat = new THREE.MeshStandardMaterial({
+                                color,
+                                roughness: Number.isFinite(sourceMaterial.roughness) ? sourceMaterial.roughness : 0.72,
+                                metalness: Number.isFinite(sourceMaterial.metalness) ? sourceMaterial.metalness : 0.08,
+                                opacity: Number.isFinite(sourceMaterial.opacity) ? sourceMaterial.opacity : 1,
+                                transparent: !!sourceMaterial.transparent,
+                                side: sourceMaterial.side ?? THREE.FrontSide,
+                                emissive: sourceMaterial.emissive?.isColor ? sourceMaterial.emissive.clone() : new THREE.Color(0x000000)
+                            });
+                        }
+                        // glTF export does not support every Three.js material/texture type.
+                        // Retry without texture maps instead of losing the entire model export.
+                        const textureFields = ['map','alphaMap','aoMap','bumpMap','displacementMap','emissiveMap','envMap','lightMap','metalnessMap','normalMap','roughnessMap','clearcoatMap','clearcoatNormalMap','clearcoatRoughnessMap','iridescenceMap','iridescenceThicknessMap','sheenColorMap','sheenRoughnessMap','specularColorMap','specularIntensityMap','transmissionMap','thicknessMap'];
+                        for (const field of textureFields) {
+                            const texture = mat[field];
+                            if (stripTextures || (texture && (!texture.isTexture || !texture.image || texture.isDataTexture))) {
+                                if (field === 'map' && stripTextures && sourceMaterial.color?.isColor && mat.color?.copy) mat.color.copy(sourceMaterial.color);
+                                if (field === 'emissiveMap' && sourceMaterial.emissive?.isColor && mat.emissive?.copy) mat.emissive.copy(sourceMaterial.emissive);
+                                mat[field] = null;
+                            }
+                        }
+                        if (mat.isMeshBasicMaterial) {
+                            const standard = new THREE.MeshStandardMaterial({
+                                color: mat.color?.isColor ? mat.color.clone() : 0xb8c4d8,
+                                roughness: 0.8, metalness: 0.02,
+                                opacity: mat.opacity ?? 1, transparent: !!mat.transparent, side: mat.side ?? THREE.FrontSide
+                            });
+                            for (const field of textureFields) if (!stripTextures && mat[field]?.isTexture) standard[field] = mat[field];
+                            mat = standard;
+                        }
+                        mat.wireframe = false;
+                        return mat;
+                    });
+                    node.material = Array.isArray(node.material) ? converted : converted[0];
+                    node.visible = true;
+                });
+                for (const node of removeNodes) node.parent?.remove(node);
+                root.updateMatrixWorld?.(true);
+                return root;
+            }
+
+            async function parseRoot(root) {
+                root.updateMatrixWorld?.(true);
+                const exporter = new GLTFExporter();
+                const result = await new Promise((resolve, reject) => {
+                    exporter.parse(root, resolve, reject, { binary: true, onlyVisible: true, trs: false, maxTextureSize: 2048 });
+                });
+                if (!(result instanceof ArrayBuffer) || result.byteLength < 20) throw new Error('Exporter returned an empty or non-binary GLB payload.');
+                const magic = new Uint8Array(result, 0, 4);
+                if (magic[0] !== 0x67 || magic[1] !== 0x6c || magic[2] !== 0x54 || magic[3] !== 0x46) {
+                    throw new Error('Exporter payload does not have a valid glTF binary header.');
+                }
+                return result;
+            }
+
+            let result;
+            let exportClone = makeExportClone(exportSource, false);
+            try {
+                result = await parseRoot(exportClone);
+            } catch (firstError) {
+                console.warn('[Arix3D] GLB export retrying with texture-safe materials:', firstError);
+                exportClone = makeExportClone(exportSource, true);
+                result = await parseRoot(exportClone);
+            }
             const blob = new Blob([result], { type: 'model/gltf-binary' });
-            const objectUrl = URL.createObjectURL(blob);
+            if (!blob.size) throw new Error('Generated GLB file is empty.');
+            objectUrl = URL.createObjectURL(blob);
             const anchor = document.createElement('a');
             anchor.href = objectUrl;
-            const title = String(document.getElementById('title-' + uid)?.textContent || 'ArixAI-3D-Model').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'ArixAI-3D-Model';
+            const title = String(document.getElementById('title-' + uid)?.textContent || 'ArixAI-3D-Model')
+                .replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'ArixAI-3D-Model';
             anchor.download = `${title}.glb`;
-            document.body.appendChild(anchor); anchor.click(); anchor.remove();
-            setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+            anchor.style.display = 'none';
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            setTimeout(() => { try { URL.revokeObjectURL(objectUrl); } catch (_) {} }, 10000);
             notify(`GLB exported (${(blob.size / 1024 / 1024).toFixed(2)} MB).`);
         } catch (error) {
-            console.error('[Arix3D] GLB export failed:', error);
-            notify('GLB export failed safely. Check the model and try again.');
+            console.error('[Arix3D] GLB export failed after recovery attempts:', error);
+            notify('GLB export could not complete. The scene remains intact; retry after the 3D engine finishes loading.');
         } finally {
+            try { temporaryBundle?.dispose?.(); } catch (_) {}
             if (button) { button.disabled = false; button.innerHTML = oldLabel || '<i class="ph-bold ph-download-simple text-sm"></i>'; }
         }
     };
@@ -12308,6 +12457,317 @@ window.downloadWorkspaceZip = async function() {
     scheduleNextPulse();
 })();
 
+</script>
+<style id="last-star-styles">
+#last-star-overlay{position:fixed;inset:0;z-index:99999;display:none;overflow:hidden;background:#030611;color:#eff7ff;font-family:Inter,ui-sans-serif,system-ui,sans-serif;isolation:isolate}
+#last-star-overlay.is-active{display:block}
+#last-star-canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#last-star-overlay:before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 44%,transparent 0%,rgba(2,5,16,.08) 42%,rgba(1,3,12,.7) 100%)}
+#last-star-overlay .ls-ui{position:absolute;z-index:2;inset:0;pointer-events:none}
+#last-star-overlay .ls-top{position:absolute;top:max(18px,env(safe-area-inset-top));left:clamp(14px,3vw,38px);right:clamp(14px,3vw,38px);display:flex;align-items:center;justify-content:space-between;gap:14px}
+#last-star-overlay .ls-brand{display:flex;align-items:center;gap:12px;min-width:0}
+#last-star-overlay .ls-mark{width:40px;height:40px;display:grid;place-items:center;border:1px solid rgba(98,230,255,.42);border-radius:13px;background:linear-gradient(145deg,rgba(17,43,83,.88),rgba(8,13,35,.75));box-shadow:0 0 25px rgba(39,202,255,.18),inset 0 0 18px rgba(58,176,255,.12);color:#9beeff;font-size:21px}
+#last-star-overlay .ls-eyebrow{font-size:9px;font-weight:900;letter-spacing:.26em;text-transform:uppercase;color:#78d9fc}
+#last-star-overlay .ls-title{margin-top:2px;font-size:clamp(15px,2vw,22px);line-height:1;font-weight:900;letter-spacing:.15em;color:#f5fbff;text-shadow:0 0 24px rgba(99,216,255,.28)}
+#last-star-overlay .ls-status{display:flex;align-items:center;gap:8px;border:1px solid rgba(112,202,236,.22);background:rgba(5,13,33,.65);backdrop-filter:blur(10px);border-radius:999px;padding:9px 13px;font-size:10px;font-weight:800;letter-spacing:.08em;color:#bad5ed;white-space:nowrap}
+#last-star-overlay .ls-live-dot{width:7px;height:7px;border-radius:50%;background:#46f5b7;box-shadow:0 0 12px #46f5b7;animation:ls-pulse 1.4s ease-in-out infinite}
+#last-star-overlay .ls-hud{position:absolute;top:86px;left:clamp(14px,3vw,38px);display:flex;gap:9px;flex-wrap:wrap}
+#last-star-overlay .ls-hud-box{min-width:78px;padding:9px 12px;border:1px solid rgba(132,191,231,.18);border-radius:12px;background:rgba(4,11,29,.58);backdrop-filter:blur(9px);box-shadow:inset 0 1px 0 rgba(255,255,255,.035)}
+#last-star-overlay .ls-hud-label{font-size:8px;font-weight:900;letter-spacing:.2em;color:#799bbd;text-transform:uppercase}
+#last-star-overlay .ls-hud-value{margin-top:4px;font-variant-numeric:tabular-nums;font-size:18px;line-height:1;font-weight:900;color:#f1f9ff}
+#last-star-overlay .ls-heart{color:#ff668e;text-shadow:0 0 12px rgba(255,63,111,.42);letter-spacing:3px}
+#last-star-overlay .ls-footer{position:absolute;left:clamp(14px,3vw,38px);right:clamp(14px,3vw,38px);bottom:max(18px,env(safe-area-inset-bottom));display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+#last-star-overlay .ls-tip{font-size:10px;line-height:1.7;color:#9cb8d5;letter-spacing:.04em;max-width:420px}
+#last-star-overlay .ls-tip strong{color:#e5f6ff;font-weight:900}
+#last-star-overlay .ls-ai-note{max-width:300px;text-align:right;font-size:10px;line-height:1.6;color:#8fa9c6}
+#last-star-overlay .ls-ai-note b{color:#80e5ff;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+#last-star-overlay .ls-controls{pointer-events:auto;position:absolute;right:clamp(14px,3vw,38px);bottom:108px;display:none;align-items:center;gap:10px}
+#last-star-overlay .ls-control-btn{width:55px;height:55px;border-radius:50%;color:#ddf7ff;background:linear-gradient(145deg,rgba(19,55,91,.9),rgba(5,15,39,.9));border:1px solid rgba(122,223,255,.36);box-shadow:0 0 25px rgba(36,185,255,.12),inset 0 1px 0 rgba(255,255,255,.13);font-size:20px;font-weight:900;touch-action:none;user-select:none;-webkit-user-select:none}
+#last-star-overlay .ls-control-btn:active{transform:scale(.95);background:#14517b}
+#last-star-overlay .ls-control-btn.fire{width:68px;height:68px;background:linear-gradient(145deg,rgba(15,101,144,.96),rgba(36,42,102,.96));border-color:rgba(130,241,255,.7);box-shadow:0 0 30px rgba(44,213,255,.24);font-size:11px;letter-spacing:.14em}
+#last-star-overlay .ls-hint{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);z-index:3;text-align:center;pointer-events:none;transition:opacity .6s ease;max-width:min(550px,88vw);width:max-content}
+#last-star-overlay .ls-hint.fade{opacity:0}
+#last-star-overlay .ls-hint-overline{color:#84dffc;font-size:9px;letter-spacing:.34em;font-weight:900;text-transform:uppercase}
+#last-star-overlay .ls-hint-title{font-size:clamp(28px,5.4vw,64px);line-height:1.04;font-weight:950;letter-spacing:.11em;margin:10px 0 13px;color:#f2fbff;text-shadow:0 0 35px rgba(73,206,255,.3)}
+#last-star-overlay .ls-hint-copy{font-size:clamp(11px,1.4vw,14px);line-height:1.8;color:#acc4df}
+#last-star-overlay .ls-hint-copy span{display:inline-block;border:1px solid rgba(122,202,237,.23);background:rgba(4,11,30,.5);border-radius:6px;padding:3px 7px;margin:4px 2px;color:#e5f6ff;font-weight:800;font-size:10px}
+#last-star-overlay .ls-scan{position:absolute;inset:0;pointer-events:none;opacity:.08;background:repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(153,226,255,.12) 4px)}
+@keyframes ls-pulse{0%,100%{opacity:.65;transform:scale(.88)}50%{opacity:1;transform:scale(1.12)}}
+@media(max-width:700px){#last-star-overlay .ls-top{align-items:flex-start}#last-star-overlay .ls-status{font-size:8px;padding:8px 10px;max-width:48vw;white-space:normal;line-height:1.4}#last-star-overlay .ls-hud{top:80px;gap:6px}#last-star-overlay .ls-hud-box{min-width:63px;padding:8px 9px}#last-star-overlay .ls-hud-value{font-size:15px}#last-star-overlay .ls-footer{bottom:22px;align-items:flex-start}#last-star-overlay .ls-tip{max-width:58%;font-size:9px}#last-star-overlay .ls-ai-note{max-width:38%;font-size:9px}#last-star-overlay .ls-controls{display:flex;bottom:112px;right:16px}#last-star-overlay .ls-control-btn{width:47px;height:47px}#last-star-overlay .ls-control-btn.fire{width:58px;height:58px}#last-star-overlay .ls-hint{top:47%}}
+@media(prefers-reduced-motion:reduce){#last-star-overlay .ls-live-dot{animation:none}}
+</style>
+<div id="last-star-overlay" aria-label="Last Star space survival game" aria-live="polite">
+  <canvas id="last-star-canvas" aria-label="Move your spacecraft, dodge asteroids, and destroy incoming threats"></canvas>
+  <div class="ls-scan"></div>
+  <div class="ls-ui">
+    <div class="ls-top">
+      <div class="ls-brand"><div class="ls-mark">✦</div><div><div class="ls-eyebrow">Arix Arcade / Survival Protocol</div><div class="ls-title">LAST STAR</div></div></div>
+      <div class="ls-status"><span class="ls-live-dot"></span><span id="ls-status-text">AI RESPONSE IN FLIGHT · STAY ALIVE</span></div>
+    </div>
+    <div class="ls-hud">
+      <div class="ls-hud-box"><div class="ls-hud-label">Score</div><div class="ls-hud-value" id="ls-score">000000</div></div>
+      <div class="ls-hud-box"><div class="ls-hud-label">Wave</div><div class="ls-hud-value" id="ls-wave">01</div></div>
+      <div class="ls-hud-box"><div class="ls-hud-label">Hull</div><div class="ls-hud-value ls-heart" id="ls-lives">♥ ♥ ♥</div></div>
+    </div>
+    <div class="ls-hint" id="ls-hint">
+      <div class="ls-hint-overline">Sector 09 · Distress signal detected</div>
+      <div class="ls-hint-title">LAST STAR</div>
+      <div class="ls-hint-copy">Pilot the last surviving craft. Blast incoming threats and hold the line while ArixAI works.<br><span>←</span><span>→</span> steer <span>SPACE</span> fire <span>W</span> boost</div>
+    </div>
+    <div class="ls-controls" aria-label="Touch game controls">
+      <button class="ls-control-btn" id="ls-left" aria-label="Move left">◀</button>
+      <button class="ls-control-btn" id="ls-right" aria-label="Move right">▶</button>
+      <button class="ls-control-btn fire" id="ls-fire" aria-label="Fire weapon">FIRE</button>
+    </div>
+    <div class="ls-footer">
+      <div class="ls-tip"><strong>FLIGHT CONTROLS</strong><br>Move: <strong>← →</strong> or <strong>A / D</strong> &nbsp;·&nbsp; Fire: <strong>SPACE</strong> / click &nbsp;·&nbsp; Boost: <strong>W / ↑</strong><br>Destroy red drones, break asteroids, and avoid collisions.</div>
+      <div class="ls-ai-note"><b>While ArixAI computes</b><br>Your answer is still processing. LAST STAR will close automatically after the completed answer is visible with copy and PDF tools.</div>
+    </div>
+  </div>
+</div>
+<script id="last-star-engine">
+(() => {
+  'use strict';
+  const overlay = document.getElementById('last-star-overlay');
+  const canvas = document.getElementById('last-star-canvas');
+  if (!overlay || !canvas) return;
+  const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+  if (!ctx) return;
+  const $ = id => document.getElementById(id);
+  const scoreEl = $('ls-score'), waveEl = $('ls-wave'), livesEl = $('ls-lives'), hint = $('ls-hint');
+  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
+  const keys = new Set();
+  let active = false, raf = 0, lastTime = 0, lastDraw = 0, w = 1, h = 1, dpr = 1, elapsed = 0;
+  let processingSeen = false, finishWaitStarted = 0, baselineMessageIds = new Set();
+  let stars = [], asteroids = [], enemies = [], shots = [], hostileShots = [], particles = [], rings = [], score = 0, wave = 1, lives = 3;
+  let spawnClock = 0, enemyClock = 0, fireClock = 0, invulnerable = 0, boost = 100, shake = 0, hintTimer = 0, mobileLeft = false, mobileRight = false, mobileFire = false;
+  const rand = (a,b) => a + Math.random() * (b-a);
+  const clamp = (v,a,b) => Math.max(a, Math.min(b,v));
+  const dist2 = (a,b) => (a.x-b.x)**2 + (a.y-b.y)**2;
+  let ship = {x:0,y:0,vx:0,tilt:0,r:11};
+  function resize() {
+    w = Math.max(1, window.innerWidth); h = Math.max(1, window.innerHeight);
+    dpr = Math.min(window.devicePixelRatio || 1, 1.35, (navigator.hardwareConcurrency || 8) <= 4 ? 1 : 1.35);
+    canvas.width = Math.round(w*dpr); canvas.height = Math.round(h*dpr);
+    canvas.style.width = w+'px'; canvas.style.height = h+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    stars = Array.from({length: w < 650 ? 76 : 145}, () => ({x:Math.random()*w,y:Math.random()*h,z:rand(.25,1),r:rand(.35,1.55),p:rand(0,Math.PI*2)}));
+    if (!ship.x) { ship.x = w/2; ship.y = h*.72; }
+    ship.x = clamp(ship.x,28,w-28); ship.y = clamp(ship.y,Math.max(120,h*.3),h-70);
+  }
+  function resetRun() {
+    score = 0; wave = 1; lives = 3; elapsed = 0; spawnClock = .25; enemyClock = 3; fireClock = 0; invulnerable = 1.8; boost = 100; shake=0;
+    asteroids=[]; enemies=[]; shots=[]; hostileShots=[]; particles=[]; rings=[];
+    ship = {x:w/2,y:h*.72,vx:0,tilt:0,r:11};
+    updateHud();
+  }
+  function updateHud() {
+    if (scoreEl) scoreEl.textContent = String(score).padStart(6,'0');
+    if (waveEl) waveEl.textContent = String(wave).padStart(2,'0');
+    if (livesEl) livesEl.textContent = lives > 0 ? Array.from({length:3},(_,i)=>i<lives?'♥':'♡').join(' ') : 'CRITICAL';
+  }
+  function burst(x,y,color,count=12,power=1) {
+    for(let i=0;i<count && particles.length<240;i++) {
+      const a=rand(0,Math.PI*2), speed=rand(.45,3.5)*power;
+      particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:rand(.22,.8),max:rand(.22,.8),r:rand(.7,2.7),color});
+    }
+  }
+  function spawnAsteroid() {
+    const r=rand(12,32)*(1+Math.min(wave,10)*.025), x=rand(r,w-r);
+    const sides=Math.floor(rand(8,13)), shape=[];
+    for(let i=0;i<sides;i++) shape.push(rand(.72,1.15));
+    asteroids.push({x,y:-r-10,r,vx:rand(-.55,.55)*(1+wave*.025),vy:rand(.7,1.7)+wave*.11,rot:rand(0,6.28),vr:rand(-.018,.018),sides,shape,hp:r>26?2:1,seed:Math.random()*50});
+  }
+  function spawnEnemy() {
+    const side=Math.random()<.5?-1:1;
+    enemies.push({x:side<0?-26:w+26,y:rand(h*.12,h*.43),vx:side*rand(1.0,1.7)*(1+wave*.025),vy:rand(.08,.38),r:13,hp:2,phase:rand(0,8),fire:rand(.7,1.8)});
+  }
+  function fire() {
+    if(fireClock>0)return;
+    fireClock=.17;
+    shots.push({x:ship.x-5,y:ship.y-15,vy:-10.5,r:2.3,life:1.4});
+    shots.push({x:ship.x+5,y:ship.y-15,vy:-10.5,r:2.3,life:1.4});
+    burst(ship.x,ship.y-15,'#55e8ff',3,.5);
+  }
+  function takeHit() {
+    if(invulnerable>0)return;
+    lives--; invulnerable=1.65; shake=8;
+    burst(ship.x,ship.y,'#ff5b86',32,1.3); rings.push({x:ship.x,y:ship.y,r:5,life:.5,color:'#ff6792'});
+    if(lives<=0) { lives=0; updateHud(); setTimeout(()=>{ if(active && isProcessingNow()) resetRun(); },1000); }
+    updateHud();
+  }
+  function drawBackground(dt) {
+    const bg=ctx.createLinearGradient(0,0,0,h); bg.addColorStop(0,'#030713');bg.addColorStop(.53,'#07142b');bg.addColorStop(1,'#030714');ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);
+    const t=elapsed*.08;
+    const nebulae=[{x:w*(.22+.07*Math.sin(t)),y:h*.35,r:Math.max(w,h)*.4,c:'rgba(36,63,155,.13)'},{x:w*(.8+.06*Math.cos(t*.8)),y:h*.65,r:Math.max(w,h)*.36,c:'rgba(0,160,199,.10)'},{x:w*.5,y:h*.12,r:Math.max(w,h)*.25,c:'rgba(111,43,158,.07)'}];
+    for(const n of nebulae){const g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r);g.addColorStop(0,n.c);g.addColorStop(1,'rgba(1,4,16,0)');ctx.fillStyle=g;ctx.fillRect(n.x-n.r,n.y-n.r,n.r*2,n.r*2);}
+    ctx.save();
+    for(const s of stars){s.y+=(.3+s.z*1.6)*dt*40;if(s.y>h+2){s.y=-2;s.x=Math.random()*w;}s.p+=dt*(.7+s.z);const alpha=.22+s.z*.58*(.72+.28*Math.sin(s.p));ctx.globalAlpha=alpha;ctx.fillStyle=s.z>.84?'#c4f7ff':'#a7cbea';ctx.beginPath();ctx.arc(s.x,s.y,s.r*s.z,0,Math.PI*2);ctx.fill();if(s.z>.9){ctx.globalAlpha=alpha*.25;ctx.fillRect(s.x-.5,s.y-6*s.z,1,12*s.z);}}
+    ctx.restore();ctx.globalAlpha=1;
+    // horizon arcs and subtle depth grid
+    ctx.save();ctx.strokeStyle='rgba(53,137,194,.075)';ctx.lineWidth=1;
+    const horizon=h*.83;
+    for(let i=0;i<7;i++){ctx.beginPath();ctx.ellipse(w*.5,horizon,80+i*95,(18+i*17),0,0,Math.PI*2);ctx.stroke();}
+    ctx.restore();
+  }
+  function drawAsteroid(a) {
+    ctx.save();ctx.translate(a.x,a.y);ctx.rotate(a.rot);
+    const grad=ctx.createLinearGradient(-a.r,-a.r,a.r,a.r);grad.addColorStop(0,'#77879e');grad.addColorStop(.45,'#33455e');grad.addColorStop(1,'#111e32');
+    ctx.beginPath();for(let i=0;i<a.sides;i++){const ang=i/a.sides*Math.PI*2,rr=a.r*a.shape[i];const x=Math.cos(ang)*rr,y=Math.sin(ang)*rr;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();
+    ctx.shadowColor='rgba(69,177,229,.23)';ctx.shadowBlur=12;ctx.fillStyle=grad;ctx.fill();ctx.shadowBlur=0;ctx.lineWidth=1.1;ctx.strokeStyle='rgba(150,206,234,.48)';ctx.stroke();
+    for(let i=0;i<3;i++){const x=Math.sin(a.seed+i*2.17)*a.r*.42,y=Math.cos(a.seed*1.3+i*1.8)*a.r*.38,r=a.r*randStatic(.10,.2,a.seed+i);ctx.beginPath();ctx.ellipse(x,y,r,r*.72,0,0,Math.PI*2);ctx.fillStyle='rgba(4,12,28,.34)';ctx.fill();ctx.strokeStyle='rgba(180,206,225,.15)';ctx.stroke();}
+    ctx.restore();
+  }
+  function randStatic(min,max,seed){const v=Math.abs(Math.sin(seed*12.9898)*43758.5453)%1;return min+(max-min)*v;}
+  function drawShip() {
+    ctx.save();ctx.translate(ship.x,ship.y);ctx.rotate(ship.tilt*.17);
+    if(invulnerable>0 && Math.floor(elapsed*14)%2===0)ctx.globalAlpha=.45;
+    const flame=ctx.createLinearGradient(0,8,0,34);flame.addColorStop(0,'rgba(104,244,255,.9)');flame.addColorStop(.45,'rgba(28,131,255,.68)');flame.addColorStop(1,'rgba(44,76,255,0)');
+    ctx.shadowColor='#33dcff';ctx.shadowBlur=17;ctx.fillStyle=flame;ctx.beginPath();ctx.moveTo(-5,8);ctx.lineTo(0,30+Math.sin(elapsed*35)*4);ctx.lineTo(5,8);ctx.closePath();ctx.fill();ctx.shadowBlur=0;
+    const body=ctx.createLinearGradient(-11,-15,11,13);body.addColorStop(0,'#f3ffff');body.addColorStop(.27,'#87dfff');body.addColorStop(.65,'#2479c9');body.addColorStop(1,'#102958');
+    ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(9,5);ctx.lineTo(8,12);ctx.lineTo(0,8);ctx.lineTo(-8,12);ctx.lineTo(-9,5);ctx.closePath();ctx.fillStyle=body;ctx.shadowColor='#42dfff';ctx.shadowBlur=16;ctx.fill();ctx.shadowBlur=0;ctx.strokeStyle='rgba(221,252,255,.85)';ctx.lineWidth=1;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(3.5,1);ctx.lineTo(0,4);ctx.lineTo(-3.5,1);ctx.closePath();ctx.fillStyle='#071c3f';ctx.fill();ctx.fillStyle='#a4ffff';ctx.shadowColor='#7fffff';ctx.shadowBlur=8;ctx.beginPath();ctx.ellipse(0,-4,1.5,4,0,0,Math.PI*2);ctx.fill();ctx.shadowBlur=0;
+    ctx.restore();
+    if(invulnerable>0){ctx.save();ctx.strokeStyle='rgba(79,222,255,.32)';ctx.lineWidth=1.4;ctx.beginPath();ctx.arc(ship.x,ship.y,23+Math.sin(elapsed*8)*2,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  }
+  function drawEnemy(e) {
+    ctx.save();ctx.translate(e.x,e.y);ctx.rotate(Math.sin(e.phase)*.08);
+    ctx.shadowColor='#ff416e';ctx.shadowBlur=18;ctx.fillStyle='#a41e48';ctx.strokeStyle='#ff8ba8';ctx.lineWidth=1.25;ctx.beginPath();ctx.moveTo(0,15);ctx.lineTo(-16,1);ctx.lineTo(-9,-8);ctx.lineTo(-4,-3);ctx.lineTo(0,-14);ctx.lineTo(4,-3);ctx.lineTo(9,-8);ctx.lineTo(16,1);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle='#ffe4ec';ctx.fillRect(-3,-1,6,2);ctx.fillStyle='#ff547e';ctx.beginPath();ctx.arc(0,2,3,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+  function tick(dt) {
+    elapsed+=dt;fireClock=Math.max(0,fireClock-dt);invulnerable=Math.max(0,invulnerable-dt);shake=Math.max(0,shake-dt*26);boost=Math.min(100,boost+dt*12);
+    wave=1+Math.floor(elapsed/13); if(waveEl && wave!==Number(waveEl.textContent))updateHud();
+    const steer=(keys.has('ArrowLeft')||keys.has('a')||keys.has('A')||mobileLeft?-1:0)+(keys.has('ArrowRight')||keys.has('d')||keys.has('D')||mobileRight?1:0);
+    const thrust=keys.has('ArrowUp')||keys.has('w')||keys.has('W');
+    ship.vx=clamp(ship.vx+steer*dt*42,-6.4,6.4); if(!steer)ship.vx*=Math.pow(.06,dt); ship.x=clamp(ship.x+ship.vx*dt*42,24,w-24);ship.tilt=clamp(ship.vx/6,-1,1);
+    if(thrust&&boost>0){ship.y=Math.max(h*.3,ship.y-dt*105);boost-=dt*40;}else ship.y=Math.min(h*.8,ship.y+dt*22);
+    if(keys.has(' ')||keys.has('Spacebar')||mobileFire)fire();
+    spawnClock-=dt;if(spawnClock<=0){spawnAsteroid();spawnClock=Math.max(.24,rand(.54,1.1)-Math.min(wave,14)*.035);}
+    enemyClock-=dt;if(enemyClock<=0){spawnEnemy();enemyClock=Math.max(1.4,rand(2.6,4.1)-Math.min(wave,12)*.13);}
+    for(const a of asteroids){a.x+=a.vx*dt*36;a.y+=a.vy*dt*36;a.rot+=a.vr*dt*35;}
+    for(const e of enemies){e.phase+=dt*3.2;e.x+=e.vx*dt*34;e.y+=Math.sin(e.phase)*dt*12+e.vy*dt*32;e.fire-=dt;if(e.fire<=0&&e.y<h*.72){hostileShots.push({x:e.x,y:e.y+12,vx:(ship.x-e.x)*.001,vy:3.3+wave*.1,r:3,life:3});e.fire=rand(1.25,2.1);}}
+    for(const s of shots){s.y+=s.vy*dt*36;s.life-=dt;}
+    for(const s of hostileShots){s.x+=s.vx*dt*36;s.y+=s.vy*dt*36;s.life-=dt;}
+    for(const p of particles){p.x+=p.vx*dt*35;p.y+=p.vy*dt*35;p.vx*=Math.pow(.4,dt);p.vy*=Math.pow(.4,dt);p.life-=dt;}
+    for(const r of rings){r.r+=dt*65;r.life-=dt;}
+    asteroids=asteroids.filter(a=>a.y<h+a.r+30 && a.x>-a.r-60&&a.x<w+a.r+60);
+    enemies=enemies.filter(e=>e.y<h+40&&e.x>-80&&e.x<w+80);
+    shots=shots.filter(s=>s.y>-20&&s.life>0);hostileShots=hostileShots.filter(s=>s.y<h+30&&s.life>0&&s.x>-20&&s.x<w+20);
+    particles=particles.filter(p=>p.life>0);rings=rings.filter(r=>r.life>0);
+    for(let i=asteroids.length-1;i>=0;i--){const a=asteroids[i];for(let j=shots.length-1;j>=0;j--){const b=shots[j];if(dist2(a,b)<(a.r+b.r)**2){shots.splice(j,1);a.hp--;burst(b.x,b.y,'#7feaff',4,.65);if(a.hp<=0){score+=a.r>25?25:15;burst(a.x,a.y,'#9cb5cc',Math.min(24,Math.ceil(a.r)),.9);rings.push({x:a.x,y:a.y,r:2,life:.35,color:'#9eeaff'});asteroids.splice(i,1);updateHud();}break;}}
+      if(asteroids[i]&&invulnerable<=0&&dist2(a,ship)<(a.r+ship.r)**2){asteroids.splice(i,1);takeHit();}}
+    for(let i=enemies.length-1;i>=0;i--){const e=enemies[i];for(let j=shots.length-1;j>=0;j--){const b=shots[j];if(dist2(e,b)<(e.r+b.r)**2){shots.splice(j,1);e.hp--;burst(b.x,b.y,'#ff92ad',4,.6);if(e.hp<=0){score+=100;burst(e.x,e.y,'#ff5b88',26,1);rings.push({x:e.x,y:e.y,r:4,life:.55,color:'#ff78a2'});enemies.splice(i,1);updateHud();}break;}}
+      if(enemies[i]&&invulnerable<=0&&dist2(e,ship)<(e.r+ship.r)**2){enemies.splice(i,1);takeHit();}}
+    for(let i=hostileShots.length-1;i>=0;i--){const b=hostileShots[i];if(invulnerable<=0&&dist2(b,ship)<(b.r+ship.r+2)**2){hostileShots.splice(i,1);takeHit();}}
+  }
+  function draw(dt) {
+    ctx.save();if(shake>0)ctx.translate(rand(-shake,shake),rand(-shake,shake));
+    drawBackground(dt);
+    for(const r of rings){ctx.globalAlpha=clamp(r.life*2,0,1);ctx.strokeStyle=r.color;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,Math.PI*2);ctx.stroke();}ctx.globalAlpha=1;
+    for(const a of asteroids)drawAsteroid(a);for(const e of enemies)drawEnemy(e);
+    ctx.save();ctx.lineCap='round';for(const s of shots){const g=ctx.createLinearGradient(s.x,s.y+15,s.x,s.y-9);g.addColorStop(0,'rgba(61,170,255,0)');g.addColorStop(1,'#d0ffff');ctx.strokeStyle=g;ctx.lineWidth=2.5;ctx.shadowColor='#65ecff';ctx.shadowBlur=12;ctx.beginPath();ctx.moveTo(s.x,s.y+12);ctx.lineTo(s.x,s.y-8);ctx.stroke();}ctx.shadowBlur=0;
+    for(const s of hostileShots){ctx.fillStyle='#ff416f';ctx.shadowColor='#ff416f';ctx.shadowBlur=14;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();}ctx.restore();
+    for(const p of particles){ctx.globalAlpha=clamp(p.life/(p.max||.5),0,1);ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=8;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();}ctx.shadowBlur=0;ctx.globalAlpha=1;
+    drawShip();ctx.restore();
+    // tiny weapon charge line in HUD space
+    ctx.fillStyle='rgba(93,164,211,.13)';ctx.fillRect(w*.5-60,h-14,120,2);ctx.fillStyle='#62e6ff';ctx.fillRect(w*.5-60,h-14,120*(boost/100),2);
+  }
+  function loop(now) {
+    if(!active)return;
+    if(document.visibilityState!=='visible'){raf=0;return;}
+    if(now-lastDraw < (reducedMotion?48:27)){raf=requestAnimationFrame(loop);return;}
+    const dt=Math.min(.04,Math.max(0,(now-(lastTime||now))/1000));lastTime=now;lastDraw=now;
+    try{tick(dt);draw(dt);}catch(e){console.warn('[LAST STAR] Frame recovered:',e);}
+    raf=requestAnimationFrame(loop);
+  }
+  function isProcessingNow(){try{return typeof isProcessing!=='undefined'&&!!isProcessing;}catch(_){return false;}}
+  function showGame(){
+    if(active)return;
+    try { baselineMessageIds = new Set(Array.from(document.querySelectorAll('[id^="msg-wrapper-"]')).map(node => node.id)); } catch (_) { baselineMessageIds = new Set(); }
+    processingSeen = true; finishWaitStarted = 0;
+    active=true;overlay.classList.add('is-active');window.__arixWaitGameActive=true;resetRun();hintTimer=0;hint?.classList.remove('fade');
+    const status=$('ls-status-text');if(status)status.textContent=(typeof activeModelId!=='undefined'&&activeModelId==='oracle'?'ORACLE':'AI')+' RESPONSE IN FLIGHT · STAY ALIVE';
+    cancelAnimationFrame(raf);lastTime=0;lastDraw=0;raf=requestAnimationFrame(loop);
+    clearTimeout(showGame.hintTimeout);showGame.hintTimeout=setTimeout(()=>{if(active)hint?.classList.add('fade');},4200);
+  }
+  function hideGame(){active=false;overlay.classList.remove('is-active');window.__arixWaitGameActive=false;cancelAnimationFrame(raf);raf=0;keys.clear();mobileLeft=mobileRight=mobileFire=false;processingSeen=false;finishWaitStarted=0;}
+  function ensureFinalActions(){
+    let touched=false;
+    let stored=[];
+    try { stored=Array.isArray(messages)?messages:[]; } catch (_) {}
+    document.querySelectorAll('[id^="msg-wrapper-"]').forEach(wrapper=>{
+      if(baselineMessageIds.has(wrapper.id))return;
+      const content=wrapper.querySelector('.msg-content');
+      if(!content||content.querySelector('.action-bar'))return;
+      const msgId=wrapper.id.slice('msg-wrapper-'.length);
+      if(!stored.some(m=>String(m?.id)===msgId))return;
+      const visibleText=(content.innerText||content.textContent||'').trim();
+      if(!visibleText&&!content.querySelector('canvas,img,video,.arix-widget-shell,[id^="shell-"],.artifact-card'))return;
+      const bar=document.createElement('div');
+      bar.className='action-bar flex flex-wrap items-center gap-3 mt-4 pt-3 border-t border-gray-100 opacity-100';
+      const copy=document.createElement('button');copy.type='button';copy.className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600';copy.innerHTML='<i class="ph-bold ph-copy"></i> Copy Text';copy.addEventListener('click',()=>{if(typeof copyToClipboard==='function')copyToClipboard(msgId);});
+      const pdf=document.createElement('button');pdf.type='button';pdf.className='flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600';pdf.innerHTML='<i class="ph-bold ph-file-pdf text-red-500"></i> Export PDF';pdf.addEventListener('click',()=>{if(typeof openPdfModal==='function')openPdfModal(msgId);});
+      bar.append(copy,pdf);content.appendChild(bar);touched=true;
+    });
+    return touched;
+  }
+  function hasFreshFinalAnswer(){
+    let stored=[];try{stored=Array.isArray(messages)?messages:[];}catch(_){}
+    const wrappers=Array.from(document.querySelectorAll('[id^="msg-wrapper-"]'));
+    for(const wrapper of wrappers){
+      if(baselineMessageIds.has(wrapper.id))continue;
+      const content=wrapper.querySelector('.msg-content');if(!content)continue;
+      const msgId=wrapper.id.slice('msg-wrapper-'.length);
+      if(!stored.some(m=>String(m?.id)===msgId))continue;
+      const body=content.cloneNode(true);body.querySelectorAll('.action-bar,button,.typing-cursor,#Arix-persistent-loader,#Arix-repair-loader').forEach(n=>n.remove());
+      const txt=(body.innerText||body.textContent||'').replace(/\s+/g,' ').trim();
+      const hasVisual=!!body.querySelector('canvas,img,video,.arix-widget-shell,[id^="shell-"],.artifact-card');
+      if((txt.length>=4||hasVisual)&&content.querySelector('.action-bar'))return true;
+    }
+    return false;
+  }
+  function shouldShowGame(){
+    if(!isProcessingNow())return false;
+    try { if(typeof isWorkspaceMode!=='undefined'&&isWorkspaceMode)return false; } catch(_) {}
+    return true;
+  }
+  function sync(){
+    const shouldShow=shouldShowGame();
+    if(shouldShow){if(!active)showGame();processingSeen=true;finishWaitStarted=0;return;}
+    if(!active||!processingSeen)return;
+    ensureFinalActions();
+    if(hasFreshFinalAnswer()){hideGame();return;}
+    if(!finishWaitStarted){finishWaitStarted=Date.now();const status=$('ls-status-text');if(status)status.textContent='FINALIZING ANSWER · PREPARING EXPORT TOOLS';return;}
+    // A failed specialized branch can finish without creating an assistant bubble. Make the
+    // failure explicit and exportable before dismissing the game; never silently hide it.
+    if(Date.now()-finishWaitStarted>2600){
+      try{
+        const id='last_star_recovery_'+Date.now();
+        const text='The request stopped before a final answer was rendered. Please retry your prompt; the workspace is still available.';
+        if(typeof appendMessage==='function'){
+          const model=(typeof activeModelId!=='undefined'?activeModelId:'oracle');
+          const obj=appendMessage('assistant',text,model,id,[],null);
+          if(Array.isArray(messages)){messages.push({role:'assistant',content:text,id:obj.id,modelId:model});}
+          if(typeof saveCurrentChat==='function')saveCurrentChat();
+        }
+      }catch(error){console.warn('[LAST STAR] Finalization fallback failed:',error);}
+      ensureFinalActions();hideGame();
+    }
+  }
+  window.addEventListener('resize',resize,{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(active&&document.visibilityState==='visible'&&!raf){lastTime=0;raf=requestAnimationFrame(loop);}});
+  window.addEventListener('keydown',e=>{if(!active)return;const k=e.key;if(['ArrowLeft','ArrowRight','ArrowUp',' ','Spacebar','a','A','d','D','w','W'].includes(k)){keys.add(k);if(['ArrowLeft','ArrowRight','ArrowUp',' '].includes(k))e.preventDefault();if(hint)hint.classList.add('fade');}}, {passive:false});
+  window.addEventListener('keyup',e=>{keys.delete(e.key);});
+  window.addEventListener('blur',()=>{keys.clear();mobileLeft=mobileRight=mobileFire=false;});
+  const bindHold=(id,setter)=>{const el=$(id);if(!el)return;const down=e=>{e.preventDefault();setter(true);if(hint)hint.classList.add('fade');};const up=e=>{e.preventDefault();setter(false);};el.addEventListener('pointerdown',down);['pointerup','pointercancel','pointerleave'].forEach(name=>el.addEventListener(name,up));};
+  bindHold('ls-left',v=>mobileLeft=v);bindHold('ls-right',v=>mobileRight=v);bindHold('ls-fire',v=>mobileFire=v);
+  canvas.addEventListener('pointerdown',()=>{if(active){keys.add(' ');if(hint)hint.classList.add('fade');}});window.addEventListener('pointerup',()=>keys.delete(' '));
+  resize();resetRun();
+  // Poll only the tiny app state flag; the game animation itself is paused unless it is needed.
+  setInterval(sync,100);
+  window.addEventListener('pageshow',sync);
+})();
 </script>
 </body>
 </html>
