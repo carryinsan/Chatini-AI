@@ -1,10 +1,22 @@
-
-
-
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
 <meta charset="UTF-8">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.170.0",
+    "three/addons/": "https://esm.sh/three@0.170.0/examples/jsm/",
+    "@dimforge/rapier3d-compat": "https://esm.sh/@dimforge/rapier3d-compat@0.14.0",
+    "gsap": "https://esm.sh/gsap@3.12.5",
+    "postprocessing": "https://esm.sh/postprocessing@6.36.6?external=three",
+    "@gltf-transform/core": "https://esm.sh/@gltf-transform/core@4.5.1",
+    "@gltf-transform/functions": "https://esm.sh/@gltf-transform/functions@4.5.1",
+    "@gltf-transform/extensions": "https://esm.sh/@gltf-transform/extensions@4.5.1",
+    "meshoptimizer": "https://esm.sh/meshoptimizer@1.3.0"
+  }
+}
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ArixAI Workspace</title>
 <link rel="icon" type="image/png" href="https://lexis-ai-chatini.vercel.app/favicon.png?v=2">
@@ -4984,6 +4996,9 @@ ${marked.parse(unclosedContent.trim())}
                         <button type="button" onclick="window.Arix3D.toggleFullscreen('${uid}')" id="btn-full-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-indigo-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Maximize View">
                             <i class="ph-bold ph-arrows-out-simple text-sm"></i>
                         </button>
+                        <button type="button" onclick="window.Arix3D.exportGLB('${uid}')" id="btn-export-${uid}" class="p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-white text-xs border border-transparent hover:border-gray-200 transition-colors" title="Export professional-quality GLB">
+                            <i class="ph-bold ph-download-simple text-sm"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -7839,7 +7854,642 @@ window.Arix3D = {
             document.exitFullscreen().catch(() => {});
         }
     }
-};
+ };
+
+/* ============================================================================
+ * Arix3D modern runtime adapter
+ * Uses the pinned ES-module stack first; the existing r128 renderer remains a
+ * deliberate last-resort fallback if a CDN, WebGPU device, or optional package
+ * is unavailable. AI scene content remains declarative JSON—never eval'ed.
+ * ========================================================================== */
+(function installArix3DModernRuntime() {
+    const API = window.Arix3D;
+    if (!API) return;
+    API.initLegacy = API.init;
+    let runtimePromise = null;
+
+    function getRuntime() {
+        if (runtimePromise) return runtimePromise;
+        runtimePromise = (async () => {
+            const [THREE, orbitMod, gltfMod, dracoMod, rgbeMod, exporterMod, compiler] = await Promise.all([
+                import('three'),
+                import('three/addons/controls/OrbitControls.js'),
+                import('three/addons/loaders/GLTFLoader.js'),
+                import('three/addons/loaders/DRACOLoader.js'),
+                import('three/addons/loaders/RGBELoader.js'),
+                import('three/addons/exporters/GLTFExporter.js'),
+                import('./lib/3d.js')
+            ]);
+            const optional = await Promise.allSettled([
+                import('gsap'),
+                import('@dimforge/rapier3d-compat'),
+                import('postprocessing'),
+                import('three/addons/renderers/webgpu/WebGPURenderer.js')
+            ]);
+            const gsapMod = optional[0].status === 'fulfilled' ? optional[0].value : null;
+            const rapierMod = optional[1].status === 'fulfilled' ? optional[1].value : null;
+            const postMod = optional[2].status === 'fulfilled' ? optional[2].value : null;
+            const webgpuMod = optional[3].status === 'fulfilled' ? optional[3].value : null;
+            const gsap = gsapMod?.gsap || gsapMod?.default?.gsap || gsapMod?.default || null;
+            const RAPIER = rapierMod?.World ? rapierMod : (rapierMod?.default?.World ? rapierMod.default : null);
+            return {
+                THREE,
+                OrbitControls: orbitMod.OrbitControls,
+                GLTFLoader: gltfMod.GLTFLoader,
+                DRACOLoader: dracoMod.DRACOLoader,
+                RGBELoader: rgbeMod.RGBELoader,
+                GLTFExporter: exporterMod.GLTFExporter,
+                Compiler: compiler,
+                gsap,
+                RAPIER,
+                Post: postMod,
+                WebGPURenderer: webgpuMod?.WebGPURenderer || null,
+                dracoLoader: null
+            };
+        })().catch((error) => {
+            runtimePromise = null;
+            throw error;
+        });
+        return runtimePromise;
+    }
+
+    function notify(message) {
+        try { if (typeof window.showToast === 'function') window.showToast(message); else console.info('[Arix3D]', message); }
+        catch (_) { console.info('[Arix3D]', message); }
+    }
+
+    function safeAssetUrl(value) {
+        if (typeof value !== 'string') return null;
+        const raw = value.trim();
+        if (!raw || /[\u0000-\u001f\u007f]/.test(raw) || /^(?:javascript|data|vbscript|file|blob):/i.test(raw) || raw.startsWith('//')) return null;
+        try {
+            const url = new URL(raw, window.location.href);
+            if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) return null;
+            if (url.origin !== window.location.origin && url.protocol !== 'https:') return null;
+            return /^https?:\/\//i.test(raw) ? url.href : raw;
+        } catch (_) { return null; }
+    }
+
+    function isTrustedAssetHost(url) {
+        try {
+            const host = new URL(url, window.location.href).hostname.toLowerCase();
+            return [
+                'polyhaven.com', 'polyhaven.org', 'ambientcg.com', 'github.com',
+                'raw.githubusercontent.com', 'github.io', 'kenney.nl', 'www.kenney.nl',
+                'cdn.jsdelivr.net', 'unpkg.com', 'gstatic.com'
+            ].some((domain) => host === domain || host.endsWith('.' + domain));
+        } catch (_) { return false; }
+    }
+
+    function proxyURL(url) {
+        const absolute = safeAssetUrl(url);
+        if (!absolute || !isTrustedAssetHost(absolute)) return url;
+        const configured = window.ARIX3D_ASSET_PROXY_URL;
+        const base = typeof configured === 'string' && configured.trim() ? configured.trim() : '/api/3d-assets?url=';
+        if (base.includes('{url}')) return base.replace('{url}', encodeURIComponent(absolute));
+        return base + encodeURIComponent(absolute);
+    }
+
+    function makeLoadingManager(THREE, useProxy) {
+        const manager = new THREE.LoadingManager();
+        if (useProxy) manager.setURLModifier((url) => proxyURL(url));
+        return manager;
+    }
+
+    function setTransform(object, spec) {
+        const p = spec.position || [0, 0, 0];
+        const r = spec.rotation || [0, 0, 0];
+        const s = spec.scale || [1, 1, 1];
+        object.position.set(Number(p[0]) || 0, Number(p[1]) || 0, Number(p[2]) || 0);
+        object.rotation.set(Number(r[0]) || 0, Number(r[1]) || 0, Number(r[2]) || 0);
+        object.scale.set(Number(s[0]) || 1, Number(s[1]) || 1, Number(s[2]) || 1);
+        object.visible = spec.visible !== false;
+        object.name = String(spec.name || spec.id || 'Arix3D Model').slice(0, 160);
+        object.userData = { ...(object.userData || {}), arix3dId: spec.id || object.name };
+        object.traverse?.((node) => {
+            if (node.isMesh) {
+                node.castShadow = spec.castShadow !== false;
+                node.receiveShadow = spec.receiveShadow !== false;
+            }
+        });
+    }
+
+    function fallbackGeometry(THREE, primitive, geometry = {}) {
+        switch (primitive) {
+            case 'sphere': return new THREE.SphereGeometry(0.65, 32, 20);
+            case 'cylinder': return new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+            case 'cone': return new THREE.ConeGeometry(0.65, 1.25, 32);
+            case 'torus': return new THREE.TorusGeometry(0.55, 0.18, 16, 48);
+            case 'plane': return new THREE.PlaneGeometry(1.5, 1.5);
+            case 'capsule': return typeof THREE.CapsuleGeometry === 'function' ? new THREE.CapsuleGeometry(0.45, 0.7, 6, 24) : new THREE.CylinderGeometry(0.45, 0.45, 0.7, 24);
+            default: return new THREE.BoxGeometry(1, 1, 1);
+        }
+    }
+
+    async function loadGLTF(runtime, url, useProxy = false) {
+        const THREE = runtime.THREE;
+        const manager = makeLoadingManager(THREE, useProxy);
+        const loader = new runtime.GLTFLoader(manager);
+        loader.setCrossOrigin?.('anonymous');
+        if (!runtime.dracoLoader) {
+            runtime.dracoLoader = new runtime.DRACOLoader();
+            runtime.dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+            runtime.dracoLoader.setDecoderConfig?.({ type: 'js' });
+            runtime.dracoLoader.preload?.();
+        }
+        loader.setDRACOLoader(runtime.dracoLoader);
+        return loader.loadAsync(url);
+    }
+
+    async function loadHDRI(runtime, renderer, url) {
+        if (!url || !renderer || renderer.isWebGPURenderer) return null;
+        let error = null;
+        for (const useProxy of [false, true]) {
+            try {
+                const loader = new runtime.RGBELoader();
+                loader.setCrossOrigin?.('anonymous');
+                const texture = await loader.loadAsync(useProxy ? proxyURL(url) : url);
+                const pmrem = new runtime.THREE.PMREMGenerator(renderer);
+                pmrem.compileEquirectangularShader?.();
+                const target = pmrem.fromEquirectangular(texture);
+                texture.dispose?.();
+                pmrem.dispose?.();
+                return target;
+            } catch (err) {
+                error = err;
+                if (useProxy) break;
+            }
+        }
+        console.warn('[Arix3D] HDRI failed; using procedural studio lighting.', error);
+        return null;
+    }
+
+    function buildPostProcessing(runtime, renderer, scene, camera, spec, renderMode) {
+        const P = runtime.Post;
+        if (!P || renderMode !== 'webgl' || spec?.enabled === false || !P.EffectComposer || !P.EffectPass || !P.RenderPass) return null;
+        const effects = [];
+        try {
+            if (spec?.bloom !== false && P.BloomEffect) {
+                effects.push(new P.BloomEffect({ intensity: Number(spec?.bloomIntensity) || 0.28, luminanceThreshold: 0.82, luminanceSmoothing: 0.12, mipmapBlur: true }));
+            }
+            if (spec?.ssao === true && P.SSAOEffect) {
+                effects.push(new P.SSAOEffect(scene, camera, { samples: 16, rings: 4, radius: 8, intensity: Number(spec?.ssaoIntensity) || 1.2, luminanceInfluence: 0.55 }));
+            }
+            if (spec?.depthOfField === true && P.DepthOfFieldEffect) {
+                effects.push(new P.DepthOfFieldEffect(camera, { focusDistance: 0.02, focalLength: 0.035, bokehScale: 1.5, height: 480 }));
+            }
+            if (spec?.chromaticAberration === true && P.ChromaticAberrationEffect) {
+                effects.push(new P.ChromaticAberrationEffect({ offset: new runtime.THREE.Vector2(0.00025, 0.00025), radialModulation: true, modulationOffset: 0.25 }));
+            }
+            if (!effects.length) return null;
+            const composer = new P.EffectComposer(renderer);
+            composer.addPass(new P.RenderPass(scene, camera));
+            composer.addPass(new P.EffectPass(camera, ...effects));
+            return composer;
+        } catch (error) {
+            console.warn('[Arix3D] Optional post-processing disabled safely.', error);
+            return null;
+        }
+    }
+
+    function startGSAPTrack(runtime, object, track, tweens) {
+        const gsap = runtime.gsap;
+        if (!gsap || typeof gsap.to !== 'function' || !object) return;
+        const bits = String(track.property || '').split('.');
+        if (bits.length !== 2 || !object[bits[0]] || !(bits[1] in object[bits[0]])) return;
+        const target = object[bits[0]], axis = bits[1];
+        target[axis] = Number(track.from) || 0;
+        try {
+            tweens.push(gsap.to(target, {
+                [axis]: Number(track.to) || 0,
+                duration: Math.max(0.016, (Number(track.duration) || 1000) / 1000),
+                repeat: track.repeat === true ? -1 : Math.max(0, Number(track.repeat) || 0),
+                yoyo: !!track.yoyo,
+                ease: track.easing === 'linear' ? 'none' : 'sine.inOut',
+                overwrite: 'auto'
+            }));
+        } catch (_) { /* The deterministic animation helper remains available below. */ }
+    }
+
+    function prepareGSAPAnimations(runtime, bundle, sceneObjects, loadedAssetSpecs, output = []) {
+        if (!runtime.gsap || typeof runtime.gsap.to !== 'function') return output;
+        const tracks = Array.isArray(bundle.sceneSpec?.animations) ? bundle.sceneSpec.animations : [];
+        // Asset roots arrive asynchronously and are animated when their GLTF load completes.
+        const assetIds = new Set((bundle.sceneSpec?.objects || []).filter((spec) => spec.primitive === 'asset').map((spec) => spec.id));
+        for (const track of tracks) {
+            if (assetIds.has(track.objectId)) continue;
+            const object = bundle.objectsById.get(track.objectId);
+            if (object) startGSAPTrack(runtime, object, track, output);
+        }
+        return output;
+    }
+
+    async function loadExternalMaterialTextures(runtime, bundle, materialSpecs, isDisposed, renderer) {
+        const THREE = runtime.THREE;
+        const specs = Array.isArray(materialSpecs) ? materialSpecs : [];
+        const jobs = [];
+        const fields = [
+            ['mapUrl', 'map', true],
+            ['normalMapUrl', 'normalMap', false],
+            ['roughnessMapUrl', 'roughnessMap', false],
+            ['metalnessMapUrl', 'metalnessMap', false],
+            ['aoMapUrl', 'aoMap', false],
+            ['emissiveMapUrl', 'emissiveMap', true]
+        ];
+        for (const spec of specs) {
+            const material = bundle.materialsById.get(spec.id);
+            if (!material) continue;
+            for (const [urlField, materialField, isColorTexture] of fields) {
+                const url = safeAssetUrl(spec[urlField]);
+                if (!url) continue;
+                jobs.push((async () => {
+                    let texture = null, lastError = null;
+                    const attempts = [url];
+                    const proxied = proxyURL(url);
+                    if (proxied && proxied !== url) attempts.push(proxied);
+                    for (const candidate of attempts) {
+                        try {
+                            const loader = new THREE.TextureLoader();
+                            loader.setCrossOrigin?.('anonymous');
+                            texture = await loader.loadAsync(candidate);
+                            break;
+                        } catch (error) { lastError = error; }
+                    }
+                    if (!texture) {
+                        console.warn(`[Arix3D] Material texture failed (${urlField}); procedural/color fallback retained.`, lastError);
+                        return false;
+                    }
+                    if (isDisposed()) { texture.dispose?.(); return false; }
+                    texture.colorSpace = isColorTexture && THREE.SRGBColorSpace !== undefined
+                        ? THREE.SRGBColorSpace
+                        : (THREE.NoColorSpace !== undefined ? THREE.NoColorSpace : texture.colorSpace);
+                    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+                    const textureScale = Math.min(100, Math.max(0.01, Number(spec.textureScale) || 1));
+                    texture.repeat?.set?.(textureScale, textureScale);
+                    texture.anisotropy = Math.min(8, renderer?.capabilities?.getMaxAnisotropy?.() || 1);
+                    texture.needsUpdate = true;
+                    const previous = material[materialField];
+                    if (previous && previous !== texture && previous.isTexture) {
+                        try { previous.dispose?.(); } catch (_) {}
+                    }
+                    material[materialField] = texture;
+                    if (materialField === 'normalMap' && material.normalScale?.set) {
+                        const normalScale = Math.min(4, Math.max(0, Number(spec.normalScale) || 0.15));
+                        material.normalScale.set(normalScale, normalScale);
+                    }
+                    material.needsUpdate = true;
+                    return true;
+                })());
+            }
+        }
+        return Promise.allSettled(jobs);
+    }
+
+    async function setupPhysics(runtime, bundle, objects) {
+        const RAPIER = runtime.RAPIER;
+        const physicsSpecs = (bundle.sceneSpec?.objects || []).filter((o) => o.physics?.enabled && objects.get(o.id));
+        if (!RAPIER || !physicsSpecs.length) return { world: null, bodies: [], active: false };
+        try {
+            await RAPIER.init();
+            const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+            world.timestep = 1 / 60;
+            const bodies = [];
+            for (const spec of physicsSpecs) {
+                const object = objects.get(spec.id);
+                const cfg = spec.physics || {};
+                let desc;
+                if (cfg.bodyType === 'fixed') desc = RAPIER.RigidBodyDesc.fixed();
+                else if (cfg.bodyType === 'kinematicPosition') desc = RAPIER.RigidBodyDesc.kinematicPositionBased();
+                else if (cfg.bodyType === 'kinematicVelocity') desc = RAPIER.RigidBodyDesc.kinematicVelocityBased();
+                else desc = RAPIER.RigidBodyDesc.dynamic();
+                const pos = object.position, quat = object.quaternion;
+                desc.setTranslation(pos.x, pos.y, pos.z).setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w });
+                desc.setLinearDamping?.(cfg.linearDamping ?? 0.01);
+                desc.setAngularDamping?.(cfg.angularDamping ?? 0.05);
+                desc.setCanSleep?.(cfg.canSleep !== false);
+                desc.lockRotations?.(cfg.lockRotations === true, true);
+                desc.setGravityScale?.(cfg.gravityScale ?? 1, true);
+                desc.setLinvel?.({ x: cfg.initialVelocity?.[0] || 0, y: cfg.initialVelocity?.[1] || 0, z: cfg.initialVelocity?.[2] || 0 }, true);
+                const body = world.createRigidBody(desc);
+                let colliderDesc;
+                const g = spec.geometry || {};
+                if (spec.primitive === 'sphere') colliderDesc = RAPIER.ColliderDesc.ball(Math.max(0.01, Number(g.radius) || 0.5));
+                else if (spec.primitive === 'capsule') colliderDesc = RAPIER.ColliderDesc.capsule(Math.max(0.01, (Number(g.length) || 1) / 2), Math.max(0.01, Number(g.radius) || 0.5));
+                else if (spec.primitive === 'cylinder') colliderDesc = RAPIER.ColliderDesc.cylinder(Math.max(0.01, (Number(g.height) || 1) / 2), Math.max(0.01, Math.max(Number(g.radiusTop) || 0.5, Number(g.radiusBottom) || 0.5)));
+                else {
+                    const box = object.isGroup ? new runtime.THREE.Box3().setFromObject(object) : null;
+                    const w = box ? Math.max(0.02, box.max.x - box.min.x) : Math.max(0.02, Number(g.width) || 1);
+                    const h = box ? Math.max(0.02, box.max.y - box.min.y) : Math.max(0.02, Number(g.height) || 1);
+                    const d = box ? Math.max(0.02, box.max.z - box.min.z) : Math.max(0.02, Number(g.depth) || 1);
+                    colliderDesc = RAPIER.ColliderDesc.cuboid(w / 2, h / 2, d / 2);
+                }
+                colliderDesc.setFriction?.(cfg.friction ?? 0.7);
+                colliderDesc.setRestitution?.(cfg.restitution ?? 0.05);
+                colliderDesc.setMass?.(cfg.mass ?? 1);
+                world.createCollider(colliderDesc, body);
+                bodies.push({ object, body, bodyType: cfg.bodyType || 'dynamic', specId: spec.id });
+            }
+            return { world, bodies, active: true };
+        } catch (error) {
+            console.warn('[Arix3D] Rapier physics unavailable; visual rendering will continue without physics.', error);
+            return { world: null, bodies: [], active: false };
+        }
+    }
+
+    async function initModern(uid, jsonSpec) {
+        const canvas = document.getElementById('canvas-' + uid);
+        const wrap = document.getElementById('canvas-wrap-' + uid);
+        const loaderEl = document.getElementById('loader-' + uid);
+        if (!canvas || !wrap) return;
+        const prior = API.instances[uid];
+        if (prior) {
+            if (typeof prior.dispose === 'function') {
+                try { prior.dispose(); } catch (_) {}
+            } else {
+                // The compatibility renderer predates dispose(); release what it owns once.
+                try {
+                    prior.disposed = true;
+                    if (prior.animId) cancelAnimationFrame(prior.animId);
+                    prior.resizeObserver?.disconnect?.(); prior.controls?.dispose?.();
+                    prior.renderer?.dispose?.();
+                } catch (_) {}
+            }
+            delete API.instances[uid];
+        }
+
+        let raw;
+        try {
+            raw = typeof jsonSpec === 'string' ? JSON.parse(jsonSpec) : jsonSpec;
+            if (raw?.scene && typeof raw.scene === 'object') raw = raw.scene;
+            if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('A 3D scene must be a JSON object.');
+        } catch (error) {
+            if (loaderEl) loaderEl.innerHTML = '<span class="text-red-300 px-4 text-center">Could not parse this 3D scene. A safe JSON scene is required.</span>';
+            return;
+        }
+
+        const runtime = await getRuntime();
+        const THREE = runtime.THREE;
+        const compiled = runtime.Compiler.compile3D(raw);
+        if (!compiled?.scene) throw new Error(compiled?.error || '3D scene validation failed.');
+        const sceneSpec = compiled.scene;
+        const titleEl = document.getElementById('title-' + uid);
+        if (titleEl) titleEl.textContent = String(sceneSpec.title || raw.title || 'ArixAI 3D Scene');
+        const width = Math.max(1, wrap.clientWidth || 400), height = Math.max(1, wrap.clientHeight || 360);
+        const dprLimit = window.innerWidth <= 720 ? 1.5 : 2;
+        const requestedRenderer = sceneSpec.environment?.renderer || raw.environment?.renderer || 'auto';
+        // Auto-select WebGPU on capable clients; an explicit scene preference for
+        // WebGL always wins, and any initialization failure falls back to WebGL.
+        const preferWebGPU = requestedRenderer === 'webgpu' || (requestedRenderer === 'auto' && window.ARIX3D_RENDERER_PREFERENCE !== 'webgl');
+        let renderer = null, renderMode = 'webgl';
+        if (preferWebGPU && runtime.WebGPURenderer && navigator.gpu) {
+            try {
+                renderer = new runtime.WebGPURenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprLimit));
+                renderer.setSize(width, height, false);
+                await renderer.init();
+                renderMode = 'webgpu';
+            } catch (error) {
+                try { renderer?.dispose?.(); } catch (_) {}
+                renderer = null;
+                console.warn('[Arix3D] WebGPU initialization failed; falling back to WebGL.', error);
+            }
+        }
+        if (!renderer) {
+            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
+            renderer.setSize(width, height, false);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, dprLimit));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderMode = 'webgl';
+        }
+
+        let hdriTarget = null;
+        const hdriUrl = safeAssetUrl(sceneSpec.environment?.hdriUrl || raw.environment?.hdriUrl || raw.environment?.hdrUrl || raw.environment?.environmentMapUrl);
+        if (hdriUrl && renderMode === 'webgl') hdriTarget = await loadHDRI(runtime, renderer, hdriUrl);
+        const bundle = runtime.Compiler.buildThreeScene(THREE, sceneSpec, {
+            renderer: renderMode === 'webgl' ? renderer : null,
+            environmentMap: hdriTarget?.texture || null,
+            studioEnvironment: renderMode === 'webgl',
+            textureSize: window.innerWidth <= 720 ? 256 : 512,
+            onWarning: (warning) => console.warn('[Arix3D]', warning)
+        });
+        runtime.Compiler.applyRendererSettings3D(THREE, renderer, sceneSpec);
+        const scene = bundle.scene;
+        const camera = bundle.camera;
+        const cameraData = sceneSpec.camera || {};
+        const target = cameraData.target || [0, 0, 0];
+        const controls = new runtime.OrbitControls(camera, canvas);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.minDistance = 0.03;
+        controls.maxDistance = 100000;
+        controls.target.set(target[0], target[1], target[2]);
+        controls.autoRotate = raw.controls?.autoRotate !== false;
+        controls.autoRotateSpeed = 1.15;
+        controls.update();
+
+        const modelRoot = new THREE.Group();
+        modelRoot.name = 'Arix3D Exportable Model';
+        for (const mesh of bundle.objectsById.values()) {
+            scene.remove(mesh);
+            modelRoot.add(mesh);
+        }
+        scene.add(modelRoot);
+
+        const objectSpecs = new Map((sceneSpec.objects || []).map((o) => [o.id, o]));
+        const materialsMap = {};
+        for (const [id, mat] of bundle.materialsById.entries()) materialsMap[id] = mat;
+        const wireframeMaterials = new Set();
+        scene.traverse((node) => {
+            if (node.isMesh && node.material) for (const mat of (Array.isArray(node.material) ? node.material : [node.material])) if (mat) wireframeMaterials.add(mat);
+        });
+        const assetLoads = [];
+        const tweens = [];
+        for (const spec of sceneSpec.objects || []) {
+            if (spec.primitive !== 'asset' || !spec.assetUrl) continue;
+            const url = safeAssetUrl(spec.assetUrl);
+            if (!url) continue;
+            const material = bundle.materialsById.get(spec.material) || bundle.materialsById.get('default');
+            const placeholder = new THREE.Mesh(fallbackGeometry(THREE, spec.fallbackPrimitive || 'box'), material);
+            placeholder.name = `Fallback preview · ${spec.name || spec.id}`;
+            setTransform(placeholder, spec);
+            placeholder.userData.arix3dFallback = true;
+            modelRoot.add(placeholder);
+            bundle.objectsById.set(spec.id, placeholder);
+            wireframeMaterials.add(material);
+            const assetPromise = (async () => {
+                let gltf, lastError;
+                try { gltf = await loadGLTF(runtime, url, false); }
+                catch (firstError) {
+                    lastError = firstError;
+                    try { gltf = await loadGLTF(runtime, proxyURL(url), true); }
+                    catch (proxyError) { lastError = proxyError; }
+                }
+                if (!gltf) {
+                    console.warn(`[Arix3D] Asset failed to load; procedural fallback remains for ${spec.id}.`, lastError);
+                    return false;
+                }
+                const root = gltf.scene || gltf.scenes?.[0];
+                if (!root) return false;
+                setTransform(root, spec);
+                root.userData.arix3dAssetUrl = url;
+                modelRoot.remove(placeholder);
+                placeholder.geometry?.dispose?.();
+                bundle.objectsById.set(spec.id, root);
+                modelRoot.add(root);
+                root.traverse((node) => {
+                    if (node.isMesh && node.material) for (const mat of (Array.isArray(node.material) ? node.material : [node.material])) if (mat) wireframeMaterials.add(mat);
+                });
+                for (const track of (sceneSpec.animations || [])) if (track.objectId === spec.id) startGSAPTrack(runtime, root, track, tweens);
+                const activePhysics = API.instances[uid]?.physics;
+                for (const entry of activePhysics?.bodies || []) if (entry.specId === spec.id) entry.object = root;
+                if (typeof window.__ARIX_3D_DATA__ !== 'undefined') window.__ARIX_3D_DATA__[uid] = JSON.stringify(raw);
+                return true;
+            })();
+            assetLoads.push(assetPromise.catch((error) => { console.warn('[Arix3D] Asset load was isolated.', error); return false; }));
+        }
+
+        const initialCamPos = camera.position.toArray();
+        const initialTarget = [target[0], target[1], target[2]];
+        const postSpec = sceneSpec.postprocessing || raw.postprocessing || {};
+        const composer = buildPostProcessing(runtime, renderer, scene, camera, postSpec, renderMode);
+        const physics = await setupPhysics(runtime, bundle, bundle.objectsById);
+        for (const entry of physics.bodies || []) {
+            const latestObject = bundle.objectsById.get(entry.specId);
+            if (latestObject) entry.object = latestObject;
+        }
+        prepareGSAPAnimations(runtime, bundle, objectSpecs, assetLoads, tweens);
+        let disposed = false, animId = 0, resizeObserver = null, lastFrame = performance.now(), physicsAccumulator = 0;
+        const inst = {
+            uid, scene, camera, renderer, controls, wrap, bundle, modelRoot, materialsMap,
+            wireframeMaterials, composer, physics, tweens, hdriTarget, runtime, renderMode,
+            initialCamPos, initialTarget, wireframeState: false, disposed: false,
+            dispose: () => {
+                if (disposed) return;
+                disposed = true; inst.disposed = true;
+                if (animId) cancelAnimationFrame(animId);
+                resizeObserver?.disconnect?.(); controls.dispose?.();
+                for (const tween of tweens) { try { tween?.kill?.(); } catch (_) {} }
+                try { runtime.gsap?.killTweensOf?.(modelRoot); } catch (_) {}
+                try { composer?.dispose?.(); } catch (_) {}
+                try { bundle.dispose?.(); } catch (_) {}
+                try { hdriTarget?.dispose?.(); } catch (_) {}
+                try { physics.world?.free?.(); } catch (_) {}
+                try { renderer.dispose?.(); } catch (_) {}
+            }
+        };
+
+        // First visible frame doesn't wait for network assets; placeholders cover any miss.
+        const animate = (now) => {
+            if (inst.disposed) return;
+            inst.animId = requestAnimationFrame(animate);
+            const delta = Math.min(0.05, Math.max(0, ((now || performance.now()) - lastFrame) / 1000));
+            lastFrame = now || performance.now();
+            if (physics.active && physics.world) {
+                physicsAccumulator = Math.min(physicsAccumulator + delta, 0.1);
+                let steps = 0;
+                while (physicsAccumulator >= 1 / 60 && steps < 5) {
+                    physics.world.step(); physicsAccumulator -= 1 / 60; steps++;
+                }
+                for (const entry of physics.bodies) {
+                    if (entry.bodyType === 'fixed') continue;
+                    const p = entry.body.translation(), q = entry.body.rotation();
+                    entry.object.position.set(p.x, p.y, p.z);
+                    entry.object.quaternion.set(q.x, q.y, q.z, q.w);
+                }
+            } else if (!runtime.gsap && sceneSpec.animations?.length) {
+                runtime.Compiler.updateAnimations3D(bundle, (now || performance.now()) - (inst.startTime || (inst.startTime = now || performance.now())));
+            }
+            controls.update();
+            try { if (composer) composer.render(delta); else renderer.render(scene, camera); }
+            catch (error) { console.error('[Arix3D] Frame error isolated; using direct renderer.', error); try { renderer.render(scene, camera); } catch (_) {} }
+        };
+        API.instances[uid] = inst;
+        // External PBR maps stream in asynchronously; base materials remain usable
+        // if a third-party host blocks CORS or its CDN is temporarily unavailable.
+        inst.textureLoads = loadExternalMaterialTextures(runtime, bundle, sceneSpec.materials || [], () => inst.disposed, renderer);
+        inst.animId = requestAnimationFrame(animate);
+        resizeObserver = new ResizeObserver(() => {
+            if (inst.disposed || !wrap.clientWidth || !wrap.clientHeight) return;
+            camera.aspect = wrap.clientWidth / wrap.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(wrap.clientWidth, wrap.clientHeight, false);
+            composer?.setSize?.(wrap.clientWidth, wrap.clientHeight);
+        });
+        resizeObserver.observe(wrap);
+        inst.resizeObserver = resizeObserver;
+        if (loaderEl) loaderEl.classList.add('hidden');
+        // Keep async imports from becoming unhandled rejections; a failed asset only affects itself.
+        Promise.allSettled(assetLoads).then((results) => {
+            if (!inst.disposed && results.some((r) => r.status === 'fulfilled' && r.value === false)) {
+                const failed = results.filter((r) => r.status === 'fulfilled' && r.value === false).length;
+                if (failed) console.info(`[Arix3D] ${failed} remote asset(s) used procedural fallback geometry.`);
+            }
+        });
+    }
+
+    API.init = async function(uid, jsonSpec) {
+        const loader = document.getElementById('loader-' + uid);
+        try {
+            await initModern(uid, jsonSpec);
+        } catch (error) {
+            console.warn('[Arix3D] Modern renderer failed safely; trying the legacy renderer.', error);
+            const old = API.instances[uid];
+            try { old?.dispose?.(); } catch (_) {}
+            delete API.instances[uid];
+            if (loader) {
+                loader.classList.remove('hidden');
+                loader.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-2xl"></i><span>Switching to compatibility renderer…</span>';
+            }
+            try { API.initLegacy.call(API, uid, jsonSpec); }
+            catch (legacyError) {
+                console.error('[Arix3D] All renderers failed:', legacyError);
+                if (loader) loader.innerHTML = '<span class="text-red-300 px-4 text-center">3D rendering is unavailable on this device right now. Please retry when the network or GPU is available.</span>';
+            }
+        }
+    };
+
+    API.toggleWireframe = function(uid) {
+        const inst = this.instances[uid];
+        if (!inst) return;
+        inst.wireframeState = !inst.wireframeState;
+        const materials = inst.wireframeMaterials || new Set(Object.values(inst.materialsMap || {}));
+        for (const material of materials) if (material) material.wireframe = inst.wireframeState;
+        const button = document.getElementById('btn-wire-' + uid);
+        if (button) button.classList.toggle('text-indigo-600', inst.wireframeState);
+    };
+
+    API.exportGLB = async function(uid) {
+        const inst = API.instances[uid];
+        if (!inst?.modelRoot || !inst?.runtime?.GLTFExporter) {
+            notify('GLB export needs the modern 3D module. Reopen the scene after the network is available.');
+            return;
+        }
+        const button = document.getElementById('btn-export-' + uid);
+        const oldLabel = button?.innerHTML;
+        try {
+            if (button) { button.disabled = true; button.innerHTML = '<i class="ph-bold ph-spinner animate-spin text-sm"></i>'; }
+            const exporter = new inst.runtime.GLTFExporter();
+            const result = await new Promise((resolve, reject) => {
+                exporter.parse(inst.modelRoot, resolve, reject, { binary: true, onlyVisible: true, trs: false, embedImages: true });
+            });
+            const blob = new Blob([result], { type: 'model/gltf-binary' });
+            const objectUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement('a');
+            anchor.href = objectUrl;
+            const title = String(document.getElementById('title-' + uid)?.textContent || 'ArixAI-3D-Model').replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').slice(0, 80) || 'ArixAI-3D-Model';
+            anchor.download = `${title}.glb`;
+            document.body.appendChild(anchor); anchor.click(); anchor.remove();
+            setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+            notify(`GLB exported (${(blob.size / 1024 / 1024).toFixed(2)} MB).`);
+        } catch (error) {
+            console.error('[Arix3D] GLB export failed:', error);
+            notify('GLB export failed safely. Check the model and try again.');
+        } finally {
+            if (button) { button.disabled = false; button.innerHTML = oldLabel || '<i class="ph-bold ph-download-simple text-sm"></i>'; }
+        }
+    };
+})();
 
     // Stray duplicate Pulse-card markup removed; renderPulseSuggestionCard above is complete.
 
@@ -10112,6 +10762,47 @@ window.downloadWorkspaceZip = async function() {
         try { return value ? JSON.parse(value) : fallback; } catch { return fallback; }
     }
 
+    // One lazy same-origin import powers lossless 3D chat-payload compression.
+    // If the optional module is unavailable, sync continues with the original JSON.
+    let arix3dCodecPromise = null;
+    function getArix3DStorageCodec() {
+        if (!arix3dCodecPromise) arix3dCodecPromise = import('./lib/3d.js').catch((error) => {
+            console.warn('[ArixAI] 3D storage codec unavailable; saving uncompressed scene payloads.', error);
+            return null;
+        });
+        return arix3dCodecPromise;
+    }
+
+    async function prepare3DStorageChanges(changes) {
+        const source = { ...emptyChanges(), ...(changes || {}) };
+        if (!Array.isArray(source.messages) || !source.messages.some((m) => String(m?.content || '').includes('<arix_3d'))) return source;
+        try {
+            const codec = await getArix3DStorageCodec();
+            if (typeof codec?.compress3DStorageContent !== 'function') return source;
+            source.messages = await Promise.all(source.messages.map(async (message) => {
+                if (!String(message?.content || '').includes('<arix_3d')) return message;
+                return { ...message, content: await codec.compress3DStorageContent(String(message.content || '')) };
+            }));
+        } catch (error) {
+            console.warn('[ArixAI] 3D payload compression skipped; original content retained.', error);
+        }
+        return source;
+    }
+
+    async function restore3DStorageMessageContent(content) {
+        const source = String(content || '');
+        if (!source.includes('ARIX3D_GZIP_V1:')) return source;
+        try {
+            const codec = await getArix3DStorageCodec();
+            if (typeof codec?.decompress3DStorageContent !== 'function') return source;
+            return await codec.decompress3DStorageContent(source);
+        } catch (error) {
+            // Preserve the original database record if the current browser lacks a gzip decoder.
+            console.warn('[ArixAI] Saved 3D payload could not be expanded in this browser; the database record was left untouched.', error);
+            return source;
+        }
+    }
+
     async function apiJson(url, body, timeoutMs = 80_000) {
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -10633,7 +11324,9 @@ window.downloadWorkspaceZip = async function() {
 
     async function sendSync(changes) {
         if (!cloudEnabled()) return { skipped: true };
-        const source = { ...emptyChanges(), ...(changes || {}) };
+        // Compress only large <arix_3d> bodies. gzip is lossless; the model's geometry,
+        // material values, and textures are not decimated to save database bytes.
+        const source = await prepare3DStorageChanges(changes);
         const chunks = chunkSyncChanges(source);
         if (!chunks.length && source.storageMode) chunks.push({ ...emptyChanges(), storageMode: source.storageMode });
         for (const chunk of chunks) await apiJson('/api/storage', { action: 'sync', changes: chunk }, 45_000);
@@ -10923,7 +11616,7 @@ window.downloadWorkspaceZip = async function() {
                 // cached conversation with an empty response while pagination continues.
                 if (pages === 1) {
                     if (epoch !== bridge.loadEpoch) return;
-                    const firstPageMessages = all.map(cloudMessageToLocal);
+                    const firstPageMessages = await Promise.all(all.map(cloudMessageToLocal));
                     if (firstPageMessages.length > 0) {
                         messages = firstPageMessages;
                         chat.messages = messages;
@@ -10934,7 +11627,7 @@ window.downloadWorkspaceZip = async function() {
                 if (pages > 200) break;
             } while (before);
             if (epoch !== bridge.loadEpoch) return;
-            const remoteMessages = all.map(cloudMessageToLocal);
+            const remoteMessages = await Promise.all(all.map(cloudMessageToLocal));
             if (remoteMessages.length > 0) {
                 messages = remoteMessages;
                 chat.messages = remoteMessages;
@@ -10992,17 +11685,18 @@ window.downloadWorkspaceZip = async function() {
         }
     }
 
-    function cloudMessageToLocal(m) {
+    async function cloudMessageToLocal(m) {
         const rawSources = (m?.extra && Array.isArray(m.extra.sources)) ? m.extra.sources : (Array.isArray(m?.sources) ? m.sources : []);
         if (rawSources.length > 0) {
             window.MSG_SOURCES = window.MSG_SOURCES || {};
             window.MSG_SOURCES[String(m.id)] = rawSources;
         }
+        const restoredContent = await restore3DStorageMessageContent(String(m?.content || ''));
         return {
             id: String(m.id),
             chatId: String(m.chatId || currentChatId),
             role: String(m.role || 'assistant'),
-            content: String(m.content || ''),
+            content: restoredContent,
             modelId: m.modelId || null,
             createdAt: m.createdAt,
             updatedAt: m.updatedAt,
