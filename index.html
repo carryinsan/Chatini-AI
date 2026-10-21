@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en" class="scroll-smooth">
 <head>
@@ -197,6 +198,427 @@
         .delay-300 { transition-delay: 300ms; }
 
         @keyframes gradient-shift { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+
+
+        /* ArixAI visual enhancement layer — original page copy and behavior remain intact. */
+        :root {
+            --arix-cyan: #06b6d4;
+            --arix-violet: #8b5cf6;
+            --arix-blue: #3b82f6;
+            --arix-glass: rgba(255,255,255,.76);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -15%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: .62;
+            background:
+                radial-gradient(ellipse at 14% 13%, rgba(34,211,238,.10), transparent 30%),
+                radial-gradient(ellipse at 86% 22%, rgba(139,92,246,.09), transparent 32%),
+                radial-gradient(ellipse at 50% 88%, rgba(59,130,246,.055), transparent 35%);
+            animation: arix-ambient-drift 22s ease-in-out infinite alternate;
+        }
+
+        @keyframes arix-ambient-drift {
+            from { transform: translate3d(-1.2%, -1%, 0) scale(1); }
+            to { transform: translate3d(1.2%, 1%, 0) scale(1.035); }
+        }
+
+        @keyframes arix-orbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes arix-orbit-reverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        @keyframes arix-float-panel {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, -9px, 0); }
+        }
+
+        @keyframes arix-sweep {
+            0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; }
+            18% { opacity: .75; }
+            58%, 100% { transform: translateX(260%) skewX(-18deg); opacity: 0; }
+        }
+
+        @keyframes arix-soft-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(6,182,212,.10); }
+            50% { box-shadow: 0 0 0 9px rgba(6,182,212,0); }
+        }
+
+        .hero-visual-sparkle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 999px;
+            background: #67e8f9;
+            box-shadow: 0 0 18px 5px rgba(34,211,238,.32);
+            pointer-events: none;
+        }
+
+        body > section:first-of-type {
+            isolation: isolate;
+        }
+
+        body > section:first-of-type::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            width: min(72vw, 850px);
+            height: min(72vw, 850px);
+            left: 50%;
+            top: 9%;
+            transform: translateX(-50%);
+            border-radius: 50%;
+            background: conic-gradient(from 140deg, rgba(6,182,212,.055), rgba(139,92,246,.10), rgba(59,130,246,.035), rgba(6,182,212,.055));
+            filter: blur(54px);
+            animation: arix-ambient-drift 18s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        body > section:first-of-type h1 {
+            text-wrap: balance;
+            text-shadow: 0 8px 34px rgba(15,23,42,.045);
+        }
+
+        .text-gradient {
+            filter: drop-shadow(0 8px 22px rgba(126,34,206,.11));
+        }
+
+        .premium-card {
+            isolation: isolate;
+            transform: translateZ(0);
+            transition: transform .45s cubic-bezier(.2,.75,.25,1), box-shadow .45s ease, border-color .35s ease;
+        }
+
+        .premium-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -75%;
+            width: 42%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(6,182,212,.65), rgba(139,92,246,.65), transparent);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .premium-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 28px 70px -30px rgba(15,23,42,.22), 0 8px 28px -18px rgba(6,182,212,.16);
+            border-color: rgba(6,182,212,.23);
+        }
+
+        .premium-card:hover::after {
+            opacity: 1;
+            animation: arix-sweep 1.2s ease-out both;
+        }
+
+        .mockup-inner {
+            border: 1px solid rgba(148,163,184,.24);
+            box-shadow: 0 28px 80px -35px rgba(15,23,42,.25), 0 8px 24px -16px rgba(6,182,212,.13), inset 0 1px 0 rgba(255,255,255,.95);
+        }
+
+        .magnetic-target .magnetic {
+            position: relative;
+            isolation: isolate;
+            box-shadow: 0 12px 28px -14px rgba(15,23,42,.35);
+        }
+
+        .magnetic-target .magnetic::after {
+            content: "";
+            position: absolute;
+            z-index: 0;
+            inset: 0;
+            left: -120%;
+            width: 70%;
+            border-radius: inherit;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
+            transform: skewX(-18deg);
+            pointer-events: none;
+        }
+
+        .magnetic-target:hover .magnetic::after {
+            animation: arix-sweep 1s ease-out;
+        }
+
+        #navbar {
+            transition: background .35s ease, box-shadow .35s ease, border-color .35s ease;
+        }
+
+        .arix-school-link {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            white-space: nowrap;
+            color: #075985;
+            border: 1px solid rgba(6,182,212,.25);
+            background: linear-gradient(135deg, rgba(236,254,255,.95), rgba(245,243,255,.95));
+            box-shadow: 0 5px 16px -10px rgba(6,182,212,.65);
+            transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+        }
+
+        .arix-school-link:hover {
+            transform: translateY(-2px);
+            border-color: rgba(6,182,212,.5);
+            box-shadow: 0 12px 24px -12px rgba(6,182,212,.48);
+        }
+
+        /* Dedicated Arix School feature — added without replacing any existing page section. */
+        .school-bridge {
+            isolation: isolate;
+            background:
+                radial-gradient(ellipse at 8% 28%, rgba(34,211,238,.09), transparent 34%),
+                radial-gradient(ellipse at 92% 72%, rgba(139,92,246,.09), transparent 34%),
+                linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        }
+
+        .school-bridge::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            opacity: .54;
+            background-image: radial-gradient(rgba(100,116,139,.22) .7px, transparent .7px);
+            background-size: 20px 20px;
+            mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 82%, transparent);
+            pointer-events: none;
+        }
+
+        .school-bridge-card {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(148,163,184,.26);
+            border-radius: 32px;
+            background: rgba(255,255,255,.78);
+            box-shadow: 0 35px 90px -45px rgba(30,64,175,.22), 0 10px 30px -24px rgba(15,23,42,.2), inset 0 1px 0 rgba(255,255,255,.95);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+        }
+
+        .school-bridge-card::after {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 9%;
+            width: 82%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(6,182,212,.75), rgba(139,92,246,.6), transparent);
+            pointer-events: none;
+        }
+
+        .school-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: .55rem;
+            padding: .55rem .8rem;
+            border: 1px solid rgba(6,182,212,.2);
+            border-radius: 999px;
+            background: rgba(236,254,255,.85);
+            color: #0e7490;
+            font: 700 10px/1.1 'JetBrains Mono', monospace;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+        }
+
+        .school-roles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .55rem;
+        }
+
+        .school-role-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .58rem .75rem;
+            border: 1px solid rgba(148,163,184,.24);
+            border-radius: 12px;
+            background: rgba(255,255,255,.88);
+            color: #334155;
+            font-size: 11px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px -10px rgba(15,23,42,.25);
+        }
+
+        .school-visual {
+            min-height: 370px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            isolation: isolate;
+        }
+
+        .school-orbit {
+            position: absolute;
+            width: 360px;
+            height: 360px;
+            max-width: 95%;
+            max-height: 95%;
+            border: 1px solid rgba(6,182,212,.17);
+            border-radius: 50%;
+            box-shadow: inset 0 0 50px rgba(6,182,212,.045), 0 0 65px rgba(139,92,246,.055);
+            animation: arix-orbit 54s linear infinite;
+            pointer-events: none;
+        }
+
+        .school-orbit::before,
+        .school-orbit::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            border: 1px dashed rgba(139,92,246,.19);
+            inset: 13%;
+        }
+
+        .school-orbit::after {
+            inset: 27%;
+            border-style: solid;
+            border-color: rgba(6,182,212,.14);
+        }
+
+        .school-orbit-dot {
+            position: absolute;
+            top: 16%;
+            left: 15%;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22d3ee, #818cf8);
+            box-shadow: 0 0 0 7px rgba(34,211,238,.10), 0 0 25px rgba(6,182,212,.35);
+        }
+
+        .school-dashboard {
+            position: relative;
+            z-index: 2;
+            width: min(100%, 380px);
+            padding: 20px;
+            border: 1px solid rgba(203,213,225,.78);
+            border-radius: 23px;
+            background: rgba(255,255,255,.92);
+            box-shadow: 0 28px 60px -28px rgba(30,64,175,.28), 0 10px 28px -22px rgba(15,23,42,.22), inset 0 1px 0 white;
+            animation: arix-float-panel 7s ease-in-out infinite;
+        }
+
+        .school-dashboard-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 17px;
+            border-bottom: 1px solid #eef2f7;
+        }
+
+        .school-dashboard-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .school-dashboard-row:last-child { border-bottom: 0; padding-bottom: 2px; }
+
+        .school-dashboard-icon {
+            display: flex;
+            width: 39px;
+            height: 39px;
+            flex: 0 0 39px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            font-size: 18px;
+        }
+
+        .school-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 8px;
+            border-radius: 999px;
+            color: #047857;
+            background: #ecfdf5;
+            font-size: 9px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .school-float-tag {
+            position: absolute;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 11px 14px;
+            border: 1px solid rgba(226,232,240,.95);
+            border-radius: 15px;
+            color: #334155;
+            background: rgba(255,255,255,.94);
+            box-shadow: 0 18px 35px -22px rgba(15,23,42,.35);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 10px;
+            font-weight: 800;
+            animation: arix-float-panel 6s ease-in-out infinite;
+        }
+
+        .school-float-tag.tag-top { top: 8%; right: -1%; animation-delay: -1.8s; }
+        .school-float-tag.tag-bottom { bottom: 8%; left: -1%; animation-delay: -3.2s; }
+
+        .school-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .7rem;
+            padding: 15px 22px;
+            border-radius: 999px;
+            color: #fff;
+            background: linear-gradient(110deg, #0f172a 0%, #164e63 50%, #4338ca 100%);
+            box-shadow: 0 15px 32px -14px rgba(8,145,178,.6), inset 0 1px 0 rgba(255,255,255,.2);
+            font-size: 13px;
+            font-weight: 800;
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .school-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 22px 40px -15px rgba(8,145,178,.56), inset 0 1px 0 rgba(255,255,255,.24);
+        }
+
+        .school-cta i { transition: transform .25s ease; }
+        .school-cta:hover i { transform: translateX(4px); }
+
+        @media (max-width: 767px) {
+            .school-bridge-card { border-radius: 24px; }
+            .school-visual { min-height: 330px; margin-top: 8px; }
+            .school-orbit { width: 310px; height: 310px; }
+            .school-dashboard { padding: 15px; }
+            .school-float-tag { padding: 9px 10px; }
+            .school-float-tag.tag-top { right: 0; top: 3%; }
+            .school-float-tag.tag-bottom { left: 0; bottom: 2%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::before,
+            body > section:first-of-type::before,
+            .school-orbit,
+            .school-dashboard,
+            .school-float-tag,
+            .premium-card:hover::after {
+                animation: none !important;
+            }
+            .reveal { opacity: 1; transform: none; transition: none; }
+            .premium-card, .magnetic, .school-cta { transition: none !important; }
+        }
+
     </style>
 </head>
 <body class="bg-background font-sans antialiased overflow-x-hidden relative">
@@ -239,6 +661,10 @@
                     [ API Access ]
                 </a>
                 
+                <a href="https://arix-school.vercel.app/" target="_blank" rel="noopener noreferrer" class="arix-school-link hidden sm:inline-flex px-4 py-2.5 rounded-full text-[11px] font-extrabold">
+                    <i class="ph-fill ph-graduation-cap text-base"></i> Arix School
+                </a>
+
                 <!-- Magnetic CTA -->
                 <div class="magnetic-target" data-magnetic-strength="20">
                     <a href="app.html" class="magnetic relative overflow-hidden bg-textMain text-white px-6 py-2.5 rounded-full text-xs font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
@@ -282,6 +708,94 @@
                     <a href="#engines" class="magnetic w-full sm:w-auto bg-white border border-slate-200 hover:border-slate-300 text-textMain px-10 py-4 rounded-full text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-3 hover:-translate-y-0.5">
                         Read Whitepaper
                     </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section id="arix-school" class="school-bridge relative z-10 overflow-hidden py-24 lg:py-32 px-6 border-y border-slate-200/70">
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="school-bridge-card grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center p-7 sm:p-10 lg:p-14 reveal">
+                <div class="relative z-10 py-2 lg:py-5">
+                    <div class="school-eyebrow mb-7">
+                        <i class="ph-fill ph-graduation-cap text-base"></i>
+                        Arix School
+                    </div>
+                    <h2 class="text-4xl sm:text-5xl lg:text-[3.55rem] font-extrabold text-slate-900 tracking-tight leading-[1.08] mb-6">
+                        A better-connected school starts here.
+                    </h2>
+                    <p class="text-base sm:text-lg text-slate-600 leading-relaxed font-light max-w-xl mb-8">
+                        A dedicated space where teachers, principals, and students can interact, collaborate, and make everyday school tasks easier.
+                    </p>
+                    <div class="school-roles mb-9" aria-label="Arix School community">
+                        <span class="school-role-chip"><i class="ph-fill ph-chalkboard-teacher text-cyan-600 text-base"></i> Teachers</span>
+                        <span class="school-role-chip"><i class="ph-fill ph-buildings text-violet-600 text-base"></i> Principals</span>
+                        <span class="school-role-chip"><i class="ph-fill ph-student text-blue-600 text-base"></i> Students</span>
+                    </div>
+                    <a href="https://arix-school.vercel.app/" target="_blank" rel="noopener noreferrer" class="school-cta">
+                        Explore Arix School
+                        <i class="ph-bold ph-arrow-up-right text-base"></i>
+                    </a>
+                    <div class="flex items-center gap-2 mt-5 text-[10px] sm:text-xs text-slate-500 font-medium">
+                        <i class="ph-fill ph-sparkle text-cyan-600 text-sm"></i>
+                        One dedicated space for the school community
+                    </div>
+                </div>
+
+                <div class="school-visual" aria-hidden="true">
+                    <div class="school-orbit"><span class="school-orbit-dot"></span></div>
+                    <div class="school-dashboard">
+                        <div class="school-dashboard-top">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20">
+                                    <i class="ph-fill ph-graduation-cap text-xl"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-extrabold text-slate-900">Arix School</div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">A shared school space</div>
+                                </div>
+                            </div>
+                            <span class="school-status"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Connected</span>
+                        </div>
+
+                        <div class="school-dashboard-row">
+                            <div class="school-dashboard-icon bg-cyan-50 text-cyan-700"><i class="ph-fill ph-chalkboard-teacher"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-bold text-slate-800">Teacher workspace</div>
+                                <div class="text-[10px] text-slate-500 mt-1">Plan, prepare, and organize</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-up-right text-slate-400"></i>
+                        </div>
+
+                        <div class="school-dashboard-row">
+                            <div class="school-dashboard-icon bg-violet-50 text-violet-700"><i class="ph-fill ph-buildings"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-bold text-slate-800">Principal overview</div>
+                                <div class="text-[10px] text-slate-500 mt-1">Coordinate school activities</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-up-right text-slate-400"></i>
+                        </div>
+
+                        <div class="school-dashboard-row">
+                            <div class="school-dashboard-icon bg-blue-50 text-blue-700"><i class="ph-fill ph-student"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-bold text-slate-800">Student learning</div>
+                                <div class="text-[10px] text-slate-500 mt-1">Learn, ask, and participate</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-up-right text-slate-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="school-float-tag tag-top">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700"><i class="ph-fill ph-users-three text-base"></i></span>
+                        <span>School community<br><span class="text-[9px] text-slate-500 font-medium">Made to work together</span></span>
+                    </div>
+                    <div class="school-float-tag tag-bottom">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-violet-50 text-violet-700"><i class="ph-fill ph-sparkle text-base"></i></span>
+                        <span>Everyday tasks, easier<br><span class="text-[9px] text-slate-500 font-medium">One focused destination</span></span>
+                    </div>
                 </div>
             </div>
         </div>
