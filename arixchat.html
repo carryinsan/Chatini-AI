@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -20,6 +21,30 @@
 @media(max-width:860px){.app{grid-template-columns:292px minmax(0,1fr);padding:9px;gap:9px}.chat-header{padding:0 15px}.messages-wrap{padding:21px 15px 12px}.message-stack{max-width:84%}.room-time{display:none}}
 @media(max-width:650px){body{background:#fff}.app{display:block;padding:0;height:100dvh}.sidebar,.chat{height:100dvh;border:0;border-radius:0;box-shadow:none}.sidebar{position:fixed;inset:0;z-index:20;transform:translateX(0);transition:transform .25s ease;width:100%;background:#fff}.app.chat-open .sidebar{transform:translateX(-102%)}.chat{display:none}.app.chat-open .chat{display:flex}.brandbar{padding:18px 17px 15px}.sidebar-actions{padding:0 14px 13px}.side-search{padding:0 14px 12px}.room-list{padding:0 8px 10px}.sidebar-footer{padding:13px 17px}.chat-header{height:72px;padding:0 12px;gap:9px}.mobile-back{display:inline-grid;width:34px;height:34px;border-radius:11px}.chat-header .avatar{width:38px;height:38px;border-radius:13px}.room-head-title{font-size:14px}.room-head-sub{font-size:10px}.header-actions{gap:5px}.header-actions .icon-btn{width:34px;height:34px;border-radius:11px}.header-actions .optional-action{display:none}.messages-wrap{padding:18px 11px 11px}.message-row{gap:7px;margin-bottom:15px}.message-avatar{width:27px;height:27px;border-radius:9px}.message-stack{max-width:86%}.message-bubble{font-size:12px;padding:10px 12px}.composer-area{padding:9px 10px calc(10px + env(safe-area-inset-bottom))}.composer-box{border-radius:17px;padding:8px 8px 7px 11px}.composer-main textarea{font-size:12px}.composer-hint{display:none}.tool-btn{padding:6px}.privacy-note{font-size:8px}.empty-state h2{font-size:20px}.empty-state p{font-size:12px}.message-actions{opacity:1}.mobile-overlay{display:block;position:fixed;inset:0;background:rgba(22,28,45,.25);z-index:19;opacity:0;pointer-events:none;transition:.2s}.app.chat-open .mobile-overlay{opacity:1;pointer-events:auto}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+/* ArixChat production polish: compact navigation and stable message updates. */
+.sidebar-toggle{flex:0 0 auto}
+.message-status[role="button"]{cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.message-row{will-change:auto}
+@media(min-width:651px){
+  .app{transition:grid-template-columns .22s ease}
+  .app.sidebar-collapsed{grid-template-columns:78px minmax(0,1fr)}
+  .app.sidebar-collapsed .brandbar{justify-content:center;padding:18px 7px}
+  .app.sidebar-collapsed .brandbar>div:not(.brandmark){display:none}
+  .app.sidebar-collapsed .sidebar-actions{grid-template-columns:1fr;padding:0 10px 12px}
+  .app.sidebar-collapsed .sidebar-actions button{font-size:0;gap:0;padding:10px 6px}
+  .app.sidebar-collapsed .sidebar-actions button svg{width:20px;height:20px}
+  .app.sidebar-collapsed .side-search{height:38px;padding:0 10px 12px}
+  .app.sidebar-collapsed .side-search input{display:none}
+  .app.sidebar-collapsed .side-search svg{left:50%;top:8px;transform:translateX(-50%)}
+  .app.sidebar-collapsed .section-label,.app.sidebar-collapsed .room-copy,.app.sidebar-collapsed .tiny-dot,.app.sidebar-collapsed .profile-copy{display:none}
+  .app.sidebar-collapsed .room-list{padding:0 8px 10px}
+  .app.sidebar-collapsed .room-item{justify-content:center;padding:9px 5px}
+  .app.sidebar-collapsed .sidebar-footer{justify-content:center;padding:12px 8px;flex-wrap:wrap}
+  .app.sidebar-collapsed .profile-avatar{display:none}
+}
+@media(max-width:650px){.sidebar-toggle{display:none}}
+
 </style>
 </head>
 <body>
@@ -39,6 +64,7 @@
 </aside>
 <main class="chat" aria-label="ArixChat conversation">
 <header class="chat-header">
+<button class="icon-btn sidebar-toggle" id="sidebar-toggle" aria-label="Collapse sidebar" aria-expanded="true" title="Collapse sidebar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="m14 9 3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 <button class="icon-btn mobile-back" id="mobile-back" aria-label="Back to chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 <div class="avatar" id="active-avatar">A</div>
 <div class="room-head-info"><div class="room-head-title" id="active-room-title">Welcome to ArixChat</div><div class="room-head-sub"><span class="status-dot" id="connection-dot"></span><span id="connection-text">Choose a room to begin</span><span>·</span><span id="room-access-label">No room selected</span></div></div>
@@ -75,7 +101,8 @@ rooms: safeJson(localStorage.getItem(STORE_ROOMS), []),
 allMessages: safeJson(localStorage.getItem(STORE_MESSAGES), {}),
 profile: safeJson(localStorage.getItem(STORE_PROFILE), { name: localStorage.getItem('Arix_nickname') || '' }),
 activeRoomId: null, activeMessages: [], pollTimer: null, pollBusy: false,
-seenServerIds: new Set(), pendingReply: null, stagedAttachment: null,
+seenServerIds: new Set(), seenRecordKeys: new Set(), pollGeneration: 0, pollController: null,
+pendingReply: null, stagedAttachment: null,
 sending: false, lastToast: 0, rateWindow: [], pendingEvents: []
 };
 if (!Array.isArray(state.rooms)) state.rooms = [];
@@ -91,6 +118,22 @@ else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() 
 return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 function now() { return Date.now(); }
+function hashText(value) {
+let hash = 2166136261;
+for (let i = 0; i < value.length; i++) { hash ^= value.charCodeAt(i); hash = Math.imul(hash, 16777619); }
+return (hash >>> 0).toString(36);
+}
+function serverRecordKey(raw) {
+if (raw && raw.id != null && String(raw.id)) return String(raw.id);
+// Backward-compatible deterministic key for records created before server IDs existed.
+return 'legacy_' + hashText(String(Number(raw?.ts) || 0) + '\u001f' + cleanName(raw?.nickname || 'Guest') + '\u001f' + String(raw?.message ?? ''));
+}
+function messageSignature(msg) {
+const signature = JSON.stringify([msg.sender, msg.text, msg.time, msg.status, msg.edited, msg.deleted,
+msg.replyTo, msg.attachment ? [msg.attachment.name, msg.attachment.mime, msg.attachment.data] : null,
+(msg.reactions || []).map(r => [r.emoji, r.by]), msg.serverId, msg.error]);
+return hashText(signature);
+}
 function shortTime(ts) { const d = new Date(Number(ts) || now()); return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
 function roomMessages(roomId) { if (!Array.isArray(state.allMessages[roomId])) state.allMessages[roomId] = []; return state.allMessages[roomId]; }
 function persist() {
@@ -152,6 +195,7 @@ const room = state.rooms.find(r => r.id === roomId); if (!room) return;
 state.activeRoomId = roomId; state.pendingReply = null; state.stagedAttachment = null;
 state.activeMessages = roomMessages(roomId);
 state.seenServerIds = new Set(state.activeMessages.map(m => m.serverId).filter(Boolean).map(String));
+state.seenRecordKeys = new Set(state.activeMessages.map(m => m.recordKey || m.serverId).filter(Boolean).map(String));
 state.pendingEvents = [];
 $('active-room-title').textContent = roomTitle(room);
 $('active-avatar').textContent = roomTitle(room).trim().charAt(0).toUpperCase() || 'A';
@@ -167,7 +211,7 @@ $('message-input').focus();
 }
 function renderRoomList() {
 const host = $('room-list'); const query = $('room-search').value.trim().toLowerCase();
-const list = state.rooms.filter(r => !query || roomTitle(r).toLowerCase().includes(query) || r.id.toLowerCase().includes(query) || String(r.lastMessage || '').toLowerCase().includes(query));
+const list = state.rooms.filter(r => !query || roomTitle(r).toLowerCase().includes(query) || r.id.toLowerCase().includes(query) || String(r.lastMessage || '').toLowerCase().includes(query)).slice().sort((a,b) => Number(!!b.pinned)-Number(!!a.pinned) || (Number(b.updatedAt)||0)-(Number(a.updatedAt)||0));
 $('room-count-label').textContent = state.rooms.length + (state.rooms.length === 1 ? ' room' : ' rooms');
 if (!list.length) {
 host.innerHTML = `<div style="padding:28px 16px;text-align:center;color:#9aa2b2;font-size:12px;line-height:1.7"><div style="font-size:24px;margin-bottom:8px">⌁</div>${query ? 'No matches found.' : 'No conversations yet.<br>Create a room or join an invite link to get started.'}</div>`; return;
@@ -176,7 +220,7 @@ host.innerHTML = list.map((room, index) => {
 const selected = room.id === state.activeRoomId;
 const color = ['','green','blue','amber'][index % 4];
 const preview = room.lastMessage || ('Invite link · ' + room.id.slice(0, 9) + '…');
-return `<div class="room-item ${selected ? 'active' : ''}" role="button" tabindex="0" data-room="${esc(room.id)}" aria-current="${selected ? 'page' : 'false'}"><div class="avatar ${color}">${esc(roomTitle(room).charAt(0).toUpperCase())}</div><div class="room-copy"><div class="room-title-row"><span class="room-title">${esc(roomTitle(room))}</span><span class="room-time">${shortTime(room.updatedAt || room.createdAt)}</span></div><div class="room-preview">${esc(preview)}</div></div>${selected ? '<span class="tiny-dot"></span>' : ''}</div>`;
+return `<div class="room-item ${selected ? 'active' : ''}" role="button" tabindex="0" data-room="${esc(room.id)}" title="${esc(roomTitle(room))}" aria-current="${selected ? 'page' : 'false'}"><div class="avatar ${color}">${esc(roomTitle(room).charAt(0).toUpperCase())}</div><div class="room-copy"><div class="room-title-row"><span class="room-title">${esc(roomTitle(room))}</span>${room.pinned ? '<span title="Pinned chat" aria-label="Pinned">★</span>' : ''}<span class="room-time">${shortTime(room.updatedAt || room.createdAt)}</span></div><div class="room-preview">${esc(preview)}</div></div>${selected ? '<span class="tiny-dot"></span>' : ''}</div>`;
 }).join('');
 }
 function formatMessageText(text) { return esc(text).replace(/\n/g, '<br>'); }
@@ -195,24 +239,48 @@ attachment = `<div class="attachment-card"><span class="file-symbol">${a.mime ==
 }
 return `${quote}<div class="message-bubble">${formatMessageText(msg.text || '')}${attachment}</div>`;
 }
-function renderMessages(shouldScroll = true) {
-const host = $('message-list'); if (!state.activeRoomId) return;
-if (!state.activeMessages.length) {
-host.innerHTML = `<div style="text-align:center;padding:44px 15px;color:#9aa2b2;font-size:12px;line-height:1.8"><div style="font-size:25px;margin-bottom:10px">✦</div><strong style="display:block;color:#556071;font-size:13px;margin-bottom:5px">This room is ready</strong>Send the first message, or copy the invite link to bring someone in.</div>`;
-if (shouldScroll) $('messages-wrap').scrollTop = $('messages-wrap').scrollHeight; return;
-}
-const messages = state.activeMessages.filter(m => !m.event);
-host.innerHTML = messages.map(msg => {
+function messageRowHtml(msg) {
 const mine = msg.sender === state.profile.name;
 const initial = (msg.sender || '?').trim().charAt(0).toUpperCase() || '?';
 const reactions = (msg.reactions || []).filter(r => r && r.emoji).reduce((acc, r) => { const k = r.emoji; acc[k] = (acc[k] || 0) + 1; return acc; }, {});
 const reactionsHtml = Object.entries(reactions).map(([emoji,count]) => `<button class="reaction ${(msg.reactions || []).some(r => r.emoji === emoji && r.by === state.profile.name) ? 'mine' : ''}" data-action="react" data-id="${esc(msg.id)}" data-emoji="${esc(emoji)}" title="React with ${esc(emoji)}">${esc(emoji)} ${count}</button>`).join('');
-const status = mine ? (msg.status === 'failed' ? '<span class="message-status" style="color:#ffb1b1">Not sent · retry</span>' : msg.status === 'delivered' ? '<span class="message-status">✓✓</span>' : msg.status === 'sent' ? '<span class="message-status">✓</span>' : '<span class="message-status">…</span>') : '';
-return `<article class="message-row ${mine ? 'mine' : ''}" data-message-row="${esc(msg.id)}"><div class="message-avatar">${esc(initial)}</div><div class="message-stack"><div class="sender-line"><span>${esc(msg.sender || 'Guest')}</span>${msg.edited ? '<span>· edited</span>' : ''}</div>${messageBodyHtml(msg)}${reactionsHtml ? `<div class="reactions">${reactionsHtml}</div>` : ''}<div class="message-meta"><span>${shortTime(msg.time)}</span>${status}</div><div class="message-actions"><button class="message-action" data-action="reply" data-id="${esc(msg.id)}">Reply</button><button class="message-action" data-action="react-picker" data-id="${esc(msg.id)}">React</button>${mine && !msg.deleted ? `<button class="message-action" data-action="edit" data-id="${esc(msg.id)}">Edit</button><button class="message-action" data-action="delete" data-id="${esc(msg.id)}">Delete</button>` : ''}</div></div></article>`;
-}).join('');
-if (shouldScroll) $('messages-wrap').scrollTop = $('messages-wrap').scrollHeight;
+const status = mine ? (msg.status === 'failed' ? `<span class="message-status" role="button" tabindex="0" data-action="retry" data-id="${esc(msg.id)}" title="Tap to retry">Not sent · retry</span>` : msg.status === 'delivered' ? '<span class="message-status" title="Delivered">✓✓</span>' : msg.status === 'sent' ? '<span class="message-status" title="Sent">✓</span>' : '<span class="message-status" title="Sending">…</span>') : '';
+const rowKey = messageSignature(msg);
+return `<article class="message-row ${mine ? 'mine' : ''}" data-message-row="${esc(msg.id)}" data-render-key="${rowKey}"><div class="message-avatar">${esc(initial)}</div><div class="message-stack"><div class="sender-line"><span>${esc(msg.sender || 'Guest')}</span>${msg.edited ? '<span>· edited</span>' : ''}</div>${messageBodyHtml(msg)}${reactionsHtml ? `<div class="reactions">${reactionsHtml}</div>` : ''}<div class="message-meta"><span>${shortTime(msg.time)}</span>${status}</div><div class="message-actions"><button class="message-action" data-action="reply" data-id="${esc(msg.id)}">Reply</button><button class="message-action" data-action="react-picker" data-id="${esc(msg.id)}">React</button><button class="message-action" data-action="copy" data-id="${esc(msg.id)}">Copy</button>${mine && !msg.deleted ? `<button class="message-action" data-action="edit" data-id="${esc(msg.id)}">Edit</button><button class="message-action" data-action="delete" data-id="${esc(msg.id)}">Delete</button>` : ''}</div></div></article>`;
 }
-function findMessage(id) { return state.activeMessages.find(m => String(m.id) === String(id) || String(m.serverId || '') === String(id)) || null; }
+function renderMessages(shouldScroll = true) {
+const host = $('message-list'); if (!state.activeRoomId) return;
+const wrap = $('messages-wrap');
+const wasNearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 90;
+const messages = state.activeMessages.filter(m => !m.event);
+if (!messages.length) {
+host.innerHTML = `<div style="text-align:center;padding:44px 15px;color:#9aa2b2;font-size:12px;line-height:1.8"><div style="font-size:25px;margin-bottom:10px">✦</div><strong style="display:block;color:#556071;font-size:13px;margin-bottom:5px">This room is ready</strong>Send the first message, or copy the invite link to bring someone in.</div>`;
+if (shouldScroll) wrap.scrollTop = wrap.scrollHeight;
+return;
+}
+// Clear the one-time empty-state card before inserting the first message row.
+for (const child of Array.from(host.children)) if (!child.matches('[data-message-row]')) child.remove();
+const existingRows = new Map(Array.from(host.querySelectorAll('[data-message-row]')).map(row => [row.getAttribute('data-message-row'), row]));
+for (const msg of messages) {
+const key = String(msg.id);
+const oldRow = existingRows.get(key);
+const signature = messageSignature(msg);
+if (oldRow && oldRow.getAttribute('data-render-key') === signature) {
+// Preserve this element and its hover/focus state. No blinking/re-animation on ordinary polls.
+existingRows.delete(key);
+continue;
+}
+const template = document.createElement('template');
+template.innerHTML = messageRowHtml(msg).trim();
+const nextRow = template.content.firstElementChild;
+if (!nextRow) continue;
+if (oldRow) { oldRow.replaceWith(nextRow); existingRows.delete(key); }
+else host.appendChild(nextRow);
+}
+for (const row of existingRows.values()) row.remove();
+if (shouldScroll && (shouldScroll === true || wasNearBottom)) wrap.scrollTop = wrap.scrollHeight;
+}
+function findMessage(id) { return state.activeMessages.find(m => String(m.id) === String(id) || String(m.serverId || '') === String(id) || String(m.clientMessageId || '') === String(id) || String(m.recordKey || '') === String(id)) || null; }
 function sendEnvelope(envelope) {
 if (!state.activeRoomId) return Promise.reject(new Error('No room selected'));
 const nowTs = now(); state.rateWindow = state.rateWindow.filter(t => nowTs - t < 60000);
@@ -240,8 +308,13 @@ state.pendingReply = null; state.stagedAttachment = null; $('reply-preview').hid
 persist(); renderMessages(); updateRoomSummary(state.activeRoomId, message);
 const envelope = { type: 'message', clientMessageId, text, sentAt: message.time, replyTo: message.replyTo, attachment: message.attachment };
 try {
-await sendEnvelope(envelope);
-message.status = 'sent'; persist(); renderMessages(false);
+const result = await sendEnvelope(envelope);
+if (result && result.id) {
+message.serverId = String(result.id); message.recordKey = String(result.id);
+state.seenServerIds.add(String(result.id)); state.seenRecordKeys.add(String(result.id));
+}
+if (message.status === 'sending') message.status = 'sent';
+persist(); renderMessages(false);
 } catch (error) {
 message.status = 'failed'; message.error = String(error.message || 'Send failed').slice(0, 180); persist(); renderMessages(false);
 toast('Message was not sent. Tap “retry” in its status or try again.');
@@ -250,7 +323,7 @@ toast('Message was not sent. Tap “retry” in its status or try again.');
 async function retryMessage(message) {
 if (!message || message.status !== 'failed' || !message.clientMessageId) return;
 message.status = 'sending'; renderMessages(false); persist();
-try { await sendEnvelope({ type:'message', clientMessageId:message.clientMessageId, text:message.text || '', sentAt:message.time, replyTo:message.replyTo || null, attachment:message.attachment || null }); message.status = 'sent'; toast('Message sent'); }
+try { const result = await sendEnvelope({ type:'message', clientMessageId:message.clientMessageId, text:message.text || '', sentAt:message.time, replyTo:message.replyTo || null, attachment:message.attachment || null }); if (result && result.id) { message.serverId = String(result.id); message.recordKey = String(result.id); state.seenServerIds.add(String(result.id)); state.seenRecordKeys.add(String(result.id)); } if (message.status === 'sending') message.status = 'sent'; toast('Message sent'); }
 catch (error) { message.status = 'failed'; toast('Still unable to send: ' + String(error.message || 'network error').slice(0,80)); }
 persist(); renderMessages(false);
 }
@@ -265,63 +338,109 @@ return parsed;
 }
 function processEvent(payload, raw) {
 const target = findMessage(payload.targetId);
-if (!target) { state.pendingEvents.push({ payload, raw }); return; }
+if (!target) {
+if (!state.pendingEvents.some(evt => evt.payload?.eventId && evt.payload.eventId === payload.eventId)) state.pendingEvents.push({ payload, raw });
+return false;
+}
 const eventSender = cleanName(raw?.nickname || 'Guest');
 const claimedSender = cleanName(payload.by || eventSender);
-// Clients reject cross-user edits/deletes. The legacy service still cannot
-// authenticate nicknames, so this is a safety guard, not identity security.
-if (claimedSender !== eventSender) return;
-if ((payload.type === 'edit' || payload.type === 'delete') && claimedSender !== cleanName(target.sender)) return;
-if (payload.type === 'edit' && typeof payload.text === 'string') { target.text = payload.text.slice(0, MAX_TEXT); target.edited = true; target.updatedAt = Number(raw.ts) || now(); }
-if (payload.type === 'delete') { target.deleted = true; target.text = ''; target.attachment = null; }
-if (payload.type === 'reaction' && typeof payload.emoji === 'string') {
-target.reactions = Array.isArray(target.reactions) ? target.reactions : [];
-const index = target.reactions.findIndex(r => r.emoji === payload.emoji && r.by === payload.by);
-if (payload.add === false) { if (index >= 0) target.reactions.splice(index, 1); }
-else if (index < 0) target.reactions.push({ emoji: payload.emoji, by: cleanName(payload.by || raw.nickname || 'Guest') });
+// Client-side consistency guard only: nicknames are not authenticated identities.
+if (claimedSender !== eventSender) return false;
+if ((payload.type === 'edit' || payload.type === 'delete') && claimedSender !== cleanName(target.sender)) return false;
+if (payload.type === 'edit' && typeof payload.text === 'string') {
+const nextText = payload.text.slice(0, MAX_TEXT);
+if (target.text === nextText && target.edited) return false;
+target.text = nextText; target.edited = true; target.updatedAt = Number(raw.ts) || now(); return true;
 }
+if (payload.type === 'delete') {
+if (target.deleted) return false;
+target.deleted = true; target.text = ''; target.attachment = null; return true;
+}
+if (payload.type === 'reaction' && typeof payload.emoji === 'string' && payload.emoji.length <= 16) {
+target.reactions = Array.isArray(target.reactions) ? target.reactions : [];
+const by = cleanName(payload.by || eventSender);
+const index = target.reactions.findIndex(r => r.emoji === payload.emoji && r.by === by);
+if (payload.add === false) { if (index >= 0) { target.reactions.splice(index, 1); return true; } return false; }
+if (index < 0) { target.reactions.push({ emoji: payload.emoji, by }); return true; }
+}
+return false;
 }
 async function pollRoom() {
 const roomId = state.activeRoomId; if (!roomId || state.pollBusy) return;
 state.pollBusy = true;
+const generation = state.pollGeneration;
+const controller = new AbortController(); state.pollController = controller;
 try {
-const res = await fetch(API, { method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify({roomId, action:'poll'}) });
+const res = await fetch(API, { method:'POST', credentials:'same-origin', signal:controller.signal, headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify({roomId, action:'poll'}) });
 if (!res.ok) throw new Error('HTTP ' + res.status);
 const data = await res.json();
-if (roomId !== state.activeRoomId) return;
+if (roomId !== state.activeRoomId || generation !== state.pollGeneration) return;
 if (!data.success || !Array.isArray(data.messages)) { setConnection(false, 'Waiting for room service'); return; }
 setConnection(true, 'Room sync active');
 let changed = false;
+const wrap = $('messages-wrap');
+const wasNearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 90;
 const incoming = data.messages.slice().sort((a,b) => (Number(a.ts)||0) - (Number(b.ts)||0));
 for (const raw of incoming) {
 if (!raw || typeof raw !== 'object') continue;
-const sid = raw.id == null ? '' : String(raw.id);
-if (sid && state.seenServerIds.has(sid)) continue;
+const recordKey = serverRecordKey(raw);
+if (state.seenRecordKeys.has(recordKey)) continue;
+const sid = recordKey;
 const payload = decodeServerMessage(raw);
-if (sid) state.seenServerIds.add(sid);
 if (payload.type === 'message') {
+const normalizedTime = Number(payload.sentAt || raw.ts) || now();
+const normalizedSender = cleanName(raw.nickname || 'Guest') || 'Guest';
 const existing = payload.clientMessageId ? state.activeMessages.find(m => m.clientMessageId === payload.clientMessageId) : null;
 if (existing) {
-existing.serverId = sid || existing.serverId; existing.status = 'delivered';
+const previousSignature = messageSignature(existing);
+existing.serverId = sid || existing.serverId; existing.recordKey = recordKey;
+if (existing.status !== 'failed') existing.status = 'delivered';
 if (payload.replyTo) existing.replyTo = payload.replyTo;
 if (payload.attachment && !existing.attachment) existing.attachment = sanitizeAttachment(payload.attachment);
-changed = true; continue;
+if (messageSignature(existing) !== previousSignature) changed = true;
+state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); continue;
 }
-// Backward compatibility for old plain-text room messages: match a self echo before appending it.
-const selfEcho = cleanName(raw.nickname) === state.profile.name ? state.activeMessages.find(m => !m.serverId && (m.status === 'sent' || m.status === 'sending') && m.sender === state.profile.name && m.text === String(payload.text || '') && Math.abs((Number(raw.ts)||now()) - m.time) < 45000) : null;
-if (selfEcho) { selfEcho.serverId = sid || selfEcho.serverId; selfEcho.status = 'delivered'; changed = true; continue; }
-const msg = { id: sid || ('remote_' + makeRoomId()), serverId: sid || null, clientMessageId: payload.clientMessageId || null, type:'message', sender: cleanName(raw.nickname || 'Guest') || 'Guest', text: String(payload.text || '').slice(0, MAX_TEXT), time: Number(payload.sentAt || raw.ts) || now(), status:'received', replyTo: payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment: sanitizeAttachment(payload.attachment), reactions: [], event:false };
-if (!state.activeMessages.some(m => (sid && m.serverId === sid) || (msg.clientMessageId && m.clientMessageId === msg.clientMessageId))) { state.activeMessages.push(msg); changed = true; updateRoomSummary(roomId, msg); }
-} else if (['edit','delete','reaction'].includes(payload.type)) { processEvent(payload, raw); changed = true; }
+// Reconcile legacy local cache entries that predate deterministic record keys.
+const oldDuplicate = state.activeMessages.find(m => !m.event && !m.recordKey && !m.clientMessageId && m.sender === normalizedSender &&
+String(m.text || '') === String(payload.text || '') && Math.abs((Number(m.time)||0) - normalizedTime) < 1600);
+if (oldDuplicate) {
+oldDuplicate.serverId = sid; oldDuplicate.recordKey = recordKey;
+state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); changed = true; continue;
 }
-// Apply any out-of-order edit/delete/reaction packets after their target message arrives.
+// Backward compatibility for older plain-text self messages.
+const selfEcho = normalizedSender === state.profile.name ? state.activeMessages.find(m => !m.serverId && (m.status === 'sent' || m.status === 'sending') && m.sender === state.profile.name && m.text === String(payload.text || '') && Math.abs((Number(raw.ts)||now()) - m.time) < 45000) : null;
+if (selfEcho) {
+selfEcho.serverId = sid; selfEcho.recordKey = recordKey;
+if (selfEcho.status !== 'failed') selfEcho.status = 'delivered';
+state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); changed = true; continue;
+}
+const msg = { id: sid || ('remote_' + makeRoomId()), serverId: sid || null, recordKey, clientMessageId: payload.clientMessageId || null, type:'message', sender: normalizedSender, text: String(payload.text || '').slice(0, MAX_TEXT), time: normalizedTime, status:'received', replyTo: payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment: sanitizeAttachment(payload.attachment), reactions: [], event:false };
+if (!state.activeMessages.some(m => (sid && (m.serverId === sid || m.recordKey === recordKey)) || (msg.clientMessageId && m.clientMessageId === msg.clientMessageId))) {
+state.activeMessages.push(msg); changed = true; updateRoomSummary(roomId, msg);
+}
+} else if (['edit','delete','reaction'].includes(payload.type)) {
+if (processEvent(payload, raw)) changed = true;
+}
+state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey);
+}
+// Retry any event whose target arrived later in this same history batch.
 if (state.pendingEvents.length) {
 const pending = state.pendingEvents; state.pendingEvents = [];
-for (const evt of pending) { if (findMessage(evt.payload.targetId)) processEvent(evt.payload, evt.raw); else state.pendingEvents.push(evt); }
+for (const evt of pending) {
+if (findMessage(evt.payload.targetId)) { if (processEvent(evt.payload, evt.raw)) changed = true; }
+else state.pendingEvents.push(evt);
 }
-if (changed) { state.allMessages[roomId] = state.activeMessages; persist(); renderMessages(); }
-} catch (error) { setConnection(false, 'Reconnecting…'); }
-finally { state.pollBusy = false; }
+}
+if (changed) {
+state.allMessages[roomId] = state.activeMessages; persist();
+// Keep the viewport stable when reading older messages; only follow new ones at the bottom.
+renderMessages(wasNearBottom);
+}
+} catch (error) {
+if (error?.name !== 'AbortError' && generation === state.pollGeneration) setConnection(false, navigator.onLine ? 'Reconnecting…' : 'Offline — reconnecting');
+} finally {
+if (generation === state.pollGeneration) { state.pollBusy = false; state.pollController = null; }
+}
 }
 function sanitizeAttachment(input) {
 if (!input || typeof input !== 'object') return null;
@@ -332,36 +451,46 @@ if (!data) return { name, mime: '', data: '' };
 if (!/^data:(image\/(jpeg|png|gif|webp)|application\/pdf|text\/plain);base64,[a-z0-9+/=\r\n]+$/i.test(data)) return { name, mime:'', data:'' };
 return { name, mime, data };
 }
-function stopPolling() { if (state.pollTimer) clearInterval(state.pollTimer); state.pollTimer = null; state.pollBusy = false; }
+function stopPolling() { if (state.pollTimer) clearInterval(state.pollTimer); state.pollTimer = null; state.pollGeneration++; if (state.pollController) state.pollController.abort(); state.pollController = null; state.pollBusy = false; }
 function sendControlEvent(event) {
-return sendEnvelope({ ...event, eventId:makeRoomId(), sentAt:now(), by:state.profile.name }).catch(err => toast('Action failed: ' + String(err.message || 'network error').slice(0,80)));
+return sendEnvelope({ ...event, eventId:makeRoomId(), sentAt:now(), by:state.profile.name }).then(data => { if (data?.id) state.seenRecordKeys.add(String(data.id)); return true; }).catch(err => { toast('Action failed: ' + String(err.message || 'network error').slice(0,80)); return false; });
 }
 function startReply(msg) {
 if (!msg || msg.deleted) return;
 state.pendingReply = msg; $('reply-preview').hidden = false; $('reply-author').textContent = 'Replying to ' + (msg.sender || 'message'); $('reply-text').textContent = String(msg.text || (msg.attachment ? 'Attachment' : '')).slice(0,150); $('message-input').focus();
 }
+function messageEventTarget(msg) { return msg?.serverId || msg?.clientMessageId || msg?.recordKey || null; }
 function reactToMessage(msg, emoji) {
-if (!msg || !msg.serverId) { toast('This message is still syncing. Try again in a moment.'); return; }
-const existing = (msg.reactions || []).some(r => r.emoji === emoji && r.by === state.profile.name);
-sendControlEvent({ type:'reaction', targetId:msg.serverId, emoji, add:!existing });
-if (existing) msg.reactions = (msg.reactions || []).filter(r => !(r.emoji === emoji && r.by === state.profile.name));
-else { msg.reactions = msg.reactions || []; msg.reactions.push({emoji, by:state.profile.name}); }
+if (!msg || msg.deleted) return;
+const targetId = messageEventTarget(msg);
+if (!targetId) return toast('This message cannot be reacted to yet. Refresh the room and try again.');
+const by = state.profile.name;
+const existing = (msg.reactions || []).some(r => r.emoji === emoji && r.by === by);
+if (existing) msg.reactions = (msg.reactions || []).filter(r => !(r.emoji === emoji && r.by === by));
+else { msg.reactions = msg.reactions || []; msg.reactions.push({emoji, by}); }
 persist(); renderMessages(false);
+sendControlEvent({ type:'reaction', targetId, emoji, add:!existing }).then(ok => {
+if (ok) return;
+if (existing) { if (!(msg.reactions || []).some(r => r.emoji === emoji && r.by === by)) msg.reactions.push({emoji, by}); }
+else msg.reactions = (msg.reactions || []).filter(r => !(r.emoji === emoji && r.by === by));
+persist(); renderMessages(false);
+});
 }
 function handleMessageAction(action, id, emoji) {
 const msg = findMessage(id); if (!msg) return;
 if (action === 'reply') startReply(msg);
 if (action === 'react-picker') showEmojiPicker(msg);
 if (action === 'react') reactToMessage(msg, emoji || '👍');
+if (action === 'copy') { if (msg.deleted) return toast('Deleted messages cannot be copied.'); copyText(String(msg.text || '')); }
 if (action === 'edit') {
-if (msg.sender !== state.profile.name || !msg.serverId) return toast('Only your synced messages can be edited.');
+if (msg.sender !== state.profile.name || !messageEventTarget(msg)) return toast('Only your messages can be edited.');
 openModal(`<h2 id="modal-title">Edit message</h2><p>Your edit is sent as a synced room event.</p><label class="field-label" for="edit-message-field">Message</label><textarea class="field" id="edit-message-field" maxlength="${MAX_TEXT}" rows="4">${esc(msg.text || '')}</textarea><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-edit-btn">Save edit</button></div>`);
-$('confirm-edit-btn').onclick = () => { const text = $('edit-message-field').value.trim(); if (!text || text.length > MAX_TEXT) return toast('Enter a valid message.'); msg.text = text; msg.edited = true; persist(); renderMessages(false); closeModal(); sendControlEvent({type:'edit',targetId:msg.serverId,text}); };
+$('confirm-edit-btn').onclick = () => { const text = $('edit-message-field').value.trim(); if (!text || text.length > MAX_TEXT) return toast('Enter a valid message.'); const previousText = msg.text; const previousEdited = !!msg.edited; msg.text = text; msg.edited = true; persist(); renderMessages(false); closeModal(); sendControlEvent({type:'edit',targetId:messageEventTarget(msg),text}).then(ok => { if (ok) return; msg.text = previousText; msg.edited = previousEdited; persist(); renderMessages(false); }); };
 }
 if (action === 'delete') {
 if (msg.sender !== state.profile.name) return;
 openModal(`<h2 id="modal-title">Delete message?</h2><p>This sends a delete event so updated ArixChat clients in the room hide the message. The underlying server record may still exist.</p><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-delete-btn" style="background:#d92d20">Delete message</button></div>`);
-$('confirm-delete-btn').onclick = () => { if (msg.serverId) sendControlEvent({type:'delete',targetId:msg.serverId}); msg.deleted = true; msg.text = ''; msg.attachment = null; persist(); renderMessages(false); closeModal(); };
+$('confirm-delete-btn').onclick = () => { const targetId = messageEventTarget(msg); const previous = { deleted:!!msg.deleted, text:msg.text, attachment:msg.attachment }; msg.deleted = true; msg.text = ''; msg.attachment = null; persist(); renderMessages(false); closeModal(); if (targetId) sendControlEvent({type:'delete',targetId}).then(ok => { if (ok) return; msg.deleted = previous.deleted; msg.text = previous.text; msg.attachment = previous.attachment; persist(); renderMessages(false); }); };
 }
 }
 function showEmojiPicker(msg) {
@@ -402,9 +531,21 @@ setTimeout(() => $('join-room-field')?.focus(), 20);
 }
 function showRoomOptions() {
 const room = activeRoom(); if (!room) return toast('Choose a room first.');
-openModal(`<h2 id="modal-title">Room details</h2><p>Room details and titles are stored locally. Anyone holding the invite link may be able to join; the current backend does not provide membership controls.</p><label class="field-label" for="room-name-field">Display name</label><input class="field" id="room-name-field" maxlength="48" value="${esc(roomTitle(room))}"><div class="security-card"><strong>Room ID</strong><br><code style="overflow-wrap:anywhere">${esc(room.id)}</code></div><div class="modal-actions"><button class="secondary-btn" id="export-room-btn">Export messages</button><button class="secondary-btn" data-modal-cancel>Close</button><button class="primary-btn" id="save-room-name-btn">Save name</button></div>`);
+openModal(`<h2 id="modal-title">Room details</h2><p>Room names and pins are saved on this device. Anyone with the invite link may be able to join; this room service does not authenticate membership.</p><label class="field-label" for="room-name-field">Display name</label><input class="field" id="room-name-field" maxlength="48" value="${esc(roomTitle(room))}"><div class="security-card"><strong>Room ID</strong><br><code style="overflow-wrap:anywhere">${esc(room.id)}</code></div><div class="modal-actions"><button class="secondary-btn" id="pin-room-btn">${room.pinned ? 'Unpin chat' : 'Pin chat'}</button><button class="secondary-btn" id="export-room-btn">Export messages</button></div><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Close</button><button class="secondary-btn" id="remove-room-btn" style="color:#b42318">Remove chat</button><button class="primary-btn" id="save-room-name-btn">Save name</button></div>`);
 $('save-room-name-btn').onclick = () => { const title = cleanRoomTitle($('room-name-field').value); if (title) room.title = title; persist(); $('active-room-title').textContent = roomTitle(room); $('active-avatar').textContent = roomTitle(room).charAt(0).toUpperCase(); renderRoomList(); closeModal(); toast('Room name saved on this device'); };
 $('export-room-btn').onclick = () => { exportActiveRoom(); closeModal(); };
+$('pin-room-btn').onclick = () => { room.pinned = !room.pinned; persist(); renderRoomList(); closeModal(); toast(room.pinned ? 'Chat pinned' : 'Chat unpinned'); };
+$('remove-room-btn').onclick = () => {
+openModal(`<h2 id="modal-title">Remove this chat?</h2><p>This removes the chat and its cached messages from this device only. It does not delete shared server records or revoke an invite link.</p><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Keep chat</button><button class="primary-btn" id="confirm-remove-room-btn" style="background:#d92d20">Remove from device</button></div>`);
+$('confirm-remove-room-btn').onclick = () => {
+const removedId = room.id;
+state.rooms = state.rooms.filter(r => r.id !== removedId); delete state.allMessages[removedId];
+stopPolling(); state.activeRoomId = null; state.activeMessages = []; state.pendingReply = null;
+$('app').classList.remove('chat-open'); $('welcome-state').hidden = false; $('message-list').hidden = true; $('message-list').innerHTML = ''; $('composer-area').hidden = true;
+$('active-room-title').textContent = 'Welcome to ArixChat'; $('active-avatar').textContent = 'A'; $('room-access-label').textContent = 'No room selected'; setConnection(false, 'Choose a room to begin'); setRoomUrl(null);
+persist(); renderRoomList(); closeModal(); toast('Chat removed from this device');
+};
+};
 }
 function exportActiveRoom() {
 const room = activeRoom(); if (!room) return;
@@ -449,8 +590,24 @@ const row = event.target.closest('[data-message-row]'); if (!row) return;
 const msg = findMessage(row.getAttribute('data-message-row'));
 if (msg?.status === 'failed' && event.target.closest('.message-status')) retryMessage(msg);
 }
+function applySidebarPreference() {
+const collapsed = window.innerWidth > 650 && localStorage.getItem('arixchat.sidebar-collapsed.v1') === '1';
+$('app').classList.toggle('sidebar-collapsed', collapsed);
+const button = $('sidebar-toggle');
+button.setAttribute('aria-expanded', String(!collapsed));
+button.setAttribute('aria-label', collapsed ? 'Expand sidebar' : 'Collapse sidebar');
+button.title = collapsed ? 'Expand sidebar' : 'Collapse sidebar';
+}
+function toggleDesktopSidebar() {
+if (window.innerWidth <= 650) return;
+const collapsed = !$('app').classList.contains('sidebar-collapsed');
+$('app').classList.toggle('sidebar-collapsed', collapsed);
+localStorage.setItem('arixchat.sidebar-collapsed.v1', collapsed ? '1' : '0');
+applySidebarPreference();
+}
 function bindEvents() {
 $('new-room-btn').addEventListener('click', createRoom); $('welcome-new-room').addEventListener('click', createRoom);
+$('sidebar-toggle').addEventListener('click', toggleDesktopSidebar);
 $('join-room-btn').addEventListener('click', showJoinModal); $('welcome-join-room').addEventListener('click', showJoinModal);
 $('invite-btn').addEventListener('click', () => { if (state.activeRoomId) copyText(shareUrl(state.activeRoomId)); else toast('Choose a room first'); });
 $('room-menu-btn').addEventListener('click', showRoomOptions); $('profile-btn').addEventListener('click', () => openProfileModal(false)); $('privacy-btn').addEventListener('click', showPrivacyModal);
@@ -462,15 +619,18 @@ $('send-btn').addEventListener('click', sendMessage);
 $('message-input').addEventListener('input', e => { e.currentTarget.style.height='auto'; e.currentTarget.style.height=Math.min(e.currentTarget.scrollHeight,130)+'px'; $('composer-character-count').textContent=e.currentTarget.value.length+' / '+MAX_TEXT; });
 $('message-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMessage(); } });
 $('messages-wrap').addEventListener('click', handleMessageClick); $('messages-wrap').addEventListener('click', handleStatusClick);
+$('messages-wrap').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.message-status[role="button"]')) { e.preventDefault(); handleMessageClick(e); } });
 $('cancel-reply').addEventListener('click', () => { state.pendingReply = null; $('reply-preview').hidden = true; });
 $('emoji-btn').addEventListener('click', toggleEmojiTray); $('attach-btn').addEventListener('click', () => $('file-input').click()); $('file-input').addEventListener('change', e => stageAttachment(e.target.files?.[0]));
 $('mobile-back').addEventListener('click', () => $('app').classList.remove('chat-open')); $('mobile-overlay').addEventListener('click', () => $('app').classList.remove('chat-open'));
 $('modal-close').addEventListener('click', closeModal); $('modal-backdrop').addEventListener('click', e => { if (e.target === $('modal-backdrop')) closeModal(); });
 window.addEventListener('online', () => { if (state.activeRoomId) pollRoom(); });
-window.addEventListener('offline', () => setConnection(false, 'Offline — reconnecting')); 
+window.addEventListener('offline', () => setConnection(false, 'Offline — reconnecting'));
+window.addEventListener('resize', applySidebarPreference);
+window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('room-search').focus(); $('room-search').select(); } }); 
 }
 function showPrivacyModal() {
-openModal(`<h2 id="modal-title">Privacy & security</h2><p>ArixChat is a lightweight client built on the existing ArixAI room endpoint.</p><div class="security-card"><strong>What this version protects</strong><br>• User-visible text is escaped before display.<br>• Room IDs are generated with browser cryptographic randomness when available.<br>• Message length, attachment types, attachment size, and client send rate are limited.<br></div><div class="security-card"><strong>Important backend limits</strong><br>This existing endpoint uses invite-link room IDs and does not provide identity authentication, membership/role permissions, server-side rate limiting, end-to-end encryption, or guaranteed permanent deletion. Anyone with an invite link may be able to read and post in that room. Use it for ordinary conversation only, not passwords, financial details, or sensitive personal data.</div><div class="modal-actions"><button class="primary-btn" data-modal-cancel>Understood</button></div>`);
+openModal(`<h2 id="modal-title">Privacy & security</h2><p>ArixChat is a lightweight client built on the existing ArixAI room endpoint.</p><div class="security-card"><strong>What this version protects</strong><br>• User-visible text is escaped before display.<br>• Room IDs are generated with browser cryptographic randomness when available.<br>• Message length, attachment types, attachment size, and client send rate are limited.<br></div><div class="security-card"><strong>Important backend limits</strong><br>This invite-link service is not an account-authenticated messenger and does not provide membership/role permissions or end-to-end encryption. Server-side request limits are basic abuse controls, not identity security, and deleting a message hides it in updated clients but cannot guarantee erasure from historical storage or exports. Anyone with an invite link may be able to read and post in that room. Use it for ordinary conversation only, not passwords, financial details, or sensitive personal data.</div><div class="modal-actions"><button class="primary-btn" data-modal-cancel>Understood</button></div>`);
 }
 function setActiveRoomFromUrl() {
 const params = new URLSearchParams(location.search); const roomId = normalizeRoomInput(params.get('room') || '');
@@ -482,7 +642,7 @@ else { $('welcome-state').hidden = false; $('message-list').hidden = true; $('co
 function boot() {
 if (!state.profile.name) { renderProfile(); openProfileModal(true); }
 else renderProfile();
-bindEvents(); renderRoomList(); setActiveRoomFromUrl();
+bindEvents(); applySidebarPreference(); renderRoomList(); setActiveRoomFromUrl();
 }
 boot();
 })();
