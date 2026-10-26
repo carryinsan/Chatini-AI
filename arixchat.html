@@ -1,4 +1,5 @@
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -16,7 +17,7 @@
 
 <style>
 :root{color-scheme:light;--ink:#182230;--muted:#758094;--line:#e8ebf1;--panel:#fff;--canvas:#f7f8fc;--accent:#6657e8;--accent-dark:#5142cf;--accent-soft:#efedff;--green:#16a878;--shadow:0 18px 55px rgba(25,35,60,.08);--radius:18px}
-*{box-sizing:border-box}[hidden]{display:none!important}html,body{height:100%;margin:0}body{font-family:'DM Sans',system-ui,sans-serif;background:var(--canvas);color:var(--ink);overflow:hidden}button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #c9c3ff;outline-offset:2px}button:disabled{cursor:not-allowed;opacity:.45}.app{height:100dvh;display:grid;grid-template-columns:340px minmax(0,1fr);padding:14px;gap:14px}.sidebar,.chat{border:1px solid rgba(225,229,239,.95);background:var(--panel);border-radius:24px;min-width:0;overflow:hidden}.sidebar{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.03)}.brandbar{padding:20px 20px 16px;display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,#887cff,#5a49dd);display:grid;place-items:center;color:#fff;box-shadow:0 9px 18px rgba(102,87,232,.25);flex:0 0 auto}.brandmark svg{width:24px;height:24px}.brandtext{font-family:Manrope,sans-serif;font-weight:800;font-size:18px;letter-spacing:-.7px}.brandtext span{color:var(--accent)}.brand-sub{font-size:11px;color:var(--muted);margin-top:2px}.sidebar-top-actions{margin-left:auto;display:flex;gap:7px}.icon-btn{border:1px solid var(--line);background:#fff;color:#667085;width:38px;height:38px;border-radius:13px;display:inline-grid;place-items:center;transition:.2s}.icon-btn:hover{background:#f5f4ff;color:var(--accent);border-color:#dcd8ff;transform:translateY(-1px)}.icon-btn svg{width:18px;height:18px}.primary-btn{border:0;background:var(--accent);color:#fff;border-radius:13px;padding:11px 14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 7px 15px rgba(102,87,232,.18);transition:.2s}.primary-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.primary-btn svg{width:17px;height:17px}.sidebar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 15px}.sidebar-actions button{font-size:12px;padding:10px 8px;box-shadow:none}.secondary-btn{border:1px solid var(--line);background:#fff;color:#475467;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.2s}.secondary-btn:hover{background:#f8f8ff;border-color:#d7d3ff;color:var(--accent)}.secondary-btn svg{width:16px;height:16px}.side-search{padding:0 16px 14px;position:relative}.side-search svg{position:absolute;left:29px;top:13px;width:16px;color:#98a2b3}.side-search input{width:100%;border:1px solid #eceef4;background:#f8f9fc;border-radius:13px;padding:11px 12px 11px 38px;font-size:12px;outline:none;color:var(--ink)}.side-search input:focus{background:#fff;border-color:#c8c2ff}.section-label{padding:7px 20px 9px;display:flex;justify-content:space-between;align-items:center;color:#98a2b3;font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase}.room-list{overflow:auto;min-height:0;flex:1;padding:0 9px 10px}.room-item{display:flex;align-items:center;gap:11px;padding:11px;border-radius:15px;cursor:pointer;transition:.18s;border:1px solid transparent;margin-bottom:3px;min-width:0}.room-item:hover{background:#f8f9fc}.room-item.active{background:#f1efff;border-color:#e7e3ff}.avatar{width:43px;height:43px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;font-family:Manrope,sans-serif;font-weight:800;font-size:15px;color:#584bd7;background:linear-gradient(140deg,#f0edff,#e2e0ff);position:relative;overflow:hidden}.avatar.green{background:linear-gradient(140deg,#e2f8f0,#c8f0e2);color:#07845a}.avatar.blue{background:linear-gradient(140deg,#e6f2ff,#d5e6ff);color:#2864ba}.avatar.amber{background:linear-gradient(140deg,#fff2d9,#ffdfad);color:#9a6200}.room-copy{min-width:0;flex:1}.room-title-row{display:flex;align-items:center;gap:6px;min-width:0}.room-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.room-time{font-size:10px;color:#9aa3b2;margin-left:auto;white-space:nowrap}.room-preview{font-size:11px;color:#8a94a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px}.tiny-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:0 0 auto}.room-count{font-size:10px;font-weight:800;color:#fff;background:var(--accent);border-radius:20px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 5px}.sidebar-footer{padding:14px 16px;display:flex;align-items:center;gap:11px;border-top:1px solid #f0f1f6}.profile-avatar{width:37px;height:37px;border-radius:13px;background:#1f2937;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;flex:0 0 auto}.profile-copy{min-width:0;flex:1}.profile-name{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-note{font-size:10px;color:#98a2b3;margin-top:3px}.chat{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.025);position:relative}.chat-header{height:82px;border-bottom:1px solid #eff0f5;display:flex;align-items:center;padding:0 24px;gap:13px;flex:0 0 auto;background:rgba(255,255,255,.92)}.room-head-info{min-width:0;flex:1}.room-head-title{font-family:Manrope,sans-serif;font-size:16px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room-head-sub{display:flex;align-items:center;gap:7px;font-size:11px;color:#929aaa;margin-top:5px}.status-dot{height:7px;width:7px;border-radius:50%;background:#a6adbb}.status-dot.connected{background:#1bb786;box-shadow:0 0 0 3px #e7f8f2}.header-actions{display:flex;gap:8px;align-items:center}.header-actions .icon-btn{width:39px;height:39px}.mobile-back{display:none}.messages-wrap{flex:1;min-height:0;overflow:auto;padding:25px clamp(16px,4vw,56px) 16px;scroll-behavior:smooth;background:radial-gradient(ellipse at 50% 0%,rgba(245,243,255,.44),transparent 50%),#fff}.day-divider{text-align:center;margin:4px auto 26px;font-size:10px;color:#9aa2b2;display:flex;align-items:center;gap:12px;justify-content:center}.day-divider:before,.day-divider:after{content:'';height:1px;width:45px;background:#eceef4}.message-row{display:flex;gap:10px;align-items:flex-end;margin:0 0 18px;animation:messageIn .22s ease-out;max-width:min(840px,100%)}.message-row.mine{margin-left:auto;flex-direction:row-reverse}.message-avatar{width:30px;height:30px;border-radius:11px;background:#edf0f7;display:grid;place-items:center;font-size:10px;font-weight:800;color:#647084;flex:0 0 auto}.message-row.mine .message-avatar{background:#e9e5ff;color:#594bd7}.message-stack{max-width:min(76%,680px);min-width:100px}.message-row.mine .message-stack{align-items:flex-end;display:flex;flex-direction:column}.sender-line{display:flex;align-items:center;gap:7px;margin:0 0 6px 4px;font-size:10px;font-weight:800;color:#8790a0}.message-row.mine .sender-line{margin:0 4px 6px 0;justify-content:flex-end}.message-bubble{background:#f5f6fa;border:1px solid #edf0f5;border-radius:17px 17px 17px 5px;padding:12px 14px;color:#344054;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(20,30,50,.02);position:relative}.message-row.mine .message-bubble{background:#6254df;border-color:#6254df;color:#fff;border-radius:17px 17px 5px 17px;box-shadow:0 6px 15px rgba(98,84,223,.12)}.message-bubble.deleted{font-style:italic;color:#98a2b3;background:#f8f9fc;border-style:dashed}.message-row.mine .message-bubble.deleted{color:#edeaff;background:#7b70e8;border-color:#7b70e8}.quoted{display:block;border-left:3px solid #b9b1ff;background:rgba(255,255,255,.65);border-radius:7px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#667085;max-width:100%;overflow:hidden}.message-row.mine .quoted{background:rgba(255,255,255,.15);color:#f0eeff;border-left-color:#d4ceff}.quoted strong{display:block;font-size:10px;margin-bottom:2px}.attachment-card{display:flex;align-items:center;gap:9px;padding:9px;border-radius:11px;background:rgba(255,255,255,.68);margin-top:8px;border:1px solid rgba(180,185,202,.28);color:#384152;max-width:270px}.attachment-card .file-symbol{width:31px;height:34px;border-radius:8px;background:#fff;display:grid;place-items:center;color:#7163dc;font-weight:800;flex:0 0 auto}.attachment-card a{color:inherit;text-decoration:none;font-size:11px;font-weight:700;overflow-wrap:anywhere}.attachment-card img{max-width:180px;max-height:140px;object-fit:contain;border-radius:7px}.message-meta{display:flex;align-items:center;gap:6px;color:#a2aab7;font-size:9px;margin-top:5px;padding:0 3px}.message-row.mine .message-meta{justify-content:flex-end}.message-status{color:#9d95ff;font-weight:800}.message-actions{display:flex;gap:4px;margin-top:6px;opacity:0;transition:opacity .16s}.message-row:hover .message-actions,.message-row:focus-within .message-actions{opacity:1}.message-row.mine .message-actions{justify-content:flex-end}.message-action{border:1px solid #e8eaf0;background:#fff;color:#7b8496;border-radius:9px;padding:5px 7px;font-size:10px;font-weight:700}.message-action:hover{color:var(--accent);background:#f5f3ff;border-color:#dcd7ff}.message-row.mine .message-action{border-color:#e2defd}.reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.reaction{border:1px solid #e4e6ee;background:#fff;border-radius:12px;padding:4px 7px;font-size:11px;color:#5e687a}.reaction.mine{background:#efedff;border-color:#d8d2ff;color:#5142cf}.empty-state{height:100%;min-height:300px;display:grid;place-items:center;text-align:center;padding:30px}.empty-art{width:90px;height:90px;margin:0 auto 22px;border-radius:28px;background:linear-gradient(145deg,#f0edff,#fff);border:1px solid #e7e3ff;display:grid;place-items:center;box-shadow:0 15px 40px rgba(102,87,232,.1)}.empty-art svg{width:40px;height:40px;color:#7668ea}.empty-state h2{font-family:Manrope,sans-serif;font-size:23px;letter-spacing:-.8px;margin:0 0 9px}.empty-state p{font-size:13px;line-height:1.7;color:#8790a0;max-width:370px;margin:0 auto 22px}.feature-pills{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}.feature-pills span{border:1px solid #e9eaf2;background:#fff;border-radius:100px;padding:7px 10px;font-size:10px;color:#6f7889;font-weight:700}.composer-area{padding:11px clamp(12px,3vw,38px) 17px;background:#fff;border-top:1px solid #eff0f5;flex:0 0 auto}.reply-preview{display:flex;align-items:center;gap:10px;border:1px solid #e7e3ff;background:#f8f7ff;border-radius:12px;padding:8px 10px;margin-bottom:9px;font-size:11px;color:#5e6474}.reply-preview-copy{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reply-preview strong{display:block;color:#5b4ddd;margin-bottom:2px}.reply-preview button{border:0;background:transparent;color:#858ca0;font-size:17px}.composer-box{border:1px solid #e4e7ef;border-radius:20px;padding:9px 10px 8px 14px;box-shadow:0 5px 19px rgba(30,40,70,.035);transition:.2s}.composer-box:focus-within{border-color:#c9c2ff;box-shadow:0 5px 22px rgba(102,87,232,.09)}.composer-main{display:flex;align-items:flex-end;gap:9px}.composer-main textarea{flex:1;min-width:0;resize:none;border:0;outline:0!important;background:transparent;font-size:13px;line-height:1.55;max-height:130px;min-height:27px;padding:6px 2px;color:var(--ink)}.composer-main textarea::placeholder{color:#a1a8b6}.send-btn{height:39px;width:42px;border-radius:13px;border:0;display:grid;place-items:center;color:#fff;background:var(--accent);box-shadow:0 5px 12px rgba(102,87,232,.2);transition:.2s;flex:0 0 auto}.send-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.send-btn svg{width:18px;height:18px}.composer-tools{display:flex;align-items:center;gap:5px;padding-top:7px}.tool-btn{border:0;background:transparent;color:#98a1b1;border-radius:9px;padding:6px 8px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700}.tool-btn:hover{background:#f5f4ff;color:var(--accent)}.tool-btn svg{width:15px;height:15px}.composer-hint{margin-left:auto;font-size:9px;color:#abb2bf;padding-right:4px}.privacy-note{font-size:9px;color:#a1a8b5;text-align:center;margin-top:9px}.toast{position:fixed;top:20px;left:50%;transform:translate(-50%,-10px);z-index:50;background:#20283a;color:#fff;padding:11px 15px;border-radius:13px;font-size:12px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.22s}.toast.show{opacity:1;transform:translate(-50%,0)}.modal-backdrop{position:fixed;inset:0;background:rgba(22,28,45,.35);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:18px;z-index:40}.modal-backdrop.show{display:flex}.modal{background:#fff;border:1px solid #edf0f5;border-radius:24px;box-shadow:0 25px 90px rgba(25,35,60,.18);padding:24px;max-width:440px;width:100%;animation:modalIn .2s ease-out}.modal h2{font-family:Manrope,sans-serif;margin:0 0 8px;font-size:20px;letter-spacing:-.6px}.modal p{color:#7d8697;font-size:12px;line-height:1.7;margin:0 0 19px}.field-label{display:block;font-size:11px;font-weight:800;color:#667085;margin-bottom:7px}.field{width:100%;border:1px solid #e2e6ee;background:#fbfcfe;border-radius:12px;padding:12px;font-size:13px;outline:none;color:var(--ink);margin-bottom:14px}.field:focus{border-color:#c8c1ff;background:#fff}.modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:8px}.modal-actions button{min-width:92px}.modal-close{float:right;border:0;background:#f4f5f8;width:31px;height:31px;border-radius:10px;color:#687284}.security-card{background:#f8f9fc;border:1px solid #edf0f5;border-radius:14px;padding:13px;margin:12px 0;color:#7d8697;font-size:11px;line-height:1.65}.security-card strong{color:#344054}.mobile-overlay{display:none}
+*{box-sizing:border-box}[hidden]{display:none!important}html,body{height:100%;margin:0}body{font-family:'DM Sans',system-ui,sans-serif;background:var(--canvas);color:var(--ink);overflow:hidden}button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #c9c3ff;outline-offset:2px}button:disabled{cursor:not-allowed;opacity:.45}.app{height:100dvh;display:grid;grid-template-columns:340px minmax(0,1fr);padding:14px;gap:14px}.sidebar,.chat{border:1px solid rgba(225,229,239,.95);background:var(--panel);border-radius:24px;min-width:0;overflow:hidden}.sidebar{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.03)}.brandbar{padding:20px 20px 16px;display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,#887cff,#5a49dd);display:grid;place-items:center;color:#fff;box-shadow:0 9px 18px rgba(102,87,232,.25);flex:0 0 auto}.brandmark svg{width:24px;height:24px}.brandtext{font-family:Manrope,sans-serif;font-weight:800;font-size:18px;letter-spacing:-.7px}.brandtext span{color:var(--accent)}.brand-sub{font-size:11px;color:var(--muted);margin-top:2px}.sidebar-top-actions{margin-left:auto;display:flex;gap:7px}.icon-btn{border:1px solid var(--line);background:#fff;color:#667085;width:38px;height:38px;border-radius:13px;display:inline-grid;place-items:center;transition:.2s}.icon-btn:hover{background:#f5f4ff;color:var(--accent);border-color:#dcd8ff;transform:translateY(-1px)}.icon-btn svg{width:18px;height:18px}.primary-btn{border:0;background:var(--accent);color:#fff;border-radius:13px;padding:11px 14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 7px 15px rgba(102,87,232,.18);transition:.2s}.primary-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.primary-btn svg{width:17px;height:17px}.sidebar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 15px}.sidebar-actions button{font-size:12px;padding:10px 8px;box-shadow:none}.secondary-btn{border:1px solid var(--line);background:#fff;color:#475467;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.2s}.secondary-btn:hover{background:#f8f8ff;border-color:#d7d3ff;color:var(--accent)}.secondary-btn svg{width:16px;height:16px}.side-search{padding:0 16px 14px;position:relative}.side-search svg{position:absolute;left:29px;top:13px;width:16px;color:#98a2b3}.side-search input{width:100%;border:1px solid #eceef4;background:#f8f9fc;border-radius:13px;padding:11px 12px 11px 38px;font-size:12px;outline:none;color:var(--ink)}.side-search input:focus{background:#fff;border-color:#c8c2ff}.section-label{padding:7px 20px 9px;display:flex;justify-content:space-between;align-items:center;color:#98a2b3;font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase}.room-list{overflow:auto;min-height:0;flex:1;padding:0 9px 10px}.room-item{display:flex;align-items:center;gap:11px;padding:11px;border-radius:15px;cursor:pointer;transition:.18s;border:1px solid transparent;margin-bottom:3px;min-width:0}.room-item:hover{background:#f8f9fc}.room-item.active{background:#f1efff;border-color:#e7e3ff}.avatar{width:43px;height:43px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;font-family:Manrope,sans-serif;font-weight:800;font-size:15px;color:#584bd7;background:linear-gradient(140deg,#f0edff,#e2e0ff);position:relative;overflow:hidden}.avatar.green{background:linear-gradient(140deg,#e2f8f0,#c8f0e2);color:#07845a}.avatar.blue{background:linear-gradient(140deg,#e6f2ff,#d5e6ff);color:#2864ba}.avatar.amber{background:linear-gradient(140deg,#fff2d9,#ffdfad);color:#9a6200}.room-copy{min-width:0;flex:1}.room-title-row{display:flex;align-items:center;gap:6px;min-width:0}.room-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.room-time{font-size:10px;color:#9aa3b2;margin-left:auto;white-space:nowrap}.room-preview{font-size:11px;color:#8a94a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px}.tiny-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:0 0 auto}.room-count{font-size:10px;font-weight:800;color:#fff;background:var(--accent);border-radius:20px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 5px}.sidebar-footer{padding:14px 16px;display:flex;align-items:center;gap:11px;border-top:1px solid #f0f1f6}.profile-avatar{width:37px;height:37px;border-radius:13px;background:#1f2937;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;flex:0 0 auto}.profile-copy{min-width:0;flex:1}.profile-name{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-note{font-size:10px;color:#98a2b3;margin-top:3px}.chat{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.025);position:relative}.chat-header{height:82px;border-bottom:1px solid #eff0f5;display:flex;align-items:center;padding:0 24px;gap:13px;flex:0 0 auto;background:rgba(255,255,255,.92)}.room-head-info{min-width:0;flex:1}.room-head-title{font-family:Manrope,sans-serif;font-size:16px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room-head-sub{display:flex;align-items:center;gap:7px;font-size:11px;color:#929aaa;margin-top:5px}.status-dot{height:7px;width:7px;border-radius:50%;background:#a6adbb}.status-dot.connected{background:#1bb786;box-shadow:0 0 0 3px #e7f8f2}.header-actions{display:flex;gap:8px;align-items:center}.header-actions .icon-btn{width:39px;height:39px}.mobile-back{display:none}.messages-wrap{flex:1;min-height:0;overflow:auto;padding:25px clamp(16px,4vw,56px) 16px;scroll-behavior:smooth;background:radial-gradient(ellipse at 50% 0%,rgba(245,243,255,.44),transparent 50%),#fff}.history-toolbar{display:flex;justify-content:center;padding:0 0 16px}.history-toolbar button{font-size:11px;padding:8px 12px}.day-divider{text-align:center;margin:4px auto 26px;font-size:10px;color:#9aa2b2;display:flex;align-items:center;gap:12px;justify-content:center}.day-divider:before,.day-divider:after{content:'';height:1px;width:45px;background:#eceef4}.message-row{display:flex;gap:10px;align-items:flex-end;margin:0 0 18px;animation:messageIn .22s ease-out;max-width:min(840px,100%)}.message-row.mine{margin-left:auto;flex-direction:row-reverse}.message-avatar{width:30px;height:30px;border-radius:11px;background:#edf0f7;display:grid;place-items:center;font-size:10px;font-weight:800;color:#647084;flex:0 0 auto}.message-row.mine .message-avatar{background:#e9e5ff;color:#594bd7}.message-stack{max-width:min(76%,680px);min-width:100px}.message-row.mine .message-stack{align-items:flex-end;display:flex;flex-direction:column}.sender-line{display:flex;align-items:center;gap:7px;margin:0 0 6px 4px;font-size:10px;font-weight:800;color:#8790a0}.message-row.mine .sender-line{margin:0 4px 6px 0;justify-content:flex-end}.message-bubble{background:#f5f6fa;border:1px solid #edf0f5;border-radius:17px 17px 17px 5px;padding:12px 14px;color:#344054;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(20,30,50,.02);position:relative}.message-row.mine .message-bubble{background:#6254df;border-color:#6254df;color:#fff;border-radius:17px 17px 5px 17px;box-shadow:0 6px 15px rgba(98,84,223,.12)}.message-bubble.deleted{font-style:italic;color:#98a2b3;background:#f8f9fc;border-style:dashed}.message-row.mine .message-bubble.deleted{color:#edeaff;background:#7b70e8;border-color:#7b70e8}.quoted{display:block;border-left:3px solid #b9b1ff;background:rgba(255,255,255,.65);border-radius:7px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#667085;max-width:100%;overflow:hidden}.message-row.mine .quoted{background:rgba(255,255,255,.15);color:#f0eeff;border-left-color:#d4ceff}.quoted strong{display:block;font-size:10px;margin-bottom:2px}.attachment-card{display:flex;align-items:center;gap:9px;padding:9px;border-radius:11px;background:rgba(255,255,255,.68);margin-top:8px;border:1px solid rgba(180,185,202,.28);color:#384152;max-width:270px}.attachment-card .file-symbol{width:31px;height:34px;border-radius:8px;background:#fff;display:grid;place-items:center;color:#7163dc;font-weight:800;flex:0 0 auto}.attachment-card a{color:inherit;text-decoration:none;font-size:11px;font-weight:700;overflow-wrap:anywhere}.attachment-card img{max-width:180px;max-height:140px;object-fit:contain;border-radius:7px}.message-meta{display:flex;align-items:center;gap:6px;color:#a2aab7;font-size:9px;margin-top:5px;padding:0 3px}.message-row.mine .message-meta{justify-content:flex-end}.message-status{color:#9d95ff;font-weight:800}.message-actions{display:flex;gap:4px;margin-top:6px;opacity:0;transition:opacity .16s}.message-row:hover .message-actions,.message-row:focus-within .message-actions{opacity:1}.message-row.mine .message-actions{justify-content:flex-end}.message-action{border:1px solid #e8eaf0;background:#fff;color:#7b8496;border-radius:9px;padding:5px 7px;font-size:10px;font-weight:700}.message-action:hover{color:var(--accent);background:#f5f3ff;border-color:#dcd7ff}.message-row.mine .message-action{border-color:#e2defd}.reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.reaction{border:1px solid #e4e6ee;background:#fff;border-radius:12px;padding:4px 7px;font-size:11px;color:#5e687a}.reaction.mine{background:#efedff;border-color:#d8d2ff;color:#5142cf}.empty-state{height:100%;min-height:300px;display:grid;place-items:center;text-align:center;padding:30px}.empty-art{width:90px;height:90px;margin:0 auto 22px;border-radius:28px;background:linear-gradient(145deg,#f0edff,#fff);border:1px solid #e7e3ff;display:grid;place-items:center;box-shadow:0 15px 40px rgba(102,87,232,.1)}.empty-art svg{width:40px;height:40px;color:#7668ea}.empty-state h2{font-family:Manrope,sans-serif;font-size:23px;letter-spacing:-.8px;margin:0 0 9px}.empty-state p{font-size:13px;line-height:1.7;color:#8790a0;max-width:370px;margin:0 auto 22px}.feature-pills{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}.feature-pills span{border:1px solid #e9eaf2;background:#fff;border-radius:100px;padding:7px 10px;font-size:10px;color:#6f7889;font-weight:700}.composer-area{padding:11px clamp(12px,3vw,38px) 17px;background:#fff;border-top:1px solid #eff0f5;flex:0 0 auto}.reply-preview{display:flex;align-items:center;gap:10px;border:1px solid #e7e3ff;background:#f8f7ff;border-radius:12px;padding:8px 10px;margin-bottom:9px;font-size:11px;color:#5e6474}.reply-preview-copy{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reply-preview strong{display:block;color:#5b4ddd;margin-bottom:2px}.reply-preview button{border:0;background:transparent;color:#858ca0;font-size:17px}.composer-box{border:1px solid #e4e7ef;border-radius:20px;padding:9px 10px 8px 14px;box-shadow:0 5px 19px rgba(30,40,70,.035);transition:.2s}.composer-box:focus-within{border-color:#c9c2ff;box-shadow:0 5px 22px rgba(102,87,232,.09)}.composer-main{display:flex;align-items:flex-end;gap:9px}.composer-main textarea{flex:1;min-width:0;resize:none;border:0;outline:0!important;background:transparent;font-size:13px;line-height:1.55;max-height:130px;min-height:27px;padding:6px 2px;color:var(--ink)}.composer-main textarea::placeholder{color:#a1a8b6}.send-btn{height:39px;width:42px;border-radius:13px;border:0;display:grid;place-items:center;color:#fff;background:var(--accent);box-shadow:0 5px 12px rgba(102,87,232,.2);transition:.2s;flex:0 0 auto}.send-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.send-btn svg{width:18px;height:18px}.composer-tools{display:flex;align-items:center;gap:5px;padding-top:7px}.tool-btn{border:0;background:transparent;color:#98a1b1;border-radius:9px;padding:6px 8px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700}.tool-btn:hover{background:#f5f4ff;color:var(--accent)}.tool-btn svg{width:15px;height:15px}.composer-hint{margin-left:auto;font-size:9px;color:#abb2bf;padding-right:4px}.privacy-note{font-size:9px;color:#a1a8b5;text-align:center;margin-top:9px}.toast{position:fixed;top:20px;left:50%;transform:translate(-50%,-10px);z-index:50;background:#20283a;color:#fff;padding:11px 15px;border-radius:13px;font-size:12px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.22s}.toast.show{opacity:1;transform:translate(-50%,0)}.modal-backdrop{position:fixed;inset:0;background:rgba(22,28,45,.35);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:18px;z-index:40}.modal-backdrop.show{display:flex}.modal{background:#fff;border:1px solid #edf0f5;border-radius:24px;box-shadow:0 25px 90px rgba(25,35,60,.18);padding:24px;max-width:440px;width:100%;animation:modalIn .2s ease-out}.modal h2{font-family:Manrope,sans-serif;margin:0 0 8px;font-size:20px;letter-spacing:-.6px}.modal p{color:#7d8697;font-size:12px;line-height:1.7;margin:0 0 19px}.field-label{display:block;font-size:11px;font-weight:800;color:#667085;margin-bottom:7px}.field{width:100%;border:1px solid #e2e6ee;background:#fbfcfe;border-radius:12px;padding:12px;font-size:13px;outline:none;color:var(--ink);margin-bottom:14px}.field:focus{border-color:#c8c1ff;background:#fff}.modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:8px}.modal-actions button{min-width:92px}.modal-close{float:right;border:0;background:#f4f5f8;width:31px;height:31px;border-radius:10px;color:#687284}.security-card{background:#f8f9fc;border:1px solid #edf0f5;border-radius:14px;padding:13px;margin:12px 0;color:#7d8697;font-size:11px;line-height:1.65}.security-card strong{color:#344054}.mobile-overlay{display:none}
 @keyframes messageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}@keyframes modalIn{from{opacity:0;transform:translateY(7px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:860px){.app{grid-template-columns:292px minmax(0,1fr);padding:9px;gap:9px}.chat-header{padding:0 15px}.messages-wrap{padding:21px 15px 12px}.message-stack{max-width:84%}.room-time{display:none}}
 @media(max-width:650px){body{background:#fff}.app{display:block;padding:0;height:100dvh}.sidebar,.chat{height:100dvh;border:0;border-radius:0;box-shadow:none}.sidebar{position:fixed;inset:0;z-index:20;transform:translateX(0);transition:transform .25s ease;width:100%;background:#fff}.app.chat-open .sidebar{transform:translateX(-102%)}.chat{display:none}.app.chat-open .chat{display:flex}.brandbar{padding:18px 17px 15px}.sidebar-actions{padding:0 14px 13px}.side-search{padding:0 14px 12px}.room-list{padding:0 8px 10px}.sidebar-footer{padding:13px 17px}.chat-header{height:72px;padding:0 12px;gap:9px}.mobile-back{display:inline-grid;width:34px;height:34px;border-radius:11px}.chat-header .avatar{width:38px;height:38px;border-radius:13px}.room-head-title{font-size:14px}.room-head-sub{font-size:10px}.header-actions{gap:5px}.header-actions .icon-btn{width:34px;height:34px;border-radius:11px}.header-actions .optional-action{display:none}.messages-wrap{padding:18px 11px 11px}.message-row{gap:7px;margin-bottom:15px}.message-avatar{width:27px;height:27px;border-radius:9px}.message-stack{max-width:86%}.message-bubble{font-size:12px;padding:10px 12px}.composer-area{padding:9px 10px calc(10px + env(safe-area-inset-bottom))}.composer-box{border-radius:17px;padding:8px 8px 7px 11px}.composer-main textarea{font-size:12px}.composer-hint{display:none}.tool-btn{padding:6px}.privacy-note{font-size:8px}.empty-state h2{font-size:20px}.empty-state p{font-size:12px}.message-actions{opacity:1}.mobile-overlay{display:block;position:fixed;inset:0;background:rgba(22,28,45,.25);z-index:19;opacity:0;pointer-events:none;transition:.2s}.app.chat-open .mobile-overlay{opacity:1;pointer-events:auto}}
@@ -71,13 +72,14 @@
 <div class="header-actions"><button class="icon-btn optional-action" id="search-messages-btn" title="Search messages" aria-label="Search messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5" stroke-linecap="round"/></svg></button><button class="icon-btn" id="invite-btn" title="Copy room invite" aria-label="Copy room invite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></button><button class="icon-btn" id="room-menu-btn" title="Room details and options" aria-label="Room details and options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button></div>
 </header>
 <section class="messages-wrap" id="messages-wrap" aria-live="polite" aria-relevant="additions text">
-<div class="empty-state" id="welcome-state"><div><div class="empty-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.8C4 4.8 4.8 4 5.8 4h12.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8h-5.4l-4.8 3.3V16H5.8C4.8 16 4 15.2 4 14.2V5.8Z" stroke-linejoin="round"/><path d="M8 9h8M8 12h5" stroke-linecap="round"/></svg></div><h2>Your conversations, in one calm space.</h2><p>Create a private-by-link room for a conversation, or join a room with an invite link. Messages sync through the existing ArixAI chat service.</p><div class="feature-pills"><span>Live message sync</span><span>Replies & reactions</span><span>Search & export</span></div><div style="display:flex;justify-content:center;gap:9px;margin-top:23px;flex-wrap:wrap"><button class="primary-btn" id="welcome-new-room">Create a room</button><button class="secondary-btn" id="welcome-join-room">Join with link</button></div></div></div>
+<div class="history-toolbar" id="history-toolbar" hidden><button class="secondary-btn" id="load-older-btn">Load earlier messages</button></div>
+<div class="empty-state" id="welcome-state"><div><div class="empty-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.8C4 4.8 4.8 4 5.8 4h12.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8h-5.4l-4.8 3.3V16H5.8C4.8 16 4 15.2 4 14.2V5.8Z" stroke-linejoin="round"/><path d="M8 9h8M8 12h5" stroke-linecap="round"/></svg></div><h2>Your conversations, in one calm space.</h2><p>Create a private-by-link room for a conversation, or join a room with an invite link. Messages sync through your authenticated ArixChat service and are stored in your Supabase project.</p><div class="feature-pills"><span>Live message sync</span><span>Replies & reactions</span><span>Search & export</span></div><div style="display:flex;justify-content:center;gap:9px;margin-top:23px;flex-wrap:wrap"><button class="primary-btn" id="welcome-new-room">Create a room</button><button class="secondary-btn" id="welcome-join-room">Join with link</button></div></div></div>
 <div id="message-list" hidden></div>
 </section>
 <section class="composer-area" id="composer-area" hidden>
 <div class="reply-preview" id="reply-preview" hidden><div class="reply-preview-copy"><strong id="reply-author">Replying</strong><span id="reply-text"></span></div><button id="cancel-reply" aria-label="Cancel reply">×</button></div>
 <div class="composer-box"><div class="composer-main"><button class="icon-btn" id="attach-btn" title="Attach a small image or file" aria-label="Attach a file" style="width:34px;height:34px;flex:0 0 auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m8 12.5 6.9-6.9a3 3 0 0 1 4.2 4.2l-8.6 8.6A5 5 0 0 1 3.4 11.3L12 2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input type="file" id="file-input" hidden accept="image/jpeg,image/png,image/gif,image/webp,application/pdf,text/plain"><textarea id="message-input" rows="1" maxlength="4000" placeholder="Write a message… (Enter to send, Shift + Enter for a new line)" aria-label="Write a message"></textarea><button class="send-btn" id="send-btn" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m21 3-7.2 18-3.8-7.8L2 9.5 21 3Z" stroke-linejoin="round"/><path d="M10 13 21 3" stroke-linecap="round"/></svg></button></div><div class="composer-tools"><button class="tool-btn" id="emoji-btn"><span style="font-size:15px">☺</span> Emoji</button><button class="tool-btn" id="export-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-4-4 4 4 4-4M5 17v3h14v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>Export chat</button><span class="composer-hint" id="composer-character-count">0 / 4000</span></div></div>
-<div class="privacy-note">Room messages sync to the existing service. Do not share sensitive information in invite-link rooms.</div>
+<div class="privacy-note">Messages are stored in your Supabase project. Invite links grant room access; avoid sharing passwords or sensitive data.</div>
 </section>
 </main>
 </div>
@@ -91,6 +93,7 @@ const PREFIX = 'ARIXCHAT1:';
 const STORE_ROOMS = 'arixchat.rooms.v1';
 const STORE_MESSAGES = 'arixchat.messages.v1';
 const STORE_PROFILE = 'arixchat.profile.v1';
+const STORE_SESSION_HINT = 'arixchat.session-hint.v1';
 const MAX_TEXT = 4000;
 const MAX_FILE_BYTES = 100 * 1024;
 const $ = (id) => document.getElementById(id);
@@ -101,8 +104,9 @@ rooms: safeJson(localStorage.getItem(STORE_ROOMS), []),
 allMessages: safeJson(localStorage.getItem(STORE_MESSAGES), {}),
 profile: safeJson(localStorage.getItem(STORE_PROFILE), { name: localStorage.getItem('Arix_nickname') || '' }),
 activeRoomId: null, activeMessages: [], pollTimer: null, pollBusy: false,
+authenticated: false, offlineCached: false, user: null, authBusy: false, hasOlderMessages: false, loadingOlder: false,
 seenServerIds: new Set(), seenRecordKeys: new Set(), pollGeneration: 0, pollController: null,
-pendingReply: null, stagedAttachment: null,
+pendingReply: null, stagedAttachment: null, pendingRoomInvite: '', pendingRoomTitle: '',
 sending: false, lastToast: 0, rateWindow: [], pendingEvents: []
 };
 if (!Array.isArray(state.rooms)) state.rooms = [];
@@ -110,11 +114,11 @@ if (!state.allMessages || typeof state.allMessages !== 'object' || Array.isArray
 state.profile.name = cleanName(state.profile.name || '');
 
 function cleanName(value) { return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 32); }
-function roomIdValid(value) { return typeof value === 'string' && /^[a-zA-Z0-9_-]{4,80}$/.test(value); }
+function roomIdValid(value) { return typeof value === 'string' && /^[a-zA-Z0-9_-]{24,80}$/.test(value); }
 function makeRoomId() {
-const bytes = new Uint8Array(12);
-if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
-else for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+if (!window.crypto || typeof crypto.getRandomValues !== 'function') throw new Error('Secure randomness is unavailable. Open ArixChat over HTTPS in a modern browser.');
+const bytes = new Uint8Array(32);
+crypto.getRandomValues(bytes);
 return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 function now() { return Date.now(); }
@@ -129,13 +133,20 @@ if (raw && raw.id != null && String(raw.id)) return String(raw.id);
 return 'legacy_' + hashText(String(Number(raw?.ts) || 0) + '\u001f' + cleanName(raw?.nickname || 'Guest') + '\u001f' + String(raw?.message ?? ''));
 }
 function messageSignature(msg) {
-const signature = JSON.stringify([msg.sender, msg.text, msg.time, msg.status, msg.edited, msg.deleted,
+const signature = JSON.stringify([msg.sender, msg.senderId, msg.text, msg.time, msg.status, msg.edited, msg.deleted,
 msg.replyTo, msg.attachment ? [msg.attachment.name, msg.attachment.mime, msg.attachment.data] : null,
 (msg.reactions || []).map(r => [r.emoji, r.by]), msg.serverId, msg.error]);
 return hashText(signature);
 }
 function shortTime(ts) { const d = new Date(Number(ts) || now()); return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
 function roomMessages(roomId) { if (!Array.isArray(state.allMessages[roomId])) state.allMessages[roomId] = []; return state.allMessages[roomId]; }
+function readDraftMap() { const value = safeJson(localStorage.getItem('arixchat.drafts.v1'), {}); return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
+function getDraft(roomId) { const drafts = readDraftMap(); return String(drafts[roomId] || '').slice(0, MAX_TEXT); }
+function saveDraftForActiveRoom() {
+if (!state.activeRoomId || !$('message-input')) return;
+try { const drafts = readDraftMap(); const value = $('message-input').value.slice(0, MAX_TEXT); if (value) drafts[state.activeRoomId] = value; else delete drafts[state.activeRoomId]; localStorage.setItem('arixchat.drafts.v1', JSON.stringify(drafts)); }
+catch { /* A draft must never interrupt messaging if device storage is unavailable. */ }
+}
 function persist() {
 try {
 localStorage.setItem(STORE_ROOMS, JSON.stringify(state.rooms.slice(0, 80)));
@@ -144,17 +155,17 @@ for (const room of state.rooms.slice(0, 50)) {
 const arr = roomMessages(room.id).slice(-160).map(m => ({ ...m }));
 cache[room.id] = arr;
 }
-state.allMessages = cache;
+// Keep the in-memory arrays stable; replacing state.allMessages here detached the active room's live array.
 localStorage.setItem(STORE_MESSAGES, JSON.stringify(cache));
 localStorage.setItem(STORE_PROFILE, JSON.stringify(state.profile));
 } catch (err) { console.warn('[ArixChat] Local cache is full or unavailable.', err); toast('Device storage is full. Export this conversation to keep a copy.'); }
 }
 function activeRoom() { return state.rooms.find(r => r.id === state.activeRoomId) || null; }
-function updateRoomSummary(roomId, msg) {
+function updateRoomSummary(roomId, msg, refresh = true) {
 const room = state.rooms.find(r => r.id === roomId); if (!room) return;
 room.updatedAt = Number(msg?.time) || now();
 if (msg && msg.type === 'message') room.lastMessage = msg.deleted ? 'Message deleted' : (msg.text || (msg.attachment ? 'Attachment' : 'Message')).slice(0, 100);
-persist(); renderRoomList();
+if (refresh) { persist(); renderRoomList(); }
 }
 function roomTitle(room) { return String(room?.title || ('Room ' + String(room?.id || '').slice(0, 8))); }
 function toast(message) {
@@ -184,7 +195,7 @@ return raw.replace(/^room\s*:\s*/i, '').trim();
 function findOrAddRoom(roomId, title) {
 let room = state.rooms.find(r => r.id === roomId);
 if (!room) {
-room = { id: roomId, title: cleanRoomTitle(title) || ('Room ' + roomId.slice(0, 8)), createdAt: now(), updatedAt: now(), lastMessage: '' };
+room = { id: roomId, title: cleanRoomTitle(title) || ('Room ' + roomId.slice(0, 8)), createdAt: now(), updatedAt: now(), lastMessage: '', accountId: state.user?.id || null, shared: true };
 state.rooms.unshift(room);
 } else if (title && room.title.startsWith('Room ')) room.title = cleanRoomTitle(title) || room.title;
 persist(); renderRoomList(); return room;
@@ -192,27 +203,35 @@ persist(); renderRoomList(); return room;
 function cleanRoomTitle(value) { return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 48); }
 function setActiveRoom(roomId) {
 const room = state.rooms.find(r => r.id === roomId); if (!room) return;
+if (state.activeRoomId && state.activeRoomId !== roomId) saveDraftForActiveRoom();
+stopPolling();
 state.activeRoomId = roomId; state.pendingReply = null; state.stagedAttachment = null;
 state.activeMessages = roomMessages(roomId);
+state.hasOlderMessages = state.activeMessages.some(m => !!m.serverCreatedAt); $('history-toolbar').hidden = !state.hasOlderMessages; $('load-older-btn').disabled = false; $('load-older-btn').textContent = 'Load earlier messages';
 state.seenServerIds = new Set(state.activeMessages.map(m => m.serverId).filter(Boolean).map(String));
 state.seenRecordKeys = new Set(state.activeMessages.map(m => m.recordKey || m.serverId).filter(Boolean).map(String));
 state.pendingEvents = [];
 $('active-room-title').textContent = roomTitle(room);
 $('active-avatar').textContent = roomTitle(room).trim().charAt(0).toUpperCase() || 'A';
 $('active-avatar').className = 'avatar';
-$('room-access-label').textContent = 'Invite-link room';
+$('room-access-label').textContent = state.authenticated ? 'Private invite room' : 'Offline cached room';
 $('welcome-state').hidden = true; $('message-list').hidden = false; $('composer-area').hidden = false;
-$('message-input').value = ''; $('file-input').value = '';
-$('composer-character-count').textContent = '0 / ' + MAX_TEXT;
+$('message-input').value = getDraft(roomId); $('file-input').value = '';
+$('message-input').style.height = 'auto'; $('message-input').style.height = Math.min($('message-input').scrollHeight, 130) + 'px';
+$('composer-character-count').textContent = $('message-input').value.length + ' / ' + MAX_TEXT;
 $('app').classList.add('chat-open');
 setRoomUrl(roomId); renderRoomList(); renderMessages();
-stopPolling(); pollRoom(); state.pollTimer = setInterval(pollRoom, 2200);
-$('message-input').focus();
+if (state.authenticated && navigator.onLine) pollRoom();
+state.pollTimer = setInterval(() => { if (document.visibilityState === 'visible') pollRoom(); }, 3500);
+if (!navigator.onLine || state.offlineCached) setConnection(false, 'Offline — cached messages available');
+if (state.authenticated) $('message-input').focus();
 }
 function renderRoomList() {
 const host = $('room-list'); const query = $('room-search').value.trim().toLowerCase();
-const list = state.rooms.filter(r => !query || roomTitle(r).toLowerCase().includes(query) || r.id.toLowerCase().includes(query) || String(r.lastMessage || '').toLowerCase().includes(query)).slice().sort((a,b) => Number(!!b.pinned)-Number(!!a.pinned) || (Number(b.updatedAt)||0)-(Number(a.updatedAt)||0));
-$('room-count-label').textContent = state.rooms.length + (state.rooms.length === 1 ? ' room' : ' rooms');
+// Never display unowned/legacy cached conversations to an unrelated signed-in account.
+const scopedRooms = state.user?.id ? state.rooms.filter(r => r.accountId === state.user.id) : (state.offlineCached ? state.rooms.filter(r => !r.accountId || r.accountId === state.user?.id) : []);
+const list = scopedRooms.filter(r => !query || roomTitle(r).toLowerCase().includes(query) || r.id.toLowerCase().includes(query) || String(r.lastMessage || '').toLowerCase().includes(query)).slice().sort((a,b) => Number(!!b.pinned)-Number(!!a.pinned) || (Number(b.updatedAt)||0)-(Number(a.updatedAt)||0));
+$('room-count-label').textContent = scopedRooms.length + (scopedRooms.length === 1 ? ' room' : ' rooms');
 if (!list.length) {
 host.innerHTML = `<div style="padding:28px 16px;text-align:center;color:#9aa2b2;font-size:12px;line-height:1.7"><div style="font-size:24px;margin-bottom:8px">⌁</div>${query ? 'No matches found.' : 'No conversations yet.<br>Create a room or join an invite link to get started.'}</div>`; return;
 }
@@ -240,13 +259,13 @@ attachment = `<div class="attachment-card"><span class="file-symbol">${a.mime ==
 return `${quote}<div class="message-bubble">${formatMessageText(msg.text || '')}${attachment}</div>`;
 }
 function messageRowHtml(msg) {
-const mine = msg.sender === state.profile.name;
+const mine = (msg.senderId && state.user?.id) ? msg.senderId === state.user.id : msg.sender === state.profile.name;
 const initial = (msg.sender || '?').trim().charAt(0).toUpperCase() || '?';
 const reactions = (msg.reactions || []).filter(r => r && r.emoji).reduce((acc, r) => { const k = r.emoji; acc[k] = (acc[k] || 0) + 1; return acc; }, {});
-const reactionsHtml = Object.entries(reactions).map(([emoji,count]) => `<button class="reaction ${(msg.reactions || []).some(r => r.emoji === emoji && r.by === state.profile.name) ? 'mine' : ''}" data-action="react" data-id="${esc(msg.id)}" data-emoji="${esc(emoji)}" title="React with ${esc(emoji)}">${esc(emoji)} ${count}</button>`).join('');
+const reactionsHtml = Object.entries(reactions).map(([emoji,count]) => `<button class="reaction ${(msg.reactions || []).some(r => r.emoji === emoji && ((r.byId && state.user?.id && r.byId === state.user.id) || (!r.byId && r.by === state.profile.name))) ? 'mine' : ''}" data-action="react" data-id="${esc(msg.id)}" data-emoji="${esc(emoji)}" title="React with ${esc(emoji)}">${esc(emoji)} ${count}</button>`).join('');
 const status = mine ? (msg.status === 'failed' ? `<span class="message-status" role="button" tabindex="0" data-action="retry" data-id="${esc(msg.id)}" title="Tap to retry">Not sent · retry</span>` : msg.status === 'delivered' ? '<span class="message-status" title="Delivered">✓✓</span>' : msg.status === 'sent' ? '<span class="message-status" title="Sent">✓</span>' : '<span class="message-status" title="Sending">…</span>') : '';
 const rowKey = messageSignature(msg);
-return `<article class="message-row ${mine ? 'mine' : ''}" data-message-row="${esc(msg.id)}" data-render-key="${rowKey}"><div class="message-avatar">${esc(initial)}</div><div class="message-stack"><div class="sender-line"><span>${esc(msg.sender || 'Guest')}</span>${msg.edited ? '<span>· edited</span>' : ''}</div>${messageBodyHtml(msg)}${reactionsHtml ? `<div class="reactions">${reactionsHtml}</div>` : ''}<div class="message-meta"><span>${shortTime(msg.time)}</span>${status}</div><div class="message-actions"><button class="message-action" data-action="reply" data-id="${esc(msg.id)}">Reply</button><button class="message-action" data-action="react-picker" data-id="${esc(msg.id)}">React</button><button class="message-action" data-action="copy" data-id="${esc(msg.id)}">Copy</button>${mine && !msg.deleted ? `<button class="message-action" data-action="edit" data-id="${esc(msg.id)}">Edit</button><button class="message-action" data-action="delete" data-id="${esc(msg.id)}">Delete</button>` : ''}</div></div></article>`;
+return `<article class="message-row ${mine ? 'mine' : ''}" data-message-row="${esc(msg.id)}" data-render-key="${rowKey}"><div class="message-avatar">${esc(initial)}</div><div class="message-stack"><div class="sender-line"><span>${esc(msg.sender || 'Guest')}</span>${msg.edited ? '<span>· edited</span>' : ''}</div>${messageBodyHtml(msg)}${reactionsHtml ? `<div class="reactions">${reactionsHtml}</div>` : ''}<div class="message-meta"><span>${shortTime(msg.time)}</span>${status}</div><div class="message-actions"><button class="message-action" data-action="reply" data-id="${esc(msg.id)}">Reply</button><button class="message-action" data-action="react-picker" data-id="${esc(msg.id)}">React</button><button class="message-action" data-action="copy" data-id="${esc(msg.id)}">Copy</button>${mine && !msg.deleted && msg.serverId ? `<button class="message-action" data-action="edit" data-id="${esc(msg.id)}">Edit</button><button class="message-action" data-action="delete" data-id="${esc(msg.id)}">Delete</button>` : ''}</div></div></article>`;
 }
 function renderMessages(shouldScroll = true) {
 const host = $('message-list'); if (!state.activeRoomId) return;
@@ -281,16 +300,23 @@ for (const row of existingRows.values()) row.remove();
 if (shouldScroll && (shouldScroll === true || wasNearBottom)) wrap.scrollTop = wrap.scrollHeight;
 }
 function findMessage(id) { return state.activeMessages.find(m => String(m.id) === String(id) || String(m.serverId || '') === String(id) || String(m.clientMessageId || '') === String(id) || String(m.recordKey || '') === String(id)) || null; }
+async function apiRequest(payload) {
+const res = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload) });
+let data = {}; try { data = await res.json(); } catch {}
+if (!res.ok || data.success === false) {
+const error = new Error(data.error || data.message || ('Request failed (' + res.status + ')'));
+error.status = res.status; error.code = data.code || '';
+throw error;
+}
+return data;
+}
 function sendEnvelope(envelope) {
 if (!state.activeRoomId) return Promise.reject(new Error('No room selected'));
+if (!state.authenticated && !(state.offlineCached && !navigator.onLine)) return Promise.reject(new Error('Please sign in to send messages.'));
 const nowTs = now(); state.rateWindow = state.rateWindow.filter(t => nowTs - t < 60000);
 if (state.rateWindow.length >= 35) return Promise.reject(new Error('You are sending messages too quickly. Please wait a moment.'));
 state.rateWindow.push(nowTs);
-return fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ roomId: state.activeRoomId, action: 'send', message: PREFIX + JSON.stringify(envelope), nickname: state.profile.name }) }).then(async res => {
-let data = {}; try { data = await res.json(); } catch {}
-if (!res.ok || data.success === false) throw new Error(data.error || data.message || ('Request failed (' + res.status + ')'));
-return data;
-});
+return apiRequest({ roomId: state.activeRoomId, action: 'send', message: PREFIX + JSON.stringify(envelope) });
 }
 async function sendMessage() {
 if (state.sending || !state.activeRoomId) return;
@@ -298,12 +324,13 @@ const input = $('message-input'); const text = input.value.trim();
 if (!text && !state.stagedAttachment) return;
 if (text.length > MAX_TEXT) return toast('Message is too long.');
 if (!state.profile.name) return openProfileModal(true);
+if (!state.authenticated && !state.offlineCached) return openAuthModal('login', 'Sign in to send messages securely.');
 state.sending = true; $('send-btn').disabled = true;
 const localId = 'local_' + makeRoomId();
 const clientMessageId = makeRoomId();
-const message = { id: localId, clientMessageId, serverId: null, type: 'message', sender: state.profile.name, text, time: now(), status: 'sending', replyTo: state.pendingReply ? { id: state.pendingReply.id, serverId: state.pendingReply.serverId || null, sender: state.pendingReply.sender, text: state.pendingReply.text } : null, attachment: state.stagedAttachment, reactions: [], event: false };
+const message = { id: localId, clientMessageId, serverId: null, senderId: state.user?.id || null, type: 'message', sender: state.profile.name, text, time: now(), status: 'sending', replyTo: state.pendingReply ? { id: state.pendingReply.id, serverId: state.pendingReply.serverId || null, sender: state.pendingReply.sender, text: state.pendingReply.text } : null, attachment: state.stagedAttachment, reactions: [], queuedReactions: [], event: false };
 state.activeMessages.push(message); state.allMessages[state.activeRoomId] = state.activeMessages;
-input.value = ''; input.style.height = 'auto'; $('composer-character-count').textContent = '0 / ' + MAX_TEXT;
+input.value = ''; input.style.height = 'auto'; $('composer-character-count').textContent = '0 / ' + MAX_TEXT; saveDraftForActiveRoom();
 state.pendingReply = null; state.stagedAttachment = null; $('reply-preview').hidden = true; $('file-input').value = '';
 persist(); renderMessages(); updateRoomSummary(state.activeRoomId, message);
 const envelope = { type: 'message', clientMessageId, text, sentAt: message.time, replyTo: message.replyTo, attachment: message.attachment };
@@ -311,21 +338,35 @@ try {
 const result = await sendEnvelope(envelope);
 if (result && result.id) {
 message.serverId = String(result.id); message.recordKey = String(result.id);
+message.serverCreatedAt = result.created_at || null; message.serverUpdatedAt = result.updated_at || result.created_at || null; message.serverTs = Number(result.ts) || message.time; message.time = message.serverTs;
 state.seenServerIds.add(String(result.id)); state.seenRecordKeys.add(String(result.id));
 }
 if (message.status === 'sending') message.status = 'sent';
-persist(); renderMessages(false);
+persist(); renderMessages(false); await flushQueuedReactions(message);
 } catch (error) {
 message.status = 'failed'; message.error = String(error.message || 'Send failed').slice(0, 180); persist(); renderMessages(false);
-toast('Message was not sent. Tap “retry” in its status or try again.');
+if (navigator.onLine) toast('Message could not be sent. It is saved here; tap retry or check your sign-in.');
+else toast('Offline. Your message is saved on this device and will retry when connection returns.');
 } finally { state.sending = false; $('send-btn').disabled = false; input.focus(); }
 }
 async function retryMessage(message) {
-if (!message || message.status !== 'failed' || !message.clientMessageId) return;
-message.status = 'sending'; renderMessages(false); persist();
-try { const result = await sendEnvelope({ type:'message', clientMessageId:message.clientMessageId, text:message.text || '', sentAt:message.time, replyTo:message.replyTo || null, attachment:message.attachment || null }); if (result && result.id) { message.serverId = String(result.id); message.recordKey = String(result.id); state.seenServerIds.add(String(result.id)); state.seenRecordKeys.add(String(result.id)); } if (message.status === 'sending') message.status = 'sent'; toast('Message sent'); }
-catch (error) { message.status = 'failed'; toast('Still unable to send: ' + String(error.message || 'network error').slice(0,80)); }
-persist(); renderMessages(false);
+if (!message || message.status !== 'failed' || !message.clientMessageId || message.retrying) return;
+if (message.senderId && state.user?.id && message.senderId !== state.user.id) return toast('This queued message belongs to a different account.');
+message.retrying = true; message.status = 'sending'; renderMessages(false); persist();
+try {
+const result = await sendEnvelope({ type:'message', clientMessageId:message.clientMessageId, text:message.text || '', sentAt:message.time, replyTo:message.replyTo || null, attachment:message.attachment || null });
+if (result && result.id) {
+message.serverId = String(result.id); message.recordKey = String(result.id); message.serverCreatedAt = result.created_at || null; message.serverUpdatedAt = result.updated_at || result.created_at || null; message.serverTs = Number(result.ts) || message.time; message.time = message.serverTs;
+state.seenServerIds.add(String(result.id)); state.seenRecordKeys.add(String(result.id));
+}
+if (message.status === 'sending') message.status = 'sent'; message.error = ''; toast('Message synced'); await flushQueuedReactions(message);
+} catch (error) { message.status = 'failed'; message.error = String(error.message || 'Retry failed').slice(0, 180); if (navigator.onLine) toast('Still unable to sync: ' + message.error.slice(0,80)); }
+finally { message.retrying = false; persist(); renderMessages(false); }
+}
+async function retryFailedMessages() {
+if (!state.authenticated || !navigator.onLine || state.sending) return;
+const pending = state.activeMessages.filter(m => m.type === 'message' && m.status === 'failed' && m.clientMessageId && !m.retrying && (!m.senderId || !state.user?.id || m.senderId === state.user.id));
+for (const message of pending) await retryMessage(message);
 }
 function decodeServerMessage(raw) {
 const body = String(raw?.message ?? '');
@@ -344,9 +385,9 @@ return false;
 }
 const eventSender = cleanName(raw?.nickname || 'Guest');
 const claimedSender = cleanName(payload.by || eventSender);
-// Client-side consistency guard only: nicknames are not authenticated identities.
 if (claimedSender !== eventSender) return false;
-if ((payload.type === 'edit' || payload.type === 'delete') && claimedSender !== cleanName(target.sender)) return false;
+if ((payload.type === 'edit' || payload.type === 'delete') && raw?.sender_id && target.senderId && raw.sender_id !== target.senderId) return false;
+if ((payload.type === 'edit' || payload.type === 'delete') && !raw?.sender_id && claimedSender !== cleanName(target.sender)) return false;
 if (payload.type === 'edit' && typeof payload.text === 'string') {
 const nextText = payload.text.slice(0, MAX_TEXT);
 if (target.text === nextText && target.edited) return false;
@@ -356,74 +397,86 @@ if (payload.type === 'delete') {
 if (target.deleted) return false;
 target.deleted = true; target.text = ''; target.attachment = null; return true;
 }
-if (payload.type === 'reaction' && typeof payload.emoji === 'string' && payload.emoji.length <= 16) {
+if (payload.type === 'reaction' && typeof payload.emoji === 'string' && [...payload.emoji].length <= 8) {
 target.reactions = Array.isArray(target.reactions) ? target.reactions : [];
+const byId = String(raw?.sender_id || '');
 const by = cleanName(payload.by || eventSender);
-const index = target.reactions.findIndex(r => r.emoji === payload.emoji && r.by === by);
+const index = target.reactions.findIndex(r => r.emoji === payload.emoji && (byId ? r.byId === byId : r.by === by));
 if (payload.add === false) { if (index >= 0) { target.reactions.splice(index, 1); return true; } return false; }
-if (index < 0) { target.reactions.push({ emoji: payload.emoji, by }); return true; }
+if (index < 0) { target.reactions.push({ emoji: payload.emoji, by, byId: byId || null }); return true; }
 }
 return false;
 }
 async function pollRoom() {
-const roomId = state.activeRoomId; if (!roomId || state.pollBusy) return;
+const roomId = state.activeRoomId; if (!roomId || state.pollBusy || !state.authenticated || !navigator.onLine || state.offlineCached) return;
+if (document.visibilityState === 'hidden') return;
 state.pollBusy = true;
 const generation = state.pollGeneration;
 const controller = new AbortController(); state.pollController = controller;
 try {
-const res = await fetch(API, { method:'POST', credentials:'same-origin', signal:controller.signal, headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify({roomId, action:'poll'}) });
-if (!res.ok) throw new Error('HTTP ' + res.status);
-const data = await res.json();
+const versions = state.activeMessages.map(m => Date.parse(m.serverUpdatedAt || m.serverCreatedAt || '')).filter(n => Number.isFinite(n) && n > 0);
+const after = versions.length ? new Date(Math.max(...versions) - 2000).toISOString() : null;
+const res = await fetch(API, { method:'POST', credentials:'same-origin', signal:controller.signal, headers:{'Content-Type':'application/json','Accept':'application/json'}, body:JSON.stringify({roomId, action:'poll', after}) });
+let data = {}; try { data = await res.json(); } catch {}
 if (roomId !== state.activeRoomId || generation !== state.pollGeneration) return;
-if (!data.success || !Array.isArray(data.messages)) { setConnection(false, 'Waiting for room service'); return; }
-setConnection(true, 'Room sync active');
+if (!res.ok || !data.success || !Array.isArray(data.messages)) {
+if (res.status === 401) { state.authenticated = false; setConnection(false, 'Sign-in required'); openAuthModal('login', 'Your session needs to be renewed. Sign in again to continue syncing.'); }
+else setConnection(false, res.status === 403 ? 'Room access unavailable' : 'Waiting for room service');
+return;
+}
+setConnection(true, 'Secure sync active');
+if (!after) { state.hasOlderMessages = !!data.hasMore; $('history-toolbar').hidden = !state.hasOlderMessages; }
 let changed = false;
 const wrap = $('messages-wrap');
 const wasNearBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 90;
-const incoming = data.messages.slice().sort((a,b) => (Number(a.ts)||0) - (Number(b.ts)||0));
+const incoming = data.messages.slice().sort((a,b) => (Number(a.ts)||0) - (Number(b.ts)||0) || String(a.created_at||'').localeCompare(String(b.created_at||'')));
 for (const raw of incoming) {
 if (!raw || typeof raw !== 'object') continue;
 const recordKey = serverRecordKey(raw);
-if (state.seenRecordKeys.has(recordKey)) continue;
+const known = state.activeMessages.find(m => String(m.serverId || m.recordKey || '') === recordKey);
+const remoteVersion = Date.parse(raw.updated_at || raw.created_at || '');
+const knownVersion = Date.parse(known?.serverUpdatedAt || known?.serverCreatedAt || '');
+const isUpdatedKnown = !!known && Number.isFinite(remoteVersion) && (!Number.isFinite(knownVersion) || remoteVersion > knownVersion);
+if (state.seenRecordKeys.has(recordKey) && !isUpdatedKnown) continue;
 const sid = recordKey;
 const payload = decodeServerMessage(raw);
 if (payload.type === 'message') {
-const normalizedTime = Number(payload.sentAt || raw.ts) || now();
+const normalizedTime = Number(raw.ts || payload.sentAt) || now();
 const normalizedSender = cleanName(raw.nickname || 'Guest') || 'Guest';
-const existing = payload.clientMessageId ? state.activeMessages.find(m => m.clientMessageId === payload.clientMessageId) : null;
+const existing = (payload.clientMessageId ? state.activeMessages.find(m => m.clientMessageId === payload.clientMessageId) : null) || known;
 if (existing) {
 const previousSignature = messageSignature(existing);
 existing.serverId = sid || existing.serverId; existing.recordKey = recordKey;
-if (existing.status !== 'failed') existing.status = 'delivered';
-if (payload.replyTo) existing.replyTo = payload.replyTo;
-if (payload.attachment && !existing.attachment) existing.attachment = sanitizeAttachment(payload.attachment);
-if (messageSignature(existing) !== previousSignature) changed = true;
+existing.senderId = String(raw.sender_id || existing.senderId || '') || null;
+existing.sender = normalizedSender;
+existing.serverCreatedAt = raw.created_at || existing.serverCreatedAt || null; existing.serverTs = Number(raw.ts) || existing.serverTs || normalizedTime; existing.time = Number(raw.ts) || existing.time || normalizedTime;
+existing.serverUpdatedAt = raw.updated_at || raw.created_at || existing.serverUpdatedAt || null;
+existing.text = payload.deleted ? '' : String(payload.text || '').slice(0, MAX_TEXT);
+existing.deleted = !!payload.deleted;
+existing.edited = !!payload.edited;
+existing.updatedAt = payload.updatedAt ? Date.parse(payload.updatedAt) || Number(raw.ts) || now() : Number(raw.ts) || now();
+existing.replyTo = payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null;
+existing.attachment = payload.deleted ? null : sanitizeAttachment(payload.attachment);
+if (existing.senderId && state.user?.id && existing.senderId === state.user.id) existing.status = 'delivered';
+else if (!existing.status || ['sending','sent'].includes(existing.status)) existing.status = 'received';
+if (messageSignature(existing) !== previousSignature || isUpdatedKnown) changed = true;
 state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); continue;
 }
-// Reconcile legacy local cache entries that predate deterministic record keys.
-const oldDuplicate = state.activeMessages.find(m => !m.event && !m.recordKey && !m.clientMessageId && m.sender === normalizedSender &&
-String(m.text || '') === String(payload.text || '') && Math.abs((Number(m.time)||0) - normalizedTime) < 1600);
+// Reconcile legacy cache entries created before server IDs were persisted.
+const oldDuplicate = state.activeMessages.find(m => !m.event && !m.recordKey && !m.clientMessageId && m.sender === normalizedSender && String(m.text || '') === String(payload.text || '') && Math.abs((Number(m.time)||0) - normalizedTime) < 1600);
 if (oldDuplicate) {
-oldDuplicate.serverId = sid; oldDuplicate.recordKey = recordKey;
+oldDuplicate.serverId = sid; oldDuplicate.recordKey = recordKey; oldDuplicate.senderId = String(raw.sender_id || '') || null;
+oldDuplicate.serverCreatedAt = raw.created_at || null; oldDuplicate.serverTs = Number(raw.ts) || normalizedTime; oldDuplicate.serverUpdatedAt = raw.updated_at || raw.created_at || null;
 state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); changed = true; continue;
 }
-// Backward compatibility for older plain-text self messages.
-const selfEcho = normalizedSender === state.profile.name ? state.activeMessages.find(m => !m.serverId && (m.status === 'sent' || m.status === 'sending') && m.sender === state.profile.name && m.text === String(payload.text || '') && Math.abs((Number(raw.ts)||now()) - m.time) < 45000) : null;
-if (selfEcho) {
-selfEcho.serverId = sid; selfEcho.recordKey = recordKey;
-if (selfEcho.status !== 'failed') selfEcho.status = 'delivered';
-state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); changed = true; continue;
-}
-const msg = { id: sid || ('remote_' + makeRoomId()), serverId: sid || null, recordKey, clientMessageId: payload.clientMessageId || null, type:'message', sender: normalizedSender, text: String(payload.text || '').slice(0, MAX_TEXT), time: normalizedTime, status:'received', replyTo: payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment: sanitizeAttachment(payload.attachment), reactions: [], event:false };
-if (!state.activeMessages.some(m => (sid && (m.serverId === sid || m.recordKey === recordKey)) || (msg.clientMessageId && m.clientMessageId === msg.clientMessageId))) {
-state.activeMessages.push(msg); changed = true; updateRoomSummary(roomId, msg);
-}
+const msg = { id: sid || ('remote_' + makeRoomId()), serverId: sid || null, recordKey, clientMessageId: payload.clientMessageId || raw.client_message_id || null, senderId: String(raw.sender_id || '') || null, type:'message', sender: normalizedSender, text: payload.deleted ? '' : String(payload.text || '').slice(0, MAX_TEXT), time: normalizedTime, serverTs:Number(raw.ts) || normalizedTime, status:'received', replyTo: payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment: payload.deleted ? null : sanitizeAttachment(payload.attachment), reactions: [], deleted: !!payload.deleted, edited: !!payload.edited, serverCreatedAt: raw.created_at || null, serverUpdatedAt: raw.updated_at || raw.created_at || null, event:false };
+state.activeMessages.push(msg); changed = true; updateRoomSummary(roomId, msg, false);
 } else if (['edit','delete','reaction'].includes(payload.type)) {
 if (processEvent(payload, raw)) changed = true;
 }
 state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey);
 }
-// Retry any event whose target arrived later in this same history batch.
+// Events can arrive before their target in older cached rooms. Re-apply once the target is present.
 if (state.pendingEvents.length) {
 const pending = state.pendingEvents; state.pendingEvents = [];
 for (const evt of pending) {
@@ -432,15 +485,68 @@ else state.pendingEvents.push(evt);
 }
 }
 if (changed) {
-state.allMessages[roomId] = state.activeMessages; persist();
-// Keep the viewport stable when reading older messages; only follow new ones at the bottom.
+state.allMessages[roomId] = state.activeMessages; persist(); renderRoomList();
 renderMessages(wasNearBottom);
 }
 } catch (error) {
-if (error?.name !== 'AbortError' && generation === state.pollGeneration) setConnection(false, navigator.onLine ? 'Reconnecting…' : 'Offline — reconnecting');
+if (error?.name !== 'AbortError' && generation === state.pollGeneration) setConnection(false, navigator.onLine ? 'Reconnecting…' : 'Offline — cached messages available');
 } finally {
 if (generation === state.pollGeneration) { state.pollBusy = false; state.pollController = null; }
 }
+}
+async function loadOlderMessages() {
+if (state.loadingOlder || !state.activeRoomId || !state.authenticated || !state.hasOlderMessages) return;
+const roomId = state.activeRoomId;
+const earliest = state.activeMessages
+.filter(m => typeof m.serverCreatedAt === 'string' && Number.isFinite(Date.parse(m.serverCreatedAt)))
+.sort((a,b) => Date.parse(a.serverCreatedAt) - Date.parse(b.serverCreatedAt))[0];
+if (!earliest) { state.hasOlderMessages = false; $('history-toolbar').hidden = true; return; }
+// Retain the original server timestamp (including fractional microseconds) for cursor accuracy.
+const before = earliest.serverCreatedAt;
+state.loadingOlder = true; $('load-older-btn').disabled = true; $('load-older-btn').textContent = 'Loading earlier messages…';
+const wrap = $('messages-wrap'); const oldHeight = wrap.scrollHeight; const oldTop = wrap.scrollTop;
+try {
+const data = await apiRequest({ action:'history', roomId, before });
+if (roomId !== state.activeRoomId) return;
+const inserted = [];
+const incoming = (data.messages || []).slice().sort((a,b) => (Number(a.ts)||0) - (Number(b.ts)||0) || String(a.created_at||'').localeCompare(String(b.created_at||'')));
+for (const raw of incoming) {
+if (!raw || typeof raw !== 'object') continue;
+const key = serverRecordKey(raw);
+if (state.seenRecordKeys.has(key)) continue;
+const payload = decodeServerMessage(raw);
+if (payload.type === 'message') {
+const normalizedSender = cleanName(raw.nickname || 'Guest') || 'Guest';
+const duplicate = state.activeMessages.find(m => String(m.serverId || m.recordKey || '') === key || (payload.clientMessageId && m.clientMessageId === payload.clientMessageId));
+if (!duplicate) {
+const msg = { id:key, serverId:key, recordKey:key, clientMessageId:payload.clientMessageId || raw.client_message_id || null, senderId:String(raw.sender_id || '') || null, type:'message', sender:normalizedSender, text:payload.deleted ? '' : String(payload.text || '').slice(0,MAX_TEXT), time:Number(raw.ts || payload.sentAt) || now(), serverTs:Number(raw.ts)||now(), status:'received', replyTo:payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment:payload.deleted ? null : sanitizeAttachment(payload.attachment), reactions:[], deleted:!!payload.deleted, edited:!!payload.edited, serverCreatedAt:raw.created_at || null, serverUpdatedAt:raw.updated_at || raw.created_at || null, event:false };
+state.activeMessages.push(msg); inserted.push(msg);
+}
+} else if (['edit','delete','reaction'].includes(payload.type)) {
+if (processEvent(payload, raw) && !inserted.length) { /* Updated reactions are rendered below. */ }
+}
+state.seenRecordKeys.add(key); state.seenServerIds.add(key);
+}
+if (state.pendingEvents.length) {
+const pending = state.pendingEvents; state.pendingEvents = [];
+for (const evt of pending) {
+if (findMessage(evt.payload.targetId)) processEvent(evt.payload, evt.raw);
+else state.pendingEvents.push(evt);
+}
+}
+state.activeMessages.sort((a,b) => (Number(a.serverTs)||Number(a.time)||0) - (Number(b.serverTs)||Number(b.time)||0));
+state.allMessages[roomId] = state.activeMessages; persist();
+const host = $('message-list');
+for (const msg of inserted.slice().reverse()) {
+const template = document.createElement('template'); template.innerHTML = messageRowHtml(msg).trim();
+const row = template.content.firstElementChild; if (row) host.insertBefore(row, host.firstChild);
+}
+renderMessages(false);
+wrap.scrollTop = oldTop + (wrap.scrollHeight - oldHeight);
+state.hasOlderMessages = !!data.hasMore;
+$('history-toolbar').hidden = !state.hasOlderMessages;
+} catch (error) { if (navigator.onLine) toast(String(error.message || 'Could not load earlier messages.')); else toast('Reconnect to load earlier messages.'); }
+finally { state.loadingOlder = false; if ($('load-older-btn')) { $('load-older-btn').disabled = false; $('load-older-btn').textContent = 'Load earlier messages'; } }
 }
 function sanitizeAttachment(input) {
 if (!input || typeof input !== 'object') return null;
@@ -452,27 +558,55 @@ if (!/^data:(image\/(jpeg|png|gif|webp)|application\/pdf|text\/plain);base64,[a-
 return { name, mime, data };
 }
 function stopPolling() { if (state.pollTimer) clearInterval(state.pollTimer); state.pollTimer = null; state.pollGeneration++; if (state.pollController) state.pollController.abort(); state.pollController = null; state.pollBusy = false; }
-function sendControlEvent(event) {
-return sendEnvelope({ ...event, eventId:makeRoomId(), sentAt:now(), by:state.profile.name }).then(data => { if (data?.id) state.seenRecordKeys.add(String(data.id)); return true; }).catch(err => { toast('Action failed: ' + String(err.message || 'network error').slice(0,80)); return false; });
+async function sendControlEvent(event) {
+if (!state.authenticated) { toast('Sign in to sync this action.'); return false; }
+const payload = { ...event, eventId: event.eventId || makeRoomId(), sentAt: now(), by: state.profile.name };
+try {
+const data = await sendEnvelope(payload);
+if (data?.id) { state.seenRecordKeys.add(String(data.id)); state.seenServerIds.add(String(data.id)); }
+return true;
+} catch (err) { toast('Action could not sync: ' + String(err.message || 'network error').slice(0,80)); return false; }
 }
 function startReply(msg) {
 if (!msg || msg.deleted) return;
 state.pendingReply = msg; $('reply-preview').hidden = false; $('reply-author').textContent = 'Replying to ' + (msg.sender || 'message'); $('reply-text').textContent = String(msg.text || (msg.attachment ? 'Attachment' : '')).slice(0,150); $('message-input').focus();
 }
-function messageEventTarget(msg) { return msg?.serverId || msg?.clientMessageId || msg?.recordKey || null; }
+function messageEventTarget(msg) { return msg?.serverId || null; }
+async function flushQueuedReactions(msg) {
+if (!msg?.serverId || !Array.isArray(msg.queuedReactions) || !msg.queuedReactions.length) return;
+const queue = msg.queuedReactions.slice(); msg.queuedReactions = [];
+for (const item of queue) {
+const ok = await sendControlEvent({ type:'reaction', targetId:msg.serverId, emoji:item.emoji, add:item.add, eventId:item.eventId });
+if (!ok) { msg.queuedReactions.push(item); }
+}
+persist(); renderMessages(false);
+}
 function reactToMessage(msg, emoji) {
 if (!msg || msg.deleted) return;
-const targetId = messageEventTarget(msg);
-if (!targetId) return toast('This message cannot be reacted to yet. Refresh the room and try again.');
+if (!state.authenticated && !state.offlineCached) { openAuthModal('login', 'Sign in to react to messages.'); return; }
 const by = state.profile.name;
-const existing = (msg.reactions || []).some(r => r.emoji === emoji && r.by === by);
-if (existing) msg.reactions = (msg.reactions || []).filter(r => !(r.emoji === emoji && r.by === by));
-else { msg.reactions = msg.reactions || []; msg.reactions.push({emoji, by}); }
+const byId = String(state.user?.id || '');
+const reactions = Array.isArray(msg.reactions) ? msg.reactions : (msg.reactions = []);
+const existingIndex = reactions.findIndex(r => r.emoji === emoji && (byId && r.byId ? r.byId === byId : r.by === by));
+const removing = existingIndex >= 0;
+if (removing) reactions.splice(existingIndex, 1);
+else reactions.push({ emoji, by, byId: byId || null });
+if (!msg.serverId) {
+msg.queuedReactions = Array.isArray(msg.queuedReactions) ? msg.queuedReactions : [];
+const queuedIndex = msg.queuedReactions.findIndex(r => r.emoji === emoji);
+if (queuedIndex >= 0) msg.queuedReactions.splice(queuedIndex, 1);
+else if (!removing) msg.queuedReactions.push({ emoji, add:true, eventId:makeRoomId() });
+renderMessages(false); persist();
+if (!navigator.onLine) toast('Reaction saved locally; it will sync after the message is sent and you reconnect.');
+else toast('Reaction queued until the message finishes sending.');
+return;
+}
 persist(); renderMessages(false);
-sendControlEvent({ type:'reaction', targetId, emoji, add:!existing }).then(ok => {
+sendControlEvent({ type:'reaction', targetId:msg.serverId, emoji, add:!removing }).then(ok => {
 if (ok) return;
-if (existing) { if (!(msg.reactions || []).some(r => r.emoji === emoji && r.by === by)) msg.reactions.push({emoji, by}); }
-else msg.reactions = (msg.reactions || []).filter(r => !(r.emoji === emoji && r.by === by));
+const idx = (msg.reactions || []).findIndex(r => r.emoji === emoji && (byId && r.byId ? r.byId === byId : r.by === by));
+if (removing) { if (idx < 0) msg.reactions.push({emoji, by, byId:byId || null}); }
+else if (idx >= 0) msg.reactions.splice(idx, 1);
 persist(); renderMessages(false);
 });
 }
@@ -483,13 +617,13 @@ if (action === 'react-picker') showEmojiPicker(msg);
 if (action === 'react') reactToMessage(msg, emoji || '👍');
 if (action === 'copy') { if (msg.deleted) return toast('Deleted messages cannot be copied.'); copyText(String(msg.text || '')); }
 if (action === 'edit') {
-if (msg.sender !== state.profile.name || !messageEventTarget(msg)) return toast('Only your messages can be edited.');
+if (!((msg.senderId && state.user?.id && msg.senderId === state.user.id) || (!msg.senderId && msg.sender === state.profile.name)) || !messageEventTarget(msg)) return toast('Only your synced messages can be edited.');
 openModal(`<h2 id="modal-title">Edit message</h2><p>Your edit is sent as a synced room event.</p><label class="field-label" for="edit-message-field">Message</label><textarea class="field" id="edit-message-field" maxlength="${MAX_TEXT}" rows="4">${esc(msg.text || '')}</textarea><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-edit-btn">Save edit</button></div>`);
 $('confirm-edit-btn').onclick = () => { const text = $('edit-message-field').value.trim(); if (!text || text.length > MAX_TEXT) return toast('Enter a valid message.'); const previousText = msg.text; const previousEdited = !!msg.edited; msg.text = text; msg.edited = true; persist(); renderMessages(false); closeModal(); sendControlEvent({type:'edit',targetId:messageEventTarget(msg),text}).then(ok => { if (ok) return; msg.text = previousText; msg.edited = previousEdited; persist(); renderMessages(false); }); };
 }
 if (action === 'delete') {
-if (msg.sender !== state.profile.name) return;
-openModal(`<h2 id="modal-title">Delete message?</h2><p>This sends a delete event so updated ArixChat clients in the room hide the message. The underlying server record may still exist.</p><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-delete-btn" style="background:#d92d20">Delete message</button></div>`);
+if (!((msg.senderId && state.user?.id && msg.senderId === state.user.id) || (!msg.senderId && msg.sender === state.profile.name)) || !messageEventTarget(msg)) return toast('Only your synced messages can be deleted.');
+openModal(`<h2 id="modal-title">Delete message?</h2><p>This removes the message text and attachment from the active database record and syncs the deletion to the room. Backups or exports made earlier may still contain copies.</p><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-delete-btn" style="background:#d92d20">Delete message</button></div>`);
 $('confirm-delete-btn').onclick = () => { const targetId = messageEventTarget(msg); const previous = { deleted:!!msg.deleted, text:msg.text, attachment:msg.attachment }; msg.deleted = true; msg.text = ''; msg.attachment = null; persist(); renderMessages(false); closeModal(); if (targetId) sendControlEvent({type:'delete',targetId}).then(ok => { if (ok) return; msg.deleted = previous.deleted; msg.text = previous.text; msg.attachment = previous.attachment; persist(); renderMessages(false); }); };
 }
 }
@@ -500,38 +634,106 @@ document.querySelectorAll('[data-emoji-choice]').forEach(btn => btn.addEventList
 }
 function openModal(content) { $('modal-content').innerHTML = content; $('modal-backdrop').classList.add('show'); document.querySelectorAll('[data-modal-cancel]').forEach(btn => btn.addEventListener('click', closeModal)); }
 function closeModal() { $('modal-backdrop').classList.remove('show'); $('modal-content').innerHTML = ''; }
+function openAuthModal(mode = 'login', notice = '', emailValue = '') {
+state.authMode = mode === 'signup' ? 'signup' : 'login';
+state.authBusy = false;
+const signup = state.authMode === 'signup';
+const note = notice ? `<div class="security-card" role="status">${esc(notice)}</div>` : '';
+openModal(`<h2 id="modal-title">${signup ? 'Create your ArixChat account' : 'Welcome back'}</h2><p>${signup ? 'Create a secure account to sync messages across rooms and devices.' : 'Sign in to securely access your conversations.'}</p>${note}<label class="field-label" for="auth-email-field">Email address</label><input class="field" id="auth-email-field" type="email" maxlength="254" autocomplete="email" value="${esc(emailValue)}" placeholder="you@example.com" required>${signup ? '<label class="field-label" for="auth-name-field">Display name</label><input class="field" id="auth-name-field" maxlength="32" autocomplete="nickname" placeholder="How others see you" required>' : ''}<label class="field-label" for="auth-password-field">Password</label><input class="field" id="auth-password-field" type="password" maxlength="128" autocomplete="${signup ? 'new-password' : 'current-password'}" placeholder="${signup ? 'At least 8 characters' : 'Your password'}" required><div class="security-card"><strong>Account security</strong><br>Passwords are handled by Supabase Auth and are never stored in this chat's local cache. This account layer uses HTTPS and HttpOnly session cookies.</div><div class="modal-actions"><button class="secondary-btn" id="auth-mode-switch">${signup ? 'I already have an account' : 'Create account'}</button><button class="primary-btn" id="auth-submit-btn">${signup ? 'Create account' : 'Sign in'}</button></div>`);
+$('auth-submit-btn').onclick = submitAuthForm;
+$('auth-mode-switch').onclick = () => openAuthModal(signup ? 'login' : 'signup', '', $('auth-email-field')?.value || '');
+for (const id of ['auth-email-field','auth-password-field','auth-name-field']) $(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitAuthForm(); } });
+setTimeout(() => $(signup ? 'auth-name-field' : 'auth-email-field')?.focus(), 20);
+}
+async function submitAuthForm() {
+if (state.authBusy) return;
+const mode = state.authMode || 'login';
+const email = $('auth-email-field')?.value.trim() || '';
+const password = $('auth-password-field')?.value || '';
+const displayName = cleanName($('auth-name-field')?.value || '');
+if (!email) return toast('Enter your email address.');
+if (password.length < 8) return toast('Password must contain at least 8 characters.');
+if (mode === 'signup' && !displayName) return toast('Enter a display name.');
+state.authBusy = true;
+const button = $('auth-submit-btn'); if (button) { button.disabled = true; button.textContent = mode === 'signup' ? 'Creating account…' : 'Signing in…'; }
+try {
+const result = await apiRequest(mode === 'signup' ? { action:'signup', email, password, displayName } : { action:'login', email, password });
+if (result.needsEmailConfirmation) { openAuthModal('login', result.message || 'Check your email to verify your account, then sign in.', email); return; }
+if (!result.authenticated || !result.user?.id) throw new Error('The account session could not be created. Please try again.');
+await activateAuthenticatedUser(result.user);
+toast(mode === 'signup' ? 'Account created securely.' : 'Signed in securely.');
+} catch (error) { openAuthModal(mode, String(error.message || 'Authentication failed.'), email); }
+finally { state.authBusy = false; }
+}
+async function activateAuthenticatedUser(user) {
+state.user = { id:String(user.id), email:String(user.email || ''), displayName:cleanName(user.displayName || user.email?.split('@')[0] || 'ArixChat user') };
+state.profile.name = state.user.displayName || 'ArixChat user';
+state.authenticated = true; state.offlineCached = false;
+try { localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user)); localStorage.setItem('Arix_nickname', state.profile.name); } catch {}
+persist(); renderProfile(); renderRoomList(); closeModal();
+if (state.pendingRoomInvite) {
+const invite = state.pendingRoomInvite; const title = state.pendingRoomTitle; state.pendingRoomInvite = ''; state.pendingRoomTitle = '';
+await joinRoomFromInput(invite, title); return;
+}
+await setActiveRoomFromUrl();
+await retryFailedMessages();
+}
+async function signOut() {
+try { await apiRequest({ action:'logout' }); } catch { /* Clear local UI state even when the network is unavailable. */ }
+stopPolling(); state.authenticated = false; state.offlineCached = false; state.user = null; state.activeRoomId = null; state.activeMessages = [];
+try { localStorage.removeItem(STORE_SESSION_HINT); } catch {}
+$('app').classList.remove('chat-open'); $('welcome-state').hidden = false; $('message-list').hidden = true; $('message-list').innerHTML = ''; $('composer-area').hidden = true;
+setRoomUrl(null); setConnection(false, 'Sign in to continue'); renderProfile(); closeModal(); openAuthModal('login', 'You have signed out.');
+}
 function openProfileModal(required = false) {
-openModal(`<h2 id="modal-title">Your ArixChat profile</h2><p>Choose the name other people will see in invite-link rooms. Use a nickname; this legacy room service does not authenticate profiles.</p><label class="field-label" for="profile-name-field">Display name</label><input class="field" id="profile-name-field" maxlength="32" autocomplete="nickname" value="${esc(state.profile.name)}" placeholder="e.g. Vaidik"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel ${required ? 'hidden' : ''}>Cancel</button><button class="primary-btn" id="save-profile-btn">Save profile</button></div>`);
-$('save-profile-btn').onclick = () => {
+if (!state.authenticated && !state.offlineCached) return openAuthModal('login', 'Sign in to manage your profile.');
+openModal(`<h2 id="modal-title">Your ArixChat profile</h2><p>Update the display name connected to your authenticated account.</p><div class="security-card"><strong>Signed in as</strong><br>${esc(state.user?.email || 'Cached account')}</div><label class="field-label" for="profile-name-field">Display name</label><input class="field" id="profile-name-field" maxlength="32" autocomplete="nickname" value="${esc(state.profile.name)}" placeholder="Your display name"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel ${required ? 'hidden' : ''}>Cancel</button>${state.authenticated ? '<button class="secondary-btn" id="logout-btn">Sign out</button>' : ''}<button class="primary-btn" id="save-profile-btn">Save profile</button></div>`);
+$('save-profile-btn').onclick = async () => {
 const name = cleanName($('profile-name-field').value);
-if (!name) { toast('Please enter a display name.'); return; }
-state.profile.name = name; localStorage.setItem('Arix_nickname', name); persist(); renderProfile(); closeModal();
-if (required && !state.activeRoomId) createRoom();
+if (!name) { toast('Please enter a valid display name.'); return; }
+if (!state.authenticated) { toast('Profile changes need an active connection.'); return; }
+try {
+const result = await apiRequest({ action:'profile_update', displayName:name });
+state.user = { ...state.user, ...(result.user || {}), displayName:name };
+state.profile.name = name; localStorage.setItem('Arix_nickname', name); localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user));
+persist(); renderProfile(); renderMessages(false); closeModal(); toast('Profile updated');
+} catch (error) { toast(String(error.message || 'Profile could not be updated.')); }
 };
+$('logout-btn')?.addEventListener('click', signOut);
 setTimeout(() => $('profile-name-field')?.focus(), 20);
 }
 function renderProfile() {
 const name = state.profile.name || 'ArixChat user'; $('profile-name').textContent = name; $('profile-avatar').textContent = name.charAt(0).toUpperCase() || 'A';
 }
-function createRoom() {
-if (!state.profile.name) return openProfileModal(true);
-const id = makeRoomId(); const room = findOrAddRoom(id, 'Room ' + id.slice(0,8));
-setActiveRoom(room.id); copyText(shareUrl(room.id)); toast('Room created. Share the invite link.');
+async function createRoom() {
+if (!state.authenticated) return openAuthModal('login', 'Sign in to create a synced room.');
+try {
+const result = await apiRequest({ action:'create_room', title:'New conversation' });
+const id = result.room?.room_id || result.room?.id;
+if (!id || !roomIdValid(id)) throw new Error('The server returned an invalid room ID.');
+const room = findOrAddRoom(id, result.room.title || 'New conversation'); room.accountId = state.user?.id || null; room.shared = true;
+persist(); setActiveRoom(room.id); await copyText(shareUrl(room.id)); toast('Room created. Share the invite link.');
+} catch (error) { toast(String(error.message || 'Room could not be created.')); }
 }
-function joinRoomFromInput(value, title) {
+async function joinRoomFromInput(value, title) {
 const id = normalizeRoomInput(value);
 if (!roomIdValid(id)) { toast('That invite link or room ID is not valid.'); return; }
-findOrAddRoom(id, title); setActiveRoom(id); closeModal(); toast('Joined room');
+if (!state.authenticated) { state.pendingRoomInvite = value; state.pendingRoomTitle = title || ''; return openAuthModal('login', 'Sign in to join this room. Your invite will be kept.'); }
+try {
+const result = await apiRequest({ action:'join_room', roomId:id });
+const room = findOrAddRoom(id, cleanRoomTitle(title) || result.room?.title || 'Room ' + id.slice(0,8));
+room.accountId = state.user?.id || null; room.shared = true; persist(); setActiveRoom(id); closeModal(); toast('Joined room securely');
+} catch (error) { toast(String(error.message || 'Could not join this room.')); }
 }
 function showJoinModal() {
-openModal(`<h2 id="modal-title">Join a room</h2><p>Paste an ArixChat invite link or enter a room ID.</p><label class="field-label" for="join-room-field">Invite link or room ID</label><input class="field" id="join-room-field" maxlength="500" placeholder="https://…/arixchat.html?room=…" autocomplete="off"><label class="field-label" for="join-room-title-field">Room name (optional, saved on this device)</label><input class="field" id="join-room-title-field" maxlength="48" placeholder="Study group, family, project…"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-join-btn">Join room</button></div>`);
+openModal(`<h2 id="modal-title">Join a room</h2><p>Paste an ArixChat invite link or enter its room ID. You will need to sign in to join.</p><label class="field-label" for="join-room-field">Invite link or room ID</label><input class="field" id="join-room-field" maxlength="500" placeholder="https://…/arixchat.html?room=…" autocomplete="off"><label class="field-label" for="join-room-title-field">Room name (optional, saved on this device)</label><input class="field" id="join-room-title-field" maxlength="48" placeholder="Study group, family, project…"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-join-btn">Join room</button></div>`);
 $('confirm-join-btn').onclick = () => joinRoomFromInput($('join-room-field').value, $('join-room-title-field').value);
 $('join-room-field').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoomFromInput(e.currentTarget.value, $('join-room-title-field').value); });
 setTimeout(() => $('join-room-field')?.focus(), 20);
 }
 function showRoomOptions() {
 const room = activeRoom(); if (!room) return toast('Choose a room first.');
-openModal(`<h2 id="modal-title">Room details</h2><p>Room names and pins are saved on this device. Anyone with the invite link may be able to join; this room service does not authenticate membership.</p><label class="field-label" for="room-name-field">Display name</label><input class="field" id="room-name-field" maxlength="48" value="${esc(roomTitle(room))}"><div class="security-card"><strong>Room ID</strong><br><code style="overflow-wrap:anywhere">${esc(room.id)}</code></div><div class="modal-actions"><button class="secondary-btn" id="pin-room-btn">${room.pinned ? 'Unpin chat' : 'Pin chat'}</button><button class="secondary-btn" id="export-room-btn">Export messages</button></div><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Close</button><button class="secondary-btn" id="remove-room-btn" style="color:#b42318">Remove chat</button><button class="primary-btn" id="save-room-name-btn">Save name</button></div>`);
+openModal(`<h2 id="modal-title">Room details</h2><p>Room names and pins are saved on this device. Only signed-in accounts with this invite link can join. Treat the link like a private key.</p><label class="field-label" for="room-name-field">Display name</label><input class="field" id="room-name-field" maxlength="48" value="${esc(roomTitle(room))}"><div class="security-card"><strong>Room ID</strong><br><code style="overflow-wrap:anywhere">${esc(room.id)}</code></div><div class="modal-actions"><button class="secondary-btn" id="pin-room-btn">${room.pinned ? 'Unpin chat' : 'Pin chat'}</button><button class="secondary-btn" id="export-room-btn">Export messages</button></div><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Close</button><button class="secondary-btn" id="remove-room-btn" style="color:#b42318">Remove chat</button><button class="primary-btn" id="save-room-name-btn">Save name</button></div>`);
 $('save-room-name-btn').onclick = () => { const title = cleanRoomTitle($('room-name-field').value); if (title) room.title = title; persist(); $('active-room-title').textContent = roomTitle(room); $('active-avatar').textContent = roomTitle(room).charAt(0).toUpperCase(); renderRoomList(); closeModal(); toast('Room name saved on this device'); };
 $('export-room-btn').onclick = () => { exportActiveRoom(); closeModal(); };
 $('pin-room-btn').onclick = () => { room.pinned = !room.pinned; persist(); renderRoomList(); closeModal(); toast(room.pinned ? 'Chat pinned' : 'Chat unpinned'); };
@@ -549,7 +751,7 @@ persist(); renderRoomList(); closeModal(); toast('Chat removed from this device'
 }
 function exportActiveRoom() {
 const room = activeRoom(); if (!room) return;
-const messages = state.activeMessages.map(m => ({sender:m.sender,text:m.text,time:new Date(m.time).toISOString(),deleted:!!m.deleted,replyTo:m.replyTo || null,reactions:m.reactions || [],attachment:m.attachment ? {name:m.attachment.name,mime:m.attachment.mime} : undefined}));
+const messages = state.activeMessages.map(m => ({sender:m.sender,text:m.text,time:new Date(Number(m.time) || now()).toISOString(),deleted:!!m.deleted,replyTo:m.replyTo || null,reactions:m.reactions || [],attachment:m.attachment ? {name:m.attachment.name,mime:m.attachment.mime} : undefined}));
 const blob = new Blob([JSON.stringify({product:'ArixChat',room:{id:room.id,title:roomTitle(room)},exportedAt:new Date().toISOString(),messages}, null, 2)], {type:'application/json'});
 const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'arixchat-' + room.id.slice(0,8) + '.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); toast('Conversation exported');
 }
@@ -611,12 +813,12 @@ $('sidebar-toggle').addEventListener('click', toggleDesktopSidebar);
 $('join-room-btn').addEventListener('click', showJoinModal); $('welcome-join-room').addEventListener('click', showJoinModal);
 $('invite-btn').addEventListener('click', () => { if (state.activeRoomId) copyText(shareUrl(state.activeRoomId)); else toast('Choose a room first'); });
 $('room-menu-btn').addEventListener('click', showRoomOptions); $('profile-btn').addEventListener('click', () => openProfileModal(false)); $('privacy-btn').addEventListener('click', showPrivacyModal);
-$('search-messages-btn').addEventListener('click', searchMessages); $('export-btn').addEventListener('click', exportActiveRoom);
+$('search-messages-btn').addEventListener('click', searchMessages); $('export-btn').addEventListener('click', exportActiveRoom); $('load-older-btn').addEventListener('click', loadOlderMessages);
 $('room-search').addEventListener('input', renderRoomList);
 $('room-list').addEventListener('click', e => { const item = e.target.closest('[data-room]'); if (item) setActiveRoom(item.getAttribute('data-room')); });
 $('room-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('[data-room]')) { e.preventDefault(); setActiveRoom(e.target.getAttribute('data-room')); } });
 $('send-btn').addEventListener('click', sendMessage);
-$('message-input').addEventListener('input', e => { e.currentTarget.style.height='auto'; e.currentTarget.style.height=Math.min(e.currentTarget.scrollHeight,130)+'px'; $('composer-character-count').textContent=e.currentTarget.value.length+' / '+MAX_TEXT; });
+$('message-input').addEventListener('input', e => { e.currentTarget.style.height='auto'; e.currentTarget.style.height=Math.min(e.currentTarget.scrollHeight,130)+'px'; $('composer-character-count').textContent=e.currentTarget.value.length+' / '+MAX_TEXT; saveDraftForActiveRoom(); });
 $('message-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMessage(); } });
 $('messages-wrap').addEventListener('click', handleMessageClick); $('messages-wrap').addEventListener('click', handleStatusClick);
 $('messages-wrap').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.message-status[role="button"]')) { e.preventDefault(); handleMessageClick(e); } });
@@ -624,25 +826,69 @@ $('cancel-reply').addEventListener('click', () => { state.pendingReply = null; $
 $('emoji-btn').addEventListener('click', toggleEmojiTray); $('attach-btn').addEventListener('click', () => $('file-input').click()); $('file-input').addEventListener('change', e => stageAttachment(e.target.files?.[0]));
 $('mobile-back').addEventListener('click', () => $('app').classList.remove('chat-open')); $('mobile-overlay').addEventListener('click', () => $('app').classList.remove('chat-open'));
 $('modal-close').addEventListener('click', closeModal); $('modal-backdrop').addEventListener('click', e => { if (e.target === $('modal-backdrop')) closeModal(); });
-window.addEventListener('online', () => { if (state.activeRoomId) pollRoom(); });
-window.addEventListener('offline', () => setConnection(false, 'Offline — reconnecting'));
+window.addEventListener('online', () => { refreshSession(); });
+window.addEventListener('offline', () => { setConnection(false, 'Offline — cached messages available'); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.activeRoomId && state.authenticated) pollRoom(); });
 window.addEventListener('resize', applySidebarPreference);
 window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('room-search').focus(); $('room-search').select(); } }); 
 }
 function showPrivacyModal() {
-openModal(`<h2 id="modal-title">Privacy & security</h2><p>ArixChat is a lightweight client built on the existing ArixAI room endpoint.</p><div class="security-card"><strong>What this version protects</strong><br>• User-visible text is escaped before display.<br>• Room IDs are generated with browser cryptographic randomness when available.<br>• Message length, attachment types, attachment size, and client send rate are limited.<br></div><div class="security-card"><strong>Important backend limits</strong><br>This invite-link service is not an account-authenticated messenger and does not provide membership/role permissions or end-to-end encryption. Server-side request limits are basic abuse controls, not identity security, and deleting a message hides it in updated clients but cannot guarantee erasure from historical storage or exports. Anyone with an invite link may be able to read and post in that room. Use it for ordinary conversation only, not passwords, financial details, or sensitive personal data.</div><div class="modal-actions"><button class="primary-btn" data-modal-cancel>Understood</button></div>`);
+openModal(`<h2 id="modal-title">Privacy & security</h2><p>ArixChat uses Supabase Auth for accounts and a server-side API for room and message access.</p><div class="security-card"><strong>Protections in this build</strong><br>• Sign-in sessions use Secure, HttpOnly cookies.<br>• Room membership and message writes are checked by the server and database functions.<br>• Message sends/actions have stable idempotency keys and a server-side room rate limit.<br>• Text is escaped before rendering; attachment types and sizes are restricted.<br>• Edit and delete actions are checked against the authenticated message author.</div><div class="security-card"><strong>Important limitations</strong><br>Room links are bearer invites: anyone with a valid account and the link can join. Messages are encrypted in transit by HTTPS and stored in your Supabase project, but this build does not provide end-to-end encryption. Earlier exports, screenshots, or database backups may retain deleted content. Do not treat it as a secure channel for passwords or highly sensitive data.</div><div class="modal-actions"><button class="primary-btn" data-modal-cancel>Understood</button></div>`);
 }
-function setActiveRoomFromUrl() {
+async function setActiveRoomFromUrl() {
 const params = new URLSearchParams(location.search); const roomId = normalizeRoomInput(params.get('room') || '');
-if (roomId && roomIdValid(roomId)) { findOrAddRoom(roomId); setActiveRoom(roomId); }
-else if (state.rooms.length) setActiveRoom(state.rooms.slice().sort((a,b) => (Number(b.updatedAt)||0) - (Number(a.updatedAt)||0))[0].id);
-else { $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; }
+if (state.authenticated) {
+if (roomId && roomIdValid(roomId)) { await joinRoomFromInput(roomId, ''); return; }
+const candidates = state.rooms.filter(r => r.accountId === state.user?.id).slice().sort((a,b) => (Number(b.updatedAt)||0) - (Number(a.updatedAt)||0));
+for (const candidate of candidates) {
+try {
+const result = await apiRequest({ action:'join_room', roomId:candidate.id });
+candidate.accountId = state.user?.id || null; candidate.title = candidate.title && !candidate.title.startsWith('Room ') ? candidate.title : (result.room?.title || candidate.title); persist();
+setActiveRoom(candidate.id); return;
+} catch { /* Ignore stale local invites and try the next cached room. */ }
 }
-// Message-status click handling is intentionally delegated; no server records are overwritten.
-function boot() {
-if (!state.profile.name) { renderProfile(); openProfileModal(true); }
-else renderProfile();
-bindEvents(); applySidebarPreference(); renderRoomList(); setActiveRoomFromUrl();
+state.activeRoomId = null; state.activeMessages = []; $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; $('app').classList.remove('chat-open'); setRoomUrl(null); setConnection(true, 'Signed in · create or join a room'); return;
+}
+if (state.offlineCached) {
+const candidate = (roomId && roomIdValid(roomId) ? state.rooms.find(r => r.id === roomId && (!r.accountId || r.accountId === state.user?.id)) : null) || state.rooms.filter(r => r.accountId === state.user?.id).slice().sort((a,b) => (Number(b.updatedAt)||0) - (Number(a.updatedAt)||0))[0];
+if (candidate) { setActiveRoom(candidate.id); setConnection(false, 'Offline · cached messages only'); }
+else { $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; setConnection(false, 'Offline · no cached rooms'); }
+return;
+}
+state.activeRoomId = null; state.activeMessages = []; $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; $('app').classList.remove('chat-open'); setConnection(false, 'Sign in to begin');
+}
+async function refreshSession() {
+try {
+const result = await apiRequest({ action:'session' });
+if (result.authenticated && result.user?.id) {
+if (!state.authenticated || state.user?.id !== result.user.id || state.offlineCached) { await activateAuthenticatedUser(result.user); await retryFailedMessages(); }
+else { state.authenticated = true; state.offlineCached = false; setConnection(true, 'Secure sync active'); if (state.activeRoomId) { await pollRoom(); await retryFailedMessages(); } }
+return;
+}
+state.authenticated = false; state.offlineCached = false; state.user = null; setConnection(false, 'Sign-in required'); openAuthModal('login', 'Your session expired. Please sign in again.');
+} catch {
+setConnection(false, 'Reconnecting… cached messages remain available');
+}
+}
+function loadOfflineCache(hint) {
+state.user = hint; state.profile.name = cleanName(hint.displayName || hint.email?.split('@')[0] || 'ArixChat user');
+state.authenticated = false; state.offlineCached = true; renderProfile(); renderRoomList();
+setActiveRoomFromUrl(); setConnection(false, 'Offline · cached messages only');
+}
+// Message-status click handling is intentionally delegated; server records are never overwritten by the client.
+async function boot() {
+bindEvents(); applySidebarPreference(); renderRoomList(); setConnection(false, 'Checking secure session…');
+try {
+const result = await apiRequest({ action:'session' });
+if (result.authenticated && result.user?.id) { await activateAuthenticatedUser(result.user); return; }
+state.authenticated = false; state.offlineCached = false; state.user = null; renderProfile();
+$('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true;
+openAuthModal('login', 'Sign in or create an account to access ArixChat.');
+} catch (error) {
+const hint = safeJson(localStorage.getItem(STORE_SESSION_HINT), null);
+if (hint && hint.id) { loadOfflineCache(hint); toast('Server unavailable. Showing locally cached messages.'); }
+else { openAuthModal('login', String(error.message || 'Could not reach the chat service. Check the deployment settings.')); }
+}
 }
 boot();
 })();
