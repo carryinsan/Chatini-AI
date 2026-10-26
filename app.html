@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -1118,7 +1119,7 @@ body {
             </div>
             <div id="adv-int-content" class="hidden space-y-0.5 pl-2 border-l-2 border-gray-100 ml-3 py-1">
                 <button onclick="if(window.innerWidth < 1024) toggleSidebar(); openPulseModal();" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-cyan-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-lightning text-sm text-cyan-500 group-hover:scale-110 transition-transform"></i> Your Tasks</button>
-                <button onclick="createMultiplayerRoom()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-users-three text-sm text-emerald-500 group-hover:scale-110 transition-transform"></i> Invite Co-Op Friend</button>
+                <a href="./arixchat.html" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-emerald-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-chats-circle text-sm text-emerald-600 group-hover:scale-110 transition-transform"></i> ArixChat</a>
                 <button onclick="openExtModal()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-purple-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-brain text-sm text-purple-500 group-hover:scale-110 transition-transform"></i> Manage Extensions</button>
                 <button onclick="generateBrainMap()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-blue-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-graph text-sm text-blue-500 group-hover:scale-110 transition-transform"></i> Constellation Map</button>
                 <button onclick="shareFullChat()" class="w-full flex items-center justify-start px-3 gap-2.5 hover:bg-indigo-50 text-gray-600 py-2 rounded-xl text-xs font-medium transition-colors group"><i class="ph-bold ph-share-network text-sm text-indigo-500 group-hover:scale-110 transition-transform"></i> Share Chat</button>
@@ -1326,7 +1327,7 @@ body {
                 <!-- Main Textarea -->
                 <textarea 
     id="chat-input"
-    placeholder="Ask anything, type @Arix in Co-Op..."
+    placeholder="Ask anything..."
     class="w-full bg-transparent resize-none outline-none text-gray-800 placeholder-gray-400 px-3 py-2 text-[15px] min-h-[44px] max-h-[150px] custom-scrollbar leading-relaxed"
     rows="1"
 ></textarea>
@@ -1804,14 +1805,12 @@ let isCanvasMaximized = false;
 let isImageMode = false;
 let isVideoMode = false; isWorkspaceMode = false;
 let currentChatId = Date.now().toString();
+let isSendDispatching = false;
 let chats = safeLocalJSON('chatini_sessions', []);
 let messages = [];
 let pendingFiles = [];
 let currentChatExtId = null;
 let extForm = { id: "", name: "", links: [], files: [] };
-let currentMultiplayerRoom = null;
-let pollInterval = null;
-let lastMessageTs = 0;
 let pulseTasks = safeLocalJSON('Arix_pulse_tasks', []);
 let customProjects = safeLocalJSON('Arix_custom_projects', []);
 
@@ -1875,10 +1874,14 @@ window.onload = async () => {
 
     // --- Upstash App Updates Client Engine Initialization ---
     try {
-        if (window.AppUpdates && typeof window.AppUpdates.init === 'function') {
+        // Browser code must never contain an Upstash bearer token. Configure any
+        // update-service credentials through a safe, scoped public mechanism or
+        // move authenticated Redis calls behind a server endpoint.
+        if (window.AppUpdates && typeof window.AppUpdates.init === 'function' &&
+            window.UPSTASH_REDIS_REST_URL && window.UPSTASH_REDIS_REST_TOKEN) {
             window.AppUpdates.init({
-                redisUrl: window.UPSTASH_REDIS_REST_URL || 'https://immortal-eagle-36171.upstash.io',
-                redisToken: window.UPSTASH_REDIS_REST_TOKEN || 'AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw',
+                redisUrl: window.UPSTASH_REDIS_REST_URL,
+                redisToken: window.UPSTASH_REDIS_REST_TOKEN,
                 redisKey: 'app:system_update',
                 settingsMountSelector: '#arix-settings-updates-slot',
                 autoCheck: true
@@ -1901,10 +1904,9 @@ window.onload = async () => {
     // its messages have already rendered.
     const urlParams = new URLSearchParams(window.location.search);
     const shareId = urlParams.get('share');
-    const roomId = urlParams.get('room');
     const fullChatId = urlParams.get('chat');
     const projectId = urlParams.get('project');
-    const isDeepLink = !!(shareId || roomId || fullChatId || projectId);
+    const isDeepLink = !!(shareId || fullChatId || projectId);
     if (!isDeepLink) {
         if (chats.length > 0) await loadChat(chats[0].id);
         else createNewChat();
@@ -1955,8 +1957,6 @@ window.onload = async () => {
                 createNewChat();
             }
         } catch(e) { createNewChat(); }
-    } else if (roomId) {
-        joinMultiplayerRoom(roomId);
     } else if (fullChatId) {
         // Load a shared chat with a stable local/cloud ID. Keep the source URL
         // until a cloud write is confirmed so a refresh can recover from the
@@ -2184,63 +2184,6 @@ async function publishArtifact() {
             showToast("Failed to publish.");
         }
     } catch(e) { showToast("Failed to publish."); }
-}
-
-async function createMultiplayerRoom() {
-    const roomId = Math.random().toString(36).substr(2, 9);
-    currentMultiplayerRoom = roomId;
-    messages = [];
-    els.container.innerHTML = "";
-    appendMessage('assistant', 'You created a Co-Op Collaboration room! Share this link with your friend to join. Type @Arix to ask the AI.', 'oracle');
-    const link = window.location.origin + '?room=' + roomId;
-    await navigator.clipboard.writeText(link);
-    showToast("Co-Op Link Copied!");
-    startPolling();
-}
-
-function joinMultiplayerRoom(roomId) {
-    currentMultiplayerRoom = roomId;
-    messages = [];
-    els.container.innerHTML = "";
-    appendMessage('assistant', 'You joined a Co-Op Collaboration room! Type @Arix to ask the AI.', 'oracle');
-    startPolling();
-}
-
-function startPolling() {
-    if (pollInterval) clearInterval(pollInterval);
-    pollInterval = setInterval(async () => {
-        try {
-            const res = await fetch('/api/multiplayer', {
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'poll' })
-            });
-            const data = await res.json();
-            if (data.success && data.messages) {
-                data.messages.forEach(m => {
-                    if (m.ts > lastMessageTs) {
-                        lastMessageTs = m.ts;
-                        const myNick = localStorage.getItem('Arix_nickname') || 'Anonymous';
-                        
-                        if (m.nickname === myNick) {
-                            if (!document.getElementById('msg-wrapper-' + m.id)) {
-                                appendMessage('user', m.message, null, m.id, [], m.nickname);
-                            }
-                        } else if (m.nickname === 'ArixAI') {
-                            if (!document.getElementById('msg-wrapper-' + m.id)) {
-                                const msgObj = appendMessage('assistant', "", 'oracle', m.id, [], 'ArixAI');
-                                msgObj.container.innerHTML = parseRichText(m.message, false, m.id);
-                            }
-                        } else {
-                            if (!document.getElementById('msg-wrapper-' + m.id)) {
-                                appendMessage('user', m.message, null, m.id, [], m.nickname);
-                            }
-                        }
-                    }
-                });
-            }
-        } catch(e){}
-    }, 2000);
 }
 
 function openDriveModal() {
@@ -5075,28 +5018,35 @@ ${marked.parse(unclosedContent.trim())}
 }
 
 // ====== APPEND MESSAGES (TARGET UI CHAT BUBBLES) ======
+function escapeMessageHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
 function appendMessage(role, content, modelId, specificId = null, attachmentsMeta = [], senderName = null) {
-    const isUser = role === 'user'; 
+    const isUser = role === 'user';
     const msgId = specificId || Date.now().toString() + Math.random().toString(36).substr(2,5);
-    const div = document.createElement('div'); 
+    const existing = specificId ? document.getElementById('msg-wrapper-' + String(msgId)) : null;
+    if (existing) {
+        return { container: existing.querySelector('.msg-content') || existing, id: String(msgId), duplicate: true };
+    }
+    const div = document.createElement('div');
     
     div.id = 'msg-wrapper-' + msgId;
     
     if (isUser) {
         div.className = `flex items-end gap-3 mb-8 w-full animate-fade-in-up`;
-        let attHtml = attachmentsMeta.length > 0 ? 
-            `<div class="flex flex-wrap gap-2 mb-3">` + attachmentsMeta.map(a => `<span class="bg-white/80 text-gray-700 text-[11px] font-bold px-2 py-1 rounded-md border border-gray-200 shadow-sm flex items-center gap-1"><i class="ph-bold ${a.type && a.type.startsWith('image/')? 'ph-image': 'ph-file-text'} text-theme-500"></i> ${a.name}</span>`).join("") + `</div>` : "";
-        
-        let nameStr = senderName ? `<div class="text-[10px] text-gray-400 mb-1 font-bold uppercase tracking-widest text-right">${senderName} (Co-Op)</div>` : "";
+        let attHtml = attachmentsMeta.length > 0 ?
+            `<div class="flex flex-wrap gap-2 mb-3">` + attachmentsMeta.map(a => `<span class="bg-white/80 text-gray-700 text-[11px] font-bold px-2 py-1 rounded-md border border-gray-200 shadow-sm flex items-center gap-1"><i class="ph-bold ${a.type && String(a.type).startsWith('image/') ? 'ph-image' : 'ph-file-text'} text-theme-500"></i> ${escapeMessageHtml(a.name || 'Attachment')}</span>`).join("") + `</div>` : "";
+        const safeUserContent = escapeMessageHtml(content).replace(/\r?\n/g, '<br>');
+        let nameStr = "";
         
         div.innerHTML = `
             <div class="flex-1"></div>
             <div class="flex flex-col items-end group">
                 ${nameStr}
                 <div class="flex items-center gap-2">
-                    <button onclick="editMessage('${msgId}')" class="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-theme-600 transition-all flex-shrink-0"><i class="ph-bold ph-pencil-simple text-sm"></i></button>
+                    <button type="button" data-edit-message="${escapeMessageHtml(msgId)}" class="opacity-0 group-hover:opacity-100 p-2 rounded-full hover:bg-gray-100 text-gray-400 hover:text-theme-600 transition-all flex-shrink-0" aria-label="Edit prompt"><i class="ph-bold ph-pencil-simple text-sm"></i></button>
                     <div class="bg-[#F3F4F6] text-gray-800 px-5 py-4 rounded-2xl rounded-tr-sm shadow-sm text-[15px] leading-relaxed max-w-2xl relative font-medium">
-                        ${attHtml}${content}
+                        ${attHtml}${safeUserContent}
                     </div>
                 </div>
             </div>
@@ -5163,13 +5113,16 @@ function appendResearchTerminal(initText = 'Initializing Agent...', type = 'rese
 function renderMessagesToUI() { 
     els.container.innerHTML = ""; 
     window.ARTIFACT_STORE = {};
-    messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta, msg.role === 'user' ? (currentMultiplayerRoom ? localStorage.getItem('Arix_nickname') : null) : (currentMultiplayerRoom ? 'ArixAI' : null))); 
+    messages.forEach(msg => appendMessage(msg.role, msg.content, msg.modelId, msg.id, msg.attachmentsMeta || [])); 
 }
 
 // ====== CORE NETWORK PROCESSING LOOP (handleSend) ======
 async function handleSend() {
     const text = els.input.value.trim();
-    if ((!text && pendingFiles.length === 0) || isProcessing) return;
+    // Set this lock synchronously before any await; prevents Enter + click or
+    // rapid double-click from appending the same user prompt twice.
+    if ((!text && pendingFiles.length === 0) || isProcessing || isSendDispatching) return;
+    isSendDispatching = true;
 
     // Erase subsequent data only when user sends their edited prompt
     if (editingMessageId) {
@@ -5188,16 +5141,18 @@ async function handleSend() {
     }
     
     const attachmentsMeta = pendingFiles.map(f => ({ name: f.name, type: f.type }));
-    const myNick = localStorage.getItem('Arix_nickname') || 'Anonymous';
-    
     // 1. Render User Message
-    const userMsgObj = appendMessage('user', text, null, null, attachmentsMeta, currentMultiplayerRoom ? myNick : null);
+    const userMsgObj = appendMessage('user', text, null, null, attachmentsMeta);
     let payloadFiles = [...pendingFiles];
     
     if (messages.length === 0 && currentChatExtId) {
-        const exts = await DB.getAll(); 
-        const activeExt = exts.find(e => e.id === currentChatExtId);
-        if (activeExt && activeExt.files) payloadFiles = [...payloadFiles, ...activeExt.files];
+        try {
+            const exts = await DB.getAll();
+            const activeExt = exts.find(e => e.id === currentChatExtId);
+            if (activeExt && activeExt.files) payloadFiles = [...payloadFiles, ...activeExt.files];
+        } catch (extError) {
+            console.warn('[ArixAI] Could not load extension attachments:', extError);
+        }
     }
     
     const currentMessage = { 
@@ -5210,30 +5165,13 @@ async function handleSend() {
     messages.push(currentMessage);
     saveCurrentChat(); // <-- FIX: Saves immediately to prevent vanishing chats
     
-    // 2. Multiplayer Sync
-    if (currentMultiplayerRoom) {
-        fetch('/api/multiplayer', {
-            method: 'POST', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'send', message: text, nickname: myNick })
-        }).catch(()=>{});
-        
-        if (!text.toLowerCase().includes('@Arix')) {
-            els.input.value = ""; 
-            els.input.style.height = 'auto'; 
-            pendingFiles = []; 
-            renderStagingArea();
-            triggerPulseDetection(text);
-            return;
-        }
-    }
-    
     // 3. UI Cleanup & Lock
     els.input.value = ""; 
     els.input.style.height = 'auto'; 
     pendingFiles = []; 
     renderStagingArea();
-    isProcessing = true; 
+    isProcessing = true;
+    isSendDispatching = false; // The normal processing lock takes over now.
     activeAbortController = new AbortController();
     activeStreamReader = null;
     updateUIState();
@@ -5319,7 +5257,7 @@ async function handleSend() {
             logContainer.parentElement.parentElement.remove();
             
             if (compiledPayload) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
                 const rawJson = JSON.stringify(compiledPayload);
                 const artifactContent = `<artifact title="${compiledPayload.title}" type="math">\n${rawJson}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
@@ -5392,7 +5330,7 @@ async function handleSend() {
             logContainer.parentElement.parentElement.remove();
             
             if (compiledPayload) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
                 const rawJson = JSON.stringify(compiledPayload);
                 const artifactContent = `<artifact title="${compiledPayload.metadata.title}" type="presentation">\n${rawJson}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
@@ -5421,7 +5359,7 @@ async function handleSend() {
             const data = await res.json();
             logContainer.parentElement.parentElement.remove();
             if (data.success && data.data) {
-                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+                const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
                 const artifactContent = `<artifact title="${data.data.title}" type="podcast">\n${JSON.stringify(data.data)}\n</artifact>`;
                 assistantMsgObj.container.innerHTML = parseRichText(artifactContent, false, assistantMsgObj.id);
                 messages.push({ role: 'assistant', content: artifactContent, id: assistantMsgObj.id, modelId: activeModelId });
@@ -5440,7 +5378,7 @@ async function handleSend() {
     if (isAppMode) {
         els.indicator.classList.add('hidden');
         
-        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
         const container = assistantMsgObj.container;
         
         container.innerHTML = `
@@ -5718,7 +5656,6 @@ if (
         activeModelId,
         null,
         [],
-        currentMultiplayerRoom ? 'ArixAI' : null
     );
 
     /*
@@ -6315,7 +6252,7 @@ if (
         // ==========================================
         if (activeModelId === 'sparker' || activeModelId === 'FLiX') {
             els.indicator.classList.add('hidden');
-            const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+            const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
             const contentContainer = assistantMsgObj.container;
             contentContainer.classList.add('typing-cursor');
 
@@ -6405,7 +6342,7 @@ if (
         });
         
         els.indicator.classList.add('hidden');
-        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
         const contentContainer = assistantMsgObj.container;
         contentContainer.classList.add('typing-cursor');
         
@@ -6485,13 +6422,6 @@ if (
         messages.push({ role: 'assistant', content: fullResponse, id: assistantMsgObj.id, modelId: activeModelId });
         saveCurrentChat();
         
-        if (currentMultiplayerRoom && fullResponse) {
-            fetch('/api/multiplayer', {
-                method: 'POST', 
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ roomId: currentMultiplayerRoom, action: 'send', message: fullResponse, nickname: 'ArixAI' })
-            }).catch(()=>{});
-        }
         if (!uiErrFlag) sendTelemetry(currentAction, activeModelId, 'success');
         
     } catch (error) {
@@ -7136,7 +7066,7 @@ async function executeLabTool() {
     closeExperimentalModal();
     if (input) input.value = "";
     
-    const userMsgObj = appendMessage('user', `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('Arix_nickname') : null);
+    const userMsgObj = appendMessage('user', `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, null, null, []);
     messages.push({ role: 'user', content: `[LAB BRAINSTORM LAUNCH]: ${ideaText}`, id: userMsgObj.id });
     isProcessing = true;
     updateUIState();
@@ -7154,7 +7084,7 @@ async function executeLabTool() {
             })
         });
         
-        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
         const contentContainer = assistantMsgObj.container;
         contentContainer.classList.add('typing-cursor');
         const reader = res.body.getReader();
@@ -7209,7 +7139,7 @@ async function executeTwinTool() {
     closeExperimentalModal();
     if (input) input.value = "";
     
-    const userMsgObj = appendMessage('user', `[DIGITAL TWIN SIMULATION]: ${promptText}`, null, null, [], currentMultiplayerRoom ? localStorage.getItem('Arix_nickname') : null);
+    const userMsgObj = appendMessage('user', `[DIGITAL TWIN SIMULATION]: ${promptText}`, null, null, []);
     messages.push({ role: 'user', content: `[DIGITAL TWIN SIMULATION]: ${promptText}`, id: userMsgObj.id });
     isProcessing = true;
     updateUIState();
@@ -7227,7 +7157,7 @@ async function executeTwinTool() {
                 userProfile: userProfile
             })
         });
-        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+        const assistantMsgObj = appendMessage('assistant', "", activeModelId, null, []);
         const contentContainer = assistantMsgObj.container;
         contentContainer.classList.add('typing-cursor');
         const reader = res.body.getReader();
@@ -7899,6 +7829,12 @@ function deletePulseTask(taskId) {
 }
 
 // ====== GLOBAL EVENT LISTENERS ======
+// Delegate edit actions without injecting message IDs into inline JavaScript.
+els.container.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-edit-message]');
+    if (button) editMessage(button.getAttribute('data-edit-message'));
+});
+
 els.input.addEventListener('input', function() { 
     this.style.height = 'auto'; 
     this.style.height = this.scrollHeight + 'px'; 
@@ -9170,7 +9106,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const serialized = JSON.stringify(compact);
-                const assistant = appendMessage('assistant', '', activeModelId || 'study', null, [], currentMultiplayerRoom ? 'ArixAI' : null);
+                const assistant = appendMessage('assistant', '', activeModelId || 'study', null, []);
                 const artifactContent = `<artifact title="${escapeHtml(compact.title || 'ArixAI Study Pack')}" type="study">\n${serialized}\n</artifact>`;
                 assistant.container.innerHTML = typeof parseRichText === 'function'
                     ? parseRichText(artifactContent, false, assistant.id)
