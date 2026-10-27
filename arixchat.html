@@ -607,10 +607,21 @@ function preferCallCodecs(pc) {
       if (kind !== 'video') continue;
       const codecs = RTCRtpReceiver.getCapabilities('video')?.codecs || [];
       const preference = ['video/vp9','video/av1','video/vp8','video/h264'];
-      const primary = codecs.filter(c => !String(c.mimeType).toLowerCase().endsWith('/rtx') && !String(c.mimeType).toLowerCase().endsWith('/red') && !String(c.mimeType).toLowerCase().endsWith('/ulpfec'));
-      primary.sort((a,b) => { const ai=preference.indexOf(String(a.mimeType).toLowerCase()); const bi=preference.indexOf(String(b.mimeType).toLowerCase()); return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi); });
-      const repair = codecs.filter(c => String(c.mimeType).toLowerCase().endsWith('/rtx') || String(c.mimeType).toLowerCase().endsWith('/red') || String(c.mimeType).toLowerCase().endsWith('/ulpfec'));
+      const primary = codecs.filter(c => {
+        const mime = String(c.mimeType).toLowerCase();
+        return !mime.endsWith('/rtx') && !mime.endsWith('/red') && !mime.endsWith('/ulpfec');
+      });
+      primary.sort((a, b) => {
+        const ai = preference.indexOf(String(a.mimeType).toLowerCase());
+        const bi = preference.indexOf(String(b.mimeType).toLowerCase());
+        return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
+      });
+      const repair = codecs.filter(c => {
+        const mime = String(c.mimeType).toLowerCase();
+        return mime.endsWith('/rtx') || mime.endsWith('/red') || mime.endsWith('/ulpfec');
+      });
       transceiver.setCodecPreferences([...primary, ...repair]);
+    }
     }
   } catch { /* Keep browser codec defaults if this engine rejects preferences. */ }
 }
@@ -639,18 +650,29 @@ function createCallPeerConnection() {
   pc.onicecandidate = event => {
     if (event.candidate && callState.id) sendCallSignal('ice', event.candidate.toJSON ? event.candidate.toJSON() : event.candidate).catch(() => {});
   };
-  pc.ontrack = event => {
-    const stream = event.streams?.[0] || new MediaStream([event.track]);
-    callState.remoteStream = stream;
-    if (callState.mediaType === 'video') {
-      $('call-remote-video').srcObject = stream;
-      $('call-remote-video').hidden = false;
-      $('call-remote-video').volume = callState.speakerOn ? 1 : .35;
-      $('call-remote-video').play().catch(() => {});
-    } else {
-      $('call-remote-audio').srcObject = stream;
-      $('call-remote-audio').volume = callState.speakerOn ? 1 : .35;
-      $('call-remote-audio').play().catch(() => {});
+pc.ontrack = event => {
+  if (!callState.remoteStream) {
+    callState.remoteStream = new MediaStream();
+  }
+  if (event.track) {
+    callState.remoteStream.addTrack(event.track);
+  }
+  const stream = event.streams?.[0] || callState.remoteStream;
+  callState.remoteStream = stream;
+
+  if (callState.mediaType === 'video') {
+    const remoteVid = $('call-remote-video');
+    remoteVid.srcObject = stream;
+    remoteVid.hidden = false;
+    remoteVid.volume = callState.speakerOn ? 1.0 : 0;
+    remoteVid.play().catch(() => {});
+  } else {
+    const remoteAud = $('call-remote-audio');
+    remoteAud.srcObject = stream;
+    remoteAud.volume = callState.speakerOn ? 1.0 : 0;
+    remoteAud.play().catch(() => {});
+  }
+};
     }
   };
   pc.onconnectionstatechange = () => {
@@ -741,11 +763,16 @@ async function handleCallSignal(signal) {
     await drainPendingIce(); return;
   }
   if (signal.type === 'ice') {
-    if (!callState.pc || !signal.candidate) return;
-    if (!callState.pc.remoteDescription) { callState.pendingIce.push(signal.candidate); return; }
-    try { await callState.pc.addIceCandidate(new RTCIceCandidate(signal.candidate)); }
-    catch { /* Ignore obsolete trickle ICE candidates after renegotiation. */ }
+  if (!signal.candidate) return;
+  if (!callState.pc || !callState.pc.remoteDescription) {
+    callState.pendingIce.push(signal.candidate);
     return;
+  }
+  try {
+    await callState.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+  } catch {}
+  return;
+}
   }
   if (signal.type === 'decline') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' declined the call.'); return; }
   if (signal.type === 'busy') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' is busy right now.'); return; }
@@ -784,7 +811,7 @@ function toggleCallMute() {
 async function toggleCallSpeaker() {
   callState.speakerOn = !callState.speakerOn;
   const output = callState.mediaType === 'video' ? $('call-remote-video') : $('call-remote-audio');
-  output.volume = callState.speakerOn ? 1 : .35;
+  output.volume = callState.speakerOn ? 1.0 : 0;
   if (callState.speakerOn && typeof output.setSinkId === 'function') {
     try { await output.setSinkId('default'); } catch { /* Some mobile browsers do not expose output routing. */ }
   }
