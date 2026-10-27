@@ -9,7 +9,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f7f8fc">
 <meta name="description" content="ArixChat — simple, thoughtful conversations. Share a room link and chat in real time.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <title>ArixChat — Conversations, made simple</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 
@@ -496,6 +496,32 @@ function resetCallState() {
   };
 }
 function initials(name) { return String(name || 'A').trim().split(/\s+/).slice(0,2).map(part => part.charAt(0).toUpperCase()).join('') || 'A'; }
+const DEFAULT_METERED_ICE_SERVERS = [
+  {
+    urls: 'stun:stun.relay.metered.ca:80',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:80',
+    username: '473ec286e01f12e61535106e',
+    credential: 'ekfBESk1J5B6nNX0',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+    username: '473ec286e01f12e61535106e',
+    credential: 'ekfBESk1J5B6nNX0',
+  },
+  {
+    urls: 'turn:global.relay.metered.ca:443',
+    username: '473ec286e01f12e61535106e',
+    credential: 'ekfBESk1J5B6nNX0',
+  },
+  {
+    urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+    username: '473ec286e01f12e61535106e',
+    credential: 'ekfBESk1J5B6nNX0',
+  },
+];
+
 function updateCallUI() {
   const active = !!callState.id;
   $('call-overlay').hidden = !active;
@@ -516,7 +542,7 @@ function updateCallUI() {
   $('call-camera-btn').hidden = callState.mediaType !== 'video';
   $('call-switch-camera-btn').hidden = callState.mediaType !== 'video';
   $('call-stage').classList.toggle('video-mode', callState.mediaType === 'video');
-  $('call-remote-audio').hidden = callState.mediaType === 'video';
+  $('call-remote-audio').hidden = false;
   $('call-mute-btn').classList.toggle('selected', callState.micMuted);
   $('call-mute-btn').setAttribute('aria-pressed', String(callState.micMuted));
   $('call-mute-btn').querySelector('span').textContent = callState.micMuted ? 'Unmute' : 'Mute';
@@ -543,6 +569,13 @@ async function startOutgoingCall(targetArixId, mediaType, displayName) {
     remoteStream:null, pendingIce:[], micMuted:false, cameraOff:false, speakerOn:true, restartAttempted:false,
   };
   updateCallUI();
+  try {
+    // Request local microphone/camera right on user click so autoplay & permissions succeed
+    await prepareCallMedia();
+  } catch (error) {
+    closeLocalCall(false);
+    return toast(mediaErrorMessage(error));
+  }
   startCallRingTimer(callId, 'cancel');
   try {
     const result = await apiRequest({ action:'call_invite', callId, targetArixId, mediaType:callState.mediaType, displayName:state.profile.name });
@@ -586,108 +619,125 @@ async function prepareCallMedia() {
   if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection !== 'function') throw new Error('WebRTC is unavailable. Open ArixChat on HTTPS in a supported browser.');
   if (callState.localStream) return callState.localStream;
   const constraints = {
-    audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true, sampleRate:{ideal:48000}, channelCount:{ideal:2} },
+    audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true },
     video: callState.mediaType === 'video' ? {
-      width:{ideal:3840}, height:{ideal:2160}, frameRate:{ideal:60, max:60}, facingMode:{ideal:'user'}
+      width:{ideal:1280}, height:{ideal:720}, frameRate:{ideal:30, max:30}, facingMode:{ideal:'user'}
     } : false,
   };
-  callState.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+  try {
+    callState.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+  } catch (err) {
+    if (callState.mediaType === 'video') {
+      callState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    } else {
+      callState.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    }
+  }
   if (callState.mediaType === 'video') {
-    $('call-local-video').srcObject = callState.localStream;
+    const localVid = $('call-local-video');
+    localVid.srcObject = callState.localStream;
+    localVid.muted = true;
     $('call-local-wrap').hidden = false;
-    $('call-local-video').play().catch(() => {});
+    localVid.play().catch(() => {});
   }
   return callState.localStream;
 }
-function preferCallCodecs(pc) {
-  if (typeof RTCRtpReceiver === 'undefined' || typeof RTCRtpReceiver.getCapabilities !== 'function') return;
-  try {
-    for (const transceiver of pc.getTransceivers()) {
-      if (typeof transceiver.setCodecPreferences !== 'function') continue;
-      const kind = transceiver.sender?.track?.kind || transceiver.receiver?.track?.kind;
-      if (kind !== 'video') continue;
-      const codecs = RTCRtpReceiver.getCapabilities('video')?.codecs || [];
-      const preference = ['video/vp9','video/av1','video/vp8','video/h264'];
-      const primary = codecs.filter(c => {
-        const mime = String(c.mimeType).toLowerCase();
-        return !mime.endsWith('/rtx') && !mime.endsWith('/red') && !mime.endsWith('/ulpfec');
-      });
-      primary.sort((a, b) => {
-        const ai = preference.indexOf(String(a.mimeType).toLowerCase());
-        const bi = preference.indexOf(String(b.mimeType).toLowerCase());
-        return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi);
-      });
-      const repair = codecs.filter(c => {
-        const mime = String(c.mimeType).toLowerCase();
-        return mime.endsWith('/rtx') || mime.endsWith('/red') || mime.endsWith('/ulpfec');
-      });
-      transceiver.setCodecPreferences([...primary, ...repair]);
-    }
-  } catch { /* Keep browser codec defaults if this engine rejects preferences. */ }
-}
 function createCallPeerConnection() {
   if (callState.pc) return callState.pc;
+  const configuredServers = Array.isArray(state.user?.callIceServers) && state.user.callIceServers.length
+    ? state.user.callIceServers
+    : [];
+  const hasMeteredTurn = configuredServers.some(s => JSON.stringify(s.urls || '').includes('global.relay.metered.ca'));
+  const iceServers = hasMeteredTurn ? configuredServers : [...DEFAULT_METERED_ICE_SERVERS, ...configuredServers];
+
   const pc = new RTCPeerConnection({
-    iceServers:Array.isArray(state.user?.callIceServers) && state.user.callIceServers.length ? state.user.callIceServers : [
-      {urls:'stun:stun.l.google.com:19302'},
-      {urls:'stun:stun.cloudflare.com:3478'},
-    ],
-    bundlePolicy:'max-bundle', rtcpMuxPolicy:'require', iceTransportPolicy:'all',
+    iceServers,
+    bundlePolicy:'max-bundle',
+    rtcpMuxPolicy:'require',
+    iceTransportPolicy:'all',
   });
   callState.pc = pc;
-  for (const track of callState.localStream?.getTracks() || []) pc.addTrack(track, callState.localStream);
-  preferCallCodecs(pc);
-  for (const sender of pc.getSenders()) {
-    if (sender.track?.kind !== 'video' || typeof sender.getParameters !== 'function' || typeof sender.setParameters !== 'function') continue;
-    try {
-      const params = sender.getParameters();
-      params.encodings = params.encodings?.length ? params.encodings : [{}];
-      params.encodings[0].maxBitrate = 8000000;
-      params.degradationPreference = 'maintain-resolution';
-      sender.setParameters(params).catch(() => {});
-    } catch { /* Bitrate preferences are optional; the browser retains its safe defaults. */ }
-  }
-  pc.onicecandidate = event => {
-    if (event.candidate && callState.id) sendCallSignal('ice', event.candidate.toJSON ? event.candidate.toJSON() : event.candidate).catch(() => {});
-  };
-pc.ontrack = event => {
-  if (!callState.remoteStream) {
-    callState.remoteStream = new MediaStream();
-  }
-  if (event.track) {
-    callState.remoteStream.addTrack(event.track);
-  }
-  const stream = event.streams?.[0] || callState.remoteStream;
-  callState.remoteStream = stream;
+  callState.remoteStream = new MediaStream();
 
-  if (callState.mediaType === 'video') {
-    const remoteVid = $('call-remote-video');
-    remoteVid.srcObject = stream;
-    remoteVid.hidden = false;
-    remoteVid.volume = callState.speakerOn ? 1.0 : 0;
-    remoteVid.play().catch(() => {});
-  } else {
+  for (const track of callState.localStream?.getTracks() || []) {
+    pc.addTrack(track, callState.localStream);
+  }
+
+  pc.onicecandidate = event => {
+    if (event.candidate && callState.id) {
+      const cand = event.candidate.toJSON ? event.candidate.toJSON() : {
+        candidate: event.candidate.candidate,
+        sdpMid: event.candidate.sdpMid,
+        sdpMLineIndex: event.candidate.sdpMLineIndex,
+        usernameFragment: event.candidate.usernameFragment,
+      };
+      if (cand && cand.candidate) {
+        sendCallSignal('ice', cand).catch(() => {});
+      }
+    }
+  };
+
+  pc.ontrack = event => {
+    if (!callState.remoteStream) {
+      callState.remoteStream = new MediaStream();
+    }
+    if (event.track) {
+      const existing = callState.remoteStream.getTracks().find(t => t.id === event.track.id);
+      if (!existing) callState.remoteStream.addTrack(event.track);
+    }
+    if (event.streams && event.streams[0]) {
+      for (const t of event.streams[0].getTracks()) {
+        if (!callState.remoteStream.getTracks().some(existing => existing.id === t.id)) {
+          callState.remoteStream.addTrack(t);
+        }
+      }
+    }
+
     const remoteAud = $('call-remote-audio');
-    remoteAud.srcObject = stream;
+    if (remoteAud.srcObject !== callState.remoteStream) {
+      remoteAud.srcObject = callState.remoteStream;
+    }
+    remoteAud.muted = !callState.speakerOn;
     remoteAud.volume = callState.speakerOn ? 1.0 : 0;
     remoteAud.play().catch(() => {});
-  }
-};
-  pc.onconnectionstatechange = () => {
+
+    if (callState.mediaType === 'video') {
+      const remoteVid = $('call-remote-video');
+      if (remoteVid.srcObject !== callState.remoteStream) {
+        remoteVid.srcObject = callState.remoteStream;
+      }
+      remoteVid.hidden = false;
+      remoteVid.muted = true; // Audio is played cleanly via #call-remote-audio to avoid echo/autoplay blocks
+      remoteVid.play().catch(() => {});
+    }
+  };
+
+  const handleConnectionProgress = () => {
     if (callState.pc !== pc) return;
-    if (pc.connectionState === 'connected') { callState.phase = 'active'; updateCallUI(); }
-    else if (pc.connectionState === 'connecting') { callState.phase = 'connecting'; updateCallUI(); }
-    else if (pc.connectionState === 'failed') {
+    const cState = pc.connectionState;
+    const iState = pc.iceConnectionState;
+    if (cState === 'connected' || iState === 'connected' || iState === 'completed') {
+      callState.phase = 'active';
+      updateCallUI();
+    } else if (cState === 'connecting' || iState === 'checking') {
+      if (callState.phase !== 'active') {
+        callState.phase = 'connecting';
+        updateCallUI();
+      }
+    } else if (cState === 'failed' || iState === 'failed') {
       $('call-status').textContent = 'Could not connect. This network may require a TURN relay.';
       if (!callState.restartAttempted && callState.direction === 'outgoing' && typeof pc.restartIce === 'function') {
         callState.restartAttempted = true;
         try { pc.restartIce(); } catch {}
         negotiateIceRestart().catch(() => {});
       }
-    } else if (pc.connectionState === 'disconnected' && callState.phase === 'active') {
+    } else if ((cState === 'disconnected' || iState === 'disconnected') && callState.phase === 'active') {
       $('call-status').textContent = 'Connection interrupted · trying to recover…';
     }
   };
+
+  pc.onconnectionstatechange = handleConnectionProgress;
+  pc.oniceconnectionstatechange = handleConnectionProgress;
   return pc;
 }
 async function negotiateIceRestart() {
@@ -701,7 +751,10 @@ async function startOutgoingPeer() {
   await prepareCallMedia();
   const pc = createCallPeerConnection();
   callState.phase = 'connecting'; updateCallUI();
-  const offer = await pc.createOffer();
+  const offer = await pc.createOffer({
+    offerToReceiveAudio: true,
+    offerToReceiveVideo: callState.mediaType === 'video',
+  });
   await pc.setLocalDescription(offer);
   await sendCallSignal('offer', {sdp:pc.localDescription.sdp});
 }
@@ -746,31 +799,39 @@ async function handleCallSignal(signal) {
     return;
   }
   if (signal.type === 'offer') {
-    if (callState.direction !== 'incoming' || !callState.pc || !signal.sdp) return;
+    if (callState.direction !== 'incoming' || !signal.sdp) return;
+    if (!callState.pc) {
+      await prepareCallMedia();
+      createCallPeerConnection();
+    }
     await callState.pc.setRemoteDescription(new RTCSessionDescription({type:'offer', sdp:signal.sdp}));
     await drainPendingIce();
     const answer = await callState.pc.createAnswer();
     await callState.pc.setLocalDescription(answer);
     await sendCallSignal('answer', {sdp:callState.pc.localDescription.sdp});
-    callState.phase = 'connecting'; updateCallUI();
+    if (callState.phase !== 'active') {
+      callState.phase = 'connecting';
+      updateCallUI();
+    }
     return;
   }
   if (signal.type === 'answer') {
     if (callState.direction !== 'outgoing' || !callState.pc || !signal.sdp) return;
     await callState.pc.setRemoteDescription(new RTCSessionDescription({type:'answer', sdp:signal.sdp}));
-    await drainPendingIce(); return;
-  }
-  if (signal.type === 'ice') {
-  if (!signal.candidate) return;
-  if (!callState.pc || !callState.pc.remoteDescription) {
-    callState.pendingIce.push(signal.candidate);
+    await drainPendingIce();
     return;
   }
-  try {
-    await callState.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
-  } catch {}
-  return;
-}
+  if (signal.type === 'ice') {
+    if (!signal.candidate || !signal.candidate.candidate) return;
+    if (!callState.pc || !callState.pc.remoteDescription) {
+      callState.pendingIce.push(signal.candidate);
+      return;
+    }
+    try {
+      await callState.pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
+    } catch {}
+    return;
+  }
   if (signal.type === 'decline') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' declined the call.'); return; }
   if (signal.type === 'busy') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' is busy right now.'); return; }
   if (signal.type === 'cancel') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' cancelled the call.'); return; }
@@ -792,7 +853,15 @@ async function finishCall(signalType) {
 function closeLocalCall(notify = false) {
   const existingId = callState.id;
   if (notify && existingId) sendCallSignal('hangup').catch(() => {});
-  try { callState.pc?.onicecandidate && (callState.pc.onicecandidate = null); callState.pc?.close(); } catch {}
+  try {
+    if (callState.pc) {
+      callState.pc.onicecandidate = null;
+      callState.pc.ontrack = null;
+      callState.pc.onconnectionstatechange = null;
+      callState.pc.oniceconnectionstatechange = null;
+      callState.pc.close();
+    }
+  } catch {}
   try { for (const track of callState.localStream?.getTracks() || []) track.stop(); } catch {}
   try { $('call-local-video').srcObject = null; $('call-remote-video').srcObject = null; $('call-remote-audio').srcObject = null; } catch {}
   $('call-remote-video').hidden = true; $('call-local-wrap').hidden = true;
@@ -807,10 +876,11 @@ function toggleCallMute() {
 }
 async function toggleCallSpeaker() {
   callState.speakerOn = !callState.speakerOn;
-  const output = callState.mediaType === 'video' ? $('call-remote-video') : $('call-remote-audio');
-  output.volume = callState.speakerOn ? 1.0 : 0;
-  if (callState.speakerOn && typeof output.setSinkId === 'function') {
-    try { await output.setSinkId('default'); } catch { /* Some mobile browsers do not expose output routing. */ }
+  const remoteAud = $('call-remote-audio');
+  remoteAud.muted = !callState.speakerOn;
+  remoteAud.volume = callState.speakerOn ? 1.0 : 0;
+  if (callState.speakerOn && typeof remoteAud.setSinkId === 'function') {
+    try { await remoteAud.setSinkId('default'); } catch { /* Some mobile browsers do not expose output routing. */ }
   }
   updateCallUI();
 }
