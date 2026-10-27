@@ -104,10 +104,10 @@ rooms: safeJson(localStorage.getItem(STORE_ROOMS), []),
 allMessages: safeJson(localStorage.getItem(STORE_MESSAGES), {}),
 profile: safeJson(localStorage.getItem(STORE_PROFILE), { name: localStorage.getItem('Arix_nickname') || '' }),
 activeRoomId: null, activeMessages: [], pollTimer: null, pollBusy: false,
-authenticated: false, offlineCached: false, user: null, authBusy: false, hasOlderMessages: false, loadingOlder: false,
+authenticated: false, offlineCached: false, user: null, hasOlderMessages: false, loadingOlder: false,
 seenServerIds: new Set(), seenRecordKeys: new Set(), pollGeneration: 0, pollController: null,
 pendingReply: null, stagedAttachment: null, pendingRoomInvite: '', pendingRoomTitle: '',
-sending: false, lastToast: 0, rateWindow: [], pendingEvents: []
+sending: false, lastToast: 0, rateWindow: [], pendingEvents: [], authGateOpen: false
 };
 if (!Array.isArray(state.rooms)) state.rooms = [];
 if (!state.allMessages || typeof state.allMessages !== 'object' || Array.isArray(state.allMessages)) state.allMessages = {};
@@ -301,7 +301,9 @@ if (shouldScroll && (shouldScroll === true || wasNearBottom)) wrap.scrollTop = w
 }
 function findMessage(id) { return state.activeMessages.find(m => String(m.id) === String(id) || String(m.serverId || '') === String(id) || String(m.clientMessageId || '') === String(id) || String(m.recordKey || '') === String(id)) || null; }
 async function apiRequest(payload) {
-const res = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload) });
+const displayName = cleanName(payload?.displayName || state.profile.name || localStorage.getItem('Arix_nickname') || '');
+const requestBody = { ...payload, displayName };
+const res = await fetch(API, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(requestBody), cache: 'no-store' });
 let data = {}; try { data = await res.json(); } catch {}
 if (!res.ok || data.success === false) {
 const error = new Error(data.error || data.message || ('Request failed (' + res.status + ')'));
@@ -312,7 +314,7 @@ return data;
 }
 function sendEnvelope(envelope) {
 if (!state.activeRoomId) return Promise.reject(new Error('No room selected'));
-if (!state.authenticated && !(state.offlineCached && !navigator.onLine)) return Promise.reject(new Error('Please sign in to send messages.'));
+if (!state.authenticated && !(state.offlineCached && !navigator.onLine)) return Promise.reject(new Error('Your ArixAI session is not active. Open the main app to authenticate.'));
 const nowTs = now(); state.rateWindow = state.rateWindow.filter(t => nowTs - t < 60000);
 if (state.rateWindow.length >= 35) return Promise.reject(new Error('You are sending messages too quickly. Please wait a moment.'));
 state.rateWindow.push(nowTs);
@@ -324,7 +326,7 @@ const input = $('message-input'); const text = input.value.trim();
 if (!text && !state.stagedAttachment) return;
 if (text.length > MAX_TEXT) return toast('Message is too long.');
 if (!state.profile.name) return openProfileModal(true);
-if (!state.authenticated && !state.offlineCached) return openAuthModal('login', 'Sign in to send messages securely.');
+if (!state.authenticated && !state.offlineCached) return requireMainAppAuth('login', 'Open the main ArixAI app to authenticate.');
 state.sending = true; $('send-btn').disabled = true;
 const localId = 'local_' + makeRoomId();
 const clientMessageId = makeRoomId();
@@ -345,7 +347,7 @@ if (message.status === 'sending') message.status = 'sent';
 persist(); renderMessages(false); await flushQueuedReactions(message);
 } catch (error) {
 message.status = 'failed'; message.error = String(error.message || 'Send failed').slice(0, 180); persist(); renderMessages(false);
-if (navigator.onLine) toast('Message could not be sent. It is saved here; tap retry or check your sign-in.');
+if (navigator.onLine) toast('Message could not be sent. It is saved here; tap retry or check your main-app session.');
 else toast('Offline. Your message is saved on this device and will retry when connection returns.');
 } finally { state.sending = false; $('send-btn').disabled = false; input.focus(); }
 }
@@ -420,11 +422,11 @@ const res = await fetch(API, { method:'POST', credentials:'same-origin', signal:
 let data = {}; try { data = await res.json(); } catch {}
 if (roomId !== state.activeRoomId || generation !== state.pollGeneration) return;
 if (!res.ok || !data.success || !Array.isArray(data.messages)) {
-if (res.status === 401) { state.authenticated = false; setConnection(false, 'Sign-in required'); openAuthModal('login', 'Your session needs to be renewed. Sign in again to continue syncing.'); }
+if (res.status === 401) { state.authenticated = false; setConnection(false, 'ArixAI session required'); requireMainAppAuth('login', 'Your ArixAI session needs to be renewed in the main app.'); }
 else setConnection(false, res.status === 403 ? 'Room access unavailable' : 'Waiting for room service');
 return;
 }
-setConnection(true, 'Secure sync active');
+setConnection(true, 'ArixAI session active');
 if (!after) { state.hasOlderMessages = !!data.hasMore; $('history-toolbar').hidden = !state.hasOlderMessages; }
 let changed = false;
 const wrap = $('messages-wrap');
@@ -559,7 +561,7 @@ return { name, mime, data };
 }
 function stopPolling() { if (state.pollTimer) clearInterval(state.pollTimer); state.pollTimer = null; state.pollGeneration++; if (state.pollController) state.pollController.abort(); state.pollController = null; state.pollBusy = false; }
 async function sendControlEvent(event) {
-if (!state.authenticated) { toast('Sign in to sync this action.'); return false; }
+if (!state.authenticated) { toast('Open the main ArixAI app to authenticate before syncing this action.'); return false; }
 const payload = { ...event, eventId: event.eventId || makeRoomId(), sentAt: now(), by: state.profile.name };
 try {
 const data = await sendEnvelope(payload);
@@ -583,7 +585,7 @@ persist(); renderMessages(false);
 }
 function reactToMessage(msg, emoji) {
 if (!msg || msg.deleted) return;
-if (!state.authenticated && !state.offlineCached) { openAuthModal('login', 'Sign in to react to messages.'); return; }
+if (!state.authenticated && !state.offlineCached) { requireMainAppAuth('login', 'Open the main ArixAI app to authenticate.'); return; }
 const by = state.profile.name;
 const byId = String(state.user?.id || '');
 const reactions = Array.isArray(msg.reactions) ? msg.reactions : (msg.reactions = []);
@@ -633,43 +635,22 @@ openModal(`<h2 id="modal-title">React to message</h2><p>Choose a reaction.</p><d
 document.querySelectorAll('[data-emoji-choice]').forEach(btn => btn.addEventListener('click', () => { reactToMessage(msg, btn.getAttribute('data-emoji-choice')); closeModal(); }));
 }
 function openModal(content) { $('modal-content').innerHTML = content; $('modal-backdrop').classList.add('show'); document.querySelectorAll('[data-modal-cancel]').forEach(btn => btn.addEventListener('click', closeModal)); }
-function closeModal() { $('modal-backdrop').classList.remove('show'); $('modal-content').innerHTML = ''; }
-function openAuthModal(mode = 'login', notice = '', emailValue = '') {
-state.authMode = mode === 'signup' ? 'signup' : 'login';
-state.authBusy = false;
-const signup = state.authMode === 'signup';
-const note = notice ? `<div class="security-card" role="status">${esc(notice)}</div>` : '';
-openModal(`<h2 id="modal-title">${signup ? 'Create your ArixChat account' : 'Welcome back'}</h2><p>${signup ? 'Create a secure account to sync messages across rooms and devices.' : 'Sign in to securely access your conversations.'}</p>${note}<label class="field-label" for="auth-email-field">Email address</label><input class="field" id="auth-email-field" type="email" maxlength="254" autocomplete="email" value="${esc(emailValue)}" placeholder="you@example.com" required>${signup ? '<label class="field-label" for="auth-name-field">Display name</label><input class="field" id="auth-name-field" maxlength="32" autocomplete="nickname" placeholder="How others see you" required>' : ''}<label class="field-label" for="auth-password-field">Password</label><input class="field" id="auth-password-field" type="password" maxlength="128" autocomplete="${signup ? 'new-password' : 'current-password'}" placeholder="${signup ? 'At least 8 characters' : 'Your password'}" required><div class="security-card"><strong>Account security</strong><br>Passwords are handled by Supabase Auth and are never stored in this chat's local cache. This account layer uses HTTPS and HttpOnly session cookies.</div><div class="modal-actions"><button class="secondary-btn" id="auth-mode-switch">${signup ? 'I already have an account' : 'Create account'}</button><button class="primary-btn" id="auth-submit-btn">${signup ? 'Create account' : 'Sign in'}</button></div>`);
-$('auth-submit-btn').onclick = submitAuthForm;
-$('auth-mode-switch').onclick = () => openAuthModal(signup ? 'login' : 'signup', '', $('auth-email-field')?.value || '');
-for (const id of ['auth-email-field','auth-password-field','auth-name-field']) $(id)?.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submitAuthForm(); } });
-setTimeout(() => $(signup ? 'auth-name-field' : 'auth-email-field')?.focus(), 20);
-}
-async function submitAuthForm() {
-if (state.authBusy) return;
-const mode = state.authMode || 'login';
-const email = $('auth-email-field')?.value.trim() || '';
-const password = $('auth-password-field')?.value || '';
-const displayName = cleanName($('auth-name-field')?.value || '');
-if (!email) return toast('Enter your email address.');
-if (password.length < 8) return toast('Password must contain at least 8 characters.');
-if (mode === 'signup' && !displayName) return toast('Enter a display name.');
-state.authBusy = true;
-const button = $('auth-submit-btn'); if (button) { button.disabled = true; button.textContent = mode === 'signup' ? 'Creating account…' : 'Signing in…'; }
-try {
-const result = await apiRequest(mode === 'signup' ? { action:'signup', email, password, displayName } : { action:'login', email, password });
-if (result.needsEmailConfirmation) { openAuthModal('login', result.message || 'Check your email to verify your account, then sign in.', email); return; }
-if (!result.authenticated || !result.user?.id) throw new Error('The account session could not be created. Please try again.');
-await activateAuthenticatedUser(result.user);
-toast(mode === 'signup' ? 'Account created securely.' : 'Signed in securely.');
-} catch (error) { openAuthModal(mode, String(error.message || 'Authentication failed.'), email); }
-finally { state.authBusy = false; }
+function closeModal() { state.authGateOpen = false; $('modal-backdrop').classList.remove('show'); $('modal-content').innerHTML = ''; }
+function requireMainAppAuth() {
+if (state.authGateOpen) return;
+state.authGateOpen = true;
+const target = new URL('/app.html', window.location.origin).href;
+openModal(`<h2 id="modal-title">Use your ArixAI account</h2><p>ArixChat uses the secure session from the main ArixAI app. There is no separate ArixChat sign-in or account creation.</p><div class="security-card" role="status">Open ArixAI, sign in or create your account there, then return to ArixChat. Your main-app session is checked securely by the server.</div><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Not now</button><button class="primary-btn" id="open-main-app-btn">Open ArixAI</button></div>`);
+const openButton = $('open-main-app-btn');
+if (openButton) openButton.onclick = () => { window.location.assign(target); };
 }
 async function activateAuthenticatedUser(user) {
-state.user = { id:String(user.id), email:String(user.email || ''), displayName:cleanName(user.displayName || user.email?.split('@')[0] || 'ArixChat user') };
-state.profile.name = state.user.displayName || 'ArixChat user';
+const savedChatName = cleanName(state.profile.name);
+state.user = { id:String(user.id), email:String(user.email || ''), displayName:cleanName(user.displayName || user.email?.split('@')[0] || 'ArixAI user') };
+// Keep ArixChat's optional local display name separate from the main app's profile.
+state.profile.name = savedChatName || state.user.displayName || 'ArixAI user';
 state.authenticated = true; state.offlineCached = false;
-try { localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user)); localStorage.setItem('Arix_nickname', state.profile.name); } catch {}
+try { localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user)); } catch {}
 persist(); renderProfile(); renderRoomList(); closeModal();
 if (state.pendingRoomInvite) {
 const invite = state.pendingRoomInvite; const title = state.pendingRoomTitle; state.pendingRoomInvite = ''; state.pendingRoomTitle = '';
@@ -678,35 +659,24 @@ await joinRoomFromInput(invite, title); return;
 await setActiveRoomFromUrl();
 await retryFailedMessages();
 }
-async function signOut() {
-try { await apiRequest({ action:'logout' }); } catch { /* Clear local UI state even when the network is unavailable. */ }
-stopPolling(); state.authenticated = false; state.offlineCached = false; state.user = null; state.activeRoomId = null; state.activeMessages = [];
-try { localStorage.removeItem(STORE_SESSION_HINT); } catch {}
-$('app').classList.remove('chat-open'); $('welcome-state').hidden = false; $('message-list').hidden = true; $('message-list').innerHTML = ''; $('composer-area').hidden = true;
-setRoomUrl(null); setConnection(false, 'Sign in to continue'); renderProfile(); closeModal(); openAuthModal('login', 'You have signed out.');
-}
 function openProfileModal(required = false) {
-if (!state.authenticated && !state.offlineCached) return openAuthModal('login', 'Sign in to manage your profile.');
-openModal(`<h2 id="modal-title">Your ArixChat profile</h2><p>Update the display name connected to your authenticated account.</p><div class="security-card"><strong>Signed in as</strong><br>${esc(state.user?.email || 'Cached account')}</div><label class="field-label" for="profile-name-field">Display name</label><input class="field" id="profile-name-field" maxlength="32" autocomplete="nickname" value="${esc(state.profile.name)}" placeholder="Your display name"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel ${required ? 'hidden' : ''}>Cancel</button>${state.authenticated ? '<button class="secondary-btn" id="logout-btn">Sign out</button>' : ''}<button class="primary-btn" id="save-profile-btn">Save profile</button></div>`);
-$('save-profile-btn').onclick = async () => {
+if (!state.authenticated && !state.offlineCached) return requireMainAppAuth();
+openModal(`<h2 id="modal-title">Your ArixChat profile</h2><p>Choose the display name shown in ArixChat. Account sign-in and identity remain managed by ArixAI.</p><div class="security-card"><strong>ArixAI account</strong><br>${esc(state.user?.displayName || localStorage.getItem('Arix_arixName') || 'Connected through the main app')}</div><label class="field-label" for="profile-name-field">Chat display name</label><input class="field" id="profile-name-field" maxlength="32" autocomplete="nickname" value="${esc(state.profile.name)}" placeholder="Your display name"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel ${required ? 'hidden' : ''}>Cancel</button><button class="primary-btn" id="save-profile-btn">Save name</button></div>`);
+$('save-profile-btn').onclick = () => {
 const name = cleanName($('profile-name-field').value);
 if (!name) { toast('Please enter a valid display name.'); return; }
-if (!state.authenticated) { toast('Profile changes need an active connection.'); return; }
-try {
-const result = await apiRequest({ action:'profile_update', displayName:name });
-state.user = { ...state.user, ...(result.user || {}), displayName:name };
-state.profile.name = name; localStorage.setItem('Arix_nickname', name); localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user));
-persist(); renderProfile(); renderMessages(false); closeModal(); toast('Profile updated');
-} catch (error) { toast(String(error.message || 'Profile could not be updated.')); }
+state.profile.name = name;
+if (state.user) state.user = { ...state.user, displayName: name };
+try { localStorage.setItem(STORE_PROFILE, JSON.stringify(state.profile)); if (state.user) localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user)); } catch {}
+persist(); renderProfile(); renderRoomList(); renderMessages(false); closeModal(); toast('Chat display name saved on this device.');
 };
-$('logout-btn')?.addEventListener('click', signOut);
 setTimeout(() => $('profile-name-field')?.focus(), 20);
 }
 function renderProfile() {
 const name = state.profile.name || 'ArixChat user'; $('profile-name').textContent = name; $('profile-avatar').textContent = name.charAt(0).toUpperCase() || 'A';
 }
 async function createRoom() {
-if (!state.authenticated) return openAuthModal('login', 'Sign in to create a synced room.');
+if (!state.authenticated) return requireMainAppAuth('login', 'Authenticate in the main ArixAI app to create a synced room.');
 try {
 const result = await apiRequest({ action:'create_room', title:'New conversation' });
 const id = result.room?.room_id || result.room?.id;
@@ -718,7 +688,7 @@ persist(); setActiveRoom(room.id); await copyText(shareUrl(room.id)); toast('Roo
 async function joinRoomFromInput(value, title) {
 const id = normalizeRoomInput(value);
 if (!roomIdValid(id)) { toast('That invite link or room ID is not valid.'); return; }
-if (!state.authenticated) { state.pendingRoomInvite = value; state.pendingRoomTitle = title || ''; return openAuthModal('login', 'Sign in to join this room. Your invite will be kept.'); }
+if (!state.authenticated) { state.pendingRoomInvite = value; state.pendingRoomTitle = title || ''; return requireMainAppAuth('login', 'Authenticate in the main ArixAI app to join this room. Your invite will be kept.'); }
 try {
 const result = await apiRequest({ action:'join_room', roomId:id });
 const room = findOrAddRoom(id, cleanRoomTitle(title) || result.room?.title || 'Room ' + id.slice(0,8));
@@ -726,7 +696,7 @@ room.accountId = state.user?.id || null; room.shared = true; persist(); setActiv
 } catch (error) { toast(String(error.message || 'Could not join this room.')); }
 }
 function showJoinModal() {
-openModal(`<h2 id="modal-title">Join a room</h2><p>Paste an ArixChat invite link or enter its room ID. You will need to sign in to join.</p><label class="field-label" for="join-room-field">Invite link or room ID</label><input class="field" id="join-room-field" maxlength="500" placeholder="https://…/arixchat.html?room=…" autocomplete="off"><label class="field-label" for="join-room-title-field">Room name (optional, saved on this device)</label><input class="field" id="join-room-title-field" maxlength="48" placeholder="Study group, family, project…"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-join-btn">Join room</button></div>`);
+openModal(`<h2 id="modal-title">Join a room</h2><p>Paste an ArixChat invite link or enter its room ID. You need an active ArixAI session from the main app to join.</p><label class="field-label" for="join-room-field">Invite link or room ID</label><input class="field" id="join-room-field" maxlength="500" placeholder="https://…/arixchat.html?room=…" autocomplete="off"><label class="field-label" for="join-room-title-field">Room name (optional, saved on this device)</label><input class="field" id="join-room-title-field" maxlength="48" placeholder="Study group, family, project…"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-join-btn">Join room</button></div>`);
 $('confirm-join-btn').onclick = () => joinRoomFromInput($('join-room-field').value, $('join-room-title-field').value);
 $('join-room-field').addEventListener('keydown', e => { if (e.key === 'Enter') joinRoomFromInput(e.currentTarget.value, $('join-room-title-field').value); });
 setTimeout(() => $('join-room-field')?.focus(), 20);
@@ -833,7 +803,7 @@ window.addEventListener('resize', applySidebarPreference);
 window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('room-search').focus(); $('room-search').select(); } }); 
 }
 function showPrivacyModal() {
-openModal(`<h2 id="modal-title">Privacy & security</h2><p>ArixChat uses Supabase Auth for accounts and a server-side API for room and message access.</p><div class="security-card"><strong>Protections in this build</strong><br>• Sign-in sessions use Secure, HttpOnly cookies.<br>• Room membership and message writes are checked by the server and database functions.<br>• Message sends/actions have stable idempotency keys and a server-side room rate limit.<br>• Text is escaped before rendering; attachment types and sizes are restricted.<br>• Edit and delete actions are checked against the authenticated message author.</div><div class="security-card"><strong>Important limitations</strong><br>Room links are bearer invites: anyone with a valid account and the link can join. Messages are encrypted in transit by HTTPS and stored in your Supabase project, but this build does not provide end-to-end encryption. Earlier exports, screenshots, or database backups may retain deleted content. Do not treat it as a secure channel for passwords or highly sensitive data.</div><div class="modal-actions"><button class="primary-btn" data-modal-cancel>Understood</button></div>`);
+openModal(`<h2 id="modal-title">Privacy & security</h2><p>ArixChat uses your main ArixAI session and a server-side API for room and message access.</p><div class="security-card"><strong>Protections in this build</strong><br>• The chat session uses a Secure, HttpOnly cookie bound to the main-app session.<br>• Room membership and message writes are checked by the server and database functions.<br>• Message sends/actions have stable idempotency keys and a server-side room rate limit.<br>• Text is escaped before rendering; attachment types and sizes are restricted.<br>• Edit and delete actions are checked against the authenticated message author.</div><div class="security-card"><strong>Important limitations</strong><br>Room links are bearer invites: anyone with a valid account and the link can join. Messages are encrypted in transit by HTTPS and stored in your Supabase project, but this build does not provide end-to-end encryption. Earlier exports, screenshots, or database backups may retain deleted content. Do not treat it as a secure channel for passwords or highly sensitive data.</div><div class="modal-actions"><button class="primary-btn" data-modal-cancel>Understood</button></div>`);
 }
 async function setActiveRoomFromUrl() {
 const params = new URLSearchParams(location.search); const roomId = normalizeRoomInput(params.get('room') || '');
@@ -847,7 +817,7 @@ candidate.accountId = state.user?.id || null; candidate.title = candidate.title 
 setActiveRoom(candidate.id); return;
 } catch { /* Ignore stale local invites and try the next cached room. */ }
 }
-state.activeRoomId = null; state.activeMessages = []; $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; $('app').classList.remove('chat-open'); setRoomUrl(null); setConnection(true, 'Signed in · create or join a room'); return;
+state.activeRoomId = null; state.activeMessages = []; $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; $('app').classList.remove('chat-open'); setRoomUrl(null); setConnection(true, 'ArixAI session active · create or join a room'); return;
 }
 if (state.offlineCached) {
 const candidate = (roomId && roomIdValid(roomId) ? state.rooms.find(r => r.id === roomId && (!r.accountId || r.accountId === state.user?.id)) : null) || state.rooms.filter(r => r.accountId === state.user?.id).slice().sort((a,b) => (Number(b.updatedAt)||0) - (Number(a.updatedAt)||0))[0];
@@ -855,17 +825,17 @@ if (candidate) { setActiveRoom(candidate.id); setConnection(false, 'Offline · c
 else { $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; setConnection(false, 'Offline · no cached rooms'); }
 return;
 }
-state.activeRoomId = null; state.activeMessages = []; $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; $('app').classList.remove('chat-open'); setConnection(false, 'Sign in to begin');
+state.activeRoomId = null; state.activeMessages = []; $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true; $('app').classList.remove('chat-open'); setConnection(false, 'ArixAI session required');
 }
 async function refreshSession() {
 try {
 const result = await apiRequest({ action:'session' });
 if (result.authenticated && result.user?.id) {
 if (!state.authenticated || state.user?.id !== result.user.id || state.offlineCached) { await activateAuthenticatedUser(result.user); await retryFailedMessages(); }
-else { state.authenticated = true; state.offlineCached = false; setConnection(true, 'Secure sync active'); if (state.activeRoomId) { await pollRoom(); await retryFailedMessages(); } }
+else { state.authenticated = true; state.offlineCached = false; setConnection(true, 'ArixAI session active'); if (state.activeRoomId) { await pollRoom(); await retryFailedMessages(); } }
 return;
 }
-state.authenticated = false; state.offlineCached = false; state.user = null; setConnection(false, 'Sign-in required'); openAuthModal('login', 'Your session expired. Please sign in again.');
+state.authenticated = false; state.offlineCached = false; state.user = null; setConnection(false, 'ArixAI session required'); requireMainAppAuth('login', 'Your ArixAI session is no longer active.');
 } catch {
 setConnection(false, 'Reconnecting… cached messages remain available');
 }
@@ -883,11 +853,19 @@ const result = await apiRequest({ action:'session' });
 if (result.authenticated && result.user?.id) { await activateAuthenticatedUser(result.user); return; }
 state.authenticated = false; state.offlineCached = false; state.user = null; renderProfile();
 $('welcome-state').hidden = false; $('message-list').hidden = true; $('composer-area').hidden = true;
-openAuthModal('login', 'Sign in or create an account to access ArixChat.');
+requireMainAppAuth('login', 'Authenticate in the main ArixAI app to access synced chat.');
 } catch (error) {
 const hint = safeJson(localStorage.getItem(STORE_SESSION_HINT), null);
-if (hint && hint.id) { loadOfflineCache(hint); toast('Server unavailable. Showing locally cached messages.'); }
-else { openAuthModal('login', String(error.message || 'Could not reach the chat service. Check the deployment settings.')); }
+if (hint && hint.id) {
+loadOfflineCache(hint);
+toast('ArixChat server unavailable. Showing locally cached messages.');
+} else if (error?.status === 502 || error?.status === 503 || error?.code === 'MAIN_SESSION_UNAVAILABLE') {
+setConnection(false, 'Server connection required');
+openModal(`<h2 id="modal-title">ArixChat could not connect</h2><p>${esc(error.message || 'The chat API could not complete its secure session check.')}</p><div class="security-card">Check that <code>/api/multiplayer</code> is deployed and that the server has <code>SUPABASE_URL</code> and <code>SUPABASE_SECRET_KEY</code> configured. Authentication is handled in the main ArixAI app.</div><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Close</button><button class="primary-btn" id="retry-chat-connection">Retry</button></div>`);
+$('retry-chat-connection')?.addEventListener('click', () => { closeModal(); boot(); });
+} else {
+requireMainAppAuth();
+}
 }
 }
 boot();
