@@ -1,3 +1,5 @@
+import { authenticateArixSession } from './otp.js';
+
 export const config = { runtime: 'edge' };
 
 const PREFIX = 'ARIXCHAT1:';
@@ -12,19 +14,24 @@ const ALLOWED_ATTACHMENT_MIMES = new Set([
   'image/jpeg', 'image/png', 'image/gif', 'image/webp',
   'application/pdf', 'text/plain',
 ]);
+const CHAT_SESSION_COOKIE = 'arixchat_session';
+const CHAT_SESSION_TTL_SECONDS = 8 * 60 * 60;
+const SHADOW_EMAIL_DOMAIN = 'identity.arixchat.invalid';
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function runtimeEnv() {
   const env = typeof process !== 'undefined' && process.env ? process.env : {};
-  const url = "https://vvcpdfdofihdmzshglxr.supabase.co";
-  const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ";
-  const serviceKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ";
-  if (!url || !anonKey || !serviceKey) return null;
+  const url = String(env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  // ArixChat authenticates through the main ArixAI app session. Supabase is
+  // used only by this trusted server, so a publishable/anon key is not needed.
+  const serviceKey = String(env.SUPABASE_SECRET_KEY || '').trim();
+  if (!url || !serviceKey) return null;
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') return null;
     if (parsed.pathname !== '/' || parsed.search || parsed.hash) return null;
   } catch { return null; }
-  return { url, anonKey, serviceKey };
+  return { url, serviceKey };
 }
 
 function json(body, status = 200, extraHeaders = {}, cookies = []) {
@@ -41,19 +48,6 @@ function json(body, status = 200, extraHeaders = {}, cookies = []) {
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-function cookiesForSession(session) {
-  const accessSeconds = Math.max(60, Math.min(Number(session.expires_in) || 3600, 86400));
-  return [
-    `arix_access=${session.access_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${accessSeconds}`,
-    `arix_refresh=${session.refresh_token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`,
-  ];
-}
-function clearSessionCookies() {
-  return [
-    'arix_access=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
-    'arix_refresh=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0',
-  ];
-}
 function cookieValue(req, name) {
   const header = req.headers.get('cookie') || '';
   for (const item of header.split(';')) {
@@ -84,54 +78,272 @@ function parseEnvelope(message) {
     return value && typeof value === 'object' && !Array.isArray(value) ? value : null;
   } catch { return null; }
 }
-function decodeSupabaseError(payload, fallback) {
-  const message = String(payload?.msg || payload?.message || payload?.error_description || payload?.error || '');
-  if (/rate limit|too many/i.test(message)) return 'Too many attempts. Please wait and try again.';
-  if (/invalid login credentials|invalid email or password/i.test(message)) return 'Email or password is incorrect.';
-  if (/email not confirmed/i.test(message)) return 'Please verify your email before signing in.';
-  if (/already registered|already exists/i.test(message)) return 'An account with this email may already exist. Try signing in.';
-  return fallback;
-}
 async function readJsonResponse(response) {
   try { return await response.json(); } catch { return {}; }
 }
-async function authFetch(cfg, path, method = 'GET', body = null, accessToken = '') {
-  const headers = { apikey: cfg.anonKey, accept: 'application/json' };
-  if (body !== null) headers['content-type'] = 'application/json';
-  if (accessToken) headers.authorization = `Bearer ${accessToken}`;
-  const response = await fetch(`${cfg.url}/auth/v1/${path}`, {
-    method, headers, body: body === null ? undefined : JSON.stringify(body),
-  });
-  return { response, data: await readJsonResponse(response) };
-}
-async function authenticate(req, cfg) {
-  const accessToken = cookieValue(req, 'arix_access');
-  const refreshToken = cookieValue(req, 'arix_refresh');
-  if (accessToken) {
-    try {
-      const result = await authFetch(cfg, 'user', 'GET', null, accessToken);
-      if (result.response.ok && result.data?.id) return { user: result.data, accessToken, cookies: [] };
-    } catch { /* Attempt refresh below. */ }
+function cookiePairs(req, excludeChatCookie = true) {
+  const header = req.headers.get('cookie') || '';
+  const pairs = [];
+  for (const item of header.split(';')) {
+    const i = item.indexOf('=');
+    if (i < 0) continue;
+    const name = item.slice(0, i).trim();
+    const value = item.slice(i + 1).trim();
+    if (!name) continue;
+    if (excludeChatCookie && (name.toLowerCase() === CHAT_SESSION_COOKIE || name.toLowerCase() === 'arix_access' || name.toLowerCase() === 'arix_refresh')) continue;
+    pairs.push([name, value]);
   }
-  if (refreshToken) {
-    try {
-      const result = await authFetch(cfg, 'token?grant_type=refresh_token', 'POST', { refresh_token: refreshToken });
-      if (result.response.ok && result.data?.access_token && result.data?.refresh_token && result.data?.user?.id) {
-        return { user: result.data.user, accessToken: result.data.access_token, cookies: cookiesForSession(result.data) };
+  return pairs;
+}
+async function sha256Hex(value) {
+  const bytes = new TextEncoder().encode(String(value));
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, b => b.toString(16).padStart(2, '0')).join('');
+}
+async function parentCookieFingerprint(req) {
+  const pairs = cookiePairs(req, true);
+  if (!pairs.length) return '';
+  // Prefer auth/session cookies; fall back to all non-ArixChat cookies for
+  // deployments whose session-cookie name is custom.
+  const relevant = pairs.filter(([name]) => /session|auth|access|refresh|token|(?:^|[_-])sid(?:$|[_-])/i.test(name));
+  const chosen = (relevant.length ? relevant : pairs).sort((a, b) => a[0].localeCompare(b[0]));
+  return sha256Hex(JSON.stringify(chosen));
+}
+function base64UrlBytes(bytes) {
+  let binary = '';
+  for (const value of bytes) binary += String.fromCharCode(value);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+function decodeBase64Url(text) {
+  const normalized = String(text).replace(/-/g, '+').replace(/_/g, '/');
+  const binary = atob(normalized + '='.repeat((4 - normalized.length % 4) % 4));
+  return Uint8Array.from(binary, ch => ch.charCodeAt(0));
+}
+async function hmacBase64Url(value, secret) {
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(value));
+  return base64UrlBytes(new Uint8Array(signature));
+}
+function sameStringConstantTime(a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+async function createChatSessionCookie(user, parentFingerprint, cfg) {
+  const payload = {
+    v: 1,
+    sub: String(user.id),
+    email: String(user.email || ''),
+    displayName: cleanName(user.displayName || 'ArixAI user') || 'ArixAI user',
+    parent: parentFingerprint,
+    exp: Date.now() + CHAT_SESSION_TTL_SECONDS * 1000,
+  };
+  const encoded = base64UrlBytes(new TextEncoder().encode(JSON.stringify(payload)));
+  const signature = await hmacBase64Url(encoded, cfg.serviceKey);
+  return `${CHAT_SESSION_COOKIE}=${encoded}.${signature}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${CHAT_SESSION_TTL_SECONDS}`;
+}
+function clearChatSessionCookie() {
+  return `${CHAT_SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`;
+}
+async function readChatSessionCookie(req, cfg, parentFingerprint) {
+  const value = cookieValue(req, CHAT_SESSION_COOKIE);
+  if (!value || !parentFingerprint) return null;
+  const dot = value.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const encoded = value.slice(0, dot);
+  const suppliedSignature = value.slice(dot + 1);
+  let expectedSignature;
+  try { expectedSignature = await hmacBase64Url(encoded, cfg.serviceKey); } catch { return null; }
+  if (!sameStringConstantTime(suppliedSignature, expectedSignature)) return null;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(encoded)));
+    if (payload?.v !== 1 || !UUID_RE.test(String(payload.sub || '')) || !Number.isFinite(Number(payload.exp)) || Number(payload.exp) <= Date.now()) return null;
+    if (!sameStringConstantTime(String(payload.parent || ''), parentFingerprint)) return null;
+    return { id: String(payload.sub), email: String(payload.email || ''), displayName: cleanName(payload.displayName) || 'ArixAI user' };
+  } catch { return null; }
+}
+function authAdminHeaders(cfg, jsonBody = false) {
+  const headers = { apikey: cfg.serviceKey, accept: 'application/json' };
+  if (jsonBody) headers['content-type'] = 'application/json';
+  return headers;
+}
+function candidateValue(...values) {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) return value.trim().slice(0, 256);
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+  }
+  return '';
+}
+function extractMainAppIdentity(body, displayNameHint, parentFingerprint) {
+  const sources = [
+    body, body?.user, body?.account, body?.profile, body?.auth,
+    body?.data, body?.data?.user, body?.data?.account, body?.data?.profile,
+    body?.data?.auth, body?.data?.session, body?.data?.account?.user,
+  ].filter(Boolean);
+  // Prefer ID fields nested under an explicit identity object. Do not accidentally
+  // treat an arbitrary bootstrap payload's generic `data.id` as an account ID.
+  const serverId = candidateValue(
+    body?.user?.id, body?.account?.id, body?.profile?.id, body?.auth?.user?.id,
+    body?.data?.user?.id, body?.data?.account?.id, body?.data?.profile?.id,
+    body?.data?.auth?.user?.id, body?.userId, body?.user_id, body?.accountId, body?.account_id,
+  );
+  const email = candidateValue(...sources.map(source => source?.email)).toLowerCase();
+  const handle = candidateValue(...sources.flatMap(source => [source?.arixName, source?.arixname, source?.username, source?.loginId, source?.login_id]));
+  const serverName = candidateValue(...sources.flatMap(source => [source?.displayName, source?.display_name, source?.fullName, source?.full_name, source?.username, source?.arixName, source?.nickname, source?.name]));
+  const identityKey = serverId ? `id:${serverId}` : email ? `email:${email}` : handle ? `handle:${handle.toLowerCase()}` : `session:${parentFingerprint}`;
+  return {
+    identityKey,
+    displayName: cleanName(serverName || displayNameHint || handle || email.split('@')[0] || 'ArixAI user') || 'ArixAI user',
+    email: email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '',
+  };
+}
+async function validateMainAppSession(req, parentFingerprint, displayNameHint) {
+  let result;
+  try {
+    // Reuse the existing authoritative ArixAI session validator. The OTP API
+    // validates the HttpOnly arix_session cookie against Redis and returns the
+    // trusted user record; no browser token or localStorage identity is trusted.
+    result = await authenticateArixSession(req);
+  } catch (error) {
+    const e = new Error('ArixAI session verification failed. Check that the main app authentication service is available.');
+    e.code = error?.code === 'ORIGIN_DENIED' ? 'MAIN_SESSION_ORIGIN_DENIED' : 'MAIN_SESSION_UNAVAILABLE';
+    throw e;
+  }
+  if (!result?.authenticated || !result?.user) return { authenticated: false };
+  const mainUser = result.user;
+  const data = {
+    user: {
+      id: candidateValue(mainUser.uid, mainUser.id, mainUser.userId),
+      email: mainUser.email,
+      arixName: mainUser.arixName,
+      username: mainUser.displayName || mainUser.username,
+      displayName: mainUser.displayName || mainUser.username || mainUser.arixName,
+    },
+  };
+  return { authenticated: true, account: extractMainAppIdentity(data, displayNameHint, parentFingerprint) };
+}
+function runtimeRedisEnv() {
+  const env = typeof process !== 'undefined' && process.env ? process.env : {};
+  const url = String(env.UPSTASH_REDIS_REST_URL || env.UPSTASH_URL || '').trim().replace(/\/+$/, '');
+  const token = String(env.UPSTASH_REDIS_REST_TOKEN || env.UPSTASH_TOKEN || '').trim();
+  if (!url || !token) return null;
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:' || parsed.pathname !== '/' || parsed.search || parsed.hash) return null;
+  } catch { return null; }
+  return { url, token };
+}
+async function redisCommand(redis, ...command) {
+  if (!redis) return null;
+  try {
+    const response = await fetch(redis.url, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${redis.token}`, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(command),
+      cache: 'no-store',
+    });
+    const data = await readJsonResponse(response);
+    if (!response.ok || data?.error) return null;
+    return data?.result ?? null;
+  } catch { return null; }
+}
+async function getCachedShadowUser(cfg, identityHash) {
+  const redis = runtimeRedisEnv();
+  if (!redis) return null;
+  const userId = await redisCommand(redis, 'GET', `arixchat:shadow-user:${identityHash}`);
+  if (!UUID_RE.test(String(userId || ''))) return null;
+  try {
+    const response = await fetch(`${cfg.url}/auth/v1/admin/users/${encodeURIComponent(String(userId))}`, {
+      headers: authAdminHeaders(cfg), cache: 'no-store',
+    });
+    const data = await readJsonResponse(response);
+    const user = data?.user || data;
+    if (!response.ok || String(user?.id || '') !== String(userId) || user?.user_metadata?.arixchat_identity_hash !== identityHash) return null;
+    return user;
+  } catch { return null; }
+}
+async function cacheShadowUser(identityHash, userId) {
+  const redis = runtimeRedisEnv();
+  // The mapping is only an optimization; Supabase Auth remains authoritative.
+  await redisCommand(redis, 'SET', `arixchat:shadow-user:${identityHash}`, String(userId), 'EX', '31536000');
+}
+async function lookupShadowAuthUser(cfg, email, identityHash) {
+  const url = new URL(`${cfg.url}/auth/v1/admin/users`);
+  url.searchParams.set('page', '1');
+  url.searchParams.set('per_page', '1000');
+  // Supabase Auth filters users by email/metadata. The hash is unique to this
+  // main-app identity and avoids scanning unrelated users in normal deployments.
+  url.searchParams.set('filter', identityHash.slice(0, 32));
+  const response = await fetch(url.toString(), { headers: authAdminHeaders(cfg) });
+  const data = await readJsonResponse(response);
+  if (!response.ok) {
+    const error = new Error('Supabase Auth admin lookup failed. Check that SUPABASE_SECRET_KEY is a server-side secret key with Auth admin access.');
+    error.code = 'SUPABASE_AUTH_ADMIN_LOOKUP';
+    error.status = response.status;
+    throw error;
+  }
+  const users = Array.isArray(data?.users) ? data.users : Array.isArray(data) ? data : [];
+  return users.find(user => String(user?.email || '').toLowerCase() === email.toLowerCase() || user?.user_metadata?.arixchat_identity_hash === identityHash) || null;
+}
+async function ensureShadowAuthUser(cfg, account) {
+  const identityHash = await sha256Hex(account.identityKey);
+  const email = `arixchat-${identityHash}@${SHADOW_EMAIL_DOMAIN}`;
+  let user = await getCachedShadowUser(cfg, identityHash);
+  if (!user) user = await lookupShadowAuthUser(cfg, email, identityHash);
+  if (!user) {
+    const password = createId();
+    const response = await fetch(`${cfg.url}/auth/v1/admin/users`, {
+      method: 'POST',
+      headers: authAdminHeaders(cfg, true),
+      body: JSON.stringify({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: {
+          arixchat_shadow_user: true,
+          arixchat_identity_hash: identityHash,
+          display_name: account.displayName,
+        },
+      }),
+    });
+    const data = await readJsonResponse(response);
+    user = data?.user || data;
+    if (!response.ok || !user?.id) {
+      // Concurrent first requests can race while provisioning the same user.
+      if (/already registered|already exists|duplicate/i.test(String(data?.msg || data?.message || data?.error || ''))) {
+        user = await lookupShadowAuthUser(cfg, email, identityHash).catch(() => null);
       }
-    } catch { /* Treat an unavailable or invalid refresh token as signed out. */ }
+      if (!user?.id) {
+        const error = new Error('Could not create ArixChat’s internal account. Verify SUPABASE_SECRET_KEY and the Auth Admin API settings.');
+        error.code = 'SUPABASE_AUTH_ADMIN_CREATE';
+        error.status = response.status;
+        throw error;
+      }
+    }
   }
-  return { user: null, accessToken: '', cookies: (accessToken || refreshToken) ? clearSessionCookies() : [] };
-}
-function userSummary(user) {
-  const meta = user?.user_metadata || {};
-  const email = String(user?.email || '');
-  const fromEmail = email.includes('@') ? email.slice(0, email.indexOf('@')) : 'ArixChat user';
+  if (!user?.id || !UUID_RE.test(String(user.id))) {
+    const error = new Error('Supabase Auth returned an invalid internal account ID.');
+    error.code = 'SUPABASE_AUTH_ADMIN_BAD_USER';
+    throw error;
+  }
+  await cacheShadowUser(identityHash, String(user.id));
   return {
     id: String(user.id),
-    email,
-    displayName: cleanName(meta.display_name || meta.full_name || fromEmail) || 'ArixChat user',
+    // Never expose the synthetic, non-deliverable Auth email as the user’s email.
+    email: account.email || '',
+    displayName: cleanName(account.displayName) || 'ArixAI user',
   };
+}
+async function authenticateMainApp(req, cfg, input) {
+  const fingerprint = await parentCookieFingerprint(req);
+  if (!fingerprint) return { user: null, cookies: [clearChatSessionCookie()] };
+  const existing = await readChatSessionCookie(req, cfg, fingerprint);
+  if (existing) return { user: existing, cookies: [] };
+  const verified = await validateMainAppSession(req, fingerprint, input?.displayName || '');
+  if (!verified.authenticated) return { user: null, cookies: [clearChatSessionCookie()] };
+  const user = await ensureShadowAuthUser(cfg, verified.account);
+  return { user, cookies: [await createChatSessionCookie(user, fingerprint, cfg)] };
 }
 function validateInputEnvelope(envelope, nickname) {
   if (!envelope || typeof envelope.type !== 'string') throw new Error('Invalid message format.');
@@ -201,20 +413,10 @@ function validateInputEnvelope(envelope, nickname) {
   return { payload, idempotencyKey: eventId };
 }
 function serviceHeaders(cfg, jsonBody = false) {
-  // New Supabase secret API keys are not JWTs: send them as `apikey` only.
-  // Legacy service_role keys are JWTs and also need the Authorization header.
+  // Supabase secret keys are API keys, not JWTs. Send only the apikey header.
   const out = { apikey: cfg.serviceKey, accept: 'application/json' };
-  if (!cfg.serviceKey.startsWith('sb_secret_')) out.authorization = `Bearer ${cfg.serviceKey}`;
   if (jsonBody) out['content-type'] = 'application/json';
   return out;
-}
-async function rest(cfg, path, method = 'GET', body = null, prefer = '') {
-  const headers = serviceHeaders(cfg, body !== null);
-  if (prefer) headers.prefer = prefer;
-  const response = await fetch(`${cfg.url}/rest/v1/${path}`, {
-    method, headers, body: body === null ? undefined : JSON.stringify(body),
-  });
-  return { response, data: await readJsonResponse(response) };
 }
 async function rpc(cfg, name, args) {
   const response = await fetch(`${cfg.url}/rest/v1/rpc/${name}`, {
@@ -260,66 +462,26 @@ export default async function handler(req) {
   } catch { return json({ success: false, error: 'Invalid JSON body.' }, 400); }
 
   const action = String(input.action || '');
-  if (!['signup', 'login', 'session', 'logout', 'profile_update', 'create_room', 'join_room', 'send', 'poll', 'history'].includes(action)) {
+  if (!['session', 'logout', 'create_room', 'join_room', 'send', 'poll', 'history'].includes(action)) {
     return json({ success: false, error: 'Invalid action.' }, 400);
   }
   const cfg = runtimeEnv();
-  if (!cfg) return json({ success: false, error: 'Chat service is not configured. Set SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY), and SUPABASE_SECRET_KEY (or SUPABASE_SERVICE_ROLE_KEY) in the server environment.' }, 503);
+  if (!cfg) return json({ success: false, error: 'Chat storage is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY as server-side environment variables.' }, 503);
 
-  let refreshCookies = [];
+  let sessionCookies = [];
   try {
-    if (action === 'signup') {
-      const email = String(input.email || '').trim().toLowerCase();
-      const password = typeof input.password === 'string' ? input.password : '';
-      const displayName = cleanName(input.displayName);
-      if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ success: false, error: 'Enter a valid email address.' }, 400);
-      if (password.length < 8 || password.length > 128) return json({ success: false, error: 'Password must be between 8 and 128 characters.' }, 400);
-      if (!displayName) return json({ success: false, error: 'Enter a display name.' }, 400);
-      const result = await authFetch(cfg, 'signup', 'POST', { email, password, data: { display_name: displayName } });
-      if (!result.response.ok) return json({ success: false, error: decodeSupabaseError(result.data, 'Account could not be created. Check the details and try again.') }, result.response.status === 429 ? 429 : 400);
-      const session = result.data?.access_token && result.data?.refresh_token ? result.data : null;
-      if (session) return json({ success: true, authenticated: true, user: userSummary(session.user) }, 200, {}, cookiesForSession(session));
-      return json({ success: true, authenticated: false, needsEmailConfirmation: true, message: 'Account created. Check your email to verify the address, then sign in.' }, 200);
-    }
+    if (action === 'logout') return json({ success: true }, 200, {}, [clearChatSessionCookie()]);
 
-    if (action === 'login') {
-      const email = String(input.email || '').trim().toLowerCase();
-      const password = typeof input.password === 'string' ? input.password : '';
-      if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !password || password.length > 128) return json({ success: false, error: 'Enter a valid email and password.' }, 400);
-      const result = await authFetch(cfg, 'token?grant_type=password', 'POST', { email, password });
-      if (!result.response.ok || !result.data?.access_token || !result.data?.refresh_token || !result.data?.user?.id) {
-        return json({ success: false, error: decodeSupabaseError(result.data, 'Sign-in failed. Check your email and password.') }, result.response.status === 429 ? 429 : 401, {}, clearSessionCookies());
-      }
-      return json({ success: true, authenticated: true, user: userSummary(result.data.user) }, 200, {}, cookiesForSession(result.data));
-    }
-
-    if (action === 'logout') {
-      const refresh = cookieValue(req, 'arix_refresh');
-      const auth = await authenticate(req, cfg);
-      if (refresh) {
-        try { await authFetch(cfg, 'logout', 'POST', null, auth.accessToken); } catch { /* Always clear this browser session. */ }
-      }
-      return json({ success: true }, 200, {}, clearSessionCookies());
-    }
-
-    const auth = await authenticate(req, cfg);
+    const auth = await authenticateMainApp(req, cfg, input);
     const cookies = auth.cookies || [];
-    refreshCookies = cookies;
+    sessionCookies = cookies;
     if (action === 'session') {
       if (!auth.user) return json({ success: true, authenticated: false }, 200, {}, cookies);
-      return json({ success: true, authenticated: true, user: userSummary(auth.user) }, 200, {}, cookies);
+      return json({ success: true, authenticated: true, user: auth.user }, 200, {}, cookies);
     }
-    if (!auth.user?.id || !auth.accessToken) return json({ success: false, error: 'Please sign in to continue.', code: 'AUTH_REQUIRED' }, 401, {}, cookies);
-    const user = userSummary(auth.user);
-    const nickname = user.displayName;
-
-    if (action === 'profile_update') {
-      const displayName = cleanName(input.displayName);
-      if (!displayName) return json({ success: false, error: 'Enter a valid display name.' }, 400, {}, cookies);
-      const result = await authFetch(cfg, 'user', 'PUT', { data: { ...(auth.user.user_metadata || {}), display_name: displayName } }, auth.accessToken);
-      if (!result.response.ok || !result.data?.id) return json({ success: false, error: 'Profile could not be updated. Please retry.' }, 502, {}, cookies);
-      return json({ success: true, user: userSummary(result.data) }, 200, {}, cookies);
-    }
+    if (!auth.user?.id) return json({ success: false, error: 'Open the main ArixAI app and authenticate there before using ArixChat.', code: 'AUTH_REQUIRED' }, 401, {}, cookies);
+    const user = auth.user;
+    const nickname = cleanName(input.displayName) || user.displayName || 'ArixAI user';
 
     if (action === 'create_room') {
       const roomId = createId();
@@ -414,7 +576,15 @@ export default async function handler(req) {
       rows = rows.slice(0, 200).reverse();
     }
     return json({ success: true, messages: rows, hasMore }, 200, {}, cookies);
-  } catch {
-    return json({ success: false, error: 'Chat service is temporarily unavailable. Please retry.' }, 502, {}, refreshCookies);
+  } catch (error) {
+    console.error('[ArixChat API]', String(error?.code || 'UNEXPECTED'), String(error?.message || 'request failed'));
+    const message = error?.code === 'MAIN_SESSION_ORIGIN_DENIED'
+      ? 'ArixChat and the main ArixAI app must use the same allowed site origin.'
+      : error?.code === 'MAIN_SESSION_UNAVAILABLE'
+      ? 'ArixAI session verification failed. Check the main app authentication service and its Redis configuration.'
+      : error?.code?.startsWith?.('SUPABASE_AUTH_ADMIN')
+        ? String(error.message || 'Chat account setup failed. Check the Supabase server configuration.')
+        : 'Chat storage is temporarily unavailable. Please retry.';
+    return json({ success: false, error: message }, 502, {}, sessionCookies);
   }
 }
