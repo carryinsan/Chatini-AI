@@ -1,6 +1,7 @@
 
 
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -622,7 +623,6 @@ function preferCallCodecs(pc) {
       });
       transceiver.setCodecPreferences([...primary, ...repair]);
     }
-    }
   } catch { /* Keep browser codec defaults if this engine rejects preferences. */ }
 }
 function createCallPeerConnection() {
@@ -673,8 +673,6 @@ pc.ontrack = event => {
     remoteAud.play().catch(() => {});
   }
 };
-    }
-  };
   pc.onconnectionstatechange = () => {
     if (callState.pc !== pc) return;
     if (pc.connectionState === 'connected') { callState.phase = 'active'; updateCallUI(); }
@@ -773,7 +771,6 @@ async function handleCallSignal(signal) {
   } catch {}
   return;
 }
-  }
   if (signal.type === 'decline') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' declined the call.'); return; }
   if (signal.type === 'busy') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' is busy right now.'); return; }
   if (signal.type === 'cancel') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' cancelled the call.'); return; }
