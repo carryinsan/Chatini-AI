@@ -290,11 +290,23 @@ function getCallIceServers() {
   const servers = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun.cloudflare.com:3478' },
+    {
+      urls: [
+        'stun:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:80',
+        'turn:openrelay.metered.ca:443',
+        'turn:openrelay.metered.ca:443?transport=tcp'
+      ],
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    }
   ];
-  const urls = String(env.ARIXCALL_TURN_URLS || '').split(',').map(value => value.trim()).filter(value => /^turns?:/i.test(value));
-  const username = String(env.ARIXCALL_TURN_USERNAME || '').trim();
-  const credential = String(env.ARIXCALL_TURN_CREDENTIAL || '').trim();
-  if (urls.length && username && credential) servers.push({ urls, username, credential });
+  const customUrls = String(env.ARIXCALL_TURN_URLS || '').split(',').map(v => v.trim()).filter(v => /^turns?:/i.test(v));
+  const customUser = String(env.ARIXCALL_TURN_USERNAME || '').trim();
+  const customPass = String(env.ARIXCALL_TURN_CREDENTIAL || '').trim();
+  if (customUrls.length && customUser && customPass) {
+    servers.push({ urls: customUrls, username: customUser, credential: customPass });
+  }
   return servers;
 }
 function callIdentityKey(arixCallId) { return `arixcall:identity:${arixCallId}`; }
