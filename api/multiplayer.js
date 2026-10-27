@@ -18,6 +18,13 @@ const CHAT_SESSION_COOKIE = 'arixchat_session';
 const CHAT_SESSION_TTL_SECONDS = 8 * 60 * 60;
 const SHADOW_EMAIL_DOMAIN = 'identity.arixchat.invalid';
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ARIX_CALL_ID_RE = /^ARX-[A-F0-9]{32}$/;
+const CALL_ID_RE = /^[a-zA-Z0-9_-]{24,80}$/;
+const CALL_USER_TTL_SECONDS = 2592000;
+const CALL_PRESENCE_TTL_SECONDS = 55;
+const CALL_RING_TTL_SECONDS = 50;
+const CALL_SESSION_TTL_SECONDS = 21600;
+const CALL_SIGNAL_TYPES = new Set(['accept', 'decline', 'cancel', 'hangup', 'offer', 'answer', 'ice']);
 
 function runtimeEnv() {
   const env = typeof process !== 'undefined' && process.env ? process.env : {};
@@ -227,8 +234,8 @@ async function validateMainAppSession(req, parentFingerprint, displayNameHint) {
 }
 function runtimeRedisEnv() {
   const env = typeof process !== 'undefined' && process.env ? process.env : {};
-  const url = String(env.UPSTASH_REDIS_REST_URL || env.UPSTASH_URL || '').trim().replace(/\/+$/, '');
-  const token = String(env.UPSTASH_REDIS_REST_TOKEN || env.UPSTASH_TOKEN || '').trim();
+  const url = String(env.UPSTASH_REDIS_REST_URL || "https://immortal-eagle-36171.upstash.io" || '').trim().replace(/\/+$/, '');
+  const token = String(env.UPSTASH_REDIS_REST_TOKEN || "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw" || '').trim();
   if (!url || !token) return null;
   try {
     const parsed = new URL(url);
@@ -250,6 +257,219 @@ async function redisCommand(redis, ...command) {
     return data?.result ?? null;
   } catch { return null; }
 }
+function callFail(message, status = 400) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+async function callRedisCommand(redis, ...command) {
+  if (!redis) throw callFail('ArixCall signaling is not configured. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN on the server.', 503);
+  let response;
+  try {
+    response = await fetch(redis.url, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${redis.token}`, 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(command),
+      cache: 'no-store',
+    });
+  } catch {
+    throw callFail('ArixCall signaling could not reach Redis. Please retry.', 503);
+  }
+  const data = await readJsonResponse(response);
+  if (!response.ok || data?.error) {
+    // Do not expose Redis credentials or raw server details to the browser.
+    throw callFail('ArixCall signaling is temporarily unavailable. Please retry.', 503);
+  }
+  return data?.result ?? null;
+}
+
+function callUserChannel(userId) { return `arixcall-user-${userId}`; }
+function getCallIceServers() {
+  const env = typeof process !== 'undefined' && process.env ? process.env : {};
+  const servers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun.cloudflare.com:3478' },
+  ];
+  const urls = String(env.ARIXCALL_TURN_URLS || '').split(',').map(value => value.trim()).filter(value => /^turns?:/i.test(value));
+  const username = String(env.ARIXCALL_TURN_USERNAME || '').trim();
+  const credential = String(env.ARIXCALL_TURN_CREDENTIAL || '').trim();
+  if (urls.length && username && credential) servers.push({ urls, username, credential });
+  return servers;
+}
+function callIdentityKey(arixCallId) { return `arixcall:identity:${arixCallId}`; }
+function callProfileKey(userId) { return `arixcall:profile:${userId}`; }
+function callPresenceKey(userId) { return `arixcall:online:${userId}`; }
+function callSessionKey(callId) { return `arixcall:session:${callId}`; }
+function callActiveKey(userId) { return `arixcall:active:${userId}`; }
+
+async function makeArixCallId(userId, cfg) {
+  const hash = await sha256Hex(`${cfg.serviceKey}|arixcall-v1|${userId}`);
+  return `ARX-${hash.slice(0, 32).toUpperCase()}`;
+}
+
+async function registerCallIdentity(user, cfg, displayName) {
+  const redis = runtimeRedisEnv();
+  if (!redis) throw callFail('ArixCall needs UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN configured on the server.', 503);
+  const arixCallId = await makeArixCallId(user.id, cfg);
+  const name = cleanName(displayName || user.displayName || 'ArixChat user') || 'ArixChat user';
+  await callRedisCommand(redis, 'SET', callIdentityKey(arixCallId), String(user.id), 'EX', String(CALL_USER_TTL_SECONDS));
+  await callRedisCommand(redis, 'SET', callProfileKey(user.id), JSON.stringify({ arixCallId, displayName: name }), 'EX', String(CALL_USER_TTL_SECONDS));
+  return arixCallId;
+}
+
+async function publishCallEvent(redis, userId, event) {
+  const delivered = await callRedisCommand(redis, 'PUBLISH', callUserChannel(userId), JSON.stringify(event));
+  return Number(delivered) || 0;
+}
+
+async function releaseCallSession(redis, session) {
+  for (const participantId of [session.callerId, session.calleeId]) {
+    const key = callActiveKey(participantId);
+    const activeId = await callRedisCommand(redis, 'GET', key).catch(() => null);
+    if (String(activeId || '') === String(session.callId)) {
+      await callRedisCommand(redis, 'DEL', key).catch(() => null);
+    }
+  }
+  await callRedisCommand(redis, 'DEL', callSessionKey(session.callId)).catch(() => null);
+}
+
+async function resolveCallPeer(redis, arixCallId) {
+  if (typeof arixCallId !== 'string' || !ARIX_CALL_ID_RE.test(arixCallId)) {
+    throw callFail('Enter a valid ArixID, such as ARX-12AB34CD56EF789012AB34CD56EF7890.');
+  }
+  const userId = await callRedisCommand(redis, 'GET', callIdentityKey(arixCallId));
+  if (!UUID_RE.test(String(userId || ''))) throw callFail('That ArixID was not found. Ask the person to open ArixChat and share their current ArixID.', 404);
+  const profileRaw = await callRedisCommand(redis, 'GET', callProfileKey(String(userId)));
+  let profile = {};
+  try { profile = JSON.parse(String(profileRaw || '{}')); } catch { profile = {}; }
+  const online = await callRedisCommand(redis, 'GET', callPresenceKey(String(userId)));
+  return {
+    userId: String(userId),
+    arixCallId,
+    displayName: cleanName(profile?.displayName || 'ArixChat user') || 'ArixChat user',
+    online: String(online || '') === '1',
+  };
+}
+
+function normalizeCallSignal(signalType, payload) {
+  if (!CALL_SIGNAL_TYPES.has(signalType)) throw callFail('Unsupported ArixCall signal.');
+  if (signalType === 'offer' || signalType === 'answer') {
+    const sdp = typeof payload?.sdp === 'string' ? payload.sdp : '';
+    if (!sdp || sdp.length > 26000 || !/^v=0\r?\n/.test(sdp)) throw callFail('The WebRTC session description is invalid or too large.');
+    return { sdp };
+  }
+  if (signalType === 'ice') {
+    const candidate = String(payload?.candidate || '');
+    if (!candidate || candidate.length > 4096) throw callFail('The network candidate is invalid.');
+    const mid = payload?.sdpMid == null ? null : String(payload.sdpMid).slice(0, 128);
+    const line = payload?.sdpMLineIndex == null ? null : Number(payload.sdpMLineIndex);
+    if (line !== null && (!Number.isInteger(line) || line < 0 || line > 256)) throw callFail('The network candidate is invalid.');
+    return { candidate, sdpMid: mid, sdpMLineIndex: line, usernameFragment: payload?.usernameFragment == null ? null : String(payload.usernameFragment).slice(0, 256) };
+  }
+  return {};
+}
+
+async function handleCallStream(req, cfg) {
+  const auth = await authenticateMainApp(req, cfg, {});
+  if (!auth.user?.id) return json({ success: false, authenticated: false, error: 'Open the main ArixAI app and authenticate before using ArixCall.' }, 401, {}, auth.cookies || []);
+  const redis = runtimeRedisEnv();
+  if (!redis) return json({ success: false, error: 'ArixCall needs UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN configured on the server.' }, 503, {}, auth.cookies || []);
+  let arixCallId;
+  try { arixCallId = await registerCallIdentity(auth.user, cfg); }
+  catch (error) { return json({ success: false, error: error.message || 'ArixCall identity setup failed.' }, error.status || 503, {}, auth.cookies || []); }
+
+  let upstream;
+  try {
+    upstream = await fetch(`${redis.url}/subscribe/${encodeURIComponent(callUserChannel(auth.user.id))}`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${redis.token}`, accept: 'text/event-stream', 'cache-control': 'no-cache' },
+      signal: req.signal,
+      cache: 'no-store',
+    });
+  } catch {
+    return json({ success: false, error: 'ArixCall signaling could not open its secure stream. Please retry.' }, 503, {}, auth.cookies || []);
+  }
+  if (!upstream.ok || !upstream.body) {
+    try { await upstream.body?.cancel(); } catch {}
+    return json({ success: false, error: 'ArixCall signaling could not open its secure stream. Please retry.' }, 503, {}, auth.cookies || []);
+  }
+
+  const reader = upstream.body.getReader();
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  let closed = false;
+  let heartbeat = null;
+  let controllerRef = null;
+  let buffer = '';
+  const closeOutput = () => {
+    if (closed) return;
+    closed = true;
+    if (heartbeat) clearInterval(heartbeat);
+    try { controllerRef?.close(); } catch {}
+    try { reader.cancel(); } catch {}
+  };
+  const enqueue = (text) => {
+    if (closed || !controllerRef) return;
+    try { controllerRef.enqueue(encoder.encode(text)); } catch { closeOutput(); }
+  };
+  const output = new ReadableStream({
+    start(controller) {
+      controllerRef = controller;
+      enqueue('retry: 1500\n\n');
+      heartbeat = setInterval(() => enqueue(': keep-alive\n\n'), 12000);
+      const processFrame = (frame) => {
+        const dataLines = frame.split('\n').filter(line => line.startsWith('data:')).map(line => line.slice(5).replace(/^ /, ''));
+        if (!dataLines.length) return;
+        const raw = dataLines.join('\n');
+        if (raw.startsWith('subscribe,')) {
+          enqueue(`event: ready\ndata: ${JSON.stringify({ arixCallId, iceServers: getCallIceServers() })}\n\n`);
+          return;
+        }
+        if (!raw.startsWith('message,')) return;
+        const firstComma = raw.indexOf(',');
+        const secondComma = raw.indexOf(',', firstComma + 1);
+        if (secondComma < 0) return;
+        const eventText = raw.slice(secondComma + 1);
+        try {
+          const event = JSON.parse(eventText);
+          if (!event || typeof event !== 'object' || !CALL_SIGNAL_TYPES.has(event.type) && event.type !== 'invite') return;
+          enqueue(`event: signal\ndata: ${JSON.stringify(event)}\n\n`);
+        } catch { /* Ignore malformed or non-ArixCall pub/sub messages. */ }
+      };
+      const pump = async () => {
+        try {
+          while (!closed) {
+            const part = await reader.read();
+            if (part.done) { closeOutput(); break; }
+            buffer += decoder.decode(part.value, { stream: true }).replace(/\r\n/g, '\n');
+            let boundary;
+            while ((boundary = buffer.indexOf('\n\n')) >= 0) {
+              const frame = buffer.slice(0, boundary);
+              buffer = buffer.slice(boundary + 2);
+              processFrame(frame);
+            }
+            if (buffer.length > 40000) buffer = buffer.slice(-20000);
+          }
+        } catch { closeOutput(); }
+      };
+      pump();
+      req.signal.addEventListener('abort', closeOutput, { once: true });
+    },
+    cancel() { closeOutput(); },
+  });
+  const headers = new Headers({
+    'content-type': 'text/event-stream; charset=utf-8',
+    'cache-control': 'no-cache, no-transform',
+    'x-accel-buffering': 'no',
+    'x-content-type-options': 'nosniff',
+    'x-frame-options': 'DENY',
+    'referrer-policy': 'no-referrer',
+  });
+  for (const cookie of auth.cookies || []) headers.append('set-cookie', cookie);
+  return new Response(output, { status: 200, headers });
+}
+
 async function getCachedShadowUser(cfg, identityHash) {
   const redis = runtimeRedisEnv();
   if (!redis) return null;
@@ -446,7 +666,6 @@ function mapDatabaseError(error) {
 }
 
 export default async function handler(req) {
-  if (req.method !== 'POST') return json({ success: false, error: 'Method not allowed.' }, 405, { allow: 'POST' });
   const origin = req.headers.get('origin');
   if (origin) {
     try {
@@ -454,6 +673,15 @@ export default async function handler(req) {
     } catch { return json({ success: false, error: 'Invalid origin.' }, 403); }
   }
   if (req.headers.get('sec-fetch-site') === 'cross-site') return json({ success: false, error: 'Cross-site requests are not allowed.' }, 403);
+  if (req.method === 'GET') {
+    const url = new URL(req.url);
+    if (url.searchParams.get('action') !== 'call_stream') return json({ success: false, error: 'Method not allowed.' }, 405, { allow: 'POST, GET' });
+    const cfg = runtimeEnv();
+    if (!cfg) return json({ success: false, error: 'Chat storage is not configured. Set SUPABASE_URL and SUPABASE_SECRET_KEY as server-side environment variables.' }, 503);
+    try { return await handleCallStream(req, cfg); }
+    catch (error) { return json({ success: false, error: 'ArixCall signaling is temporarily unavailable.' }, error?.status || 503); }
+  }
+  if (req.method !== 'POST') return json({ success: false, error: 'Method not allowed.' }, 405, { allow: 'POST, GET' });
   const contentType = req.headers.get('content-type') || '';
   if (!contentType.toLowerCase().includes('application/json')) return json({ success: false, error: 'JSON is required.' }, 415);
   const claimedLength = Number(req.headers.get('content-length') || 0);
@@ -467,7 +695,7 @@ export default async function handler(req) {
   } catch { return json({ success: false, error: 'Invalid JSON body.' }, 400); }
 
   const action = String(input.action || '');
-  if (!['session', 'logout', 'create_room', 'join_room', 'send', 'poll', 'history'].includes(action)) {
+  if (!['session', 'logout', 'create_room', 'join_room', 'send', 'poll', 'history', 'call_presence', 'call_lookup', 'call_invite', 'call_signal'].includes(action)) {
     return json({ success: false, error: 'Invalid action.' }, 400);
   }
   const cfg = runtimeEnv();
@@ -482,11 +710,155 @@ export default async function handler(req) {
     sessionCookies = cookies;
     if (action === 'session') {
       if (!auth.user) return json({ success: true, authenticated: false }, 200, {}, cookies);
-      return json({ success: true, authenticated: true, user: auth.user }, 200, {}, cookies);
+      // Do not advertise an ArixID unless the Redis mapping was actually registered.
+      // This avoids presenting a plausible-looking but uncallable ID during outages.
+      let arixCallId = '';
+      try { arixCallId = await registerCallIdentity(auth.user, cfg); } catch { /* Call signaling will surface the missing Redis configuration. */ }
+      return json({ success: true, authenticated: true, user: { ...auth.user, arixCallId, callIceServers: getCallIceServers() } }, 200, {}, cookies);
     }
     if (!auth.user?.id) return json({ success: false, error: 'Open the main ArixAI app and authenticate there before using ArixChat.', code: 'AUTH_REQUIRED' }, 401, {}, cookies);
     const user = auth.user;
     const nickname = cleanName(input.displayName) || user.displayName || 'ArixAI user';
+
+    if (action === 'call_presence') {
+      try {
+        const redis = runtimeRedisEnv();
+        if (!redis) throw callFail('ArixCall needs UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN configured on the server.', 503);
+        const arixCallId = await registerCallIdentity(user, cfg, nickname);
+        await callRedisCommand(redis, 'SET', callPresenceKey(user.id), '1', 'EX', String(CALL_PRESENCE_TTL_SECONDS));
+        return json({ success: true, arixCallId, iceServers: getCallIceServers(), expiresIn: CALL_PRESENCE_TTL_SECONDS }, 200, {}, cookies);
+      } catch (error) {
+        return json({ success: false, error: error.message || 'ArixCall presence could not be refreshed.' }, error.status || 503, {}, cookies);
+      }
+    }
+
+    if (action === 'call_lookup') {
+      try {
+        const redis = runtimeRedisEnv();
+        if (!redis) throw callFail('ArixCall signaling is not configured on the server.', 503);
+        const target = String(input.targetArixId || '').trim().toUpperCase();
+        const peer = await resolveCallPeer(redis, target);
+        if (peer.userId === user.id) throw callFail('You cannot call your own ArixID.');
+        return json({ success: true, peer: { arixCallId: peer.arixCallId, displayName: peer.displayName, online: peer.online } }, 200, {}, cookies);
+      } catch (error) {
+        return json({ success: false, error: error.message || 'Could not look up that ArixID.' }, error.status || 503, {}, cookies);
+      }
+    }
+
+    if (action === 'call_invite') {
+      const redis = runtimeRedisEnv();
+      let callerLocked = false;
+      let calleeLocked = false;
+      let sessionWritten = false;
+      let session = null;
+      try {
+        if (!redis) throw callFail('ArixCall signaling is not configured on the server.', 503);
+        const callId = String(input.callId || '');
+        if (!CALL_ID_RE.test(callId)) throw callFail('Invalid call identifier. Try again.');
+        const mediaType = input.mediaType === 'video' ? 'video' : input.mediaType === 'audio' ? 'audio' : '';
+        if (!mediaType) throw callFail('Choose a voice or video call.');
+        const peer = await resolveCallPeer(redis, String(input.targetArixId || '').trim().toUpperCase());
+        if (peer.userId === user.id) throw callFail('You cannot call your own ArixID.');
+        if (!peer.online) throw callFail(`${peer.displayName} is not connected to ArixCall right now. Ask them to open ArixChat and try again.`, 409);
+        const callerArixId = await registerCallIdentity(user, cfg, nickname);
+        const callerLock = await callRedisCommand(redis, 'SET', callActiveKey(user.id), callId, 'EX', String(CALL_RING_TTL_SECONDS), 'NX');
+        if (callerLock !== 'OK') throw callFail('You are already in another call. End it before starting a new one.', 409);
+        callerLocked = true;
+        const calleeLock = await callRedisCommand(redis, 'SET', callActiveKey(peer.userId), callId, 'EX', String(CALL_RING_TTL_SECONDS), 'NX');
+        if (calleeLock !== 'OK') throw callFail(`${peer.displayName} is already on another call.`, 409);
+        calleeLocked = true;
+        session = {
+          callId,
+          callerId: user.id,
+          calleeId: peer.userId,
+          callerArixId,
+          calleeArixId: peer.arixCallId,
+          callerName: nickname,
+          calleeName: peer.displayName,
+          mediaType,
+          status: 'ringing',
+          createdAt: Date.now(),
+        };
+        const created = await callRedisCommand(redis, 'SET', callSessionKey(callId), JSON.stringify(session), 'EX', String(CALL_RING_TTL_SECONDS), 'NX');
+        if (created !== 'OK') throw callFail('Could not reserve this call. Please try again.', 409);
+        sessionWritten = true;
+        const delivered = await publishCallEvent(redis, peer.userId, {
+          type: 'invite', callId, fromArixId: callerArixId, fromName: nickname, mediaType, at: Date.now(),
+        });
+        if (delivered < 1) throw callFail(`${peer.displayName} disconnected. Please try again.`, 409);
+        return json({ success: true, callId, status: 'ringing', peer: { arixCallId: peer.arixCallId, displayName: peer.displayName } }, 200, {}, cookies);
+      } catch (error) {
+        if (redis && sessionWritten && session) await callRedisCommand(redis, 'DEL', callSessionKey(session.callId)).catch(() => null);
+        if (redis && callerLocked) {
+          const active = await callRedisCommand(redis, 'GET', callActiveKey(user.id)).catch(() => null);
+          if (String(active || '') === String(input.callId || '')) await callRedisCommand(redis, 'DEL', callActiveKey(user.id)).catch(() => null);
+        }
+        if (redis && calleeLocked && session?.calleeId) {
+          const active = await callRedisCommand(redis, 'GET', callActiveKey(session.calleeId)).catch(() => null);
+          if (String(active || '') === String(input.callId || '')) await callRedisCommand(redis, 'DEL', callActiveKey(session.calleeId)).catch(() => null);
+        }
+        return json({ success: false, error: error.message || 'Could not start this call.' }, error.status || 503, {}, cookies);
+      }
+    }
+
+    if (action === 'call_signal') {
+      const redis = runtimeRedisEnv();
+      try {
+        if (!redis) throw callFail('ArixCall signaling is not configured on the server.', 503);
+        const callId = String(input.callId || '');
+        const signalType = String(input.signalType || '');
+        if (!CALL_ID_RE.test(callId)) throw callFail('Invalid call identifier.');
+        if (!CALL_SIGNAL_TYPES.has(signalType)) throw callFail('Unsupported ArixCall signal.');
+        const sessionRaw = await callRedisCommand(redis, 'GET', callSessionKey(callId));
+        let session;
+        try { session = JSON.parse(String(sessionRaw || '')); } catch { session = null; }
+        if (!session || session.callId !== callId) throw callFail('This call has ended or expired.', 404);
+        const isCaller = user.id === session.callerId;
+        const isCallee = user.id === session.calleeId;
+        if (!isCaller && !isCallee) throw callFail('You are not a participant in this call.', 403);
+        if (signalType === 'accept' && (!isCallee || session.status !== 'ringing')) throw callFail('This call can no longer be answered.', 409);
+        if (signalType === 'decline' && !isCallee) throw callFail('Only the invited person can decline this call.', 403);
+        if (signalType === 'cancel' && !isCaller) throw callFail('Only the caller can cancel while it is ringing.', 403);
+        if (signalType === 'offer' && !isCaller) throw callFail('Invalid WebRTC offer sender.', 403);
+        if (signalType === 'answer' && !isCallee) throw callFail('Invalid WebRTC answer sender.', 403);
+        if (['offer', 'answer', 'ice'].includes(signalType) && session.status !== 'active') throw callFail('Answer the call before exchanging WebRTC media details.', 409);
+        if (['decline', 'cancel', 'hangup'].includes(signalType) && session.status === 'ended') return json({ success: true, delivered: false }, 200, {}, cookies);
+        const payload = normalizeCallSignal(signalType, input.payload || {});
+        if (signalType === 'accept') {
+          for (const participantId of [session.callerId, session.calleeId]) {
+            const activeId = await callRedisCommand(redis, 'GET', callActiveKey(participantId));
+            if (String(activeId || '') !== callId) throw callFail('This call has expired. Please start a new call.', 409);
+          }
+          session.status = 'active';
+          await callRedisCommand(redis, 'SET', callActiveKey(session.callerId), callId, 'EX', String(CALL_SESSION_TTL_SECONDS));
+          await callRedisCommand(redis, 'SET', callActiveKey(session.calleeId), callId, 'EX', String(CALL_SESSION_TTL_SECONDS));
+        }
+        if (signalType === 'offer' || signalType === 'answer' || signalType === 'ice' || signalType === 'accept') {
+          await callRedisCommand(redis, 'SET', callSessionKey(callId), JSON.stringify(session), 'EX', String(CALL_SESSION_TTL_SECONDS));
+        }
+        const recipientId = isCaller ? session.calleeId : session.callerId;
+        const event = {
+          type: signalType,
+          callId,
+          fromArixId: isCaller ? session.callerArixId : session.calleeArixId,
+          fromName: isCaller ? session.callerName : session.calleeName,
+          mediaType: session.mediaType,
+        };
+        if (signalType === 'offer' || signalType === 'answer') event.sdp = payload.sdp;
+        if (signalType === 'ice') event.candidate = payload;
+        const delivered = await publishCallEvent(redis, recipientId, event);
+        if (['decline', 'cancel', 'hangup'].includes(signalType)) {
+          session.status = 'ended';
+          await releaseCallSession(redis, session);
+        } else if (['accept', 'offer', 'answer'].includes(signalType) && delivered < 1) {
+          await releaseCallSession(redis, session);
+          throw callFail('The other person temporarily lost the signaling connection. Retry the call.', 503);
+        }
+        return json({ success: true, delivered: delivered > 0 }, 200, {}, cookies);
+      } catch (error) {
+        return json({ success: false, error: error.message || 'ArixCall signaling failed.' }, error.status || 503, {}, cookies);
+      }
+    }
 
     if (action === 'create_room') {
       const roomId = createId();
