@@ -158,13 +158,18 @@ async function readChatSessionCookie(req, cfg, parentFingerprint) {
   if (!sameStringConstantTime(suppliedSignature, expectedSignature)) return null;
   try {
     const payload = JSON.parse(new TextDecoder().decode(decodeBase64Url(encoded)));
-    if (payload?.v !== 1 || !UUID_RE.test(String(payload.sub || '')) || !Number.isFinite(Number(payload.exp)) || Number(payload.exp) <= Date.now()) return null;
+    if (payload?.v !== 1 || !UUID_RE.test(String(payload.sub || '')) || !Number.isFinite(Number(payload.exp))
+        || Number(payload.exp) <= Date.now()) return null;
     if (!sameStringConstantTime(String(payload.parent || ''), parentFingerprint)) return null;
     return { id: String(payload.sub), email: String(payload.email || ''), displayName: cleanName(payload.displayName) || 'ArixAI user' };
   } catch { return null; }
 }
 function authAdminHeaders(cfg, jsonBody = false) {
-  const headers = { apikey: cfg.serviceKey, accept: 'application/json' };
+  const headers = {
+    apikey: cfg.serviceKey,
+    authorization: `Bearer ${cfg.serviceKey}`,
+    accept: 'application/json',
+  };
   if (jsonBody) headers['content-type'] = 'application/json';
   return headers;
 }
@@ -413,8 +418,11 @@ function validateInputEnvelope(envelope, nickname) {
   return { payload, idempotencyKey: eventId };
 }
 function serviceHeaders(cfg, jsonBody = false) {
-  // Supabase secret keys are API keys, not JWTs. Send only the apikey header.
-  const out = { apikey: cfg.serviceKey, accept: 'application/json' };
+  const out = {
+    apikey: cfg.serviceKey,
+    authorization: `Bearer ${cfg.serviceKey}`,
+    accept: 'application/json',
+  };
   if (jsonBody) out['content-type'] = 'application/json';
   return out;
 }
@@ -583,8 +591,8 @@ export default async function handler(req) {
       : error?.code === 'MAIN_SESSION_UNAVAILABLE'
       ? 'ArixAI session verification failed. Check the main app authentication service and its Redis configuration.'
       : error?.code?.startsWith?.('SUPABASE_AUTH_ADMIN')
-        ? String(error.message || 'Chat account setup failed. Check the Supabase server configuration.')
-        : 'Chat storage is temporarily unavailable. Please retry.';
-    return json({ success: false, error: message }, 502, {}, sessionCookies);
+      ? String(error.message || 'Chat account setup failed. Check the Supabase server configuration.')
+      : 'Chat storage is temporarily unavailable. Please retry.';
+    return json({ success: false, error: message, code: error?.code }, 502, {}, sessionCookies);
   }
 }
