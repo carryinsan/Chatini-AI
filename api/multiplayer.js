@@ -45,7 +45,7 @@ function json(body, status = 200, extraHeaders = {}, cookies = []) {
     'x-content-type-options': 'nosniff',
     'x-frame-options': 'DENY',
     'referrer-policy': 'no-referrer',
-    'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+    'permissions-policy': 'camera=(self), microphone=(self), geolocation=()',
     ...extraHeaders,
   });
   for (const cookie of cookies) headers.append('set-cookie', cookie);
@@ -288,18 +288,29 @@ function callUserChannel(userId) { return `arixcall-user-${userId}`; }
 function getCallIceServers() {
   const env = typeof process !== 'undefined' && process.env ? process.env : {};
   const servers = [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun.cloudflare.com:3478' },
     {
-      urls: [
-        'stun:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:80',
-        'turn:openrelay.metered.ca:443',
-        'turn:openrelay.metered.ca:443?transport=tcp'
-      ],
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    }
+      urls: 'stun:stun.relay.metered.ca:80',
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:80',
+      username: '473ec286e01f12e61535106e',
+      credential: 'ekfBESk1J5B6nNX0',
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:80?transport=tcp',
+      username: '473ec286e01f12e61535106e',
+      credential: 'ekfBESk1J5B6nNX0',
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:443',
+      username: '473ec286e01f12e61535106e',
+      credential: 'ekfBESk1J5B6nNX0',
+    },
+    {
+      urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+      username: '473ec286e01f12e61535106e',
+      credential: 'ekfBESk1J5B6nNX0',
+    },
   ];
   const customUrls = String(env.ARIXCALL_TURN_URLS || '').split(',').map(v => v.trim()).filter(v => /^turns?:/i.test(v));
   const customUser = String(env.ARIXCALL_TURN_USERNAME || '').trim();
