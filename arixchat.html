@@ -1,5 +1,6 @@
 
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -46,6 +47,18 @@
 }
 @media(max-width:650px){.sidebar-toggle{display:none}}
 
+
+/* ArixCall: responsive, privacy-minded one-to-one WebRTC call UI. */
+.call-overlay{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(12,16,31,.72);backdrop-filter:blur(12px)}
+.call-window{width:min(760px,100%);overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:28px;background:#111827;color:#f9fafb;box-shadow:0 30px 100px rgba(0,0,0,.38);display:flex;flex-direction:column;max-height:min(92dvh,900px)}
+.call-top{display:flex;align-items:center;gap:15px;padding:20px 24px;background:linear-gradient(135deg,#202844,#121a2c);border-bottom:1px solid rgba(255,255,255,.09)}
+.call-top-copy{flex:1;min-width:0}.call-peer-name{font-family:Manrope,sans-serif;font-size:21px;font-weight:800;letter-spacing:-.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}.call-peer-status{font-size:12px;color:#c0c8d8;margin:5px 0 0;line-height:1.5}.call-kind{display:inline-flex;align-items:center;gap:7px;font-size:10px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#d8d5ff;border:1px solid rgba(167,157,255,.28);background:rgba(113,99,225,.17);padding:7px 10px;border-radius:100px;margin-bottom:9px}.call-stage{position:relative;min-height:290px;flex:1;display:grid;place-items:center;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#283653,#0c1220 75%);isolation:isolate}
+.call-stage.video-mode{min-height:360px;aspect-ratio:16/9}.call-peer-avatar{width:104px;height:104px;border-radius:34px;display:grid;place-items:center;background:linear-gradient(145deg,#9287ff,#5446c6);color:#fff;font-size:36px;font-family:Manrope,sans-serif;font-weight:800;box-shadow:0 0 0 12px rgba(130,115,255,.08),0 18px 45px rgba(0,0,0,.25)}
+.call-peer-avatar.pulse{animation:arixCallPulse 1.8s ease-out infinite}.call-remote-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#080b12}.call-local-wrap{position:absolute;right:17px;bottom:17px;width:clamp(100px,22%,180px);aspect-ratio:3/4;border-radius:16px;overflow:hidden;background:#202a3c;border:1px solid rgba(255,255,255,.25);box-shadow:0 10px 30px rgba(0,0,0,.3);z-index:2}.call-local-video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.call-media-note{font-size:10px;color:#9da9bd;text-align:center;padding:0 16px 12px}.call-button-row{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;padding:18px 20px 14px;background:#111827}.call-btn{border:1px solid rgba(255,255,255,.14);color:#f9fafb;background:#273246;border-radius:15px;min-width:86px;padding:11px 14px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:background .15s,transform .15s}.call-btn:hover{background:#344258;transform:translateY(-1px)}.call-btn svg{width:17px;height:17px}.call-btn.accept{background:#0b9d70;border-color:#0b9d70}.call-btn.accept:hover{background:#07845e}.call-btn.danger{background:#d92d3a;border-color:#d92d3a}.call-btn.danger:hover{background:#b91c2c}.call-btn.selected{background:#5c50d9;border-color:#877cff}.call-privacy{font-size:10px;line-height:1.55;text-align:center;color:#8793a8;padding:0 24px 18px;background:#111827}.call-header-action{color:#5f55d9}.call-start-btn{grid-column:1/-1}.call-id-copy{width:32px;height:32px;flex:0 0 auto;border-radius:10px}.call-peer-mini{font-size:10px;color:#a4adc0;margin-top:3px;overflow-wrap:anywhere}.profile-note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@keyframes arixCallPulse{0%{box-shadow:0 0 0 0 rgba(130,115,255,.25),0 18px 45px rgba(0,0,0,.25)}70%{box-shadow:0 0 0 20px rgba(130,115,255,0),0 18px 45px rgba(0,0,0,.25)}100%{box-shadow:0 0 0 0 rgba(130,115,255,0),0 18px 45px rgba(0,0,0,.25)}}
+@media(max-width:650px){.call-overlay{padding:0}.call-window{width:100%;height:100dvh;max-height:100dvh;border-radius:0;border:0}.call-top{padding:calc(17px + env(safe-area-inset-top)) 17px 17px}.call-peer-name{font-size:19px}.call-stage{min-height:0;flex:1}.call-stage.video-mode{min-height:0;aspect-ratio:auto}.call-button-row{padding:17px 12px 12px;gap:7px}.call-btn{min-width:69px;padding:11px 10px;font-size:11px}.call-privacy{padding:0 18px calc(17px + env(safe-area-inset-bottom))}.call-local-wrap{right:12px;bottom:12px;width:28%;max-width:140px}.call-peer-avatar{width:90px;height:90px;border-radius:29px;font-size:31px}}
+@media(prefers-reduced-motion:reduce){.call-peer-avatar.pulse{animation:none}}
+
 </style>
 </head>
 <body>
@@ -58,10 +71,11 @@
 <div class="sidebar-top-actions"><button class="icon-btn" id="profile-btn" aria-label="Profile settings" title="Profile settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 20c.7-3.6 3-5.4 6.5-5.4s5.8 1.8 6.5 5.4" stroke-linecap="round"/></svg></button></div>
 </div>
 <div class="sidebar-actions"><button class="primary-btn" id="new-room-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>New chat</button><button class="secondary-btn" id="join-room-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 13a5 5 0 0 0 7.07 0l2-2A5 5 0 0 0 12 3.93l-1.15 1.15" stroke-linecap="round"/><path d="M14 11a5 5 0 0 0-7.07 0l-2 2A5 5 0 0 0 12 20.07l1.15-1.15" stroke-linecap="round"/></svg>Join a room</button></div>
+<div class="sidebar-actions call-sidebar-action"><button class="secondary-btn call-start-btn" id="call-by-id-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.2 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72l.4 2.8a2 2 0 0 1-.57 1.7L7.1 10.05a16 16 0 0 0 6 6l1.83-1.83a2 2 0 0 1 1.7-.57l2.8.4A2 2 0 0 1 22 16.92Z" stroke-linecap="round" stroke-linejoin="round"/></svg>Call by ArixID</button></div>
 <div class="side-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5" stroke-linecap="round"/></svg><input id="room-search" type="search" autocomplete="off" placeholder="Search chats or room IDs" aria-label="Search chats"></div>
 <div class="section-label"><span>Your conversations</span><span id="room-count-label">0 rooms</span></div>
 <div class="room-list" id="room-list"></div>
-<div class="sidebar-footer"><div class="profile-avatar" id="profile-avatar">A</div><div class="profile-copy"><div class="profile-name" id="profile-name">ArixChat user</div><div class="profile-note">Your profile on this device</div></div><button class="icon-btn" id="privacy-btn" title="Privacy and security" aria-label="Privacy and security"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 19 6v5c0 4.5-2.8 7.7-7 10-4.2-2.3-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+<div class="sidebar-footer"><div class="profile-avatar" id="profile-avatar">A</div><div class="profile-copy"><div class="profile-name" id="profile-name">ArixChat user</div><div class="profile-note" id="profile-note">Your profile on this device</div></div><button class="icon-btn call-id-copy" id="copy-arix-id-btn" title="Copy your ArixID" aria-label="Copy your ArixID" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1H8"/></svg></button><button class="icon-btn" id="privacy-btn" title="Privacy and security" aria-label="Privacy and security"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 19 6v5c0 4.5-2.8 7.7-7 10-4.2-2.3-7-5.5-7-10V6l7-3Z"/><path d="m9 12 2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
 </aside>
 <main class="chat" aria-label="ArixChat conversation">
 <header class="chat-header">
@@ -69,11 +83,11 @@
 <button class="icon-btn mobile-back" id="mobile-back" aria-label="Back to chats"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
 <div class="avatar" id="active-avatar">A</div>
 <div class="room-head-info"><div class="room-head-title" id="active-room-title">Welcome to ArixChat</div><div class="room-head-sub"><span class="status-dot" id="connection-dot"></span><span id="connection-text">Choose a room to begin</span><span>·</span><span id="room-access-label">No room selected</span></div></div>
-<div class="header-actions"><button class="icon-btn optional-action" id="search-messages-btn" title="Search messages" aria-label="Search messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5" stroke-linecap="round"/></svg></button><button class="icon-btn" id="invite-btn" title="Copy room invite" aria-label="Copy room invite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></button><button class="icon-btn" id="room-menu-btn" title="Room details and options" aria-label="Room details and options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button></div>
+<div class="header-actions"><button class="icon-btn call-header-action" id="voice-call-btn" title="Start a voice call by ArixID" aria-label="Start a voice call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.2 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72l.4 2.8a2 2 0 0 1-.57 1.7L7.1 10.05a16 16 0 0 0 6 6l1.83-1.83a2 2 0 0 1 1.7-.57l2.8.4A2 2 0 0 1 22 16.92Z" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="icon-btn call-header-action" id="video-call-btn" title="Start a video call by ArixID" aria-label="Start a video call"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3" stroke-linejoin="round"/></svg></button><button class="icon-btn optional-action" id="search-messages-btn" title="Search messages" aria-label="Search messages"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5" stroke-linecap="round"/></svg></button><button class="icon-btn" id="invite-btn" title="Copy room invite" aria-label="Copy room invite"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg></button><button class="icon-btn" id="room-menu-btn" title="Room details and options" aria-label="Room details and options"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg></button></div>
 </header>
 <section class="messages-wrap" id="messages-wrap" aria-live="polite" aria-relevant="additions text">
 <div class="history-toolbar" id="history-toolbar" hidden><button class="secondary-btn" id="load-older-btn">Load earlier messages</button></div>
-<div class="empty-state" id="welcome-state"><div><div class="empty-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.8C4 4.8 4.8 4 5.8 4h12.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8h-5.4l-4.8 3.3V16H5.8C4.8 16 4 15.2 4 14.2V5.8Z" stroke-linejoin="round"/><path d="M8 9h8M8 12h5" stroke-linecap="round"/></svg></div><h2>Your conversations, in one calm space.</h2><p>Create a private-by-link room for a conversation, or join a room with an invite link. Messages sync through your authenticated ArixChat service and are stored in your Supabase project.</p><div class="feature-pills"><span>Live message sync</span><span>Replies & reactions</span><span>Search & export</span></div><div style="display:flex;justify-content:center;gap:9px;margin-top:23px;flex-wrap:wrap"><button class="primary-btn" id="welcome-new-room">Create a room</button><button class="secondary-btn" id="welcome-join-room">Join with link</button></div></div></div>
+<div class="empty-state" id="welcome-state"><div><div class="empty-art"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5.8C4 4.8 4.8 4 5.8 4h12.4c1 0 1.8.8 1.8 1.8v8.4c0 1-.8 1.8-1.8 1.8h-5.4l-4.8 3.3V16H5.8C4.8 16 4 15.2 4 14.2V5.8Z" stroke-linejoin="round"/><path d="M8 9h8M8 12h5" stroke-linecap="round"/></svg></div><h2>Your conversations, in one calm space.</h2><p>Create a private-by-link room for a conversation, or join a room with an invite link. Messages sync through your authenticated ArixChat service and are stored in your Supabase project.</p><div class="feature-pills"><span>Live message sync</span><span>Replies & reactions</span><span>Voice & video calls</span></div><div style="display:flex;justify-content:center;gap:9px;margin-top:23px;flex-wrap:wrap"><button class="primary-btn" id="welcome-new-room">Create a room</button><button class="secondary-btn" id="welcome-join-room">Join with link</button><button class="secondary-btn" id="welcome-call-btn">Call by ArixID</button></div></div></div>
 <div id="message-list" hidden></div>
 </section>
 <section class="composer-area" id="composer-area" hidden>
@@ -82,6 +96,38 @@
 <div class="privacy-note">Messages are stored in your Supabase project. Invite links grant room access; avoid sharing passwords or sensitive data.</div>
 </section>
 </main>
+</div>
+<div class="call-overlay" id="call-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="call-peer-name">
+  <section class="call-window">
+    <header class="call-top">
+      <div class="call-top-copy">
+        <div class="call-kind" id="call-kind-label">ArixCall · secure signaling</div>
+        <h2 class="call-peer-name" id="call-peer-name">ArixCall</h2>
+        <div class="call-peer-mini" id="call-peer-id"></div>
+        <p class="call-peer-status" id="call-status" role="status" aria-live="polite">Preparing call…</p>
+      </div>
+      <div class="profile-avatar" id="call-peer-avatar-small" aria-hidden="true">A</div>
+    </header>
+    <div class="call-stage" id="call-stage">
+      <div class="call-peer-avatar pulse" id="call-peer-avatar" aria-hidden="true">A</div>
+      <video class="call-remote-video" id="call-remote-video" autoplay playsinline controlslist="nodownload noremoteplayback" oncontextmenu="return false" hidden></video>
+      <div class="call-local-wrap" id="call-local-wrap" hidden><video class="call-local-video" id="call-local-video" autoplay muted playsinline controlslist="nodownload noremoteplayback" oncontextmenu="return false"></video></div>
+      <audio id="call-remote-audio" autoplay></audio>
+    </div>
+    <div class="call-button-row" id="call-incoming-actions" hidden>
+      <button class="call-btn accept" id="call-accept-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.2 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72l.4 2.8a2 2 0 0 1-.57 1.7L7.1 10.05a16 16 0 0 0 6 6l1.83-1.83a2 2 0 0 1 1.7-.57l2.8.4A2 2 0 0 1 22 16.92Z"/></svg>Answer</button>
+      <button class="call-btn danger" id="call-decline-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 5 14 14M19 5 5 19" stroke-linecap="round"/></svg>Decline</button>
+    </div>
+    <div class="call-button-row" id="call-outgoing-actions" hidden><button class="call-btn danger" id="call-cancel-btn">Cancel call</button></div>
+    <div class="call-button-row" id="call-live-actions" hidden>
+      <button class="call-btn" id="call-mute-btn" aria-pressed="false" title="Mute microphone"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5m-4 0h8" stroke-linecap="round"/></svg><span>Mute</span></button>
+      <button class="call-btn" id="call-speaker-btn" aria-pressed="false" title="Adjust speaker output"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 5 6 9H3v6h3l5 4V5Z" stroke-linejoin="round"/><path d="M15.5 8.5a5 5 0 0 1 0 7m3-10a9 9 0 0 1 0 13" stroke-linecap="round"/></svg><span>Speaker</span></button>
+      <button class="call-btn" id="call-camera-btn" aria-pressed="false" title="Turn camera off"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3" stroke-linejoin="round"/></svg><span>Camera</span></button>
+      <button class="call-btn" id="call-switch-camera-btn" title="Switch front/rear camera"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 7v5h-5M4 17v-5h5" stroke-linecap="round" stroke-linejoin="round"/><path d="M5.6 9A7 7 0 0 1 17 5l3 2M4 17l3 2a7 7 0 0 0 11.4-4" stroke-linecap="round"/></svg><span>Flip</span></button>
+      <button class="call-btn danger" id="call-hangup-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14.5a13.5 13.5 0 0 1 16 0l-2.5 4-4-2v-2a8.7 8.7 0 0 0-3 0v2l-4 2L4 14.5Z" stroke-linejoin="round"/></svg><span>End</span></button>
+    </div>
+    <div class="call-privacy">Audio and video use encrypted WebRTC between the two browsers when possible; a TURN relay may carry media on restrictive networks. ArixCall does not record or save media. Temporary signaling metadata is used only to establish and authorize the connection. Screen recording by a participant cannot be blocked by a webpage.</div>
+  </section>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="modal-backdrop" id="modal-backdrop" role="presentation"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" id="modal-close" aria-label="Close dialog">×</button><div id="modal-content"></div></section></div>
@@ -112,6 +158,18 @@ sending: false, lastToast: 0, rateWindow: [], pendingEvents: [], authGateOpen: f
 if (!Array.isArray(state.rooms)) state.rooms = [];
 if (!state.allMessages || typeof state.allMessages !== 'object' || Array.isArray(state.allMessages)) state.allMessages = {};
 state.profile.name = cleanName(state.profile.name || '');
+
+let callEventSource = null;
+let callPresenceTimer = null;
+let callRingTimer = null;
+let callConnectTimer = null;
+let callSignalingUserId = '';
+let callStreamReady = false;
+let callState = {
+  id: '', direction: '', mediaType: 'audio', phase: '', peerArixId: '', peerName: '',
+  pc: null, localStream: null, remoteStream: null, pendingIce: [], micMuted: false,
+  cameraOff: false, speakerOn: true, restartAttempted: false,
+};
 
 function cleanName(value) { return String(value || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 32); }
 function roomIdValid(value) { return typeof value === 'string' && /^[a-zA-Z0-9_-]{24,80}$/.test(value); }
@@ -312,6 +370,441 @@ throw error;
 }
 return data;
 }
+function callIdIsValid(value) { return /^ARX-[A-F0-9]{32}$/.test(String(value || '').trim().toUpperCase()); }
+function callWait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+async function copyArixId() {
+  const id = String(state.user?.arixCallId || '');
+  if (!id) return toast('Your ArixID is not available yet.');
+  try { await navigator.clipboard.writeText(id); toast('Your ArixID copied: ' + id); }
+  catch { prompt('Copy your ArixID', id); }
+}
+function stopCallSignaling() {
+  if (callPresenceTimer) clearInterval(callPresenceTimer);
+  callPresenceTimer = null;
+  if (callEventSource) { try { callEventSource.close(); } catch {} }
+  callEventSource = null;
+  callStreamReady = false;
+  callSignalingUserId = '';
+}
+async function refreshCallPresence() {
+  if (!state.authenticated || !state.user?.id || state.offlineCached || !navigator.onLine) return;
+  try {
+    const result = await apiRequest({ action:'call_presence', displayName:state.profile.name });
+    if (result.arixCallId && state.user) { state.user.arixCallId = String(result.arixCallId); }
+    if (Array.isArray(result.iceServers) && state.user) state.user.callIceServers = result.iceServers;
+    renderProfile();
+  } catch { callStreamReady = false; }
+}
+function startCallSignaling() {
+  if (!state.authenticated || !state.user?.id || state.offlineCached || !navigator.onLine) return;
+  if (callEventSource && callSignalingUserId === String(state.user.id)) return;
+  if (callEventSource) stopCallSignaling();
+  callSignalingUserId = String(state.user.id);
+  try {
+    const stream = new EventSource(API + '?action=call_stream', { withCredentials:true });
+    callEventSource = stream;
+    stream.addEventListener('ready', event => {
+      if (callEventSource !== stream) return;
+      callStreamReady = true;
+      const ready = safeJson(event.data, {});
+      if (ready.arixCallId && state.user) { state.user.arixCallId = String(ready.arixCallId); }
+      if (Array.isArray(ready.iceServers) && state.user) state.user.callIceServers = ready.iceServers;
+      renderProfile();
+      refreshCallPresence();
+      if (callPresenceTimer) clearInterval(callPresenceTimer);
+      callPresenceTimer = setInterval(refreshCallPresence, 20000);
+    });
+    stream.addEventListener('signal', event => {
+      const signal = safeJson(event.data, null);
+      if (signal && typeof signal === 'object') handleCallSignal(signal).catch(error => {
+        toast('Call setup issue: ' + String(error?.message || 'signaling failed').slice(0,100));
+      });
+    });
+    stream.onerror = () => {
+      if (callEventSource !== stream) return;
+      callStreamReady = false;
+      if (callPresenceTimer) clearInterval(callPresenceTimer);
+      callPresenceTimer = null;
+      // EventSource automatically reconnects. Existing WebRTC media stays peer-to-peer.
+      if (callState.id && callState.phase === 'ringing') { $('call-status').textContent = 'Reconnecting to secure signaling…'; }
+    };
+  } catch { callStreamReady = false; }
+}
+async function waitForCallStream() {
+  for (let attempt = 0; attempt < 16; attempt++) {
+    if (callStreamReady && callEventSource && state.authenticated && navigator.onLine) return true;
+    await callWait(250);
+  }
+  return false;
+}
+function showDialModal(mediaType) {
+  if (!state.authenticated || state.offlineCached) return requireMainAppAuth();
+  if (callState.id) return toast('Finish your current call before starting another.');
+  if (!callEventSource) startCallSignaling();
+  const label = mediaType === 'video' ? 'video' : 'voice';
+  const me = String(state.user?.arixCallId || '');
+  openModal(`<h2 id="modal-title">Start a ${label} call</h2><p>Enter the other person’s ArixID. Their ArixChat must be open and connected to receive a call.</p><div class="security-card"><strong>Your ArixID</strong><br><code style="font-weight:800;color:#5142cf;letter-spacing:.5px">${esc(me || 'Connecting…')}</code><br>Share this ID with people who should be able to call you.</div><label class="field-label" for="call-target-id">Recipient ArixID</label><input class="field" id="call-target-id" maxlength="36" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ARX-12AB34CD56EF789012AB34CD56EF7890"><div class="modal-actions"><button class="secondary-btn" data-modal-cancel>Cancel</button><button class="primary-btn" id="confirm-start-call-btn">Start ${label} call</button></div>`);
+  const submit = async () => {
+    const field = $('call-target-id');
+    const target = String(field?.value || '').trim().toUpperCase();
+    if (!callIdIsValid(target)) { toast('Enter the full ArixID, for example ARX-12AB34CD56EF789012AB34CD56EF7890.'); field?.focus(); return; }
+    if (target === me) { toast('You cannot call your own ArixID.'); return; }
+    const button = $('confirm-start-call-btn'); if (button) { button.disabled = true; button.textContent = 'Checking ArixID…'; }
+    try {
+      const info = await apiRequest({ action:'call_lookup', targetArixId:target, displayName:state.profile.name });
+      if (!info.peer?.online) { toast((info.peer?.displayName || target) + ' is offline. Ask them to open ArixChat first.'); return; }
+      closeModal(); await startOutgoingCall(target, mediaType, info.peer.displayName || target);
+    } catch (error) { toast(String(error.message || 'Could not look up this ArixID.')); }
+    finally { const current = $('confirm-start-call-btn'); if (current) { current.disabled = false; current.textContent = 'Start ' + label + ' call'; } }
+  };
+  $('confirm-start-call-btn').addEventListener('click', submit);
+  $('call-target-id').addEventListener('keydown', event => { if (event.key === 'Enter') { event.preventDefault(); submit(); } });
+  setTimeout(() => $('call-target-id')?.focus(), 40);
+}
+function clearCallRingTimer() {
+  if (callRingTimer) clearTimeout(callRingTimer);
+  callRingTimer = null;
+}
+function clearCallConnectTimer() {
+  if (callConnectTimer) clearTimeout(callConnectTimer);
+  callConnectTimer = null;
+}
+function startCallConnectTimer(callId) {
+  if (callConnectTimer) return;
+  callConnectTimer = setTimeout(() => {
+    if (callState.id !== callId || callState.phase !== 'connecting') return;
+    toast('Could not establish the direct media connection. Try again, or configure a TURN relay for restrictive networks.');
+    finishCall('hangup').catch(() => {});
+  }, 45000);
+}
+function startCallRingTimer(callId, signalType) {
+  clearCallRingTimer();
+  callRingTimer = setTimeout(() => {
+    if (callState.id !== callId || callState.phase !== 'ringing') return;
+    finishCall(signalType).catch(() => {});
+    toast('No answer. The call has ended.');
+  }, 45000);
+}
+function resetCallState() {
+  clearCallRingTimer();
+  clearCallConnectTimer();
+  callState = {
+    id:'', direction:'', mediaType:'audio', phase:'', peerArixId:'', peerName:'', pc:null,
+    localStream:null, remoteStream:null, pendingIce:[], micMuted:false, cameraOff:false,
+    speakerOn:true, restartAttempted:false,
+  };
+}
+function initials(name) { return String(name || 'A').trim().split(/\s+/).slice(0,2).map(part => part.charAt(0).toUpperCase()).join('') || 'A'; }
+function updateCallUI() {
+  const active = !!callState.id;
+  $('call-overlay').hidden = !active;
+  if (!active) return;
+  const incoming = callState.direction === 'incoming' && callState.phase === 'ringing';
+  const outgoing = callState.direction === 'outgoing' && callState.phase === 'ringing';
+  const live = ['connecting','active'].includes(callState.phase);
+  if (callState.phase === 'connecting') startCallConnectTimer(callState.id);
+  else if (callState.phase === 'active') clearCallConnectTimer();
+  $('call-peer-name').textContent = callState.peerName || 'ArixCall';
+  $('call-peer-id').textContent = callState.peerArixId || '';
+  $('call-peer-avatar-small').textContent = initials(callState.peerName);
+  $('call-peer-avatar').textContent = initials(callState.peerName);
+  $('call-kind-label').textContent = (incoming ? 'Incoming ' : outgoing ? 'Outgoing ' : '') + (callState.mediaType === 'video' ? 'video call' : 'voice call');
+  $('call-incoming-actions').hidden = !incoming;
+  $('call-outgoing-actions').hidden = !outgoing;
+  $('call-live-actions').hidden = !live;
+  $('call-camera-btn').hidden = callState.mediaType !== 'video';
+  $('call-switch-camera-btn').hidden = callState.mediaType !== 'video';
+  $('call-stage').classList.toggle('video-mode', callState.mediaType === 'video');
+  $('call-remote-audio').hidden = callState.mediaType === 'video';
+  $('call-mute-btn').classList.toggle('selected', callState.micMuted);
+  $('call-mute-btn').setAttribute('aria-pressed', String(callState.micMuted));
+  $('call-mute-btn').querySelector('span').textContent = callState.micMuted ? 'Unmute' : 'Mute';
+  $('call-speaker-btn').classList.toggle('selected', callState.speakerOn);
+  $('call-speaker-btn').setAttribute('aria-pressed', String(callState.speakerOn));
+  $('call-speaker-btn').querySelector('span').textContent = callState.speakerOn ? 'Speaker' : 'Normal';
+  $('call-camera-btn').classList.toggle('selected', callState.cameraOff);
+  $('call-camera-btn').setAttribute('aria-pressed', String(callState.cameraOff));
+  $('call-camera-btn').querySelector('span').textContent = callState.cameraOff ? 'Camera on' : 'Camera';
+  $('call-local-wrap').hidden = callState.mediaType !== 'video' || !callState.localStream;
+  if (callState.mediaType !== 'video') $('call-remote-video').hidden = true;
+  if (callState.phase === 'ringing') $('call-status').textContent = incoming ? 'ArixChat is ringing. Answer or decline.' : 'Ringing… waiting for them to answer.';
+  else if (callState.phase === 'connecting') $('call-status').textContent = 'Connecting directly between devices…';
+  else if (callState.phase === 'active') $('call-status').textContent = 'Connected · encrypted WebRTC media';
+}
+async function startOutgoingCall(targetArixId, mediaType, displayName) {
+  if (callState.id) return toast('You are already in a call.');
+  if (!state.authenticated || !navigator.onLine) return toast('Reconnect to ArixChat before calling.');
+  if (!await waitForCallStream()) return toast('ArixCall is connecting to its secure signal channel. Please try again in a moment.');
+  const callId = makeRoomId();
+  callState = {
+    id:callId, direction:'outgoing', mediaType:mediaType === 'video' ? 'video' : 'audio', phase:'ringing',
+    peerArixId:targetArixId, peerName:cleanName(displayName) || targetArixId, pc:null, localStream:null,
+    remoteStream:null, pendingIce:[], micMuted:false, cameraOff:false, speakerOn:true, restartAttempted:false,
+  };
+  updateCallUI();
+  startCallRingTimer(callId, 'cancel');
+  try {
+    const result = await apiRequest({ action:'call_invite', callId, targetArixId, mediaType:callState.mediaType, displayName:state.profile.name });
+    if (callState.id !== callId) return;
+    callState.peerName = cleanName(result.peer?.displayName || displayName) || targetArixId;
+    callState.peerArixId = String(result.peer?.arixCallId || targetArixId);
+    updateCallUI();
+  } catch (error) {
+    closeLocalCall(false);
+    toast(String(error.message || 'Call could not be started.'));
+  }
+}
+async function answerIncomingCall() {
+  if (!callState.id || callState.direction !== 'incoming' || callState.phase !== 'ringing') return;
+  const callId = callState.id;
+  clearCallRingTimer();
+  $('call-accept-btn').disabled = true;
+  $('call-status').textContent = 'Requesting microphone' + (callState.mediaType === 'video' ? ' and camera…' : '…');
+  try {
+    await prepareCallMedia();
+    createCallPeerConnection();
+    callState.phase = 'connecting';
+    updateCallUI();
+    await sendCallSignal('accept');
+  } catch (error) {
+    try { await sendCallSignal('decline', { reason:'media_unavailable' }); } catch {}
+    closeLocalCall(false);
+    toast(mediaErrorMessage(error));
+  } finally { $('call-accept-btn').disabled = false; }
+  if (callState.id !== callId) return;
+}
+function mediaErrorMessage(error) {
+  const name = String(error?.name || '');
+  if (name === 'NotAllowedError' || name === 'PermissionDeniedError') return 'Microphone/camera permission was denied. Allow access in your browser and try again.';
+  if (name === 'NotFoundError' || name === 'DevicesNotFoundError') return 'No compatible microphone or camera was found.';
+  if (name === 'NotReadableError' || name === 'TrackStartError') return 'The microphone or camera may be in use by another app.';
+  if (!navigator.mediaDevices?.getUserMedia) return 'Voice/video calls need HTTPS (or localhost) and a modern browser with WebRTC support.';
+  return String(error?.message || 'Could not start your microphone/camera. Check browser permissions and try again.').slice(0,180);
+}
+async function prepareCallMedia() {
+  if (!navigator.mediaDevices?.getUserMedia || typeof RTCPeerConnection !== 'function') throw new Error('WebRTC is unavailable. Open ArixChat on HTTPS in a supported browser.');
+  if (callState.localStream) return callState.localStream;
+  const constraints = {
+    audio: { echoCancellation:true, noiseSuppression:true, autoGainControl:true, sampleRate:{ideal:48000}, channelCount:{ideal:2} },
+    video: callState.mediaType === 'video' ? {
+      width:{ideal:3840}, height:{ideal:2160}, frameRate:{ideal:60, max:60}, facingMode:{ideal:'user'}
+    } : false,
+  };
+  callState.localStream = await navigator.mediaDevices.getUserMedia(constraints);
+  if (callState.mediaType === 'video') {
+    $('call-local-video').srcObject = callState.localStream;
+    $('call-local-wrap').hidden = false;
+    $('call-local-video').play().catch(() => {});
+  }
+  return callState.localStream;
+}
+function preferCallCodecs(pc) {
+  if (typeof RTCRtpReceiver === 'undefined' || typeof RTCRtpReceiver.getCapabilities !== 'function') return;
+  try {
+    for (const transceiver of pc.getTransceivers()) {
+      if (typeof transceiver.setCodecPreferences !== 'function') continue;
+      const kind = transceiver.sender?.track?.kind || transceiver.receiver?.track?.kind;
+      if (kind !== 'video') continue;
+      const codecs = RTCRtpReceiver.getCapabilities('video')?.codecs || [];
+      const preference = ['video/vp9','video/av1','video/vp8','video/h264'];
+      const primary = codecs.filter(c => !String(c.mimeType).toLowerCase().endsWith('/rtx') && !String(c.mimeType).toLowerCase().endsWith('/red') && !String(c.mimeType).toLowerCase().endsWith('/ulpfec'));
+      primary.sort((a,b) => { const ai=preference.indexOf(String(a.mimeType).toLowerCase()); const bi=preference.indexOf(String(b.mimeType).toLowerCase()); return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi); });
+      const repair = codecs.filter(c => String(c.mimeType).toLowerCase().endsWith('/rtx') || String(c.mimeType).toLowerCase().endsWith('/red') || String(c.mimeType).toLowerCase().endsWith('/ulpfec'));
+      transceiver.setCodecPreferences([...primary, ...repair]);
+    }
+  } catch { /* Keep browser codec defaults if this engine rejects preferences. */ }
+}
+function createCallPeerConnection() {
+  if (callState.pc) return callState.pc;
+  const pc = new RTCPeerConnection({
+    iceServers:Array.isArray(state.user?.callIceServers) && state.user.callIceServers.length ? state.user.callIceServers : [
+      {urls:'stun:stun.l.google.com:19302'},
+      {urls:'stun:stun.cloudflare.com:3478'},
+    ],
+    bundlePolicy:'max-bundle', rtcpMuxPolicy:'require', iceTransportPolicy:'all',
+  });
+  callState.pc = pc;
+  for (const track of callState.localStream?.getTracks() || []) pc.addTrack(track, callState.localStream);
+  preferCallCodecs(pc);
+  for (const sender of pc.getSenders()) {
+    if (sender.track?.kind !== 'video' || typeof sender.getParameters !== 'function' || typeof sender.setParameters !== 'function') continue;
+    try {
+      const params = sender.getParameters();
+      params.encodings = params.encodings?.length ? params.encodings : [{}];
+      params.encodings[0].maxBitrate = 8000000;
+      params.degradationPreference = 'maintain-resolution';
+      sender.setParameters(params).catch(() => {});
+    } catch { /* Bitrate preferences are optional; the browser retains its safe defaults. */ }
+  }
+  pc.onicecandidate = event => {
+    if (event.candidate && callState.id) sendCallSignal('ice', event.candidate.toJSON ? event.candidate.toJSON() : event.candidate).catch(() => {});
+  };
+  pc.ontrack = event => {
+    const stream = event.streams?.[0] || new MediaStream([event.track]);
+    callState.remoteStream = stream;
+    if (callState.mediaType === 'video') {
+      $('call-remote-video').srcObject = stream;
+      $('call-remote-video').hidden = false;
+      $('call-remote-video').volume = callState.speakerOn ? 1 : .35;
+      $('call-remote-video').play().catch(() => {});
+    } else {
+      $('call-remote-audio').srcObject = stream;
+      $('call-remote-audio').volume = callState.speakerOn ? 1 : .35;
+      $('call-remote-audio').play().catch(() => {});
+    }
+  };
+  pc.onconnectionstatechange = () => {
+    if (callState.pc !== pc) return;
+    if (pc.connectionState === 'connected') { callState.phase = 'active'; updateCallUI(); }
+    else if (pc.connectionState === 'connecting') { callState.phase = 'connecting'; updateCallUI(); }
+    else if (pc.connectionState === 'failed') {
+      $('call-status').textContent = 'Could not connect. This network may require a TURN relay.';
+      if (!callState.restartAttempted && callState.direction === 'outgoing' && typeof pc.restartIce === 'function') {
+        callState.restartAttempted = true;
+        try { pc.restartIce(); } catch {}
+        negotiateIceRestart().catch(() => {});
+      }
+    } else if (pc.connectionState === 'disconnected' && callState.phase === 'active') {
+      $('call-status').textContent = 'Connection interrupted · trying to recover…';
+    }
+  };
+  return pc;
+}
+async function negotiateIceRestart() {
+  const pc = callState.pc;
+  if (!pc || pc.signalingState === 'closed' || callState.direction !== 'outgoing') return;
+  const offer = await pc.createOffer({iceRestart:true});
+  await pc.setLocalDescription(offer);
+  await sendCallSignal('offer', {sdp:pc.localDescription.sdp});
+}
+async function startOutgoingPeer() {
+  await prepareCallMedia();
+  const pc = createCallPeerConnection();
+  callState.phase = 'connecting'; updateCallUI();
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  await sendCallSignal('offer', {sdp:pc.localDescription.sdp});
+}
+async function drainPendingIce() {
+  if (!callState.pc?.remoteDescription || !callState.pendingIce.length) return;
+  const candidates = callState.pendingIce.splice(0);
+  for (const candidate of candidates) {
+    try { await callState.pc.addIceCandidate(new RTCIceCandidate(candidate)); }
+    catch { /* Browser may reject a redundant/obsolete candidate during ICE restart. */ }
+  }
+}
+async function handleCallSignal(signal) {
+  if (signal.type === 'invite') {
+    if (!state.authenticated || !state.user?.id) return;
+    if (callState.id) {
+      try { await apiRequest({ action:'call_signal', callId:signal.callId, signalType:'decline', payload:{reason:'busy'}, displayName:state.profile.name }); } catch {}
+      return;
+    }
+    const callId = String(signal.callId || '');
+    if (!/^[a-zA-Z0-9_-]{24,80}$/.test(callId) || !callIdIsValid(signal.fromArixId) || !['audio','video'].includes(signal.mediaType)) return;
+    callState = {
+      id:callId, direction:'incoming', mediaType:signal.mediaType, phase:'ringing',
+      peerArixId:String(signal.fromArixId), peerName:cleanName(signal.fromName || signal.fromArixId),
+      pc:null, localStream:null, remoteStream:null, pendingIce:[], micMuted:false, cameraOff:false,
+      speakerOn:true, restartAttempted:false,
+    };
+    updateCallUI();
+    startCallRingTimer(callId, 'decline');
+    toast('Incoming ' + (signal.mediaType === 'video' ? 'video' : 'voice') + ' call from ' + callState.peerName);
+    return;
+  }
+  if (!signal.callId || signal.callId !== callState.id) return;
+  if (signal.type === 'accept') {
+    if (callState.direction !== 'outgoing' || callState.phase !== 'ringing') return;
+    clearCallRingTimer();
+    callState.phase = 'connecting'; updateCallUI();
+    try { await startOutgoingPeer(); }
+    catch (error) {
+      try { await sendCallSignal('hangup'); } catch {}
+      closeLocalCall(false); toast(mediaErrorMessage(error));
+    }
+    return;
+  }
+  if (signal.type === 'offer') {
+    if (callState.direction !== 'incoming' || !callState.pc || !signal.sdp) return;
+    await callState.pc.setRemoteDescription(new RTCSessionDescription({type:'offer', sdp:signal.sdp}));
+    await drainPendingIce();
+    const answer = await callState.pc.createAnswer();
+    await callState.pc.setLocalDescription(answer);
+    await sendCallSignal('answer', {sdp:callState.pc.localDescription.sdp});
+    callState.phase = 'connecting'; updateCallUI();
+    return;
+  }
+  if (signal.type === 'answer') {
+    if (callState.direction !== 'outgoing' || !callState.pc || !signal.sdp) return;
+    await callState.pc.setRemoteDescription(new RTCSessionDescription({type:'answer', sdp:signal.sdp}));
+    await drainPendingIce(); return;
+  }
+  if (signal.type === 'ice') {
+    if (!callState.pc || !signal.candidate) return;
+    if (!callState.pc.remoteDescription) { callState.pendingIce.push(signal.candidate); return; }
+    try { await callState.pc.addIceCandidate(new RTCIceCandidate(signal.candidate)); }
+    catch { /* Ignore obsolete trickle ICE candidates after renegotiation. */ }
+    return;
+  }
+  if (signal.type === 'decline') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' declined the call.'); return; }
+  if (signal.type === 'busy') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' is busy right now.'); return; }
+  if (signal.type === 'cancel') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' cancelled the call.'); return; }
+  if (signal.type === 'hangup') { const peer = callState.peerName; closeLocalCall(false); toast(peer + ' ended the call.'); return; }
+}
+async function sendCallSignal(signalType, payload = {}) {
+  if (!callState.id) throw new Error('This call has already ended.');
+  return apiRequest({ action:'call_signal', callId:callState.id, signalType, payload, displayName:state.profile.name });
+}
+async function finishCall(signalType) {
+  if (!callState.id) return;
+  clearCallRingTimer();
+  clearCallConnectTimer();
+  const id = callState.id;
+  try { await sendCallSignal(signalType); }
+  catch (error) { if (signalType !== 'decline' && signalType !== 'cancel') toast('The local call will close, but the remote notification could not sync.'); }
+  if (callState.id === id) closeLocalCall(false);
+}
+function closeLocalCall(notify = false) {
+  const existingId = callState.id;
+  if (notify && existingId) sendCallSignal('hangup').catch(() => {});
+  try { callState.pc?.onicecandidate && (callState.pc.onicecandidate = null); callState.pc?.close(); } catch {}
+  try { for (const track of callState.localStream?.getTracks() || []) track.stop(); } catch {}
+  try { $('call-local-video').srcObject = null; $('call-remote-video').srcObject = null; $('call-remote-audio').srcObject = null; } catch {}
+  $('call-remote-video').hidden = true; $('call-local-wrap').hidden = true;
+  $('call-overlay').hidden = true;
+  resetCallState();
+}
+function toggleCallMute() {
+  if (!callState.localStream) return;
+  callState.micMuted = !callState.micMuted;
+  for (const track of callState.localStream.getAudioTracks()) track.enabled = !callState.micMuted;
+  updateCallUI();
+}
+async function toggleCallSpeaker() {
+  callState.speakerOn = !callState.speakerOn;
+  const output = callState.mediaType === 'video' ? $('call-remote-video') : $('call-remote-audio');
+  output.volume = callState.speakerOn ? 1 : .35;
+  if (callState.speakerOn && typeof output.setSinkId === 'function') {
+    try { await output.setSinkId('default'); } catch { /* Some mobile browsers do not expose output routing. */ }
+  }
+  updateCallUI();
+}
+function toggleCallCamera() {
+  if (callState.mediaType !== 'video' || !callState.localStream) return;
+  callState.cameraOff = !callState.cameraOff;
+  for (const track of callState.localStream.getVideoTracks()) track.enabled = !callState.cameraOff;
+  updateCallUI();
+}
+async function switchCallCamera() {
+  const track = callState.localStream?.getVideoTracks()?.[0];
+  if (!track) return;
+  const facing = track.getSettings?.().facingMode || 'user';
+  const next = facing === 'environment' ? 'user' : 'environment';
+  try { await track.applyConstraints({facingMode:{exact:next}}); toast(next === 'environment' ? 'Rear camera selected' : 'Front camera selected'); }
+  catch { toast('This device/browser cannot switch cameras during the call.'); }
+}
+
 function sendEnvelope(envelope) {
 if (!state.activeRoomId) return Promise.reject(new Error('No room selected'));
 if (!state.authenticated && !(state.offlineCached && !navigator.onLine)) return Promise.reject(new Error('Your ArixAI session is not active. Open the main app to authenticate.'));
@@ -646,11 +1139,12 @@ if (openButton) openButton.onclick = () => { window.location.assign(target); };
 }
 async function activateAuthenticatedUser(user) {
 const savedChatName = cleanName(state.profile.name);
-state.user = { id:String(user.id), email:String(user.email || ''), displayName:cleanName(user.displayName || user.email?.split('@')[0] || 'ArixAI user') };
+state.user = { id:String(user.id), email:String(user.email || ''), displayName:cleanName(user.displayName || user.email?.split('@')[0] || 'ArixAI user'), arixCallId:String(user.arixCallId || ''), callIceServers:Array.isArray(user.callIceServers) ? user.callIceServers : null };
 // Keep ArixChat's optional local display name separate from the main app's profile.
 state.profile.name = savedChatName || state.user.displayName || 'ArixAI user';
 state.authenticated = true; state.offlineCached = false;
-try { localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user)); } catch {}
+startCallSignaling();
+try { saveSessionHint(); } catch {}
 persist(); renderProfile(); renderRoomList(); closeModal();
 if (state.pendingRoomInvite) {
 const invite = state.pendingRoomInvite; const title = state.pendingRoomTitle; state.pendingRoomInvite = ''; state.pendingRoomTitle = '';
@@ -667,13 +1161,22 @@ const name = cleanName($('profile-name-field').value);
 if (!name) { toast('Please enter a valid display name.'); return; }
 state.profile.name = name;
 if (state.user) state.user = { ...state.user, displayName: name };
-try { localStorage.setItem(STORE_PROFILE, JSON.stringify(state.profile)); if (state.user) localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(state.user)); } catch {}
+try { localStorage.setItem(STORE_PROFILE, JSON.stringify(state.profile)); saveSessionHint(); } catch {}
 persist(); renderProfile(); renderRoomList(); renderMessages(false); closeModal(); toast('Chat display name saved on this device.');
 };
 setTimeout(() => $('profile-name-field')?.focus(), 20);
 }
+function saveSessionHint() {
+  if (!state.user) return;
+  const { callIceServers, ...safeUser } = state.user;
+  localStorage.setItem(STORE_SESSION_HINT, JSON.stringify(safeUser));
+}
 function renderProfile() {
 const name = state.profile.name || 'ArixChat user'; $('profile-name').textContent = name; $('profile-avatar').textContent = name.charAt(0).toUpperCase() || 'A';
+const arixId = String(state.user?.arixCallId || '');
+$('profile-note').textContent = arixId ? 'ArixID: ' + arixId : 'Your profile on this device';
+$('copy-arix-id-btn').hidden = !arixId;
+$('copy-arix-id-btn').title = arixId ? 'Copy ArixID ' + arixId : 'ArixID not available';
 }
 async function createRoom() {
 if (!state.authenticated) return requireMainAppAuth('login', 'Authenticate in the main ArixAI app to create a synced room.');
@@ -779,6 +1282,13 @@ applySidebarPreference();
 }
 function bindEvents() {
 $('new-room-btn').addEventListener('click', createRoom); $('welcome-new-room').addEventListener('click', createRoom);
+$('call-by-id-btn').addEventListener('click', () => showDialModal('audio')); $('welcome-call-btn').addEventListener('click', () => showDialModal('audio'));
+$('voice-call-btn').addEventListener('click', () => showDialModal('audio')); $('video-call-btn').addEventListener('click', () => showDialModal('video'));
+$('copy-arix-id-btn').addEventListener('click', () => state.user?.arixCallId ? copyArixId() : toast('Your ArixID is not available yet. Check the ArixCall Redis configuration.'));
+$('call-accept-btn').addEventListener('click', answerIncomingCall); $('call-decline-btn').addEventListener('click', () => finishCall('decline'));
+$('call-cancel-btn').addEventListener('click', () => finishCall('cancel')); $('call-hangup-btn').addEventListener('click', () => finishCall('hangup'));
+$('call-mute-btn').addEventListener('click', toggleCallMute); $('call-speaker-btn').addEventListener('click', toggleCallSpeaker); $('call-camera-btn').addEventListener('click', toggleCallCamera); $('call-switch-camera-btn').addEventListener('click', switchCallCamera);
+$('call-remote-video').addEventListener('contextmenu', e => e.preventDefault()); $('call-local-video').addEventListener('contextmenu', e => e.preventDefault());
 $('sidebar-toggle').addEventListener('click', toggleDesktopSidebar);
 $('join-room-btn').addEventListener('click', showJoinModal); $('welcome-join-room').addEventListener('click', showJoinModal);
 $('invite-btn').addEventListener('click', () => { if (state.activeRoomId) copyText(shareUrl(state.activeRoomId)); else toast('Choose a room first'); });
@@ -797,8 +1307,14 @@ $('emoji-btn').addEventListener('click', toggleEmojiTray); $('attach-btn').addEv
 $('mobile-back').addEventListener('click', () => $('app').classList.remove('chat-open')); $('mobile-overlay').addEventListener('click', () => $('app').classList.remove('chat-open'));
 $('modal-close').addEventListener('click', closeModal); $('modal-backdrop').addEventListener('click', e => { if (e.target === $('modal-backdrop')) closeModal(); });
 window.addEventListener('online', () => { refreshSession(); });
-window.addEventListener('offline', () => { setConnection(false, 'Offline — cached messages available'); });
+window.addEventListener('offline', () => { callStreamReady = false; setConnection(false, 'Offline — cached messages available'); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && state.activeRoomId && state.authenticated) pollRoom(); });
+window.addEventListener('pagehide', () => {
+  if (callState.id && state.authenticated && navigator.sendBeacon) {
+    try { navigator.sendBeacon(API, new Blob([JSON.stringify({ action:'call_signal', callId:callState.id, signalType:'hangup', displayName:state.profile.name })], {type:'application/json'})); } catch {}
+  }
+  stopCallSignaling(); closeLocalCall(false);
+});
 window.addEventListener('resize', applySidebarPreference);
 window.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('room-search').focus(); $('room-search').select(); } }); 
 }
@@ -832,16 +1348,16 @@ try {
 const result = await apiRequest({ action:'session' });
 if (result.authenticated && result.user?.id) {
 if (!state.authenticated || state.user?.id !== result.user.id || state.offlineCached) { await activateAuthenticatedUser(result.user); await retryFailedMessages(); }
-else { state.authenticated = true; state.offlineCached = false; setConnection(true, 'ArixAI session active'); if (state.activeRoomId) { await pollRoom(); await retryFailedMessages(); } }
+else { state.authenticated = true; state.offlineCached = false; if (result.user?.arixCallId) state.user.arixCallId = String(result.user.arixCallId); if (Array.isArray(result.user?.callIceServers)) state.user.callIceServers = result.user.callIceServers; renderProfile(); startCallSignaling(); setConnection(true, 'ArixAI session active'); if (state.activeRoomId) { await pollRoom(); await retryFailedMessages(); } }
 return;
 }
-state.authenticated = false; state.offlineCached = false; state.user = null; setConnection(false, 'ArixAI session required'); requireMainAppAuth('login', 'Your ArixAI session is no longer active.');
+state.authenticated = false; state.offlineCached = false; state.user = null; stopCallSignaling(); closeLocalCall(false); setConnection(false, 'ArixAI session required'); requireMainAppAuth('login', 'Your ArixAI session is no longer active.');
 } catch {
 setConnection(false, 'Reconnecting… cached messages remain available');
 }
 }
 function loadOfflineCache(hint) {
-state.user = hint; state.profile.name = cleanName(hint.displayName || hint.email?.split('@')[0] || 'ArixChat user');
+state.user = { id:String(hint.id || ''), email:String(hint.email || ''), displayName:cleanName(hint.displayName || hint.email?.split('@')[0] || 'ArixChat user'), arixCallId:'' }; state.profile.name = cleanName(hint.displayName || hint.email?.split('@')[0] || 'ArixChat user');
 state.authenticated = false; state.offlineCached = true; renderProfile(); renderRoomList();
 setActiveRoomFromUrl(); setConnection(false, 'Offline · cached messages only');
 }
