@@ -21,10 +21,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 
 function runtimeEnv() {
   const env = typeof process !== 'undefined' && process.env ? process.env : {};
-  const url = String(env.SUPABASE_URL || '').trim().replace(/\/+$/, '');
+  const url = "https://vvcpdfdofihdmzshglxr.supabase.co";
   // ArixChat authenticates through the main ArixAI app session. Supabase is
   // used only by this trusted server, so a publishable/anon key is not needed.
-  const serviceKey = String(env.SUPABASE_SECRET_KEY || '').trim();
+  const serviceKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ";
   if (!url || !serviceKey) return null;
   try {
     const parsed = new URL(url);
