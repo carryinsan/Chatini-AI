@@ -21,19 +21,16 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-
 
 function runtimeEnv() {
   const env = typeof process !== 'undefined' && process.env ? process.env : {};
-  const url = "https://vvcpdfdofihdmzshglxr.supabase.co";
-  // ArixChat authenticates through the main ArixAI app session. Supabase is
-  // used only by this trusted server, so a publishable/anon key is not needed.
-  const serviceKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ";
+  const url = String(env.SUPABASE_URL || "https://vvcpfdofihdmzshdglxr.supabase.co").trim().replace(/\/+$/, '');
+  const serviceKey = String(env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ2Y3BmZG9maWhkbXpzaGRnbHhyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NTA2NzQ5MCwiZXhwIjoyMTAwNjQzNDkwfQ.ACRUkwnNiVg-6ZNqSlKYYev0csd_cT6tgiL0T0fPKLQ").trim();
   if (!url || !serviceKey) return null;
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') return null;
-    if (parsed.pathname !== '/' || parsed.search || parsed.hash) return null;
+    if (parsed.pathname !== '/' && parsed.pathname !== '') return null;
   } catch { return null; }
   return { url, serviceKey };
 }
-
 function json(body, status = 200, extraHeaders = {}, cookies = []) {
   const headers = new Headers({
     'content-type': 'application/json; charset=utf-8',
