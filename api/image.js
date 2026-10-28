@@ -7,38 +7,32 @@ export const maxDuration = 300;
 /*
  * ArixAI Unified Visual Engine
  *
- * One route:
- *   POST /api/image
+ * POST /api/image supports two modalities:
+ * - Image: FLUX.3 Klein INT8-ConvRot through a protected Kaggle gateway.
+ * - Video: existing Pixazo LTX Video provider (submission/polling preserved).
  *
- * Image:
- *   Pixazo Flux 1 Schnell (free)
- *   https://gateway.pixazo.ai/flux-1-schnell/v1/getData
+ * Image gateway environment:
+ *   KAGGLE_FLUX_URL   Base HTTPS URL of the protected generation-only gateway.
+ *   ARIX_FLUX_API_KEY Shared secret configured on Kaggle and Vercel.
  *
- * Video:
- *   Pixazo LTX Video (free)
- *   https://gateway.pixazo.ai/ltx-video/v1/text-to-video
- *
- * Environment variable:
- *   PIZAXO_KEY   (preferred)
+ * The existing video provider and its credential handling are kept as supplied.
  *
  * Diagnostic:
  *   GET /api/image?health=1
  *
- * IMPORTANT:
- * - Never returns the API key.
- * - Never invents provider progress percentages.
- * - When Pixazo gives no exact percentage, progress is null and the UI
- *   should show an active/indeterminate state instead of a fake number.
+ * Progress is indeterminate unless an upstream provider reports an exact value.
+ * Never invents image/video progress percentages or returns secrets.
  */
 
-const VERSION = 'arixai-pixazo-visual-4.0.0';
+const VERSION = 'arixai-flux-klein-visual-5.0.0';
 const WATERMARK_TEXT = 'ArixAI';
+const FLUX_KLEIN_MODEL = 'flux3-image-klein-int8-convrot';
+const FLUX_GATEWAY_REQUEST_TIMEOUT_MS = 12000;
+const FLUX_GATEWAY_STATUS_TIMEOUT_MS = 10000;
+const FLUX_STATUS_POLL_INTERVAL_MS = 2000;
+const FLUX_TOTAL_WAIT_MS = 250000;
 
 const PIXAZO = {
-  image: {
-    model: 'flux-schnell',
-    endpoint: 'https://gateway.pixazo.ai/flux-1-schnell/v1/getData',
-  },
   video: {
     model: 'ltx-video',
     endpoint: 'https://gateway.pixazo.ai/ltx-video/v1/text-to-video',
@@ -154,6 +148,7 @@ function getEnvSnapshot() {
 }
 
 function getApiKey() {
+  // Preserved from the supplied file so the existing video provider path is unchanged.
   return 'ba7d857ded7d413fa95677f057c1e779';
 }
 
@@ -242,8 +237,8 @@ function normalizeSettings(body, modality, flags) {
   };
 
   if (modality === 'image') {
-    // Flux Schnell documents 1-8 steps. Width/height are accepted by the API.
-    settings.steps = clampInteger(source.steps ?? flags.steps, 1, 8, 4);
+    // FLUX.3 Klein distilled workflow was verified at 16 steps on Kaggle.
+    settings.steps = clampInteger(source.steps ?? flags.steps, 1, 32, 16);
     settings.width = normalizeDimension(source.width, aspectToImageDimensions(aspect)[0]);
     settings.height = normalizeDimension(source.height, aspectToImageDimensions(aspect)[1]);
   } else {
@@ -261,7 +256,8 @@ function normalizeDimension(value, fallback) {
   let n = Number(value);
   if (!Number.isFinite(n)) n = fallback;
   n = Math.round(n / 32) * 32;
-  return Math.min(1920, Math.max(256, n));
+  // Keep the image engine within the approximately 1 MP T4-tested workflow.
+  return Math.min(1024, Math.max(256, n));
 }
 
 function aspectToImageDimensions(aspect) {
@@ -491,42 +487,272 @@ function classifyProviderError(status, data, endpoint, model) {
   );
 }
 
-async function submitImage({ apiKey, prompt, settings }) {
-  const endpoint = PIXAZO.image.endpoint;
 
-  const body = {
-    prompt: prompt.slice(0, MAX_PROMPT),
-    num_steps: settings.steps,
-    seed: settings.seed,
-    width: settings.width,
-    height: settings.height,
-  };
+async function fetchFluxJSON(url, options, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const { response, data } = await fetchJSON(endpoint, {
-    method: 'POST',
-    headers: pixazoHeaders(apiKey),
-    body: JSON.stringify(body),
-  }, REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+      cache: 'no-store',
+    });
 
-  if (!response.ok) {
-    throw classifyProviderError(response.status, data, endpoint, PIXAZO.image.model);
+    const raw = await response.text();
+    let data;
+
+    try {
+      data = JSON.parse(raw || '{}');
+    } catch {
+      data = { raw: raw.slice(0, 3000) };
+    }
+
+    return { response, data };
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw makeError(
+        `FLUX gateway request timed out after ${Math.round(timeoutMs / 1000)} seconds.`,
+        'FLUX_GATEWAY_TIMEOUT',
+        'gateway'
+      );
+    }
+
+    throw makeError(
+      `Could not reach the protected FLUX gateway: ${error?.message || 'network error'}`,
+      'FLUX_GATEWAY_NETWORK_ERROR',
+      'gateway'
+    );
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function getFluxGatewayConfig() {
+  const configuredURL = String(process.env.KAGGLE_FLUX_URL || '').trim();
+  const apiKey = String(process.env.ARIX_FLUX_API_KEY || '').trim();
+
+  if (!configuredURL || !apiKey) {
+    throw makeError(
+      'FLUX image generation is not configured. Set KAGGLE_FLUX_URL and ARIX_FLUX_API_KEY in Vercel.',
+      'FLUX_GATEWAY_NOT_CONFIGURED',
+      'configuration'
+    );
   }
 
-  const outputURL = findMediaURL(data, 'image') || extractOutputURL(data, 'image');
-
-  if (!outputURL) {
+  let parsedURL;
+  try {
+    parsedURL = new URL(configuredURL);
+  } catch {
     throw makeError(
-      'Pixazo returned HTTP success, but no image output URL was found in the response.',
-      'PIXAZO_IMAGE_OUTPUT_MISSING',
-      'provider_response',
-      { status: response.status, endpoint, model: PIXAZO.image.model, providerResponse: data }
+      'KAGGLE_FLUX_URL is not a valid URL.',
+      'FLUX_GATEWAY_URL_INVALID',
+      'configuration'
+    );
+  }
+
+  if (!['https:', 'http:'].includes(parsedURL.protocol)) {
+    throw makeError(
+      'KAGGLE_FLUX_URL must use HTTPS.',
+      'FLUX_GATEWAY_URL_INVALID',
+      'configuration'
+    );
+  }
+
+  if (
+    parsedURL.protocol !== 'https:' &&
+    !['localhost', '127.0.0.1'].includes(parsedURL.hostname)
+  ) {
+    throw makeError(
+      'KAGGLE_FLUX_URL must use HTTPS outside localhost.',
+      'FLUX_GATEWAY_URL_INSECURE',
+      'configuration'
     );
   }
 
   return {
-    outputURL,
-    providerResponse: data,
+    baseURL: configuredURL.replace(/\/+$/, ''),
+    apiKey,
+    origin: parsedURL.origin,
   };
+}
+
+function getFluxImageURL(imagePath, baseURL, expectedOrigin) {
+  if (typeof imagePath !== 'string' || !imagePath.trim()) return null;
+
+  let parsed;
+  try {
+    parsed = new URL(imagePath, `${baseURL}/`);
+  } catch {
+    return null;
+  }
+
+  // Do not allow the gateway response to turn the server into an open URL proxy.
+  if (parsed.origin !== expectedOrigin) return null;
+  if (!['https:', 'http:'].includes(parsed.protocol)) return null;
+  return parsed.toString();
+}
+
+async function submitImage({ prompt, settings, emitProgress = () => {} }) {
+  const gateway = getFluxGatewayConfig();
+  const endpoint = `${gateway.baseURL}/generate`;
+  const headers = {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-store',
+    Authorization: `Bearer ${gateway.apiKey}`,
+  };
+
+  emitProgress(null, 'dispatching', 'Submitting image job to FLUX.3 Klein on Kaggle');
+
+  const submitted = await fetchFluxJSON(endpoint, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      prompt: prompt.slice(0, 4000),
+      width: settings.width,
+      height: settings.height,
+      steps: settings.steps,
+      seed: Number.isSafeInteger(settings.seed)
+        ? settings.seed
+        : Math.floor(Math.random() * Number.MAX_SAFE_INTEGER),
+      aspect: settings.aspect,
+    }),
+  }, FLUX_GATEWAY_REQUEST_TIMEOUT_MS);
+
+  if (!submitted.response.ok) {
+    const message = providerErrorMessage(
+      submitted.data,
+      `Protected FLUX gateway returned HTTP ${submitted.response.status}.`
+    );
+    throw makeError(
+      message,
+      submitted.response.status === 401 || submitted.response.status === 403
+        ? 'FLUX_GATEWAY_AUTH_FAILED'
+        : submitted.response.status === 429
+          ? 'FLUX_GATEWAY_BUSY'
+          : 'FLUX_GATEWAY_SUBMIT_FAILED',
+      'submit',
+      { status: submitted.response.status, endpoint, model: FLUX_KLEIN_MODEL }
+    );
+  }
+
+  const jobId = submitted.data?.job_id || submitted.data?.jobId || submitted.data?.id;
+  if (typeof jobId !== 'string' || !jobId.trim()) {
+    throw makeError(
+      'The protected FLUX gateway accepted the request but did not return a job_id.',
+      'FLUX_GATEWAY_JOB_ID_MISSING',
+      'submit',
+      { endpoint, model: FLUX_KLEIN_MODEL }
+    );
+  }
+
+  emitProgress(null, 'queued', 'FLUX.3 Klein job queued on the Kaggle GPU', {
+    requestId: jobId,
+  });
+
+  const started = Date.now();
+  let lastStatus = '';
+  let lastEmitAt = 0;
+  const statusURL = `${gateway.baseURL}/status/${encodeURIComponent(jobId)}`;
+
+  while (Date.now() - started < FLUX_TOTAL_WAIT_MS) {
+    const result = await fetchFluxJSON(statusURL, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${gateway.apiKey}`,
+        'Cache-Control': 'no-store',
+      },
+    }, FLUX_GATEWAY_STATUS_TIMEOUT_MS);
+
+    if (!result.response.ok) {
+      const retryable = [408, 425, 429, 500, 502, 503, 504].includes(result.response.status);
+      if (retryable) {
+        emitProgress(null, 'polling', `FLUX gateway temporarily returned HTTP ${result.response.status}; retrying.`);
+        await sleep(FLUX_STATUS_POLL_INTERVAL_MS);
+        continue;
+      }
+
+      throw makeError(
+        providerErrorMessage(result.data, `FLUX gateway status check failed (HTTP ${result.response.status}).`),
+        'FLUX_GATEWAY_STATUS_FAILED',
+        'polling',
+        { status: result.response.status, endpoint: statusURL, requestId: jobId, model: FLUX_KLEIN_MODEL }
+      );
+    }
+
+    const status = String(result.data?.status || result.data?.state || '').toUpperCase();
+    const detail = cleanText(result.data?.detail || result.data?.message || '', 240);
+    const now = Date.now();
+
+    if (status !== lastStatus || now - lastEmitAt >= 10000) {
+      const stage = ['QUEUED', 'PENDING'].includes(status)
+        ? 'queued'
+        : ['RUNNING', 'PROCESSING', 'IN_PROGRESS'].includes(status)
+          ? 'rendering'
+          : 'polling';
+      emitProgress(
+        null,
+        stage,
+        detail || (stage === 'queued'
+          ? 'FLUX.3 Klein is waiting for the GPU.'
+          : stage === 'rendering'
+            ? 'FLUX.3 Klein is generating the image.'
+            : 'Waiting for FLUX.3 Klein result.'),
+        { requestId: jobId }
+      );
+      lastStatus = status;
+      lastEmitAt = now;
+    }
+
+    if (isFailure(status)) {
+      throw makeError(
+        `FLUX.3 Klein generation failed: ${providerErrorMessage(result.data, status)}.`,
+        'FLUX_IMAGE_GENERATION_FAILED',
+        'generation',
+        {
+          status: result.response.status,
+          endpoint: statusURL,
+          requestId: jobId,
+          model: FLUX_KLEIN_MODEL,
+        }
+      );
+    }
+
+    if (isDone(status)) {
+      const rawImagePath =
+        result.data?.image_path ||
+        result.data?.imagePath ||
+        result.data?.image_url ||
+        result.data?.imageUrl ||
+        result.data?.outputURL ||
+        result.data?.output_url;
+
+      const outputURL = getFluxImageURL(rawImagePath, gateway.baseURL, gateway.origin);
+      if (!outputURL) {
+        throw makeError(
+          'FLUX gateway marked the job complete but did not return a valid signed image URL.',
+          'FLUX_GATEWAY_IMAGE_URL_MISSING',
+          'provider_response',
+          { endpoint: statusURL, requestId: jobId, model: FLUX_KLEIN_MODEL }
+        );
+      }
+
+      return {
+        outputURL,
+        requestId: jobId,
+        providerResponse: { job_id: jobId, status, image_path: rawImagePath },
+      };
+    }
+
+    await sleep(FLUX_STATUS_POLL_INTERVAL_MS);
+  }
+
+  throw makeError(
+    `FLUX.3 Klein generation did not finish within ${Math.round(FLUX_TOTAL_WAIT_MS / 1000)} seconds. The Kaggle job may still be running; request_id=${jobId}.`,
+    'FLUX_IMAGE_POLL_TIMEOUT',
+    'polling',
+    { requestId: jobId, endpoint: statusURL, model: FLUX_KLEIN_MODEL }
+  );
 }
 
 async function submitVideo({ apiKey, prompt, settings }) {
@@ -835,23 +1061,25 @@ export async function GET(req) {
 
   if (url.searchParams.get('health') === '1') {
     const env = getEnvSnapshot();
+    const fluxConfigured = Boolean(
+      String(process.env.KAGGLE_FLUX_URL || '').trim() &&
+      String(process.env.ARIX_FLUX_API_KEY || '').trim()
+    );
+
     return jsonResponse({
       ok: true,
       version: VERSION,
       route: '/api/image',
       environment: env.vercelEnv,
-      pixazoKey: {
-        configured: env.configured,
-        resolvedFrom: env.source,
-        preferredPIZAXO_KEYPresent: env.preferredPresent,
+      imageGateway: {
+        configured: fluxConfigured,
+        model: FLUX_KLEIN_MODEL,
+        endpoint: fluxConfigured ? 'protected Kaggle FLUX gateway (URL hidden)' : null,
       },
-      endpoints: {
-        image: PIXAZO.image.endpoint,
-        video: PIXAZO.video.endpoint,
-      },
-      models: {
-        image: PIXAZO.image.model,
-        video: PIXAZO.video.model,
+      videoProvider: {
+        credentialConfigured: env.configured,
+        videoEndpoint: PIXAZO.video.endpoint,
+        model: PIXAZO.video.model,
       },
       serverTime: nowISO(),
     });
@@ -926,20 +1154,17 @@ export async function POST(req) {
 
         sendProgress(null, 'configuration', `${modality === 'video' ? 'Video' : 'Image'} request validated`);
         sendProgress(null, 'prompt', settings.enhancePrompt ? 'Prompt enhancement applied' : 'Using prompt without enhancement');
-        sendProgress(null, 'authentication', 'Checking server-side Pixazo credential');
-
-        const apiKey = getApiKey();
-
-        sendProgress(null, 'dispatching', `Calling Pixazo ${modality === 'video' ? PIXAZO.video.model : PIXAZO.image.model}`);
 
         if (modality === 'image') {
+          sendProgress(null, 'authentication', 'Checking protected FLUX gateway configuration');
+
           const result = await submitImage({
-            apiKey,
             prompt: optimizedPrompt,
             settings,
+            emitProgress: sendProgress,
           });
 
-          sendProgress(null, 'assembling', 'Pixazo returned the image file');
+          sendProgress(null, 'assembling', 'FLUX.3 Klein returned the generated image');
 
           const watermarkedURL = makeWatermarkedImageURL(
             result.outputURL,
@@ -947,7 +1172,7 @@ export async function POST(req) {
             watermarkId
           );
 
-          sendProgress(null, 'complete', 'Watermarked image ready');
+          sendProgress(null, 'complete', 'FLUX.3 Klein image ready');
 
           sendContent(imageWidget({
             sourceURL: result.outputURL,
@@ -957,6 +1182,10 @@ export async function POST(req) {
             watermarkId,
           }));
         } else {
+          sendProgress(null, 'authentication', 'Checking server-side Pixazo credential');
+          const apiKey = getApiKey();
+          sendProgress(null, 'dispatching', `Calling Pixazo ${PIXAZO.video.model}`);
+
           const submitted = await submitVideo({
             apiKey,
             prompt: optimizedPrompt,
