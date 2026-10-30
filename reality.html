@@ -896,7 +896,7 @@ grid-template-columns:repeat(2,minmax(0,1fr))}
 </a>
 <div class="topbar-center">
 <span class="live-dot"></span>
-<span id="connection-status">Connecting</span>
+<span id="connection-status" title="Starting Reality Engine…">Connecting</span>
 <span class="topbar-separator">/</span>
 <span id="world-title">Untitled world</span>
 <span id="save-status" class="save-state">Not saved</span>
@@ -1022,23 +1022,33 @@ gateway configuration.</span><button id="send-command" class="button button-prim
 <div id="toast-root" class="toast-root" aria-live="polite"></div>
 </div>
 <script id="reality-module-load-error">
-      window.addEventListener('error', (event) => {
-        const target = event.target;
-        if (target && target.tagName === 'SCRIPT' && target.type === 'module') {
-          const status = document.getElementById('connection-status');
-          if (status && status.textContent === 'Connecting') status.textContent = 'Engine dependency failed';
-          console.error('[Reality Engine] A module dependency could not be loaded.', event);
-        }
-      }, true);
-    </script>
+(function () {
+  const status = document.getElementById('connection-status');
+  window.addEventListener('error', (event) => {
+    const target = event.target;
+    if (target && target.tagName === 'SCRIPT' && target.type === 'module') {
+      if (status) {
+        status.textContent = '3D dependency failed';
+        status.title = 'A required 3D JavaScript module failed to load. Check the Network tab for the failed module URL.';
+      }
+      console.error('[Reality Engine] A module dependency could not be loaded.', event);
+    }
+  }, true);
+  window.setTimeout(() => {
+    if (status && status.textContent === 'Connecting') {
+      status.textContent = '3D startup timed out';
+      status.title = 'The app module did not start. Check CDN access for Three.js / OrbitControls / GLTFLoader.';
+    }
+  }, 15000);
+})();
+</script>
 <script type="module">
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
-import * as RAPIER from "@dimforge/rapier3d-compat";
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 const __external = { "three": THREE, "three/addons/controls/OrbitControls.js": { OrbitControls:
-OrbitControls }, "@dimforge/rapier3d-compat": RAPIER, "three/addons/loaders/GLTFLoader.js": { GLTFLoader:
-GLTFLoader } };
+OrbitControls } };
+const bootStatus = document.getElementById('connection-status');
+if (bootStatus) bootStatus.textContent = 'Checking backend…';
 const __modules = Object.create(null);
 // Module: src/client/auth.js
 __modules["src/client/auth.js"] = (() => {
@@ -1063,21 +1073,46 @@ return { getAccessToken };
 // Module: src/client/api.js
 __modules["src/client/api.js"] = (() => {
 const getAccessToken = __modules["src/client/auth.js"]["getAccessToken"];
+function withTimeout(promise, ms, message) {
+let timer;
+return Promise.race([
+Promise.resolve(promise),
+new Promise((_, reject) => { timer = setTimeout(() => reject(new Error(message)), ms); })
+]).finally(() => clearTimeout(timer));
+}
+async function timedFetch(url, options = {}, timeoutMs = 12000) {
+const controller = new AbortController();
+const timer = setTimeout(() => controller.abort(), timeoutMs);
+try {
+let requestSignal = controller.signal;
+if (options.signal) {
+if (typeof AbortSignal.any === 'function') requestSignal = AbortSignal.any([controller.signal, options.signal]);
+else if (options.signal.aborted) controller.abort();
+else options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+}
+return await fetch(url, { ...options, signal: requestSignal });
+} catch (error) {
+if (controller.signal.aborted) throw new Error(`Request timed out after ${Math.round(timeoutMs / 1000)} seconds: ${url}`);
+throw error;
+} finally {
+clearTimeout(timer);
+}
+}
 async function apiRequest(path, { method = 'GET', body, signal } = {}) {
-const token = await getAccessToken();
+const token = await withTimeout(getAccessToken(), 8000, 'ArixAI sign-in bridge timed out while retrieving your session.');
 const headers = { Accept: 'application/json' };
 if (body !== undefined) headers['Content-Type'] = 'application/json';
 if (token) headers.Authorization = `Bearer ${token}`;
 let response;
 try {
-response = await fetch(path, {
+response = await timedFetch(path, {
 method,
 headers,
 credentials: 'same-origin',
 cache: 'no-store',
 body: body === undefined ? undefined : JSON.stringify(body),
 signal
-});
+}, 15000);
 } catch (cause) {
 throw new Error(`Cannot reach Reality Engine API: ${cause.message}`);
 }
@@ -1094,12 +1129,34 @@ throw error;
 return payload;
 }
 async function checkHealth() {
-const response = await fetch('/api/reality?action=health', { cache: 'no-store' });
-const payload = await response.json();
+let response;
+try {
+response = await timedFetch('/api/reality?action=health', {
+method: 'GET',
+headers: { Accept: 'application/json' },
+credentials: 'same-origin',
+cache: 'no-store'
+}, 10000);
+} catch (error) {
+throw new Error(`Reality Engine health check failed: ${error.message}. Verify the frontend /api/reality rewrite and the backend deployment.`);
+}
+let payload;
+try {
+payload = await response.json();
+} catch {
+throw new Error(`Reality Engine health endpoint returned non-JSON content (HTTP ${response.status}). Check the /api/reality rewrite target.`);
+}
+if (!response.ok && !payload.checks) {
+const error = new Error(payload.error || `Reality Engine health endpoint returned HTTP ${response.status}.`);
+error.status = response.status;
+error.code = payload.code || 'HEALTH_REQUEST_FAILED';
+throw error;
+}
 return { httpOk: response.ok, ...payload };
 }
 return { apiRequest, checkHealth };
 })();
+
 // Module: src/shared/world-spec.js
 __modules["src/shared/world-spec.js"] = (() => {
 const WORLD_SCHEMA_VERSION = '1.0.0';
@@ -1426,8 +1483,28 @@ return { WorldStore, createPrimitiveEntity };
 })();
 // Module: src/client/physics/rapier-runtime.js
 __modules["src/client/physics/rapier-runtime.js"] = (() => {
-const RAPIER = __external["@dimforge/rapier3d-compat"];
+let RAPIER = null;
 let initialized = false;
+let rapierLoadPromise = null;
+async function ensureRapierLoaded() {
+if (initialized && RAPIER) return RAPIER;
+if (!rapierLoadPromise) {
+rapierLoadPromise = import('@dimforge/rapier3d-compat').then(async (module) => {
+const api = typeof module.World === 'function' ? module : module.default;
+if (!api || typeof api.init !== 'function' || typeof api.World !== 'function') {
+throw new Error('The Rapier physics module loaded but did not expose the expected API.');
+}
+await api.init();
+RAPIER = api;
+initialized = true;
+return RAPIER;
+}).catch((error) => {
+rapierLoadPromise = null;
+throw new Error(`Rapier physics could not be initialized: ${error.message}`);
+});
+}
+return rapierLoadPromise;
+}
 class RapierRuntime {
 constructor() {
 this.world = null;
@@ -1438,10 +1515,7 @@ this.fixedStep = 1 / 60;
 this.ready = false;
 }
 async initialize() {
-if (!initialized) {
-await RAPIER.init();
-initialized = true;
-}
+await ensureRapierLoaded();
 this.ready = true;
 return RAPIER.version?.() || 'Rapier 3D';
 }
@@ -1556,7 +1630,6 @@ __modules["src/client/renderer/scene-runtime.js"] = (() => {
 const THREE = __external["three"];
 const OrbitControls = __external["three/addons/controls/OrbitControls.js"]["OrbitControls"];
 const RapierRuntime = __modules["src/client/physics/rapier-runtime.js"]["RapierRuntime"];
-const GLTFLoader = __external["three/addons/loaders/GLTFLoader.js"]["GLTFLoader"];
 const apiRequest = __modules["src/client/api.js"]["apiRequest"];
 class SceneRuntime {
 constructor(canvas, { onSelect = () => {}, onPhysicsState = () => {} } = {}) {
@@ -1777,6 +1850,7 @@ async #hydrateAsset(entity, placeholder) {
 const assetId = entity.components.renderable.assetId;
 const { downloadUrl } = await apiRequest('/api/reality', { method: 'POST', body: { action:
 'create_asset_download', assetId } });
+const { GLTFLoader } = await import("three/addons/loaders/GLTFLoader.js");
 const loader = new GLTFLoader();
 const gltf = await loader.loadAsync(downloadUrl);
 if (this.entityObjects.get(entity.id) !== placeholder) return;
@@ -1890,28 +1964,45 @@ this.#wireStore();
 this.#wireUI();
 }
 async initialize() {
-await this.checkHealth();
+$('#connection-status').textContent = 'Checking backend…';
+const health = await this.checkHealth();
 this.renderAll();
+if (!health || health.ok !== true || health.httpOk !== true) return;
+$('#connection-status').textContent = 'Checking account…';
 try {
 await this.store.listWorlds();
 $('#connection-status').textContent = 'API connected';
+$('#connection-status').title = 'Reality Engine API and account session are connected.';
 } catch (error) {
-$('#connection-status').textContent = 'API unavailable';
-toast(error.message, 'error', 6000);
+const needsSignIn = error.status === 401 || error.code === 'AUTH_REQUIRED' || error.code === 'AUTH_INVALID';
+$('#connection-status').textContent = needsSignIn ? 'Sign-in required' : 'API request failed';
+$('#connection-status').title = error.message;
+toast(error.message, 'error', 8000);
 }
 }
 async checkHealth() {
 try {
 const health = await checkHealth();
-const db = health.checks?.database === 'ok';
-$('#connection-status').textContent = db ? 'Connected' : 'Setup required';
-$('#ai-provider-status').textContent = health.checks?.modelGateway === 'configured' ? 'Model gateway configured' : 'Model gateway not configured';
-$('#prompt-hint').textContent = health.checks?.modelGateway === 'configured'
+const checks = health.checks || {};
+const ready = health.httpOk === true && health.ok === true;
+$('#connection-status').textContent = ready ? 'Connected' : 'Backend setup required';
+$('#connection-status').title = ready ? 'Reality Engine backend health check passed.' : `Backend not ready: ${JSON.stringify(checks)}`;
+$('#ai-provider-status').textContent = checks.modelGateway === 'configured' ? 'Model gateway configured' : 'Model gateway not configured';
+$('#prompt-hint').textContent = checks.modelGateway === 'configured'
 ? 'Commands are compiled by your configured ArixAI model gateway.'
 : 'Configure the existing ArixAI model gateway on the server to enable AI compilation.';
+if (!ready) {
+const required = [];
+if (checks.database !== 'ok') required.push(`database=${checks.database || 'unknown'}`);
+if (checks.auth !== 'configured') required.push(`auth=${checks.auth || 'unknown'}`);
+if (checks.allowedOrigins !== 'configured') required.push(`allowedOrigins=${checks.allowedOrigins || 'unknown'}`);
+toast(`Reality Engine backend is not ready. ${required.join('; ') || `HTTP ${health.httpOk ? '200' : 'error'}`}`, 'error', 9000);
+}
 return health;
-} catch {
-$('#connection-status').textContent = 'API unavailable';
+} catch (error) {
+$('#connection-status').textContent = error.code === 'ORIGIN_NOT_ALLOWED' ? 'Backend origin blocked' : 'API unreachable';
+$('#connection-status').title = error.message;
+toast(error.message, 'error', 9000);
 return null;
 }
 }
