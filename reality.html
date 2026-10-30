@@ -1039,7 +1039,7 @@ gateway configuration.</span><button id="send-command" class="button button-prim
       status.textContent = '3D startup timed out';
       status.title = 'The app module did not start. Check CDN access for Three.js / OrbitControls / GLTFLoader.';
     }
-  }, 15000);
+  }, 55000);
 })();
 </script>
 <script type="module">
@@ -2078,8 +2078,10 @@ this.store.addEventListener('saved', () => toast('World snapshot saved in this b
 $('#new-world').addEventListener('click', () => this.openCreateWorldModal());
 $('#empty-create-world').addEventListener('click', () => this.openCreateWorldModal());
 $('#open-worlds').addEventListener('click', () => this.openWorldsModal());
-$('#import-asset').addEventListener('click', () => $('#asset-input').click());
-$('#asset-input').addEventListener('change', (event) => this.importGlb(event.target.files?.[0]));
+const importButton = $('#import-asset');
+const assetInput = $('#asset-input');
+if (importButton) importButton.addEventListener('click', () => toast('GLB cloud imports are unavailable in temporary browser-local mode. Built-in primitives are available.', 'error', 7000));
+if (assetInput) assetInput.addEventListener('change', (event) => this.importGlb(event.target.files?.[0]));
 $('#add-entity').addEventListener('click', () => this.addPrimitive('box'));
 $$('[data-add]').forEach((button) => button.addEventListener('click', () =>
 this.addPrimitive(button.dataset.add)));
@@ -2090,7 +2092,7 @@ $('#physics-reset').addEventListener('click', () => { this.scene.resetPhysics();
 this.store.updateLocalSpec(this.scene.exportSpec()); toast('Physics bodies reset. Save to create a local snapshot.'); });
 $('#camera-home').addEventListener('click', () => this.scene.resetCamera());
 $('#toggle-grid').addEventListener('click', () => this.scene.toggleGrid());
-$('#send-command').addEventListener('click', () => this.compilePrompt());
+$$('#send-command').forEach((button) => button.addEventListener('click', () => this.compilePrompt()));
 $('#world-prompt').addEventListener('keydown', (event) => {
 if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.compilePrompt(); }
 });
@@ -2121,44 +2123,30 @@ $('#save-status').textContent = 'Saved';
 }
 async importGlb(file) {
 if (!file) return;
-if (!this.store.hasWorld) return this.openCreateWorldModal();
-if (!file.name.toLowerCase().endsWith('.glb')) return toast('Only binary .glb files are supported in this release.', 'error');
-try {
-toast('Requesting a secure asset upload URL…');
-const intent = await this.store.createAssetUpload(file);
-const upload = await fetch(intent.uploadUrl, { method: 'PUT', headers: intent.headers, body: file });
-if (!upload.ok) throw new Error(`Object storage upload failed (HTTP ${upload.status}). Check bucket
-CORS and credentials.`);
-const completed = await this.store.completeAssetUpload(intent.assetId);
-const entity = createPrimitiveEntity('box', this.store.spec.entities.length);
-entity.type = 'asset';
-entity.name = file.name.replace(/\.glb$/i, '').slice(0, 100) || 'Imported model';
-entity.components.renderable = { ...entity.components.renderable, shape: 'asset', assetId:
-intent.assetId };
-const result = await this.store.applyCommand({ type: 'CREATE_ENTITY', entity });
-await this.scene.loadWorld(result.spec);
-this.scene.setSelected(entity.id);
-$('#asset-input').value = '';
-toast(`GLB uploaded, verified and added to this world. ${completed.status}`, 'success', 5000);
-} catch (error) { this.showError(error); }
+// Browser-local mode intentionally has no cloud object storage or durable asset IDs.
+// Do not attempt an API upload that cannot succeed in this deployment mode.
+const input = $('#asset-input');
+if (input) input.value = '';
+toast('GLB import requires cloud object storage, which is disabled in temporary database-free mode. Add built-in primitive objects instead.', 'error', 8000);
 }
 async compilePrompt() {
-const prompt = $('#world-prompt').value.trim();
+const promptInput = $('#world-prompt');
+const prompt = promptInput?.value?.trim() || '';
 if (!prompt) return;
 if (!this.store.hasWorld) { this.openCreateWorldModal(); return; }
-const button = $('#send-command');
-button.disabled = true;
-button.textContent = 'Compiling…';
+const buttons = $$('#send-command');
+buttons.forEach((button) => { button.disabled = true; button.textContent = 'Compiling…'; });
 try {
 this.scene.pausePhysics();
 const result = await this.store.compilePrompt(prompt, this.scene.selectedId);
 await this.scene.loadWorld(result.spec);
-$('#world-prompt').value = '';
-$('#world-intelligence').querySelector('p').textContent = result.explanation || 'World updates applied.';
+if (promptInput) promptInput.value = '';
+const intelligenceText = $('#world-intelligence p');
+if (intelligenceText) intelligenceText.textContent = result.explanation || 'World updates applied.';
 if (result.compiledTitle && !this.store.spec.title) this.store.spec.title = result.compiledTitle;
 toast('Structured world commands validated and applied.', 'success');
 } catch (error) { this.showError(error); }
-finally { button.disabled = false; button.innerHTML = 'Run command <span>!—</span>'; }
+finally { $$('#send-command').forEach((button) => { button.disabled = !this.store.hasWorld; button.innerHTML = 'Run command <span>!—</span>'; }); }
 }
 async openCreateWorldModal() {
 const body = `
@@ -2211,24 +2199,27 @@ $('#modal-new-world').addEventListener('click', () => this.openCreateWorldModal(
 }
 renderAll() {
 const { spec, world, branch, sequence, dirty } = this.store;
-$('#world-title').textContent = world?.title || 'Untitled world';
-$('#save-world').disabled = !this.store.hasWorld;
-$('#import-asset').disabled = !this.store.hasWorld;
-$('#save-status').textContent = dirty ? 'Unsaved changes' : this.store.hasWorld ? 'Saved' : 'Not saved';
-$('#entity-count').textContent = `${spec?.entities?.length || 0} entities`;
-$('#metric-entities').textContent = String(spec?.entities?.length || 0);
-$('#metric-version').textContent = String(sequence || 0);
-$('#metric-branch').textContent = branch?.name || 'Main';
-$('#sequence-label').textContent = `SEQ ${sequence || 0}`;
-$('#world-mode').textContent = spec?.domain || 'Spatial world';
-$('#send-command').disabled = !this.store.hasWorld;
+const setText = (selector, value) => { const element = $(selector); if (element) element.textContent = value; };
+setText('#world-title', world?.title || 'Untitled world');
+$$('#save-world').forEach((element) => { element.disabled = !this.store.hasWorld; });
+// GLB uploads are intentionally unavailable without configured cloud object storage.
+$$('#import-asset').forEach((element) => { element.disabled = true; element.title = 'Unavailable in temporary browser-local mode'; });
+setText('#save-status', dirty ? 'Unsaved changes' : this.store.hasWorld ? 'Saved' : 'Not saved');
+setText('#entity-count', `${spec?.entities?.length || 0} entities`);
+setText('#metric-entities', String(spec?.entities?.length || 0));
+setText('#metric-version', String(sequence || 0));
+setText('#metric-branch', branch?.name || 'Main');
+setText('#sequence-label', `SEQ ${sequence || 0}`);
+setText('#world-mode', spec?.domain || 'Spatial world');
+$$('#send-command').forEach((element) => { element.disabled = !this.store.hasWorld; });
 this.renderEntityList();
-if (this.scene.selectedId) this.renderInspector(spec?.entities?.find((entity) => entity.id ===
-this.scene.selectedId) || null);
-if (!this.store.hasWorld) $('#viewport-empty').classList.remove('hidden');
+if (this.scene.selectedId) this.renderInspector(spec?.entities?.find((entity) => entity.id === this.scene.selectedId) || null);
+const emptyViewport = $('#viewport-empty');
+if (!this.store.hasWorld && emptyViewport) emptyViewport.classList.remove('hidden');
 }
 renderEntityList() {
 const list = $('#entity-list');
+if (!list) return;
 const entities = this.store.spec?.entities || [];
 if (!this.store.hasWorld) { list.innerHTML = '<div class="empty-state">Create a world to begin.</div>';
 return; }
@@ -2244,6 +2235,7 @@ this.scene.setSelected(row.dataset.entityId)));
 }
 renderInspector(entity) {
 const root = $('#inspector-content');
+if (!root) return;
 if (!entity) { root.innerHTML = '<div class="empty-state">Select an entity to inspect its properties.</div>'; this.renderEntityList(); return; }
 const transform = entity.components.transform;
 const renderable = entity.components.renderable;
@@ -2351,8 +2343,10 @@ id="world-prompt" rows="1" placeholder="Describe what you want to create or chan
 maxlength="4000"></textarea><div class="composer-actions"><span id="prompt-hint">AI compilation requires
 your ArixAI model gateway configuration.</span><button id="send-command" class="button button-primary"
 ${this.store.hasWorld?'':'disabled'}>Run command <span>!—</span></button></div></div>`;
-$('#send-command').addEventListener('click', () => this.compilePrompt());
-$('#world-prompt').addEventListener('keydown', (event) => { if (event.key === 'Enter' &&
+const commandButton = $('#send-command');
+if (commandButton) commandButton.addEventListener('click', () => this.compilePrompt());
+const commandInput = $('#world-prompt');
+if (commandInput) commandInput.addEventListener('keydown', (event) => { if (event.key === 'Enter' &&
 !event.shiftKey) { event.preventDefault(); this.compilePrompt(); } });
 return;
 }
