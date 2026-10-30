@@ -1,0 +1,2594 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f7fb" />
+    <meta name="description" content="ArixAI Reality Engine — create, inspect and experiment with persistent interactive worlds and operational simulations." />
+    <title>ArixAI Reality Engine</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+:root {
+  font-family:'DM Sans',sans-serif;
+  color:#172033;
+  background:#f4f6fa;
+  font-synthesis:none;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+  --ink:#172033;
+  --muted:#788399;
+  --line:#e7ebf2;
+  --panel:#fff;
+  --surface:#f7f9fc;
+  --accent:#475eea;
+  --accent-dark:#3448cb;
+  --green:#129a70;
+  --shadow:0 8px 28px rgba(24,39,75,.06)}
+
+* {
+  box-sizing:border-box}
+
+body {
+  margin:0;
+  min-width:320px;
+  min-height:100vh}
+
+button,input,textarea,select {
+  font:inherit}
+
+button {
+  cursor:pointer}
+
+button:disabled {
+  cursor:not-allowed;
+  opacity:.45}
+
+#app {
+  height:100vh;
+  min-height:700px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden}
+
+.topbar {
+  height:66px;
+  flex-shrink:0;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 22px;
+  z-index:3}
+
+.brand {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  text-decoration:none;
+  color:var(--ink);
+  min-width:220px}
+
+.brand-mark {
+  width:35px;
+  height:35px;
+  border-radius:11px;
+  background:linear-gradient(145deg,#5e72f2,#3548be);
+  color:#fff;
+  display:grid;
+  place-items:center;
+  font:800 19px Manrope;
+  box-shadow:0 5px 14px #4b60d83d}
+
+.brand strong {
+  display:block;
+  font:800 15px Manrope;
+  letter-spacing:-.4px}
+
+.brand small {
+  display:block;
+  font-size:8px;
+  letter-spacing:1.6px;
+  color:#8993a9;
+  font-weight:700;
+  margin-top:1px}
+
+.topbar-center {
+  display:flex;
+  align-items:center;
+  gap:9px;
+  color:#68748b;
+  font-size:12px}
+
+.live-dot,.status-dot {
+  width:7px;
+  height:7px;
+  border-radius:99px;
+  background:#20b889;
+  display:inline-block;
+  box-shadow:0 0 0 3px #20b88917}
+
+.topbar-separator {
+  color:#c1c8d4}
+
+.save-state {
+  color:#9aa3b4;
+  margin-left:5px;
+  font-size:11px}
+
+.topbar-actions {
+  display:flex;
+  align-items:center;
+  gap:8px}
+
+.button {
+  border:1px solid transparent;
+  border-radius:8px;
+  padding:9px 13px;
+  font-size:12px;
+  font-weight:700;
+  transition:.18s}
+
+.button-primary {
+  background:var(--accent);
+  color:#fff;
+  box-shadow:0 4px 10px #475eea25}
+
+.button-primary:hover {
+  background:var(--accent-dark);
+  transform:translateY(-1px)}
+
+.button-quiet {
+  background:#fff;
+  border-color:var(--line);
+  color:#59657b}
+
+.button-quiet:hover {
+  background:#f7f8fc}
+
+.workspace {
+  flex:1;
+  min-height:0;
+  display:grid;
+  grid-template-columns:245px minmax(400px,1fr) 270px;
+  gap:10px;
+  padding:10px 10px 8px}
+
+.panel {
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:12px;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  box-shadow:var(--shadow)}
+
+.left-panel,.right-panel {
+  padding:16px 14px}
+
+.panel-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:16px}
+
+.eyebrow {
+  font-size:9px;
+  letter-spacing:1.25px;
+  font-weight:800;
+  color:#9aa4b6}
+
+.panel-heading h2 {
+  font:700 14px Manrope;
+  margin:4px 0 0;
+  letter-spacing:-.3px}
+
+.icon-button {
+  width:28px;
+  height:28px;
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:7px;
+  color:#68748b;
+  font-size:19px;
+  line-height:1}
+
+.tool-strip {
+  display:flex;
+  gap:5px;
+  padding-bottom:13px;
+  border-bottom:1px solid var(--line)}
+
+.tool-button {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:6px;
+  border:1px solid #edf0f5;
+  border-radius:8px;
+  background:#fafbfe;
+  color:#68748b;
+  padding:8px 3px 7px;
+  font-size:10px}
+
+.tool-button:hover {
+  border-color:#cbd2f8;
+  color:var(--accent);
+  background:#f7f8ff}
+
+.tool-glyph {
+  width:13px;
+  height:13px;
+  border:1.5px solid #8793ad;
+  display:block}
+
+.glyph-box {
+  border-radius:2px}
+
+.glyph-sphere {
+  border-radius:50%}
+
+.glyph-cylinder {
+  border-radius:50%/25%;
+  border-width:1.5px}
+
+.entity-list {
+  overflow:auto;
+  flex:1;
+  padding:12px 0}
+
+.entity-row {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 8px;
+  border-radius:7px;
+  font-size:11px;
+  color:#5f6b80;
+  cursor:pointer}
+
+.entity-row:hover,.entity-row.selected {
+  background:#f1f3ff;
+  color:#3f54d5}
+
+.entity-type-icon {
+  width:22px;
+  height:22px;
+  display:grid;
+  place-items:center;
+  background:#f1f3f8;
+  border-radius:6px;
+  color:#7e8aa1;
+  font-size:10px}
+
+.entity-row.selected .entity-type-icon {
+  background:#e5e9ff;
+  color:#4359e5}
+
+.entity-row .entity-name {
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  flex:1}
+
+.entity-row .entity-kind {
+  font-size:9px;
+  color:#9aa4b6}
+
+.empty-state {
+  padding:20px 10px;
+  text-align:center;
+  color:#9aa4b6;
+  font-size:11px;
+  line-height:1.6}
+
+.panel-footer-note {
+  border-top:1px solid var(--line);
+  padding-top:12px;
+  color:#8994a7;
+  font-size:10px;
+  display:flex;
+  align-items:center;
+  gap:8px}
+
+.panel-footer-note .status-dot {
+  width:6px;
+  height:6px}
+
+.center-stage {
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:8px}
+
+.viewport-toolbar {
+  height:42px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 11px}
+
+.view-tabs {
+  display:flex;
+  gap:5px}
+
+.view-tab {
+  padding:6px 10px;
+  border:0;
+  background:transparent;
+  color:#8490a4;
+  font-size:11px;
+  border-radius:6px}
+
+.view-tab.active {
+  background:#f0f2ff;
+  color:#4357d7;
+  font-weight:700}
+
+.viewport-tools {
+  display:flex;
+  align-items:center;
+  gap:9px}
+
+.small-tool {
+  border:0;
+  background:transparent;
+  color:#758198;
+  font-size:16px;
+  padding:3px 6px;
+  border-radius:5px}
+
+.small-tool:hover {
+  background:#f1f3f8}
+
+.toolbar-divider {
+  height:17px;
+  width:1px;
+  background:var(--line)}
+
+.viewport-meta {
+  color:#9aa4b6;
+  font-size:10px}
+
+.viewport {
+  position:relative;
+  flex:1;
+  min-height:280px;
+  overflow:hidden;
+  background:radial-gradient(ellipse at 50% 40%,#f7f9ff,#e9edf6 75%);
+  border:1px solid var(--line);
+  border-radius:11px}
+
+.viewport canvas {
+  display:block;
+  width:100%;
+  height:100%;
+  outline:0}
+
+.viewport-overlay {
+  position:absolute;
+  left:14px;
+  right:14px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  pointer-events:none}
+
+.viewport-overlay-top {
+  top:13px}
+
+.viewport-overlay-bottom {
+  bottom:13px;
+  justify-content:flex-start;
+  gap:6px}
+
+.overlay-chip,.hint-chip {
+  padding:6px 9px;
+  border-radius:6px;
+  background:#ffffffd9;
+  border:1px solid #e6eaf0;
+  color:#778398;
+  font-size:9px;
+  backdrop-filter:blur(8px)}
+
+.overlay-chip .status-dot {
+  width:5px;
+  height:5px;
+  margin-right:6px}
+
+.hint-chip {
+  background:#ffffffb9;
+  font-size:9px}
+
+.viewport-empty {
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  pointer-events:none;
+  gap:9px}
+
+.viewport-empty.hidden {
+  display:none}
+
+.viewport-empty strong {
+  font:700 15px Manrope;
+  color:#4d5a70}
+
+.viewport-empty p {
+  max-width:320px;
+  text-align:center;
+  margin:0;
+  color:#8994a7;
+  font-size:11px;
+  line-height:1.6}
+
+.viewport-empty .button {
+  pointer-events:auto;
+  margin-top:5px}
+
+.empty-orbit {
+  width:60px;
+  height:60px;
+  border:1px solid #cfd6e6;
+  border-radius:50%;
+  position:relative;
+  margin-bottom:7px;
+  animation:orbit 14s linear infinite}
+
+.empty-orbit:before,.empty-orbit:after {
+  content:'';
+  position:absolute;
+  border:1px solid #cfd6e6;
+  border-radius:50%;
+  inset:9px -5px;
+  transform:rotate(54deg)}
+
+.empty-orbit:after {
+  transform:rotate(-54deg)}
+
+.empty-orbit span {
+  position:absolute;
+  width:6px;
+  height:6px;
+  background:#687af1;
+  border-radius:50%;
+  top:4px;
+  left:23px}
+
+.empty-orbit span:nth-child(2) {
+  top:43px;
+  left:5px;
+  background:#65b7a3}
+
+.empty-orbit span:nth-child(3) {
+  top:25px;
+  left:48px;
+  background:#efb86a}
+
+@keyframes orbit {
+  to {
+  transform:rotate(360deg)}
+
+}
+
+.timeline-bar {
+  height:58px;
+  flex-shrink:0;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:0 13px;
+  display:flex;
+  align-items:center;
+  gap:17px}
+
+.timeline-controls {
+  display:flex;
+  align-items:center;
+  gap:5px}
+
+.transport-button {
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:#fff;
+  color:#758198;
+  width:27px;
+  height:27px;
+  font-size:11px}
+
+.transport-play {
+  background:#eef0ff;
+  border-color:#dfe3ff;
+  color:#495ee1}
+
+.timeline-track-wrap {
+  flex:1;
+  min-width:50px}
+
+.timeline-labels {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:5px}
+
+.timeline-labels span {
+  font-size:8px;
+  letter-spacing:1px;
+  color:#a1aabc;
+  font-weight:800}
+
+.timeline-labels strong {
+  font-size:10px;
+  color:#68748b;
+  font-weight:600}
+
+.timeline-track {
+  height:4px;
+  border-radius:5px;
+  background:#edf0f6;
+  overflow:hidden}
+
+.timeline-progress {
+  height:100%;
+  width:0;
+  background:var(--accent);
+  transition:width .2s}
+
+.timeline-right {
+  display:flex;
+  align-items:center;
+  gap:10px}
+
+.state-pill {
+  font-size:9px;
+  color:#9aa4b6;
+  background:#f5f6f9;
+  padding:5px 8px;
+  border-radius:5px}
+
+.sequence-label {
+  font-size:9px;
+  color:#9aa4b6;
+  font-variant-numeric:tabular-nums}
+
+.right-panel .panel-heading {
+  margin-bottom:14px}
+
+.inspector-icon {
+  color:#9aa4b6;
+  font-size:15px}
+
+.inspector-content {
+  min-height:110px;
+  max-height:42%;
+  overflow:auto}
+
+.inspector-section {
+  padding:0 0 13px}
+
+.inspector-section h3 {
+  font-size:10px;
+  color:#8792a6;
+  margin:0 0 9px;
+  font-weight:700}
+
+.field-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:7px}
+
+.field-label {
+  font-size:9px;
+  color:#9aa4b6;
+  display:block;
+  margin-bottom:4px}
+
+.field-input {
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:7px 6px;
+  color:#4c5870;
+  font-size:10px;
+  outline:0;
+  min-width:0;
+  background:#fbfcfe}
+
+.field-input:focus {
+  border-color:#9ba8fb;
+  box-shadow:0 0 0 2px #475eea12}
+
+.field-full {
+  grid-column:1/-1}
+
+.panel-divider {
+  height:1px;
+  background:var(--line);
+  margin:10px 0 13px}
+
+.panel-subheading {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:10px}
+
+.ai-indicator {
+  font-size:8px;
+  color:#596ce7;
+  border:1px solid #dce1ff;
+  background:#f4f5ff;
+  border-radius:4px;
+  padding:3px 5px;
+  font-weight:800}
+
+.intelligence-card {
+  background:#f7f8ff;
+  border:1px solid #e8ebff;
+  border-radius:8px;
+  padding:12px}
+
+.intelligence-icon {
+  width:24px;
+  height:24px;
+  border-radius:7px;
+  background:#e9ecff;
+  color:#566be9;
+  display:grid;
+  place-items:center;
+  font-size:13px;
+  margin-bottom:9px}
+
+.intelligence-card strong {
+  font-size:11px;
+  color:#4d5b76}
+
+.intelligence-card p {
+  font-size:10px;
+  color:#8a95a8;
+  line-height:1.55;
+  margin:5px 0 8px}
+
+.provider-status {
+  font-size:9px;
+  color:#c18b42}
+
+.metric-list {
+  display:flex;
+  flex-direction:column;
+  gap:9px}
+
+.metric-list div {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-size:10px;
+  color:#8d97a9}
+
+.metric-list strong {
+  font-size:10px;
+  font-weight:700;
+  color:#5d6980}
+
+.bottom-dock {
+  flex-shrink:0;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:11px;
+  margin:0 10px 10px;
+  padding:0 15px 11px;
+  box-shadow:var(--shadow)}
+
+.dock-tabs {
+  display:flex;
+  gap:17px;
+  height:37px;
+  border-bottom:1px solid var(--line)}
+
+.dock-tab {
+  position:relative;
+  border:0;
+  background:transparent;
+  padding:0 2px;
+  color:#929caf;
+  font-size:10px}
+
+.dock-tab.active {
+  color:#495ee0;
+  font-weight:700}
+
+.dock-tab.active:after {
+  content:'';
+  position:absolute;
+  bottom:-1px;
+  left:0;
+  right:0;
+  height:2px;
+  background:#5267e8;
+  border-radius:2px}
+
+.dock-content {
+  min-height:64px}
+
+.command-composer {
+  display:grid;
+  grid-template-columns:27px 1fr;
+  gap:9px;
+  padding-top:11px}
+
+.command-mark {
+  width:25px;
+  height:25px;
+  border-radius:7px;
+  background:#eef0ff;
+  color:#586ce7;
+  display:grid;
+  place-items:center}
+
+.command-composer textarea {
+  resize:vertical;
+  border:0;
+  outline:0;
+  min-height:28px;
+  max-height:100px;
+  color:#4e5b72;
+  font-size:11px;
+  padding:4px 0;
+  background:transparent}
+
+.command-composer textarea::placeholder {
+  color:#a1aabc}
+
+.composer-actions {
+  grid-column:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between}
+
+.composer-actions span {
+  font-size:9px;
+  color:#a1aabc}
+
+.composer-actions .button {
+  padding:7px 10px;
+  font-size:10px}
+
+.bottom-dock .button span {
+  color:#fff;
+  font-size:14px;
+  margin-left:5px}
+
+.toast-root {
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  z-index:20;
+  display:flex;
+  flex-direction:column;
+  gap:8px}
+
+.toast {
+  background:#172033;
+  color:#fff;
+  padding:10px 13px;
+  border-radius:8px;
+  box-shadow:0 8px 24px #17203325;
+  font-size:11px;
+  max-width:340px;
+  animation:toastIn .2s ease}
+
+.toast.error {
+  background:#922f42}
+
+.toast.success {
+  background:#117a5b}
+
+@keyframes toastIn {
+  from {
+  opacity:0;
+  transform:translateY(7px)}
+
+to {
+  opacity:1;
+  transform:none}
+
+}
+
+.modal-backdrop {
+  position:fixed;
+  inset:0;
+  background:#10182d67;
+  backdrop-filter:blur(3px);
+  z-index:15;
+  display:grid;
+  place-items:center;
+  padding:20px}
+
+.modal {
+  background:#fff;
+  border-radius:14px;
+  width:min(480px,100%);
+  padding:22px;
+  box-shadow:0 22px 80px #111a3340}
+
+.modal h2 {
+  font:800 18px Manrope;
+  margin:0 0 6px;
+  color:#27334b}
+
+.modal p {
+  font-size:11px;
+  color:#8490a4;
+  line-height:1.6;
+  margin:0 0 18px}
+
+.modal-actions {
+  display:flex;
+  justify-content:flex-end;
+  gap:8px;
+  margin-top:18px}
+
+.modal-input {
+  width:100%;
+  border:1px solid var(--line);
+  padding:10px;
+  border-radius:8px;
+  font-size:12px;
+  outline:0}
+
+.modal-input:focus {
+  border-color:#9ba8fb}
+
+.world-list {
+  display:grid;
+  gap:7px;
+  max-height:300px;
+  overflow:auto}
+
+.world-card {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  text-align:left;
+  border:1px solid var(--line);
+  border-radius:8px;
+  background:#fff;
+  padding:11px;
+  color:#4f5b70}
+
+.world-card:hover {
+  border-color:#bfc8ff;
+  background:#f8f9ff}
+
+.world-card strong {
+  font-size:11px}
+
+.world-card small {
+  display:block;
+  font-size:9px;
+  color:#9aa4b6;
+  margin-top:3px}
+
+.dock-panel-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+  padding-top:10px}
+
+.dock-card {
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:10px}
+
+.dock-card label {
+  display:block;
+  font-size:9px;
+  color:#8994a7;
+  margin-bottom:5px}
+
+.dock-card input {
+  width:100%;
+  padding:7px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  font-size:10px;
+  outline:0}
+
+.dock-card .button {
+  margin-top:8px;
+  width:100%;
+  font-size:10px}
+
+.result-grid {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px;
+  padding:10px 0}
+
+.result-metric {
+  background:#f7f8fc;
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:9px}
+
+.result-metric span {
+  font-size:8px;
+  color:#929caf;
+  display:block}
+
+.result-metric strong {
+  font-size:13px;
+  color:#4f5d76;
+  display:block;
+  margin-top:4px}
+
+.result-note {
+  font-size:10px;
+  color:#7d899f;
+  line-height:1.6;
+  padding:8px 0}
+
+.branch-row,.event-row {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 2px;
+  border-bottom:1px solid #f0f2f6;
+  font-size:10px;
+  color:#647188}
+
+.branch-row:last-child,.event-row:last-child {
+  border-bottom:0}
+
+.branch-row button {
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:5px;
+  padding:4px 7px;
+  font-size:9px;
+  color:#65718a}
+
+@media(max-width:1100px) {
+  .workspace {
+  grid-template-columns:210px minmax(320px,1fr) 235px}
+
+.left-panel,.right-panel {
+  padding:13px 11px}
+
+}
+
+@media(max-width:850px) {
+  #app {
+  height:auto;
+  min-height:100vh;
+  overflow:visible}
+
+.topbar {
+  padding:0 12px}
+
+.brand {
+  min-width:auto}
+
+.topbar-center {
+  display:none}
+
+.workspace {
+  display:grid;
+  grid-template-columns:1fr;
+  grid-template-rows:minmax(430px,55vh) auto auto;
+  padding:8px}
+
+.center-stage {
+  grid-row:1}
+
+.left-panel {
+  grid-row:2;
+  min-height:180px}
+
+.right-panel {
+  grid-row:3;
+  min-height:260px}
+
+.bottom-dock {
+  margin:0 8px 8px}
+
+.viewport {
+  min-height:330px}
+
+.timeline-bar {
+  height:54px}
+
+.dock-panel-grid {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+
+}
+
+@media(max-width:520px) {
+  .topbar {
+  height:58px}
+
+.brand-mark {
+  width:30px;
+  height:30px}
+
+.brand strong {
+  font-size:13px}
+
+.topbar-actions .button {
+  padding:8px 9px;
+  font-size:10px}
+
+.topbar-actions #open-worlds {
+  display:none}
+
+.workspace {
+  grid-template-rows:minmax(360px,55vh) auto auto}
+
+.viewport-toolbar {
+  height:38px}
+
+.timeline-bar {
+  gap:8px;
+  padding:0 8px}
+
+.timeline-right {
+  gap:5px}
+
+.sequence-label {
+  display:none}
+
+.hint-chip:nth-child(2) {
+  display:none}
+
+.dock-tabs {
+  gap:12px}
+
+.dock-tab {
+  font-size:9px}
+
+.result-grid {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+
+}
+
+
+
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+    "@dimforge/rapier3d-compat": "https://cdn.jsdelivr.net/npm/@dimforge/rapier3d-compat@0.18.0/rapier.es.js"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="/reality" aria-label="ArixAI Reality Engine home">
+          <span class="brand-mark">A</span>
+          <span><strong>ArixAI</strong><small>REALITY ENGINE</small></span>
+        </a>
+        <div class="topbar-center">
+          <span class="live-dot"></span>
+          <span id="connection-status">Connecting</span>
+          <span class="topbar-separator">/</span>
+          <span id="world-title">Untitled world</span>
+          <span id="save-status" class="save-state">Not saved</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="button button-quiet" id="import-asset" disabled>Import GLB</button>
+          <input id="asset-input" type="file" accept=".glb,model/gltf-binary" hidden />
+          <button class="button button-quiet" id="open-worlds">Worlds</button>
+          <button class="button button-quiet" id="save-world" disabled>Save</button>
+          <button class="button button-primary" id="new-world">New world</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="left-panel panel">
+          <div class="panel-heading">
+            <div><span class="eyebrow">SCENE</span><h2>World hierarchy</h2></div>
+            <button class="icon-button" id="add-entity" title="Add object" aria-label="Add object">＋</button>
+          </div>
+          <div class="tool-strip" aria-label="Add primitive">
+            <button class="tool-button" data-add="box"><span class="tool-glyph glyph-box"></span>Box</button>
+            <button class="tool-button" data-add="sphere"><span class="tool-glyph glyph-sphere"></span>Sphere</button>
+            <button class="tool-button" data-add="cylinder"><span class="tool-glyph glyph-cylinder"></span>Cylinder</button>
+          </div>
+          <div id="entity-list" class="entity-list"><div class="empty-state">Create a world to begin.</div></div>
+          <div class="panel-footer-note"><span class="status-dot"></span>Persistent world state</div>
+        </aside>
+
+        <section class="center-stage">
+          <div class="viewport-toolbar">
+            <div class="view-tabs">
+              <button class="view-tab active" data-view="spatial">Spatial</button>
+              <button class="view-tab" data-view="system">System</button>
+            </div>
+            <div class="viewport-tools">
+              <button class="small-tool" id="camera-home" title="Reset camera">⌂</button>
+              <button class="small-tool" id="toggle-grid" title="Toggle grid">▦</button>
+              <span class="toolbar-divider"></span>
+              <span class="viewport-meta" id="viewport-quality">WebGL · Adaptive</span>
+            </div>
+          </div>
+          <div id="viewport" class="viewport">
+            <canvas id="world-canvas" aria-label="Interactive 3D world viewport"></canvas>
+            <div class="viewport-overlay viewport-overlay-top">
+              <span class="overlay-chip"><span class="status-dot"></span><span id="world-mode">Spatial world</span></span>
+              <span class="overlay-chip" id="entity-count">0 entities</span>
+            </div>
+            <div class="viewport-overlay viewport-overlay-bottom">
+              <span class="hint-chip">Drag to orbit</span><span class="hint-chip">Scroll to zoom</span><span class="hint-chip">Select an object to inspect</span>
+            </div>
+            <div id="viewport-empty" class="viewport-empty">
+              <div class="empty-orbit"><span></span><span></span><span></span></div>
+              <strong>Your world starts here</strong>
+              <p>Create a world, add objects or describe an environment to the AI World Compiler.</p>
+              <button class="button button-primary" id="empty-create-world">Create first world</button>
+            </div>
+          </div>
+          <div class="timeline-bar">
+            <div class="timeline-controls">
+              <button class="transport-button" id="physics-reset" title="Reset physics">↺</button>
+              <button class="transport-button transport-play" id="physics-play" title="Run physics">▶</button>
+              <button class="transport-button" id="physics-pause" title="Pause physics">Ⅱ</button>
+            </div>
+            <div class="timeline-track-wrap">
+              <div class="timeline-labels"><span>PHYSICS CLOCK</span><strong id="physics-clock">00:00.0</strong></div>
+              <div class="timeline-track"><div id="timeline-progress" class="timeline-progress"></div></div>
+            </div>
+            <div class="timeline-right"><span id="physics-state" class="state-pill">Paused</span><span class="sequence-label" id="sequence-label">SEQ 0</span></div>
+          </div>
+        </section>
+
+        <aside class="right-panel panel">
+          <div class="panel-heading"><div><span class="eyebrow">INSPECTOR</span><h2>Properties</h2></div><span class="inspector-icon">⌘</span></div>
+          <div id="inspector-content" class="inspector-content"><div class="empty-state">Select an entity to inspect its properties.</div></div>
+          <div class="panel-divider"></div>
+          <div class="panel-subheading"><span class="eyebrow">WORLD INTELLIGENCE</span><span class="ai-indicator">AI</span></div>
+          <div id="world-intelligence" class="intelligence-card">
+            <div class="intelligence-icon">✦</div>
+            <strong>World Director</strong>
+            <p>Describe a change or ask the engine to construct a world from your instructions.</p>
+            <span id="ai-provider-status" class="provider-status">Provider not configured</span>
+          </div>
+          <div class="panel-divider"></div>
+          <div class="panel-subheading"><span class="eyebrow">WORLD DATA</span></div>
+          <div class="metric-list">
+            <div><span>Entities</span><strong id="metric-entities">0</strong></div>
+            <div><span>World version</span><strong id="metric-version">0</strong></div>
+            <div><span>Branch</span><strong id="metric-branch">Main</strong></div>
+            <div><span>Physics engine</span><strong id="metric-physics">Loading</strong></div>
+          </div>
+        </aside>
+      </main>
+
+      <section class="bottom-dock">
+        <div class="dock-tabs">
+          <button class="dock-tab active" data-dock="command">Command</button>
+          <button class="dock-tab" data-dock="simulation">Simulation</button>
+          <button class="dock-tab" data-dock="scenarios">Scenarios</button>
+          <button class="dock-tab" data-dock="history">History</button>
+        </div>
+        <div class="dock-content" id="dock-content">
+          <div class="command-composer">
+            <div class="command-mark">✦</div>
+            <textarea id="world-prompt" rows="1" placeholder="Describe what you want to create or change in this world…" maxlength="4000"></textarea>
+            <div class="composer-actions"><span id="prompt-hint">AI compilation requires your ArixAI model gateway configuration.</span><button id="send-command" class="button button-primary" disabled>Run command <span>↗</span></button></div>
+          </div>
+        </div>
+      </section>
+
+      <div id="modal-root"></div>
+      <div id="toast-root" class="toast-root" aria-live="polite"></div>
+    </div>
+  <script type="module">
+import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import * as RAPIER from "@dimforge/rapier3d-compat";
+import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+
+const __external = { "three": THREE, "three/addons/controls/OrbitControls.js": { OrbitControls: OrbitControls }, "@dimforge/rapier3d-compat": RAPIER, "three/addons/loaders/GLTFLoader.js": { GLTFLoader: GLTFLoader } };
+const __modules = Object.create(null);
+
+// Module: src/client/auth.js
+__modules["src/client/auth.js"] = (() => {
+
+/**
+ * Integration contract with the existing ArixAI app:
+ * expose window.ARIXAI_AUTH.getAccessToken() returning the same signed JWT
+ * whose issuer/audience/subject are verified by the Reality Engine backend.
+ * HttpOnly-cookie sessions work without this bridge when cookie and API share an origin.
+ */
+async function getAccessToken() {
+  const bridge = window.ARIXAI_AUTH;
+  if (bridge && typeof bridge.getAccessToken === 'function') {
+    const token = await bridge.getAccessToken();
+    return typeof token === 'string' && token.length ? token : null;
+  }
+  if (typeof window.ARIXAI_ACCESS_TOKEN === 'string' && window.ARIXAI_ACCESS_TOKEN) return window.ARIXAI_ACCESS_TOKEN;
+  return null;
+}
+
+return { getAccessToken };
+})();
+
+
+// Module: src/client/api.js
+__modules["src/client/api.js"] = (() => {
+const getAccessToken = __modules["src/client/auth.js"]["getAccessToken"];
+
+
+async function apiRequest(path, { method = 'GET', body, signal } = {}) {
+  const token = await getAccessToken();
+  const headers = { Accept: 'application/json' };
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (token) headers.Authorization = `Bearer ${token}`;
+  let response;
+  try {
+    response = await fetch(path, {
+      method,
+      headers,
+      credentials: 'same-origin',
+      cache: 'no-store',
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal
+    });
+  } catch (cause) {
+    throw new Error(`Cannot reach Reality Engine API: ${cause.message}`);
+  }
+  let payload;
+  try { payload = await response.json(); }
+  catch { throw new Error(`Reality Engine API returned an invalid response (HTTP ${response.status}).`); }
+  if (!response.ok || payload.success === false || payload.ok === false) {
+    const error = new Error(payload.error || `Reality Engine request failed (HTTP ${response.status}).`);
+    error.status = response.status;
+    error.code = payload.code || 'REQUEST_FAILED';
+    error.payload = payload;
+    throw error;
+  }
+  return payload;
+}
+
+async function checkHealth() {
+  const response = await fetch('/api/reality?action=health', { cache: 'no-store' });
+  const payload = await response.json();
+  return { httpOk: response.ok, ...payload };
+}
+
+return { apiRequest, checkHealth };
+})();
+
+
+// Module: src/shared/world-spec.js
+__modules["src/shared/world-spec.js"] = (() => {
+
+const WORLD_SCHEMA_VERSION = '1.0.0';
+const ENGINE_VERSION = '0.1.0';
+const MAX_ENTITY_COUNT = 5000;
+const ALLOWED_SHAPES = new Set(['box', 'sphere', 'cylinder', 'capsule', 'plane', 'asset']);
+
+function createEmptyWorld({ title = 'Untitled world', domain = 'spatial.general', seed = cryptoSeed() } = {}) {
+  return {
+    schemaVersion: WORLD_SCHEMA_VERSION,
+    worldId: null,
+    worldType: domain.startsWith('business.') ? 'system' : 'spatial',
+    domain,
+    title: cleanText(title, 120),
+    seed,
+    units: { length: 'meter', time: 'second', mass: 'kg' },
+    clock: { mode: 'fixed', stepMs: 1000 / 60, elapsedSeconds: 0 },
+    environment: { gravity: [0, -9.81, 0], background: '#edf1f8', grid: true },
+    entities: [],
+    relationships: [],
+    systems: [],
+    actors: [],
+    sources: [],
+    visualProfile: { quality: 'adaptive', shadows: true },
+    simulationProfile: { physicsEnabled: true, deterministic: true }
+  };
+}
+
+function validateWorldSpec(spec, { maxEntities = MAX_ENTITY_COUNT } = {}) {
+  const errors = [];
+  if (!isObject(spec)) errors.push('WorldSpec must be an object.');
+  if (errors.length) return { valid: false, errors };
+  if (spec.schemaVersion !== WORLD_SCHEMA_VERSION) errors.push(`Unsupported schemaVersion. Expected ${WORLD_SCHEMA_VERSION}.`);
+  if (typeof spec.title !== 'string' || !spec.title.trim() || spec.title.length > 120) errors.push('title must be a non-empty string up to 120 characters.');
+  if (typeof spec.domain !== 'string' || spec.domain.length > 100) errors.push('domain must be a string up to 100 characters.');
+  if (!Array.isArray(spec.entities) || spec.entities.length > maxEntities) errors.push(`entities must be an array with at most ${maxEntities} entries.`);
+  if (Array.isArray(spec.entities)) {
+    const ids = new Set();
+    for (const entity of spec.entities) {
+      if (!isObject(entity) || typeof entity.id !== 'string' || !/^[a-zA-Z0-9_-]{1,80}$/.test(entity.id)) {
+        errors.push('Every entity must have a valid id.');
+        continue;
+      }
+      if (ids.has(entity.id)) errors.push(`Duplicate entity id: ${entity.id}`);
+      ids.add(entity.id);
+      if (!isObject(entity.components)) errors.push(`Entity ${entity.id} must have components.`);
+      const transform = entity.components?.transform;
+      if (transform) {
+        for (const key of ['position', 'rotation', 'scale']) {
+          if (transform[key] !== undefined && !validVector3(transform[key])) errors.push(`Entity ${entity.id} has an invalid transform.${key}.`);
+        }
+      }
+      const shape = entity.components?.renderable?.shape;
+      if (shape && !ALLOWED_SHAPES.has(shape)) errors.push(`Entity ${entity.id} uses unsupported shape ${shape}.`);
+      if (shape === 'asset' && (typeof entity.components?.renderable?.assetId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(entity.components.renderable.assetId))) errors.push(`Entity ${entity.id} requires a valid UUID renderable.assetId when shape is asset.`);
+      const physics = entity.components?.physics;
+      if (physics && (!['dynamic', 'fixed', 'kinematic'].includes(physics.bodyType || 'dynamic'))) errors.push(`Entity ${entity.id} has an invalid physics bodyType.`);
+    }
+  }
+  if (!Array.isArray(spec.relationships)) errors.push('relationships must be an array.');
+  if (!isObject(spec.environment)) errors.push('environment must be an object.');
+  if (spec.environment?.gravity !== undefined && !validVector3(spec.environment.gravity)) errors.push('environment.gravity must be a finite 3-vector.');
+  return { valid: errors.length === 0, errors };
+}
+
+function normalizeEntity(entity) {
+  if (!isObject(entity)) throw new TypeError('Entity must be an object.');
+  const components = isObject(entity.components) ? entity.components : {};
+  const transform = components.transform || {};
+  const renderable = components.renderable || {};
+  const physics = components.physics || {};
+  const shape = ALLOWED_SHAPES.has(renderable.shape) ? renderable.shape : 'box';
+  return {
+    id: String(entity.id || cryptoId()),
+    type: cleanText(entity.type || shape, 64),
+    name: cleanText(entity.name || `${shape[0].toUpperCase()}${shape.slice(1)}`, 100),
+    components: {
+      transform: {
+        position: vector3(transform.position, [0, 1, 0]),
+        rotation: vector3(transform.rotation, [0, 0, 0]),
+        scale: vector3(transform.scale, [1, 1, 1])
+      },
+      renderable: {
+        shape,
+        color: validHex(renderable.color) ? renderable.color : '#8796bb',
+        roughness: finiteClamp(renderable.roughness, 0, 1, 0.65),
+        metalness: finiteClamp(renderable.metalness, 0, 1, 0.08),
+        ...(typeof renderable.assetId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(renderable.assetId) ? { assetId: renderable.assetId } : {})
+      },
+      physics: {
+        enabled: physics.enabled !== false,
+        bodyType: ['dynamic', 'fixed', 'kinematic'].includes(physics.bodyType) ? physics.bodyType : 'dynamic',
+        mass: finiteClamp(physics.mass, 0.01, 100000, 1),
+        restitution: finiteClamp(physics.restitution, 0, 1, 0.15),
+        friction: finiteClamp(physics.friction, 0, 2, 0.6)
+      }
+    }
+  };
+}
+
+function cleanText(value, max = 120) {
+  if (typeof value !== 'string') return '';
+  return value.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+function validVector3(value) {
+  return Array.isArray(value) && value.length === 3 && value.every((item) => Number.isFinite(item) && Math.abs(item) <= 1e7);
+}
+
+function vector3(value, fallback) {
+  return validVector3(value) ? value.map(Number) : [...fallback];
+}
+
+function finiteClamp(value, min, max, fallback) {
+  return Number.isFinite(Number(value)) ? Math.min(max, Math.max(min, Number(value))) : fallback;
+}
+
+function validHex(value) {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value);
+}
+
+function cryptoId() {
+  return globalThis.crypto?.randomUUID?.() || `ent_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function cryptoSeed() {
+  const values = new Uint32Array(1);
+  globalThis.crypto?.getRandomValues?.(values);
+  return values[0] || Math.floor(Math.random() * 0xffffffff);
+}
+
+return { WORLD_SCHEMA_VERSION, ENGINE_VERSION, MAX_ENTITY_COUNT, createEmptyWorld, validateWorldSpec, normalizeEntity, cleanText, isObject, validVector3, vector3, finiteClamp, validHex, cryptoId };
+})();
+
+
+// Module: src/client/world-store.js
+__modules["src/client/world-store.js"] = (() => {
+const apiRequest = __modules["src/client/api.js"]["apiRequest"];
+const normalizeEntity = __modules["src/shared/world-spec.js"]["normalizeEntity"];
+
+
+class WorldStore extends EventTarget {
+  constructor() {
+    super();
+    this.world = null;
+    this.branch = null;
+    this.branches = [];
+    this.spec = null;
+    this.sequence = 0;
+    this.dirty = false;
+  }
+
+  get hasWorld() { return Boolean(this.world?.id && this.branch?.id && this.spec); }
+
+  emit(type = 'change', detail = {}) {
+    this.dispatchEvent(new CustomEvent(type, { detail: { ...detail, world: this.world, branch: this.branch, spec: this.spec, sequence: this.sequence, dirty: this.dirty } }));
+  }
+
+  async createWorld({ title, domain }) {
+    const result = await apiRequest('/api/reality', { method: 'POST', body: { action: 'create_world', title, domain } });
+    this.world = result.world;
+    this.branch = result.branch;
+    this.branches = [result.branch];
+    this.spec = result.spec;
+    this.sequence = Number(result.branch.sequence);
+    this.dirty = false;
+    this.emit('world-loaded');
+    return result;
+  }
+
+  async listWorlds() {
+    return (await apiRequest('/api/reality?action=list_worlds')).worlds;
+  }
+
+  async loadWorld(worldId, branchId) {
+    const result = await apiRequest(`/api/reality?action=load_world&worldId=${encodeURIComponent(worldId)}${branchId ? `&branchId=${encodeURIComponent(branchId)}` : ''}`);
+    this.world = result.world;
+    this.branch = result.branch;
+    this.branches = result.branches;
+    this.spec = result.spec;
+    this.sequence = Number(result.branch.sequence);
+    this.dirty = false;
+    this.emit('world-loaded');
+    return result;
+  }
+
+  async applyCommand(command) {
+    this.#requireWorld();
+    const result = await apiRequest('/api/reality', {
+      method: 'POST',
+      body: {
+        action: 'apply_command', worldId: this.world.id, branchId: this.branch.id,
+        baseVersion: this.sequence, command, idempotencyKey: crypto.randomUUID().replaceAll('-', '')
+      }
+    });
+    this.#acceptState(result.spec, result.sequence);
+    return result;
+  }
+
+  async applyCommandBatch(commands) {
+    this.#requireWorld();
+    const result = await apiRequest('/api/reality', {
+      method: 'POST', body: {
+        action: 'apply_command_batch', worldId: this.world.id, branchId: this.branch.id,
+        baseVersion: this.sequence, commands, idempotencyKey: crypto.randomUUID().replaceAll('-', '')
+      }
+    });
+    this.#acceptState(result.spec, result.sequence);
+    return result;
+  }
+
+  async compilePrompt(prompt, selectedEntityId) {
+    this.#requireWorld();
+    const result = await apiRequest('/api/reality', {
+      method: 'POST',
+      body: {
+        action: 'compile_prompt', worldId: this.world.id, branchId: this.branch.id,
+        baseVersion: this.sequence, prompt, selectedEntityId,
+        idempotencyKey: crypto.randomUUID().replaceAll('-', '')
+      }
+    });
+    this.#acceptState(result.spec, result.sequence);
+    return result;
+  }
+
+  async saveSnapshot(spec) {
+    this.#requireWorld();
+    const result = await apiRequest('/api/reality', {
+      method: 'POST', body: {
+        action: 'save_snapshot', worldId: this.world.id, branchId: this.branch.id,
+        baseVersion: this.sequence, spec
+      }
+    });
+    this.#acceptState(spec, result.sequence);
+    this.dirty = false;
+    this.emit('saved', { snapshot: result.snapshot });
+    return result;
+  }
+
+  async forkBranch(name) {
+    this.#requireWorld();
+    const result = await apiRequest('/api/reality', { method: 'POST', body: { action: 'fork_branch', worldId: this.world.id, branchId: this.branch.id, name } });
+    this.branches = [...this.branches, result.branch];
+    await this.loadWorld(this.world.id, result.branch.id);
+    return result;
+  }
+
+  async switchBranch(branchId) {
+    this.#requireWorld();
+    return this.loadWorld(this.world.id, branchId);
+  }
+
+  async compareBranches(leftBranchId, rightBranchId) {
+    this.#requireWorld();
+    return apiRequest('/api/reality', { method: 'POST', body: { action: 'compare_branches', worldId: this.world.id, leftBranchId, rightBranchId } });
+  }
+
+  async sync(afterSequence = 0) {
+    this.#requireWorld();
+    const result = await apiRequest(`/api/reality-realtime?action=sync&worldId=${encodeURIComponent(this.world.id)}&branchId=${encodeURIComponent(this.branch.id)}&afterSequence=${afterSequence}`);
+    return result;
+  }
+
+  async runFactory(input) {
+    this.#requireWorld();
+    return apiRequest('/api/reality', { method: 'POST', body: { action: 'run_factory_simulation', worldId: this.world.id, input } });
+  }
+
+  async runFactoryMonteCarlo(payload) {
+    this.#requireWorld();
+    return apiRequest('/api/reality', { method: 'POST', body: { action: 'run_factory_monte_carlo', worldId: this.world.id, ...payload } });
+  }
+
+  async issueRealtimeToken() {
+    this.#requireWorld();
+    return { disabled: true };
+  }
+
+  async createAssetUpload(file) {
+    this.#requireWorld();
+    return apiRequest('/api/reality-assets', { method: 'POST', body: { action: 'create_asset_upload', worldId: this.world.id, fileName: file.name, contentType: 'model/gltf-binary', sizeBytes: file.size } });
+  }
+
+  async completeAssetUpload(assetId) {
+    return apiRequest('/api/reality-assets', { method: 'POST', body: { action: 'complete_asset_upload', assetId } });
+  }
+
+  async getAssetDownload(assetId) {
+    return apiRequest('/api/reality-assets', { method: 'POST', body: { action: 'create_asset_download', assetId } });
+  }
+
+  acceptRemote(spec, sequence) {
+    if (this.dirty || !Number.isSafeInteger(sequence) || sequence <= this.sequence) return;
+    this.spec = spec;
+    this.sequence = sequence;
+    this.branch = { ...this.branch, sequence };
+    this.dirty = false;
+    this.emit('remote-change');
+  }
+
+  updateLocalSpec(spec) {
+    this.spec = structuredClone(spec);
+    this.dirty = true;
+    this.emit('change');
+  }
+
+  #acceptState(spec, sequence) {
+    this.spec = spec;
+    this.sequence = Number(sequence);
+    this.dirty = false;
+    this.world = { ...this.world, updated_at: new Date().toISOString() };
+    this.branch = { ...this.branch, sequence: this.sequence };
+    this.emit('change');
+  }
+
+  #requireWorld() {
+    if (!this.hasWorld) throw new Error('Create or load a world first.');
+  }
+}
+
+function createPrimitiveEntity(shape, index = 0) {
+  const id = crypto.randomUUID().replaceAll('-', '_');
+  const position = [((index % 3) - 1) * 1.6, 2.2 + Math.floor(index / 3) * 1.2, 0];
+  const colors = ['#788fca', '#79a99c', '#c69b70', '#8d83bb', '#c77e86'];
+  return normalizeEntity({
+    id, type: shape, name: `${shape[0].toUpperCase()}${shape.slice(1)} ${index + 1}`,
+    components: {
+      transform: { position, rotation: [0, 0, 0], scale: [1, 1, 1] },
+      renderable: { shape, color: colors[index % colors.length], roughness: 0.62, metalness: 0.08 },
+      physics: { enabled: true, bodyType: 'dynamic', mass: 1, restitution: 0.16, friction: 0.68 }
+    }
+  });
+}
+
+return { WorldStore, createPrimitiveEntity };
+})();
+
+
+// Module: src/client/physics/rapier-runtime.js
+__modules["src/client/physics/rapier-runtime.js"] = (() => {
+const RAPIER = __external["@dimforge/rapier3d-compat"];
+
+
+let initialized = false;
+
+class RapierRuntime {
+  constructor() {
+    this.world = null;
+    this.bodies = new Map();
+    this.initialTransforms = new Map();
+    this.accumulator = 0;
+    this.fixedStep = 1 / 60;
+    this.ready = false;
+  }
+
+  async initialize() {
+    if (!initialized) {
+      await RAPIER.init();
+      initialized = true;
+    }
+    this.ready = true;
+    return RAPIER.version?.() || 'Rapier 3D';
+  }
+
+  async loadWorld(spec) {
+    if (!this.ready) await this.initialize();
+    if (this.world) this.world.free();
+    this.bodies.clear();
+    this.initialTransforms.clear();
+    this.accumulator = 0;
+    const gravity = spec.environment?.gravity || [0, -9.81, 0];
+    this.world = new RAPIER.World({ x: gravity[0], y: gravity[1], z: gravity[2] });
+    this.world.timestep = this.fixedStep;
+
+    const ground = this.world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -0.15, 0));
+    this.world.createCollider(RAPIER.ColliderDesc.cuboid(100, 0.15, 100).setFriction(0.85), ground);
+    for (const entity of spec.entities || []) this.addEntity(entity);
+  }
+
+  addEntity(entity) {
+    if (!this.world || entity.components?.physics?.enabled === false) return;
+    const transform = entity.components.transform;
+    const physics = entity.components.physics || {};
+    const position = transform.position;
+    const rotation = transform.rotation || [0, 0, 0];
+    const shape = entity.components.renderable?.shape || 'box';
+    let descriptor;
+    const bodyType = physics.bodyType || 'dynamic';
+    if (bodyType === 'fixed') descriptor = RAPIER.RigidBodyDesc.fixed();
+    else if (bodyType === 'kinematic') descriptor = RAPIER.RigidBodyDesc.kinematicPositionBased();
+    else descriptor = RAPIER.RigidBodyDesc.dynamic();
+    descriptor = descriptor.setTranslation(position[0], position[1], position[2]).setRotation(eulerToQuaternion(rotation));
+    if (bodyType === 'dynamic') descriptor = descriptor.setLinearDamping(0.04).setAngularDamping(0.08);
+    const body = this.world.createRigidBody(descriptor);
+    if (bodyType === 'dynamic' && Number.isFinite(physics.mass) && typeof body.setAdditionalMass === 'function') {
+      body.setAdditionalMass(Math.max(0.01, physics.mass), true);
+    }
+    const scale = transform.scale || [1, 1, 1];
+    const collider = createColliderDescriptor(shape, scale)
+      .setFriction(physics.friction ?? 0.6)
+      .setRestitution(physics.restitution ?? 0.15);
+    this.world.createCollider(collider, body);
+    this.bodies.set(entity.id, body);
+    this.initialTransforms.set(entity.id, { position: [...position], rotation: [...rotation] });
+  }
+
+  step(deltaSeconds) {
+    if (!this.world) return;
+    this.accumulator += Math.min(0.1, Math.max(0, deltaSeconds));
+    let steps = 0;
+    while (this.accumulator >= this.fixedStep && steps < 5) {
+      this.world.timestep = this.fixedStep;
+      this.world.step();
+      this.accumulator -= this.fixedStep;
+      steps += 1;
+    }
+  }
+
+  readTransform(entityId) {
+    const body = this.bodies.get(entityId);
+    if (!body) return null;
+    const position = body.translation();
+    const rotation = body.rotation();
+    return {
+      position: [position.x, position.y, position.z],
+      quaternion: [rotation.x, rotation.y, rotation.z, rotation.w]
+    };
+  }
+
+  setTransform(entityId, position, rotation) {
+    const body = this.bodies.get(entityId);
+    if (!body) return;
+    body.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
+    if (rotation) body.setRotation(eulerToQuaternion(rotation), true);
+    body.setLinvel({ x: 0, y: 0, z: 0 }, true);
+    body.setAngvel({ x: 0, y: 0, z: 0 }, true);
+  }
+
+  reset() {
+    for (const [id, transform] of this.initialTransforms) this.setTransform(id, transform.position, transform.rotation);
+  }
+
+  dispose() {
+    if (this.world) this.world.free();
+    this.world = null;
+    this.bodies.clear();
+    this.initialTransforms.clear();
+  }
+}
+
+function createColliderDescriptor(shape, scale) {
+  const sx = Math.max(0.01, Math.abs(scale[0]));
+  const sy = Math.max(0.01, Math.abs(scale[1]));
+  const sz = Math.max(0.01, Math.abs(scale[2]));
+  switch (shape) {
+    case 'sphere': return RAPIER.ColliderDesc.ball(Math.max(sx, sy, sz) * 0.5);
+    case 'cylinder': return RAPIER.ColliderDesc.cylinder(sy * 0.5, Math.max(sx, sz) * 0.5);
+    case 'capsule': return RAPIER.ColliderDesc.capsule(Math.max(0.01, sy * 0.5 - sx * 0.25), sx * 0.25);
+    case 'plane': return RAPIER.ColliderDesc.cuboid(sx * 0.5, 0.05, sz * 0.5);
+    default: return RAPIER.ColliderDesc.cuboid(sx * 0.5, sy * 0.5, sz * 0.5);
+  }
+}
+
+function eulerToQuaternion(euler) {
+  const [x, y, z] = euler.map((value) => value * 0.5);
+  const c1 = Math.cos(x), c2 = Math.cos(y), c3 = Math.cos(z);
+  const s1 = Math.sin(x), s2 = Math.sin(y), s3 = Math.sin(z);
+  return {
+    x: s1 * c2 * c3 + c1 * s2 * s3,
+    y: c1 * s2 * c3 - s1 * c2 * s3,
+    z: c1 * c2 * s3 + s1 * s2 * c3,
+    w: c1 * c2 * c3 - s1 * s2 * s3
+  };
+}
+
+return { RapierRuntime };
+})();
+
+
+// Module: src/client/renderer/scene-runtime.js
+__modules["src/client/renderer/scene-runtime.js"] = (() => {
+const THREE = __external["three"];
+const OrbitControls = __external["three/addons/controls/OrbitControls.js"]["OrbitControls"];
+const RapierRuntime = __modules["src/client/physics/rapier-runtime.js"]["RapierRuntime"];
+const GLTFLoader = __external["three/addons/loaders/GLTFLoader.js"]["GLTFLoader"];
+const apiRequest = __modules["src/client/api.js"]["apiRequest"];
+
+
+class SceneRuntime {
+  constructor(canvas, { onSelect = () => {}, onPhysicsState = () => {} } = {}) {
+    this.canvas = canvas;
+    this.onSelect = onSelect;
+    this.onPhysicsState = onPhysicsState;
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color('#edf1f8');
+    this.camera = new THREE.PerspectiveCamera(48, 1, 0.1, 1000);
+    this.camera.position.set(9, 7, 11);
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance' });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.05;
+    this.controls = new OrbitControls(this.camera, canvas);
+    this.controls.enableDamping = true;
+    this.controls.dampingFactor = 0.075;
+    this.controls.target.set(0, 0.7, 0);
+    this.physics = new RapierRuntime();
+    this.entityObjects = new Map();
+    this.selectedId = null;
+    this.worldSpec = null;
+    this.physicsRunning = false;
+    this.elapsed = 0;
+    this.lastTime = 0;
+    this.frameHandle = 0;
+    this.gridVisible = true;
+    this.raycaster = new THREE.Raycaster();
+    this.pointer = new THREE.Vector2();
+    this.pointerDown = null;
+    this.#setupScene();
+    this.#bindPointer();
+    this.resizeObserver = new ResizeObserver(() => this.resize());
+    this.resizeObserver.observe(canvas.parentElement);
+    this.resize();
+    this.animate = this.animate.bind(this);
+    this.frameHandle = requestAnimationFrame(this.animate);
+  }
+
+  async loadWorld(spec) {
+    this.worldSpec = structuredClone(spec);
+    this.scene.background = new THREE.Color(spec.environment?.background || '#edf1f8');
+    this.#disposeEntities();
+    for (const entity of spec.entities || []) this.#createMesh(entity);
+    await this.physics.loadWorld(spec);
+    this.setSelected(this.selectedId && this.entityObjects.has(this.selectedId) ? this.selectedId : null);
+    this.#updateEmptyState();
+  }
+
+  addEntity(entity) {
+    this.worldSpec.entities.push(structuredClone(entity));
+    this.#createMesh(entity);
+    this.physics.addEntity(entity);
+    this.#updateEmptyState();
+  }
+
+  updateEntity(entity) {
+    const current = this.worldSpec.entities.find((item) => item.id === entity.id);
+    if (!current) return;
+    Object.assign(current, structuredClone(entity));
+    const mesh = this.entityObjects.get(entity.id);
+    if (mesh) {
+      mesh.position.fromArray(entity.components.transform.position);
+      mesh.rotation.set(...entity.components.transform.rotation);
+      mesh.scale.fromArray(entity.components.transform.scale);
+      if (entity.components.renderable.color) mesh.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        for (const material of materials) if (material.color) material.color.set(entity.components.renderable.color);
+      });
+      this.physics.setTransform(entity.id, entity.components.transform.position, entity.components.transform.rotation);
+    }
+  }
+
+  setSelected(entityId) {
+    this.selectedId = entityId;
+    for (const [id, object] of this.entityObjects) {
+      const selected = id === entityId;
+      object.traverse((child) => {
+        if (!child.isMesh || !child.material) return;
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        for (const material of materials) if (material.emissive) { material.emissive.set(selected ? '#2439a8' : '#000000'); material.emissiveIntensity = selected ? 0.1 : 0; }
+      });
+    }
+    const entity = this.worldSpec?.entities.find((item) => item.id === entityId) || null;
+    this.onSelect(entity);
+  }
+
+  setEntityTransform(entityId, position, rotation) {
+    const mesh = this.entityObjects.get(entityId);
+    if (!mesh) return;
+    mesh.position.fromArray(position);
+    if (rotation) mesh.rotation.set(...rotation);
+    this.physics.setTransform(entityId, position, rotation);
+  }
+
+  exportSpec() {
+    const spec = structuredClone(this.worldSpec);
+    for (const entity of spec.entities) {
+      const mesh = this.entityObjects.get(entity.id);
+      if (!mesh) continue;
+      entity.components.transform.position = mesh.position.toArray().map(round3);
+      entity.components.transform.rotation = [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z].map(round3);
+      entity.components.transform.scale = mesh.scale.toArray().map(round3);
+    }
+    spec.clock.elapsedSeconds = round3(this.elapsed);
+    return spec;
+  }
+
+  startPhysics() {
+    this.physicsRunning = true;
+    this.onPhysicsState(true);
+  }
+
+  pausePhysics() {
+    this.physicsRunning = false;
+    this.onPhysicsState(false);
+  }
+
+  resetPhysics() {
+    this.physics.reset();
+    this.elapsed = 0;
+    this.pausePhysics();
+    this.#syncMeshesFromPhysics();
+  }
+
+  resetCamera() {
+    this.camera.position.set(9, 7, 11);
+    this.controls.target.set(0, 0.7, 0);
+    this.controls.update();
+  }
+
+  toggleGrid() {
+    this.gridVisible = !this.gridVisible;
+    this.grid.visible = this.gridVisible;
+  }
+
+  resize() {
+    const rect = this.canvas.parentElement.getBoundingClientRect();
+    const width = Math.max(1, Math.floor(rect.width));
+    const height = Math.max(1, Math.floor(rect.height));
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height, false);
+  }
+
+  dispose() {
+    cancelAnimationFrame(this.frameHandle);
+    this.resizeObserver?.disconnect();
+    this.controls.dispose();
+    this.physics.dispose();
+    this.#disposeEntities();
+    this.renderer.dispose();
+  }
+
+  animate(timestamp) {
+    this.frameHandle = requestAnimationFrame(this.animate);
+    const delta = this.lastTime ? Math.min(0.05, (timestamp - this.lastTime) / 1000) : 0;
+    this.lastTime = timestamp;
+    if (this.physicsRunning) {
+      this.physics.step(delta);
+      this.elapsed += delta;
+      this.#syncMeshesFromPhysics();
+    }
+    this.controls.update();
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  #setupScene() {
+    const hemi = new THREE.HemisphereLight('#ffffff', '#aeb9cc', 2.0);
+    this.scene.add(hemi);
+    const key = new THREE.DirectionalLight('#ffffff', 3.1);
+    key.position.set(8, 14, 9);
+    key.castShadow = true;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.left = -20;
+    key.shadow.camera.right = 20;
+    key.shadow.camera.top = 20;
+    key.shadow.camera.bottom = -20;
+    key.shadow.bias = -0.0002;
+    this.scene.add(key);
+    const fill = new THREE.DirectionalLight('#dce5ff', 0.9);
+    fill.position.set(-9, 5, -5);
+    this.scene.add(fill);
+
+    const floorMaterial = new THREE.MeshStandardMaterial({ color: '#f4f6fb', roughness: 0.95, metalness: 0 });
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), floorMaterial);
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -0.001;
+    floor.receiveShadow = true;
+    this.scene.add(floor);
+    this.grid = new THREE.GridHelper(100, 100, '#cbd3e1', '#dde3ed');
+    this.grid.position.y = 0.002;
+    this.scene.add(this.grid);
+    const axes = new THREE.AxesHelper(1.3);
+    axes.position.set(-0.01, 0.003, -0.01);
+    this.scene.add(axes);
+  }
+
+  #createMesh(entity) {
+    const component = entity.components || {};
+    const transform = component.transform || {};
+    const renderable = component.renderable || {};
+    const shape = renderable.shape || 'box';
+    const geometry = makeGeometry(shape);
+    const material = new THREE.MeshStandardMaterial({
+      color: renderable.color || '#8796bb',
+      roughness: renderable.roughness ?? 0.65,
+      metalness: renderable.metalness ?? 0.08,
+      emissive: '#000000'
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = entity.name || entity.id;
+    mesh.position.fromArray(transform.position || [0, 1, 0]);
+    mesh.rotation.set(...(transform.rotation || [0, 0, 0]));
+    mesh.scale.fromArray(transform.scale || [1, 1, 1]);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.userData.entityId = entity.id;
+    this.scene.add(mesh);
+    this.entityObjects.set(entity.id, mesh);
+    if (shape === 'asset' && renderable.assetId) this.#hydrateAsset(entity, mesh).catch((error) => console.warn('[reality-asset]', error.message));
+  }
+
+  async #hydrateAsset(entity, placeholder) {
+    const assetId = entity.components.renderable.assetId;
+    const { downloadUrl } = await apiRequest('/api/reality', { method: 'POST', body: { action: 'create_asset_download', assetId } });
+    const loader = new GLTFLoader();
+    const gltf = await loader.loadAsync(downloadUrl);
+    if (this.entityObjects.get(entity.id) !== placeholder) return;
+    const root = gltf.scene;
+    root.position.copy(placeholder.position);
+    root.rotation.copy(placeholder.rotation);
+    root.scale.copy(placeholder.scale);
+    root.userData.entityId = entity.id;
+    root.traverse((child) => { if (child.isMesh) { child.userData.entityId = entity.id; child.castShadow = true; child.receiveShadow = true; } });
+    this.scene.add(root);
+    this.scene.remove(placeholder);
+    placeholder.geometry.dispose();
+    placeholder.material.dispose();
+    this.entityObjects.set(entity.id, root);
+    if (this.selectedId === entity.id) this.setSelected(entity.id);
+  }
+
+  #disposeEntities() {
+    for (const object of this.entityObjects.values()) {
+      this.scene.remove(object);
+      object.traverse((child) => {
+        if (!child.isMesh) return;
+        child.geometry?.dispose();
+        const materials = Array.isArray(child.material) ? child.material : [child.material];
+        for (const material of materials) {
+          if (!material) continue;
+          for (const key of Object.keys(material)) if (material[key]?.isTexture) material[key].dispose();
+          material.dispose();
+        }
+      });
+    }
+    this.entityObjects.clear();
+  }
+
+  #syncMeshesFromPhysics() {
+    for (const [id, mesh] of this.entityObjects) {
+      const transform = this.physics.readTransform(id);
+      if (!transform) continue;
+      mesh.position.set(...transform.position);
+      mesh.quaternion.set(...transform.quaternion);
+    }
+  }
+
+  #bindPointer() {
+    this.canvas.addEventListener('pointerdown', (event) => { this.pointerDown = { x: event.clientX, y: event.clientY }; });
+    this.canvas.addEventListener('pointerup', (event) => {
+      if (!this.pointerDown) return;
+      const moved = Math.hypot(event.clientX - this.pointerDown.x, event.clientY - this.pointerDown.y);
+      this.pointerDown = null;
+      if (moved > 5) return;
+      const rect = this.canvas.getBoundingClientRect();
+      this.pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      this.pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      this.raycaster.setFromCamera(this.pointer, this.camera);
+      const hits = this.raycaster.intersectObjects([...this.entityObjects.values()], true);
+      this.setSelected(hits.length ? hits[0].object.userData.entityId : null);
+    });
+  }
+
+  #updateEmptyState() {
+    const empty = document.getElementById('viewport-empty');
+    if (empty) empty.classList.toggle('hidden', (this.worldSpec?.entities?.length || 0) > 0);
+  }
+}
+
+function makeGeometry(shape) {
+  switch (shape) {
+    case 'sphere': return new THREE.SphereGeometry(0.5, 40, 28);
+    case 'cylinder': return new THREE.CylinderGeometry(0.5, 0.5, 1, 40, 1);
+    case 'capsule': return new THREE.CapsuleGeometry(0.3, 0.6, 6, 16);
+    case 'plane': return new THREE.BoxGeometry(1, 0.1, 1);
+    default: return new THREE.BoxGeometry(1, 1, 1, 1, 1, 1);
+  }
+}
+function round3(value) { return Number(value.toFixed(3)); }
+
+return { SceneRuntime };
+})();
+
+
+// Module: src/client/ui/notifications.js
+__modules["src/client/ui/notifications.js"] = (() => {
+
+function toast(message, type = 'info', duration = 3600) {
+  const root = document.getElementById('toast-root');
+  if (!root) return;
+  const node = document.createElement('div');
+  node.className = `toast ${type === 'error' ? 'error' : type === 'success' ? 'success' : ''}`;
+  node.textContent = String(message);
+  root.append(node);
+  window.setTimeout(() => node.remove(), duration);
+}
+
+return { toast };
+})();
+
+
+// Module: src/client/ui/controller.js
+__modules["src/client/ui/controller.js"] = (() => {
+const WorldStore = __modules["src/client/world-store.js"]["WorldStore"];
+const createPrimitiveEntity = __modules["src/client/world-store.js"]["createPrimitiveEntity"];
+const SceneRuntime = __modules["src/client/renderer/scene-runtime.js"]["SceneRuntime"];
+const checkHealth = __modules["src/client/api.js"]["checkHealth"];
+const toast = __modules["src/client/ui/notifications.js"]["toast"];
+
+
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+
+class RealityController {
+  constructor() {
+    this.store = new WorldStore();
+    this.scene = new SceneRuntime($('#world-canvas'), {
+      onSelect: (entity) => this.renderInspector(entity),
+      onPhysicsState: (running) => this.renderPhysicsState(running)
+    });
+    this.machineInputs = [];
+    this.realtimeSocket = null;
+    this.syncTimer = null;
+    this.reconnectTimer = null;
+    this.reconnectDelay = 1000;
+    this.disposed = false;
+    this.#wireStore();
+    this.#wireUI();
+  }
+
+  async initialize() {
+    await this.checkHealth();
+    this.renderAll();
+    try {
+      await this.store.listWorlds();
+      $('#connection-status').textContent = 'API connected';
+    } catch (error) {
+      $('#connection-status').textContent = 'API unavailable';
+      toast(error.message, 'error', 6000);
+    }
+  }
+
+  async checkHealth() {
+    try {
+      const health = await checkHealth();
+      const db = health.checks?.database === 'ok';
+      $('#connection-status').textContent = db ? 'Connected' : 'Setup required';
+      $('#ai-provider-status').textContent = health.checks?.modelGateway === 'configured' ? 'Model gateway configured' : 'Model gateway not configured';
+      $('#prompt-hint').textContent = health.checks?.modelGateway === 'configured'
+        ? 'Commands are compiled by your configured ArixAI model gateway.'
+        : 'Configure the existing ArixAI model gateway on the server to enable AI compilation.';
+      return health;
+    } catch {
+      $('#connection-status').textContent = 'API unavailable';
+      return null;
+    }
+  }
+
+  #wireStore() {
+    this.store.addEventListener('world-loaded', async () => {
+      await this.scene.loadWorld(this.store.spec);
+      this.scene.pausePhysics();
+      this.renderAll();
+      this.connectRealtime().catch(() => {});
+    });
+    this.store.addEventListener('change', () => this.renderAll());
+    this.store.addEventListener('saved', () => toast('World snapshot saved to the database.', 'success'));
+  }
+
+  #wireUI() {
+    $('#new-world').addEventListener('click', () => this.openCreateWorldModal());
+    $('#empty-create-world').addEventListener('click', () => this.openCreateWorldModal());
+    $('#open-worlds').addEventListener('click', () => this.openWorldsModal());
+    $('#import-asset').addEventListener('click', () => $('#asset-input').click());
+    $('#asset-input').addEventListener('change', (event) => this.importGlb(event.target.files?.[0]));
+    $('#add-entity').addEventListener('click', () => this.addPrimitive('box'));
+    $$('[data-add]').forEach((button) => button.addEventListener('click', () => this.addPrimitive(button.dataset.add)));
+    $('#save-world').addEventListener('click', () => this.saveWorld());
+    $('#physics-play').addEventListener('click', () => this.scene.startPhysics());
+    $('#physics-pause').addEventListener('click', () => this.scene.pausePhysics());
+    $('#physics-reset').addEventListener('click', () => { this.scene.resetPhysics(); this.store.updateLocalSpec(this.scene.exportSpec()); toast('Physics bodies reset. Save to persist the reset state.'); });
+    $('#camera-home').addEventListener('click', () => this.scene.resetCamera());
+    $('#toggle-grid').addEventListener('click', () => this.scene.toggleGrid());
+    $('#send-command').addEventListener('click', () => this.compilePrompt());
+    $('#world-prompt').addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.compilePrompt(); }
+    });
+    $$('.view-tab').forEach((tab) => tab.addEventListener('click', () => this.switchView(tab.dataset.view)));
+    $$('.dock-tab').forEach((tab) => tab.addEventListener('click', () => this.showDock(tab.dataset.dock)));
+    window.addEventListener('beforeunload', () => { this.disposed = true; this.disconnectRealtime(); });
+    window.setInterval(() => this.updateClock(), 100);
+  }
+
+  async addPrimitive(shape) {
+    if (!this.store.hasWorld) return this.openCreateWorldModal();
+    try {
+      const entity = createPrimitiveEntity(shape, this.store.spec.entities.length);
+      const result = await this.store.applyCommand({ type: 'CREATE_ENTITY', entity });
+      await this.scene.loadWorld(result.spec);
+      this.scene.setSelected(entity.id);
+      toast(`${entity.name} created and persisted.`, 'success');
+    } catch (error) { this.showError(error); }
+  }
+
+  async saveWorld() {
+    if (!this.store.hasWorld) return;
+    try {
+      this.scene.pausePhysics();
+      const spec = this.scene.exportSpec();
+      await this.store.saveSnapshot(spec);
+      $('#save-status').textContent = 'Saved';
+    } catch (error) { this.showError(error); }
+  }
+
+
+  async importGlb(file) {
+    if (!file) return;
+    if (!this.store.hasWorld) return this.openCreateWorldModal();
+    if (!file.name.toLowerCase().endsWith('.glb')) return toast('Only binary .glb files are supported in this release.', 'error');
+    try {
+      toast('Requesting a secure asset upload URL…');
+      const intent = await this.store.createAssetUpload(file);
+      const upload = await fetch(intent.uploadUrl, { method: 'PUT', headers: intent.headers, body: file });
+      if (!upload.ok) throw new Error(`Object storage upload failed (HTTP ${upload.status}). Check bucket CORS and credentials.`);
+      const completed = await this.store.completeAssetUpload(intent.assetId);
+      const entity = createPrimitiveEntity('box', this.store.spec.entities.length);
+      entity.type = 'asset';
+      entity.name = file.name.replace(/\.glb$/i, '').slice(0, 100) || 'Imported model';
+      entity.components.renderable = { ...entity.components.renderable, shape: 'asset', assetId: intent.assetId };
+      const result = await this.store.applyCommand({ type: 'CREATE_ENTITY', entity });
+      await this.scene.loadWorld(result.spec);
+      this.scene.setSelected(entity.id);
+      $('#asset-input').value = '';
+      toast(`GLB uploaded, verified and added to this world. ${completed.status}`, 'success', 5000);
+    } catch (error) { this.showError(error); }
+  }
+
+  async compilePrompt() {
+    const prompt = $('#world-prompt').value.trim();
+    if (!prompt) return;
+    if (!this.store.hasWorld) { this.openCreateWorldModal(); return; }
+    const button = $('#send-command');
+    button.disabled = true;
+    button.textContent = 'Compiling…';
+    try {
+      this.scene.pausePhysics();
+      const result = await this.store.compilePrompt(prompt, this.scene.selectedId);
+      await this.scene.loadWorld(result.spec);
+      $('#world-prompt').value = '';
+      $('#world-intelligence').querySelector('p').textContent = result.explanation || 'World updates applied.';
+      if (result.compiledTitle && !this.store.spec.title) this.store.spec.title = result.compiledTitle;
+      toast('Structured world commands validated and applied.', 'success');
+    } catch (error) { this.showError(error); }
+    finally { button.disabled = false; button.innerHTML = 'Run command <span>↗</span>'; }
+  }
+
+  async openCreateWorldModal() {
+    const body = `
+      <div class="modal-backdrop"><form class="modal" id="create-world-form">
+        <h2>Create a persistent world</h2>
+        <p>Start with an empty world. Add entities directly or use the configured ArixAI World Compiler.</p>
+        <label class="field-label" for="new-world-title">World name</label>
+        <input class="modal-input" id="new-world-title" maxlength="120" required placeholder="e.g. Factory layout study" value="" />
+        <label class="field-label" for="new-world-domain" style="margin-top:12px">World domain</label>
+        <select class="modal-input" id="new-world-domain"><option value="spatial.general">Spatial environment</option><option value="business.manufacturing">Manufacturing operations</option><option value="science.experiment">Scientific experiment</option><option value="software.architecture">Software system</option></select>
+        <div class="modal-actions"><button type="button" class="button button-quiet" data-close>Cancel</button><button type="submit" class="button button-primary">Create world</button></div>
+      </form></div>`;
+    this.showModal(body);
+    $('#new-world-title').focus();
+    $('#create-world-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const title = $('#new-world-title').value.trim();
+      const domain = $('#new-world-domain').value;
+      const submit = $('button[type="submit"]', event.currentTarget);
+      submit.disabled = true;
+      try {
+        await this.store.createWorld({ title, domain });
+        this.closeModal();
+        toast('World created and stored in your database.', 'success');
+      } catch (error) { submit.disabled = false; this.showError(error); }
+    });
+  }
+
+  async openWorldsModal() {
+    try {
+      const worlds = await this.store.listWorlds();
+      const items = worlds.length ? worlds.map((world) => `<button class="world-card" data-world-id="${escapeAttr(world.id)}"><span><strong>${escapeHtml(world.title)}</strong><small>${escapeHtml(world.domain)} · updated ${new Date(world.updated_at).toLocaleString()}</small></span><span>↗</span></button>`).join('') : '<div class="empty-state">No saved worlds yet. Create your first world to begin.</div>';
+      this.showModal(`<div class="modal-backdrop"><div class="modal"><h2>Your worlds</h2><p>Load a persistent world from your account.</p><div class="world-list">${items}</div><div class="modal-actions"><button class="button button-quiet" data-close>Close</button><button class="button button-primary" id="modal-new-world">New world</button></div></div></div>`);
+      $$('[data-world-id]').forEach((button) => button.addEventListener('click', async () => {
+        button.disabled = true;
+        try { await this.store.loadWorld(button.dataset.worldId); this.closeModal(); }
+        catch (error) { button.disabled = false; this.showError(error); }
+      }));
+      $('#modal-new-world').addEventListener('click', () => this.openCreateWorldModal());
+    } catch (error) { this.showError(error); }
+  }
+
+  renderAll() {
+    const { spec, world, branch, sequence, dirty } = this.store;
+    $('#world-title').textContent = world?.title || 'Untitled world';
+    $('#save-world').disabled = !this.store.hasWorld;
+    $('#import-asset').disabled = !this.store.hasWorld;
+    $('#save-status').textContent = dirty ? 'Unsaved changes' : this.store.hasWorld ? 'Saved' : 'Not saved';
+    $('#entity-count').textContent = `${spec?.entities?.length || 0} entities`;
+    $('#metric-entities').textContent = String(spec?.entities?.length || 0);
+    $('#metric-version').textContent = String(sequence || 0);
+    $('#metric-branch').textContent = branch?.name || 'Main';
+    $('#sequence-label').textContent = `SEQ ${sequence || 0}`;
+    $('#world-mode').textContent = spec?.domain || 'Spatial world';
+    $('#send-command').disabled = !this.store.hasWorld;
+    this.renderEntityList();
+    if (this.scene.selectedId) this.renderInspector(spec?.entities?.find((entity) => entity.id === this.scene.selectedId) || null);
+    if (!this.store.hasWorld) $('#viewport-empty').classList.remove('hidden');
+  }
+
+  renderEntityList() {
+    const list = $('#entity-list');
+    const entities = this.store.spec?.entities || [];
+    if (!this.store.hasWorld) { list.innerHTML = '<div class="empty-state">Create a world to begin.</div>'; return; }
+    if (!entities.length) { list.innerHTML = '<div class="empty-state">No entities yet.<br/>Use the object tools above to add one.</div>'; return; }
+    list.innerHTML = entities.map((entity) => `<div class="entity-row ${entity.id === this.scene.selectedId ? 'selected' : ''}" data-entity-id="${escapeAttr(entity.id)}"><span class="entity-type-icon">${shapeGlyph(entity.components?.renderable?.shape)}</span><span class="entity-name">${escapeHtml(entity.name)}</span><span class="entity-kind">${escapeHtml(entity.components?.renderable?.shape || entity.type)}</span></div>`).join('');
+    $$('[data-entity-id]', list).forEach((row) => row.addEventListener('click', () => this.scene.setSelected(row.dataset.entityId)));
+  }
+
+  renderInspector(entity) {
+    const root = $('#inspector-content');
+    if (!entity) { root.innerHTML = '<div class="empty-state">Select an entity to inspect its properties.</div>'; this.renderEntityList(); return; }
+    const transform = entity.components.transform;
+    const renderable = entity.components.renderable;
+    const physics = entity.components.physics;
+    root.innerHTML = `
+      <div class="inspector-section"><h3>Identity</h3>
+        <label class="field-label">Name</label><input id="inspector-name" class="field-input" maxlength="100" value="${escapeAttr(entity.name)}" />
+      </div>
+      <div class="inspector-section"><h3>Transform · metres</h3><div class="field-grid">
+        ${['X','Y','Z'].map((axis,i)=>`<label><span class="field-label">${axis}</span><input class="field-input" type="number" step="0.1" id="transform-${axis.toLowerCase()}" value="${Number(transform.position[i]).toFixed(2)}" /></label>`).join('')}
+        <div class="field-full"><button class="button button-quiet" id="apply-transform" style="width:100%;margin-top:4px">Apply position</button></div>
+      </div></div>
+      <div class="inspector-section"><h3>Appearance</h3><div class="field-grid">
+        <label class="field-full"><span class="field-label">Material color</span><input class="field-input" type="color" id="inspector-color" value="${escapeAttr(renderable.color)}" style="height:34px;padding:3px" /></label>
+      </div></div>
+      <div class="inspector-section"><h3>Physics</h3><div class="field-grid">
+        <label class="field-full"><span class="field-label">Body type</span><select id="inspector-body-type" class="field-input"><option value="dynamic" ${physics.bodyType==='dynamic'?'selected':''}>Dynamic</option><option value="fixed" ${physics.bodyType==='fixed'?'selected':''}>Fixed</option><option value="kinematic" ${physics.bodyType==='kinematic'?'selected':''}>Kinematic</option></select></label>
+        <label><span class="field-label">Mass (kg)</span><input id="inspector-mass" class="field-input" type="number" min="0.01" max="100000" step="0.1" value="${physics.mass}" /></label>
+        <label><span class="field-label">Friction</span><input id="inspector-friction" class="field-input" type="number" min="0" max="2" step="0.05" value="${physics.friction}" /></label>
+        <label><span class="field-label">Bounce</span><input id="inspector-restitution" class="field-input" type="number" min="0" max="1" step="0.05" value="${physics.restitution}" /></label>
+        <div class="field-full"><button class="button button-quiet" id="apply-physics" style="width:100%;margin-top:4px">Apply physics</button></div>
+      </div></div>
+      <button id="delete-entity" class="button button-quiet" style="width:100%;color:#b55363;border-color:#f0dfe2">Remove entity</button>`;
+    $('#apply-transform').addEventListener('click', () => this.commitTransform(entity));
+    $('#inspector-name').addEventListener('change', (event) => this.commitProperty(entity, 'name', event.target.value));
+    $('#inspector-color').addEventListener('change', (event) => this.commitProperty(entity, 'color', event.target.value));
+    $('#apply-physics').addEventListener('click', () => this.commitPhysics(entity));
+    $('#delete-entity').addEventListener('click', () => this.deleteEntity(entity));
+    this.renderEntityList();
+  }
+
+  async commitTransform(entity) {
+    try {
+      const position = ['x','y','z'].map((axis) => Number($(`#transform-${axis}`).value));
+      if (!position.every(Number.isFinite)) throw new Error('Position values must be valid numbers.');
+      const result = await this.store.applyCommand({ type: 'ENTITY_TRANSFORM', entityId: entity.id, changes: { position } });
+      await this.scene.loadWorld(result.spec);
+      this.scene.setSelected(entity.id);
+      toast('Transform updated and persisted.', 'success');
+    } catch (error) { this.showError(error); }
+  }
+
+  async commitProperty(entity, property, value) {
+    try {
+      const result = await this.store.applyCommand({ type: 'SET_PROPERTY', entityId: entity.id, property, value });
+      await this.scene.loadWorld(result.spec);
+      this.scene.setSelected(entity.id);
+    } catch (error) { this.showError(error); }
+  }
+
+  async commitPhysics(entity) {
+    try {
+      const mass = Number($('#inspector-mass').value);
+      const friction = Number($('#inspector-friction').value);
+      const restitution = Number($('#inspector-restitution').value);
+      const bodyType = $('#inspector-body-type').value;
+      if (![mass, friction, restitution].every(Number.isFinite)) throw new Error('Physics values must be valid numbers.');
+      const commands = [
+        ['mass', mass], ['friction', friction], ['restitution', restitution], ['bodyType', bodyType]
+      ].map(([property, value]) => ({ type: 'SET_PROPERTY', entityId: entity.id, property, value }));
+      await this.store.applyCommandBatch(commands);
+      await this.scene.loadWorld(this.store.spec);
+      this.scene.setSelected(entity.id);
+      toast('Physics properties updated.', 'success');
+    } catch (error) { this.showError(error); }
+  }
+
+  async deleteEntity(entity) {
+    if (!window.confirm(`Remove “${entity.name}” from this world?`)) return;
+    try {
+      await this.store.applyCommand({ type: 'REMOVE_ENTITY', entityId: entity.id });
+      this.scene.selectedId = null;
+      await this.scene.loadWorld(this.store.spec);
+      toast('Entity removed.', 'success');
+    } catch (error) { this.showError(error); }
+  }
+
+  switchView(view) {
+    $$('.view-tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.view === view));
+    if (view === 'system') this.showDock('simulation');
+    else this.showDock('command');
+    $('#world-mode').textContent = view === 'system' ? 'System model workspace' : this.store.spec?.domain || 'Spatial world';
+  }
+
+  showDock(type) {
+    $$('.dock-tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.dock === type));
+    const root = $('#dock-content');
+    if (type === 'command') {
+      root.innerHTML = `<div class="command-composer"><div class="command-mark">✦</div><textarea id="world-prompt" rows="1" placeholder="Describe what you want to create or change in this world…" maxlength="4000"></textarea><div class="composer-actions"><span id="prompt-hint">AI compilation requires your ArixAI model gateway configuration.</span><button id="send-command" class="button button-primary" ${this.store.hasWorld?'':'disabled'}>Run command <span>↗</span></button></div></div>`;
+      $('#send-command').addEventListener('click', () => this.compilePrompt());
+      $('#world-prompt').addEventListener('keydown', (event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.compilePrompt(); } });
+      return;
+    }
+    if (type === 'simulation') this.renderSimulationDock(root);
+    if (type === 'scenarios') this.renderScenariosDock(root);
+    if (type === 'history') this.renderHistoryDock(root);
+  }
+
+  renderSimulationDock(root) {
+    root.innerHTML = `
+      <div class="dock-panel-grid">
+        <div class="dock-card"><label>Simulation horizon (hours)</label><input id="sim-hours" type="number" min="0.01" max="8760" step="0.25" placeholder="Enter hours" /></div>
+        <div class="dock-card"><label>Demand (units)</label><input id="sim-demand" type="number" min="0" step="1" placeholder="Enter demand" /></div>
+        <div class="dock-card"><label>Available inventory (material units)</label><input id="sim-inventory" type="number" min="0" step="1" placeholder="Enter inventory" /></div>
+        <div class="dock-card"><label>Material per finished unit</label><input id="sim-material-per" type="number" min="0" step="0.01" placeholder="Enter ratio" /></div>
+        <div class="dock-card"><label>Selling price / unit (INR)</label><input id="sim-price" type="number" min="0" step="0.01" placeholder="Enter price" /></div>
+        <div class="dock-card"><label>Material cost / unit (INR)</label><input id="sim-material-cost" type="number" min="0" step="0.01" placeholder="Enter cost" /></div>
+        <div class="dock-card"><label>Labor cost / hour (INR)</label><input id="sim-labor-cost" type="number" min="0" step="0.01" placeholder="Enter cost" /></div>
+        <div class="dock-card"><label>Labor hours charged</label><input id="sim-labor-hours" type="number" min="0" step="0.25" placeholder="Enter labor hours" /></div>
+        <div class="dock-card"><label>Machine capacity / hour</label><input id="sim-machine-capacity" type="number" min="0" step="0.1" placeholder="Enter capacity" /><button class="button button-quiet" id="add-sim-machine">Add machine</button></div>
+      </div>
+      <div class="result-note"><strong>Machine inputs:</strong> <span id="sim-machine-list">No machines added. Add at least one machine with a capacity.</span></div>
+      <div style="display:flex;justify-content:flex-end;padding-bottom:6px"><button class="button button-primary" id="run-sim" ${this.store.hasWorld?'':'disabled'}>Run deterministic model</button></div>
+      <div id="simulation-results"></div>`;
+    $('#add-sim-machine').addEventListener('click', () => {
+      const capacity = Number($('#sim-machine-capacity').value);
+      if (!Number.isFinite(capacity) || capacity < 0) return toast('Enter a valid non-negative machine capacity.', 'error');
+      const id = `machine-${this.machineInputs.length + 1}`;
+      this.machineInputs.push({ id, capacityPerHour: capacity, efficiency: 1, available: true });
+      $('#sim-machine-capacity').value = '';
+      $('#sim-machine-list').textContent = this.machineInputs.map((item) => `${item.id}: ${item.capacityPerHour} units/hour at 100% efficiency`).join(' · ');
+    });
+    $('#run-sim').addEventListener('click', () => this.runSimulation());
+  }
+
+  async runSimulation() {
+    try {
+      const fields = ['hours','demand','inventory','material-per','price','material-cost','labor-cost','labor-hours'];
+      const values = fields.map((name) => Number($(`#sim-${name}`).value));
+      const input = {
+        hours: values[0], demandUnits: values[1], inventoryUnits: values[2], materialPerUnit: values[3],
+        sellingPricePerUnit: values[4], materialCostPerUnit: values[5], laborCostPerHour: values[6], laborHours: values[7],
+        machines: this.machineInputs
+      };
+      const result = await this.store.runFactory(input);
+      const out = result.result.outputs;
+      $('#simulation-results').innerHTML = `
+        <div class="result-grid">
+          ${metric('Produced units', out.producedUnits)}${metric('Unmet demand', out.unmetDemandUnits)}${metric('Revenue (INR)', out.revenue)}${metric('Contribution (INR)', out.contributionBeforeOverheads)}
+        </div>
+        <div class="result-note"><strong>Method:</strong> ${escapeHtml(result.result.method)}<br/><strong>Material cost:</strong> ₹${formatNum(out.materialCost)} · <strong>Labor cost:</strong> ₹${formatNum(out.laborCost)} · <strong>Inventory remaining:</strong> ${formatNum(out.inventoryRemaining)}<br/><strong>Assumptions:</strong> ${result.result.assumptions.map(escapeHtml).join(' ')}</div>`;
+    } catch (error) { this.showError(error); }
+  }
+
+  async renderScenariosDock(root) {
+    if (!this.store.hasWorld) return;
+    const branches = this.store.branches || [];
+    root.innerHTML = `<div style="display:flex;gap:8px;align-items:center;padding:11px 0"><input class="modal-input" id="branch-name" placeholder="Name this alternative future" maxlength="100" style="max-width:320px" /><button class="button button-primary" id="fork-branch">Create branch</button></div><div id="branch-list"></div><div class="result-note">Each branch starts from the current saved state. Changes made in a branch do not mutate its parent branch.</div>`;
+    this.renderBranchList(branches);
+    $('#fork-branch').addEventListener('click', async () => {
+      const name = $('#branch-name').value.trim();
+      if (!name) return toast('Enter a name for the new scenario branch.', 'error');
+      try { await this.store.forkBranch(name); toast('Scenario branch created.', 'success'); this.renderScenariosDock(root); }
+      catch (error) { this.showError(error); }
+    });
+  }
+
+  renderBranchList(branches) {
+    const root = $('#branch-list');
+    if (!root) return;
+    root.innerHTML = branches.map((branch) => `<div class="branch-row"><span><strong>${escapeHtml(branch.name)}</strong> ${branch.id === this.store.branch?.id ? '<span style="color:#566be9">· current</span>' : ''}</span><button data-branch-id="${escapeAttr(branch.id)}">Open</button></div>`).join('');
+    $$('[data-branch-id]', root).forEach((button) => button.addEventListener('click', async () => {
+      try { await this.store.switchBranch(button.dataset.branchId); this.renderScenariosDock($('#dock-content')); }
+      catch (error) { this.showError(error); }
+    }));
+  }
+
+  async renderHistoryDock(root) {
+    if (!this.store.hasWorld) return;
+    root.innerHTML = '<div class="result-note">Loading persisted event history…</div>';
+    try {
+      const result = await this.store.sync(0);
+      root.innerHTML = result.events.length
+        ? result.events.slice(-30).reverse().map((event) => `<div class="event-row"><span><strong>${escapeHtml(event.event_type)}</strong><small style="display:block;color:#a0a9b8;margin-top:3px">${new Date(event.created_at).toLocaleString()}</small></span><span>SEQ ${event.sequence}</span></div>`).join('')
+        : '<div class="empty-state">No state-changing events recorded yet.</div>';
+    } catch (error) { this.showError(error); }
+  }
+
+  renderPhysicsState(running) {
+    $('#physics-state').textContent = running ? 'Running' : 'Paused';
+    if (running && this.store.hasWorld && this.scene?.worldSpec) this.store.updateLocalSpec(this.scene.exportSpec());
+    $('#physics-state').style.color = running ? '#15966e' : '#9aa4b6';
+    $('#physics-state').style.background = running ? '#eaf8f2' : '#f5f6f9';
+  }
+
+  updateClock() {
+    if (!this.scene) return;
+    const seconds = this.scene.elapsed;
+    const minutes = Math.floor(seconds / 60);
+    const remainder = (seconds % 60).toFixed(1).padStart(4, '0');
+    $('#physics-clock').textContent = `${String(minutes).padStart(2, '0')}:${remainder}`;
+    $('#timeline-progress').style.width = `${Math.min(100, (seconds % 60) / 60 * 100)}%`;
+  }
+
+  async connectRealtime() {
+    this.disconnectRealtime();
+    if (!this.store.hasWorld) return;
+
+    const poll = async () => {
+      if (this.syncInFlight || this.disposed || !this.store.hasWorld) return;
+      this.syncInFlight = true;
+      try {
+        const result = await this.store.sync(this.store.sequence);
+        if (result.spec && Number.isSafeInteger(result.currentSequence)
+          && result.currentSequence > this.store.sequence && !this.store.dirty) {
+          this.store.acceptRemote(result.spec, result.currentSequence);
+          await this.scene.loadWorld(result.spec);
+          this.renderAll();
+        }
+        this.reconnectDelay = 1000;
+        $('#connection-status').textContent = 'API connected';
+      } catch (error) {
+        console.info('[reality-sync] durable HTTP sync will retry.', error.message);
+        $('#connection-status').textContent = 'Sync retrying';
+      } finally {
+        this.syncInFlight = false;
+      }
+    };
+
+    await poll();
+    this.syncTimer = window.setInterval(poll, 5000);
+  }
+
+  scheduleRealtimeReconnect() {
+    // Durable HTTP synchronization retries on the next polling interval.
+  }
+
+  disconnectRealtime() {
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
+    this.reconnectTimer = null;
+    if (this.syncTimer) clearInterval(this.syncTimer);
+    this.syncTimer = null;
+    this.realtimeSocket = null;
+  }
+
+  showModal(markup) {
+    $('#modal-root').innerHTML = markup;
+    $$('[data-close]').forEach((button) => button.addEventListener('click', () => this.closeModal()));
+    $('.modal-backdrop', $('#modal-root')).addEventListener('click', (event) => { if (event.target.classList.contains('modal-backdrop')) this.closeModal(); });
+  }
+  closeModal() { $('#modal-root').innerHTML = ''; }
+  showError(error) { console.error('[Reality Engine]', error); toast(error.message || 'Something went wrong.', 'error', 6000); }
+}
+
+function shapeGlyph(shape) { return ({ box: '□', sphere: '○', cylinder: '⬭', capsule: '◉', plane: '▱' })[shape] || '◇'; }
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]); }
+function escapeAttr(value) { return escapeHtml(value); }
+function metric(label, value) { return `<div class="result-metric"><span>${escapeHtml(label)}</span><strong>${formatNum(value)}</strong></div>`; }
+function formatNum(value) { return Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+
+return { RealityController };
+})();
+
+
+// Module: src/main.js
+__modules["src/main.js"] = (() => {
+const RealityController = __modules["src/client/ui/controller.js"]["RealityController"];
+
+
+const controller = new RealityController();
+controller.initialize().catch((error) => {
+  console.error('[Reality Engine bootstrap]', error);
+  const status = document.getElementById('connection-status');
+  if (status) status.textContent = 'Initialization failed';
+});
+
+window.__ARIXAI_REALITY__ = controller;
+
+return {  };
+})();
+
+</script>
+</body>
+</html>
