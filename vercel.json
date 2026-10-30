@@ -35,7 +35,7 @@
   "rewrites": [
     {
       "source": "/reality",
-      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/reality"
+      "destination": "/reality.html"
     },
     {
       "source": "/api/reality",
