@@ -34,6 +34,26 @@
   ],
   "rewrites": [
     {
+      "source": "/reality",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/reality"
+    },
+    {
+      "source": "/api/reality",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality"
+    },
+    {
+      "source": "/api/reality-assets",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality-assets"
+    },
+    {
+      "source": "/api/reality-realtime",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality-realtime"
+    },
+    {
+      "source": "/api/reality-admin",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality-admin"
+    },
+    {
       "source": "/api/3d-assets",
       "destination": "/lib/3d-assets.js"
     },
