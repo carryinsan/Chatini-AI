@@ -2018,9 +2018,9 @@ this.disposed = false;
 this.#wireStore();
 this.#wireUI();
 }
-async initialize() {
-$('#connection-status').textContent = 'Checking backend…';
-const health = await this.checkHealth();
+async initialize(preloadedHealth = null) {
+$('#connection-status').textContent = preloadedHealth ? 'Opening local saves…' : 'Checking backend…';
+const health = await this.checkHealth(preloadedHealth);
 this.renderAll();
 if (!health || health.ok !== true || health.httpOk !== true) return;
 $('#connection-status').textContent = 'Opening local saves…';
@@ -2035,9 +2035,9 @@ $('#connection-status').title = error.message;
 toast(error.message, 'error', 8000);
 }
 }
-async checkHealth() {
+async checkHealth(preloadedHealth = null) {
 try {
-const health = await checkHealth();
+const health = preloadedHealth || await checkHealth();
 const checks = health.checks || {};
 const ready = health.httpOk === true && health.ok === true;
 const localMode = health.mode === 'browser-local-storage';
@@ -2512,6 +2512,56 @@ showError(error) { console.error('[Reality Engine]', error); toast(error.message
 }
 function shapeGlyph(shape) { return ({ box: '%¡', sphere: '%Ë', cylinder: '+-', capsule: '%É', plane: '%±'
 })[shape] || '%Ç'; }
-function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]); } function escapeAttr(value) { return escapeHtml(value); } function metric(label, value) { return `<div class="result-metric"><span>${escapeHtml(label)}</span><strong>${formatNum(value)}</strong></div>`; } function formatNum(value) { return Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 }); } return { RealityController }; })(); // Module: src/main.js __modules["src/main.js"] = (() => { const RealityController = __modules["src/client/ui/controller.js"]["RealityController"]; const controller = new RealityController(); controller.initialize().catch((error) => { console.error('[Reality Engine bootstrap]', error); const status = document.getElementById('connection-status'); if (status) status.textContent = 'Initialization failed'; }); window.__ARIXAI_REALITY__ = controller; return { }; })(); </script>
+function escapeHtml(value) { return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]); } function escapeAttr(value) { return escapeHtml(value); } function metric(label, value) { return `<div class="result-metric"><span>${escapeHtml(label)}</span><strong>${formatNum(value)}</strong></div>`; } function formatNum(value) { return Number(value).toLocaleString('en-IN', { maximumFractionDigits: 2 }); } return { RealityController }; })(); // Module: src/main.js
+__modules["src/main.js"] = (() => {
+const RealityController = __modules["src/client/ui/controller.js"]["RealityController"];
+const apiCheckHealth = __modules["src/client/api.js"]["checkHealth"];
+const status = document.getElementById('connection-status');
+(async () => {
+  let health;
+  try {
+    health = await apiCheckHealth();
+    if (!health || health.ok !== true || health.httpOk !== true) {
+      if (status) {
+        status.textContent = 'Backend not ready';
+        status.title = `Health check did not pass: ${JSON.stringify(health || {})}`;
+      }
+      console.error('[Reality Engine bootstrap] Backend health check did not pass.', health);
+      return;
+    }
+  } catch (error) {
+    if (status) {
+      status.textContent = 'Backend check failed';
+      status.title = error.stack || error.message || String(error);
+    }
+    console.error('[Reality Engine bootstrap] Backend health check failed.', error);
+    return;
+  }
+
+  if (status) status.textContent = 'Backend connected · Starting 3D…';
+  let controller;
+  try {
+    controller = new RealityController();
+  } catch (error) {
+    if (status) {
+      status.textContent = '3D startup failed';
+      status.title = error.stack || error.message || String(error);
+    }
+    console.error('[Reality Engine bootstrap] 3D controller construction failed.', error);
+    return;
+  }
+
+  window.__ARIXAI_REALITY__ = controller;
+  controller.initialize(health).catch((error) => {
+    console.error('[Reality Engine bootstrap] Initialization failed.', error);
+    if (status) {
+      status.textContent = 'Initialization failed';
+      status.title = error.stack || error.message || String(error);
+    }
+  });
+})();
+return {};
+})();
+</script>
 </body>
 </html>
