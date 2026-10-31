@@ -952,7 +952,21 @@ export default async function handler(req) {
   const url = new URL(req.url);
   if (url.searchParams.get('security') === '1') return securityControl(req);
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' } });
-  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405, headers: { Allow: 'POST, OPTIONS' } });
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+
+  // --- ArixShield Gatekeeper (WAF Inspection & Distributed Token Bucket) ---
+  const arixDecision = await protectRequest(req, {
+    endpoint: process.env.ARIX_ENDPOINT,
+    serverKey: process.env.ARIX_SECRET_KEY,
+    mode: 'ENFORCE',
+    rateLimitPerMinute: 120,
+    globalRateLimit: true,
+    failopen: true
+  });
+
+  if (!arixDecision.allowed) {
+    return arixDecision.response;
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
