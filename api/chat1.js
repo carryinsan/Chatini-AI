@@ -2,7 +2,7 @@ import { verifyAndLimit } from './auth.js';
 import { PrivacyEngine } from '../lib/privacyEngine.js';
 import { processTask } from '../features/tasks.js';
 import { compile3D } from '../lib/3d.js';
-import { protectRequest } from '../lib/arix-shield/next.js';
+//import { protectRequest } from '../lib/arix-shield/next.js';
 
 export const config = {
   runtime: 'edge',
