@@ -465,7 +465,7 @@ export default async function handler(req) {
   const arixDecision = await protectRequest(req, {
     endpoint: process.env.ARIX_ENDPOINT,
     serverKey: process.env.ARIX_SECRET_KEY,
-    mode: 'ENFORCE',
+    mode: 'DRY_RUN',
     rateLimitPerMinute: 120,
     globalRateLimit: true,
     failopen: true
