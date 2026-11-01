@@ -141,12 +141,8 @@ function advancedHDBypass(text, query, maxChars) {
   return result;
 }
 
-
+export default async function handler(req) {
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
-
-  
-
-  }
 
   const encoder = new TextEncoder();
 
@@ -202,7 +198,6 @@ telemetry.model = modelId || 'unknown';
         // 0. FIREWALL & RATE LIMITING
         // ====================================================================
         const auth = await verifyAndLimit(req, modelId, 'none');
-
 
         if (!auth.authorized && !auth.isCreator) {
           telemetry.success = false;
