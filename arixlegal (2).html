@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArixLegal | Secure Advocate Portal</title>
+    <!-- Using Tailwind CSS via CDN for rapid, professional styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles to enhance the professional look */
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f3f4f6; /* Tailwind gray-100 */
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        /* Hidden class for toggling forms */
+        .hidden { display: none !important; }
+        
+        /* Simple spinner for loading states */
+        .spinner {
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top: 3px solid #ffffff;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="glass-panel w-full max-w-md rounded-2xl p-8 relative overflow-hidden">
+        
+        <!-- Top accent line -->
+        <div class="absolute top-0 left-0 w-full h-1 bg-blue-600"></div>
+
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 tracking-tight">ArixLegal</h1>
+            <p class="text-sm text-gray-500 mt-2">Intelligent Workspace for Advocates</p>
+        </div>
+
+        <!-- Global Error/Success Message Container -->
+        <div id="auth-message" class="hidden mb-4 p-3 rounded-md text-sm font-medium transition-all duration-300"></div>
+
+        <!-- ========================================== -->
+        <!-- 1. LOGIN FORM                              -->
+        <!-- ========================================== -->
+        <form id="login-form" class="space-y-5">
+            <div>
+                <label for="login-email" class="block text-sm font-medium text-gray-700 mb-1">Professional Email</label>
+                <input type="email" id="login-email" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                    placeholder="advocate@lawfirm.com">
+            </div>
+
+            <div>
+                <label for="login-password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                <input type="password" id="login-password" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm"
+                    placeholder="••••••••">
+            </div>
+
+            <button type="submit" id="btn-login"
+                class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition-colors flex justify-center items-center">
+                <span class="btn-text">Secure Login</span>
+            </button>
+
+            <div class="text-center mt-4 text-sm">
+                <span class="text-gray-600">Don't have an account?</span>
+                <a href="#" id="link-to-register" class="text-blue-600 hover:text-blue-800 font-medium ml-1">Create Workspace</a>
+            </div>
+        </form>
+
+        <!-- ========================================== -->
+        <!-- 2. REGISTRATION FORM (Hidden by default)   -->
+        <!-- ========================================== -->
+        <form id="register-form" class="space-y-4 hidden">
+            <div>
+                <label for="reg-fullname" class="block text-sm font-medium text-gray-700 mb-1">Full Legal Name</label>
+                <input type="text" id="reg-fullname" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm"
+                    placeholder="e.g., Harish Salve">
+            </div>
+
+            <div>
+                <label for="reg-username" class="block text-sm font-medium text-gray-700 mb-1">Unique Username</label>
+                <input type="text" id="reg-username" required pattern="[a-zA-Z0-9_]+" title="Only letters, numbers, and underscores allowed."
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm"
+                    placeholder="advocate_harish">
+                <p class="text-xs text-gray-500 mt-1">Used for sharing case files securely.</p>
+            </div>
+
+            <div>
+                <label for="reg-email" class="block text-sm font-medium text-gray-700 mb-1">Professional Email</label>
+                <input type="email" id="reg-email" required
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm"
+                    placeholder="harish@chambers.com">
+            </div>
+
+            <div>
+                <label for="reg-password" class="block text-sm font-medium text-gray-700 mb-1">Secure Password</label>
+                <input type="password" id="reg-password" required minlength="8"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none shadow-sm"
+                    placeholder="At least 8 characters">
+            </div>
+
+            <button type="submit" id="btn-register"
+                class="w-full bg-blue-800 hover:bg-blue-900 text-white font-semibold py-2.5 rounded-lg transition-colors flex justify-center items-center mt-2">
+                <span class="btn-text">Register Advocate</span>
+            </button>
+
+            <div class="text-center mt-4 text-sm">
+                <span class="text-gray-600">Already registered?</span>
+                <a href="#" id="link-to-login" class="text-blue-600 hover:text-blue-800 font-medium ml-1">Return to Login</a>
+            </div>
+        </form>
+
+    </div>
+
+    <!-- Define script as module to use imports from auth.js -->
+    <script type="module">
+        import { loginAdvocate, registerAdvocate, redirectIfAuthenticated } from './js/auth.js';
+
+        // 1. Initial State Check (Prevents showing login if already authenticated)
+        document.addEventListener('DOMContentLoaded', async () => {
+            // If they have a valid session, instantly move them to the dashboard
+            await redirectIfAuthenticated('dashboard.html');
+            bindEvents();
+        });
+
+        // 2. DOM Elements
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const linkToRegister = document.getElementById('link-to-register');
+        const linkToLogin = document.getElementById('link-to-login');
+        const messageBox = document.getElementById('auth-message');
+
+        // 3. Event Binding
+        function bindEvents() {
+            // View Toggling
+            linkToRegister.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleForms(true);
+            });
+            linkToLogin.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleForms(false);
+            });
+
+            // Form Submissions
+            loginForm.addEventListener('submit', handleLogin);
+            registerForm.addEventListener('submit', handleRegistration);
+        }
+
+        /**
+         * Switches between Login and Registration views.
+         */
+        function toggleForms(showRegister) {
+            hideMessage();
+            if (showRegister) {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+            } else {
+                registerForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Displays a non-intrusive UI message (Error or Success).
+         */
+        function showMessage(text, isError = true) {
+            messageBox.textContent = text;
+            messageBox.className = `mb-4 p-3 rounded-md text-sm font-medium transition-all duration-300 block ${
+                isError ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+            }`;
+        }
+
+        function hideMessage() {
+            messageBox.classList.add('hidden');
+        }
+
+        /**
+         * Toggles the loading state of a button to prevent double-clicks.
+         */
+        function setLoading(buttonId, isLoading, originalText) {
+            const btn = document.getElementById(buttonId);
+            const textSpan = btn.querySelector('.btn-text');
+            if (isLoading) {
+                btn.disabled = true;
+                btn.classList.add('opacity-75', 'cursor-not-allowed');
+                textSpan.innerHTML = `<span class="spinner"></span> Processing...`;
+            } else {
+                btn.disabled = false;
+                btn.classList.remove('opacity-75', 'cursor-not-allowed');
+                textSpan.textContent = originalText;
+            }
+        }
+
+        /**
+         * Handles Login Form Submission
+         */
+        async function handleLogin(e) {
+            e.preventDefault();
+            hideMessage();
+            setLoading('btn-login', true, 'Secure Login');
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const response = await loginAdvocate(email, password);
+                
+                if (response.success) {
+                    showMessage("Authentication successful. Securing workspace...", false);
+                    // Slight delay for UX, then redirect to the main app
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 800);
+                } else {
+                    showMessage(response.error || "Login failed. Please check credentials.");
+                }
+            } catch (err) {
+                showMessage("A network error occurred. Please try again.");
+                console.error("Login Error:", err);
+            } finally {
+                setLoading('btn-login', false, 'Secure Login');
+            }
+        }
+
+        /**
+         * Handles Registration Form Submission
+         */
+        async function handleRegistration(e) {
+            e.preventDefault();
+            hideMessage();
+            setLoading('btn-register', true, 'Register Advocate');
+
+            const fullName = document.getElementById('reg-fullname').value;
+            const username = document.getElementById('reg-username').value;
+            const email = document.getElementById('reg-email').value;
+            const password = document.getElementById('reg-password').value;
+
+            try {
+                const response = await registerAdvocate(email, password, username, fullName);
+                
+                if (response.success) {
+                    showMessage("Registration successful! Preparing your workspace...", false);
+                    // Wait a moment, then login automatically or redirect
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1200);
+                } else {
+                    // Supabase often returns specific errors (e.g., "User already exists")
+                    showMessage(response.error || "Registration failed. Please verify inputs.");
+                }
+            } catch (err) {
+                showMessage("A network error occurred during registration.");
+                console.error("Registration Error:", err);
+            } finally {
+                setLoading('btn-register', false, 'Register Advocate');
+            }
+        }
+    </script>
+</body>
+</html>

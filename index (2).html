@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArixAI | The Ultimate Autonomous Workspace</title>
+    <link rel="icon" type="image/png" href="https://lexis-ai-chatini.vercel.app/favicon.png?v=2">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 
+                        // Premium light mode palette: pristine, airy, highly legible
+                        background: '#ffffff', 
+                        surface: '#f8fafc', // slate-50
+                        surface2: '#f1f5f9', // slate-100
+                        surface3: '#e2e8f0', // slate-200
+                        textMain: '#0f172a', // slate-900
+                        textMuted: '#475569', // slate-600
+                        brand: {
+                            cyan: '#0284c7',    // Refined for light mode
+                            purple: '#7e22ce',  // Deepened for contrast
+                            emerald: '#059669', // Grounded green
+                            amber: '#d97706',   // Rich amber
+                            pink: '#db2777',
+                            blue: '#2563eb',
+                            orange: '#ea580c'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    letterSpacing: {
+                        tighter: '-.04em',
+                        tight: '-.02em',
+                    },
+                    boxShadow: {
+                        'premium': '0 20px 40px -15px rgba(0,0,0,0.05)',
+                        'premium-hover': '0 30px 60px -15px rgba(0,0,0,0.12)',
+                        'inner-light': 'inset 0 2px 4px 0 rgba(255,255,255,0.8)',
+                    },
+                    animation: { 
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 8s ease-in-out infinite',
+                        'spin-slow': 'spin 20s linear infinite',
+                        'spin-slow-reverse': 'spin 25s linear infinite reverse',
+                        'shimmer': 'shimmer 3s infinite linear',
+                        'draw-line': 'drawLine 2s ease-out forwards',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        },
+                        shimmer: {
+                            '0%': { transform: 'translateX(-100%)' },
+                            '100%': { transform: 'translateX(100%)' }
+                        },
+                        drawLine: {
+                            '0%': { strokeDashoffset: '500' },
+                            '100%': { strokeDashoffset: '0' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #ffffff;
+            color: #475569;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::selection {
+            background-color: rgba(2, 132, 199, 0.2);
+            color: #0f172a;
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f8fafc; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Glassmorphism Refined for Light Mode */
+        .glass-nav { 
+            background: rgba(255, 255, 255, 0.7); 
+            backdrop-filter: blur(24px) saturate(150%); 
+            -webkit-backdrop-filter: blur(24px) saturate(150%); 
+            border-bottom: 1px solid rgba(0,0,0,0.05); 
+        }
+
+        /* High-end Mouse-Tracking Card Effect (Adapted for Light Mode) */
+        .premium-card {
+            background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.06);
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02), 0 2px 4px -2px rgba(0,0,0,0.02);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.5s ease;
+        }
+        
+        .premium-card:hover {
+            box-shadow: 0 20px 40px -15px rgba(0,0,0,0.08);
+            border-color: rgba(0,0,0,0.12);
+        }
+
+        /* Subtle inner glow tracking the mouse */
+        .premium-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            padding: 1px;
+            background: radial-gradient(
+                600px circle at var(--mouse-x) var(--mouse-y),
+                rgba(0,0,0,0.04),
+                transparent 40%
+            );
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .text-gradient { 
+            background-clip: text; 
+            -webkit-background-clip: text; 
+            -webkit-text-fill-color: transparent; 
+            background-size: 200% auto;
+            animation: gradient-shift 8s ease infinite;
+        }
+        
+        /* Subtle architect grid */
+        .grid-bg {
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+            mask-image: radial-gradient(circle at 50% 0%, black 10%, transparent 80%);
+            -webkit-mask-image: radial-gradient(circle at 50% 0%, black 10%, transparent 80%);
+        }
+
+        /* Paper texture / noise for organic feel */
+        .noise-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            opacity: 0.25; /* Higher opacity but lighter blend mode for white */
+            mix-blend-mode: multiply;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
+        }
+
+        /* Physics-based Mockup Tilt (Light Mode Adjusted) */
+        .mockup-container { perspective: 2000px; }
+        .mockup-inner { 
+            transform-style: preserve-3d; 
+            transition: transform 0.15s ease-out;
+            will-change: transform;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.05), 0 30px 60px -15px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,1);
+            background: #ffffff;
+        }
+        .mockup-container.reset .mockup-inner {
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Magnetic Button Reset - Dopamine via Kinesthetic feedback */
+        .magnetic {
+            display: inline-block;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        /* Smooth Reveal System (Mimicking natural peripheral motion) */
+        .reveal {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), transform 1s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .delay-100 { transition-delay: 100ms; }
+        .delay-200 { transition-delay: 200ms; }
+        .delay-300 { transition-delay: 300ms; }
+
+        @keyframes gradient-shift { 0% { background-position: 0% center; } 100% { background-position: 200% center; } }
+
+
+        /* ArixAI visual enhancement layer — original page copy and behavior remain intact. */
+        :root {
+            --arix-cyan: #06b6d4;
+            --arix-violet: #8b5cf6;
+            --arix-blue: #3b82f6;
+            --arix-glass: rgba(255,255,255,.76);
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: -15%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: .62;
+            background:
+                radial-gradient(ellipse at 14% 13%, rgba(34,211,238,.10), transparent 30%),
+                radial-gradient(ellipse at 86% 22%, rgba(139,92,246,.09), transparent 32%),
+                radial-gradient(ellipse at 50% 88%, rgba(59,130,246,.055), transparent 35%);
+            animation: arix-ambient-drift 22s ease-in-out infinite alternate;
+        }
+
+        @keyframes arix-ambient-drift {
+            from { transform: translate3d(-1.2%, -1%, 0) scale(1); }
+            to { transform: translate3d(1.2%, 1%, 0) scale(1.035); }
+        }
+
+        @keyframes arix-orbit {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes arix-orbit-reverse {
+            from { transform: rotate(360deg); }
+            to { transform: rotate(0deg); }
+        }
+
+        @keyframes arix-float-panel {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, -9px, 0); }
+        }
+
+        @keyframes arix-sweep {
+            0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; }
+            18% { opacity: .75; }
+            58%, 100% { transform: translateX(260%) skewX(-18deg); opacity: 0; }
+        }
+
+        @keyframes arix-soft-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(6,182,212,.10); }
+            50% { box-shadow: 0 0 0 9px rgba(6,182,212,0); }
+        }
+
+        .hero-visual-sparkle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 999px;
+            background: #67e8f9;
+            box-shadow: 0 0 18px 5px rgba(34,211,238,.32);
+            pointer-events: none;
+        }
+
+        body > section:first-of-type {
+            isolation: isolate;
+        }
+
+        body > section:first-of-type::before {
+            content: "";
+            position: absolute;
+            z-index: -1;
+            width: min(72vw, 850px);
+            height: min(72vw, 850px);
+            left: 50%;
+            top: 9%;
+            transform: translateX(-50%);
+            border-radius: 50%;
+            background: conic-gradient(from 140deg, rgba(6,182,212,.055), rgba(139,92,246,.10), rgba(59,130,246,.035), rgba(6,182,212,.055));
+            filter: blur(54px);
+            animation: arix-ambient-drift 18s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+
+        body > section:first-of-type h1 {
+            text-wrap: balance;
+            text-shadow: 0 8px 34px rgba(15,23,42,.045);
+        }
+
+        .text-gradient {
+            filter: drop-shadow(0 8px 22px rgba(126,34,206,.11));
+        }
+
+        .premium-card {
+            isolation: isolate;
+            transform: translateZ(0);
+            transition: transform .45s cubic-bezier(.2,.75,.25,1), box-shadow .45s ease, border-color .35s ease;
+        }
+
+        .premium-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: -75%;
+            width: 42%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(6,182,212,.65), rgba(139,92,246,.65), transparent);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .premium-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 28px 70px -30px rgba(15,23,42,.22), 0 8px 28px -18px rgba(6,182,212,.16);
+            border-color: rgba(6,182,212,.23);
+        }
+
+        .premium-card:hover::after {
+            opacity: 1;
+            animation: arix-sweep 1.2s ease-out both;
+        }
+
+        .mockup-inner {
+            border: 1px solid rgba(148,163,184,.24);
+            box-shadow: 0 28px 80px -35px rgba(15,23,42,.25), 0 8px 24px -16px rgba(6,182,212,.13), inset 0 1px 0 rgba(255,255,255,.95);
+        }
+
+        .magnetic-target .magnetic {
+            position: relative;
+            isolation: isolate;
+            box-shadow: 0 12px 28px -14px rgba(15,23,42,.35);
+        }
+
+        .magnetic-target .magnetic::after {
+            content: "";
+            position: absolute;
+            z-index: 0;
+            inset: 0;
+            left: -120%;
+            width: 70%;
+            border-radius: inherit;
+            background: linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
+            transform: skewX(-18deg);
+            pointer-events: none;
+        }
+
+        .magnetic-target:hover .magnetic::after {
+            animation: arix-sweep 1s ease-out;
+        }
+
+        #navbar {
+            transition: background .35s ease, box-shadow .35s ease, border-color .35s ease;
+        }
+
+        .arix-school-link {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            white-space: nowrap;
+            color: #075985;
+            border: 1px solid rgba(6,182,212,.25);
+            background: linear-gradient(135deg, rgba(236,254,255,.95), rgba(245,243,255,.95));
+            box-shadow: 0 5px 16px -10px rgba(6,182,212,.65);
+            transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+        }
+
+        .arix-school-link:hover {
+            transform: translateY(-2px);
+            border-color: rgba(6,182,212,.5);
+            box-shadow: 0 12px 24px -12px rgba(6,182,212,.48);
+        }
+
+        /* Dedicated Arix School feature — added without replacing any existing page section. */
+        .school-bridge {
+            isolation: isolate;
+            background:
+                radial-gradient(ellipse at 8% 28%, rgba(34,211,238,.09), transparent 34%),
+                radial-gradient(ellipse at 92% 72%, rgba(139,92,246,.09), transparent 34%),
+                linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+        }
+
+        .school-bridge::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            opacity: .54;
+            background-image: radial-gradient(rgba(100,116,139,.22) .7px, transparent .7px);
+            background-size: 20px 20px;
+            mask-image: linear-gradient(to bottom, transparent, #000 16%, #000 82%, transparent);
+            pointer-events: none;
+        }
+
+        .school-bridge-card {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(148,163,184,.26);
+            border-radius: 32px;
+            background: rgba(255,255,255,.78);
+            box-shadow: 0 35px 90px -45px rgba(30,64,175,.22), 0 10px 30px -24px rgba(15,23,42,.2), inset 0 1px 0 rgba(255,255,255,.95);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+        }
+
+        .school-bridge-card::after {
+            content: "";
+            position: absolute;
+            inset: 0 auto auto 9%;
+            width: 82%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(6,182,212,.75), rgba(139,92,246,.6), transparent);
+            pointer-events: none;
+        }
+
+        .school-eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: .55rem;
+            padding: .55rem .8rem;
+            border: 1px solid rgba(6,182,212,.2);
+            border-radius: 999px;
+            background: rgba(236,254,255,.85);
+            color: #0e7490;
+            font: 700 10px/1.1 'JetBrains Mono', monospace;
+            letter-spacing: .13em;
+            text-transform: uppercase;
+        }
+
+        .school-roles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .55rem;
+        }
+
+        .school-role-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .58rem .75rem;
+            border: 1px solid rgba(148,163,184,.24);
+            border-radius: 12px;
+            background: rgba(255,255,255,.88);
+            color: #334155;
+            font-size: 11px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px -10px rgba(15,23,42,.25);
+        }
+
+        .school-visual {
+            min-height: 370px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            isolation: isolate;
+        }
+
+        .school-orbit {
+            position: absolute;
+            width: 360px;
+            height: 360px;
+            max-width: 95%;
+            max-height: 95%;
+            border: 1px solid rgba(6,182,212,.17);
+            border-radius: 50%;
+            box-shadow: inset 0 0 50px rgba(6,182,212,.045), 0 0 65px rgba(139,92,246,.055);
+            animation: arix-orbit 54s linear infinite;
+            pointer-events: none;
+        }
+
+        .school-orbit::before,
+        .school-orbit::after {
+            content: "";
+            position: absolute;
+            border-radius: 50%;
+            border: 1px dashed rgba(139,92,246,.19);
+            inset: 13%;
+        }
+
+        .school-orbit::after {
+            inset: 27%;
+            border-style: solid;
+            border-color: rgba(6,182,212,.14);
+        }
+
+        .school-orbit-dot {
+            position: absolute;
+            top: 16%;
+            left: 15%;
+            width: 11px;
+            height: 11px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #22d3ee, #818cf8);
+            box-shadow: 0 0 0 7px rgba(34,211,238,.10), 0 0 25px rgba(6,182,212,.35);
+        }
+
+        .school-dashboard {
+            position: relative;
+            z-index: 2;
+            width: min(100%, 380px);
+            padding: 20px;
+            border: 1px solid rgba(203,213,225,.78);
+            border-radius: 23px;
+            background: rgba(255,255,255,.92);
+            box-shadow: 0 28px 60px -28px rgba(30,64,175,.28), 0 10px 28px -22px rgba(15,23,42,.22), inset 0 1px 0 white;
+            animation: arix-float-panel 7s ease-in-out infinite;
+        }
+
+        .school-dashboard-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 17px;
+            border-bottom: 1px solid #eef2f7;
+        }
+
+        .school-dashboard-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .school-dashboard-row:last-child { border-bottom: 0; padding-bottom: 2px; }
+
+        .school-dashboard-icon {
+            display: flex;
+            width: 39px;
+            height: 39px;
+            flex: 0 0 39px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 13px;
+            font-size: 18px;
+        }
+
+        .school-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 8px;
+            border-radius: 999px;
+            color: #047857;
+            background: #ecfdf5;
+            font-size: 9px;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .school-float-tag {
+            position: absolute;
+            z-index: 3;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 11px 14px;
+            border: 1px solid rgba(226,232,240,.95);
+            border-radius: 15px;
+            color: #334155;
+            background: rgba(255,255,255,.94);
+            box-shadow: 0 18px 35px -22px rgba(15,23,42,.35);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            font-size: 10px;
+            font-weight: 800;
+            animation: arix-float-panel 6s ease-in-out infinite;
+        }
+
+        .school-float-tag.tag-top { top: 8%; right: -1%; animation-delay: -1.8s; }
+        .school-float-tag.tag-bottom { bottom: 8%; left: -1%; animation-delay: -3.2s; }
+
+        .school-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: .7rem;
+            padding: 15px 22px;
+            border-radius: 999px;
+            color: #fff;
+            background: linear-gradient(110deg, #0f172a 0%, #164e63 50%, #4338ca 100%);
+            box-shadow: 0 15px 32px -14px rgba(8,145,178,.6), inset 0 1px 0 rgba(255,255,255,.2);
+            font-size: 13px;
+            font-weight: 800;
+            transition: transform .25s ease, box-shadow .25s ease;
+        }
+
+        .school-cta:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 22px 40px -15px rgba(8,145,178,.56), inset 0 1px 0 rgba(255,255,255,.24);
+        }
+
+        .school-cta i { transition: transform .25s ease; }
+        .school-cta:hover i { transform: translateX(4px); }
+
+        @media (max-width: 767px) {
+            .school-bridge-card { border-radius: 24px; }
+            .school-visual { min-height: 330px; margin-top: 8px; }
+            .school-orbit { width: 310px; height: 310px; }
+            .school-dashboard { padding: 15px; }
+            .school-float-tag { padding: 9px 10px; }
+            .school-float-tag.tag-top { right: 0; top: 3%; }
+            .school-float-tag.tag-bottom { left: 0; bottom: 2%; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            body::before,
+            body > section:first-of-type::before,
+            .school-orbit,
+            .school-dashboard,
+            .school-float-tag,
+            .premium-card:hover::after {
+                animation: none !important;
+            }
+            .reveal { opacity: 1; transform: none; transition: none; }
+            .premium-card, .magnetic, .school-cta { transition: none !important; }
+        }
+
+    </style>
+</head>
+<body class="bg-background font-sans antialiased overflow-x-hidden relative">
+
+    <div class="noise-overlay"></div>
+    <div class="fixed inset-0 grid-bg pointer-events-none z-0"></div>
+
+    <!-- Very subtle, bright ambient glows (Evolutionary safe space - sunlight mimic) -->
+    <div class="fixed top-[-20%] left-[10%] w-[50vw] h-[50vw] bg-brand-cyan/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+    <div class="fixed bottom-[-20%] right-[10%] w-[50vw] h-[50vw] bg-brand-purple/5 rounded-full blur-[120px] pointer-events-none z-0"></div>
+
+    <nav class="fixed top-0 w-full glass-nav z-50 transition-all duration-500" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer magnetic-target" data-magnetic-strength="10">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center shadow-sm relative overflow-hidden group">
+                    <i class="ph-fill ph-hexagon text-brand-cyan text-xl z-10 group-hover:scale-110 transition-transform duration-300"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-extrabold tracking-tighter text-textMain block leading-none scramble-text" data-original="ArixAI">ArixAI</span>
+                </div>
+            </div>
+            
+            <div class="hidden lg:flex items-center gap-10 text-[11px] font-bold tracking-widest uppercase text-slate-500">
+                <a href="#models" class="hover:text-textMain transition-colors relative group">
+                    Cognitive Cores
+                    <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-cyan opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                </a>
+                <a href="#engines" class="hover:text-textMain transition-colors relative group">
+                    Architecture
+                    <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-cyan opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                </a>
+                <a href="#ecosystem" class="hover:text-textMain transition-colors relative group">
+                    Ecosystem
+                    <span class="absolute -bottom-4 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-brand-cyan opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                </a>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <a href="https://lexis-ai-chatini.vercel.app/apikeys.html" target="_blank" class="hidden md:block text-[11px] font-mono text-slate-500 hover:text-textMain transition-colors">
+                    [ API Access ]
+                </a>
+                
+                <a href="https://arix-school.vercel.app/" target="_blank" rel="noopener noreferrer" class="arix-school-link hidden sm:inline-flex px-4 py-2.5 rounded-full text-[11px] font-extrabold">
+                    <i class="ph-fill ph-graduation-cap text-base"></i> Arix School
+                </a>
+
+                <!-- Magnetic CTA -->
+                <div class="magnetic-target" data-magnetic-strength="20">
+                    <a href="app.html" class="magnetic relative overflow-hidden bg-textMain text-white px-6 py-2.5 rounded-full text-xs font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2">
+                        <span class="relative z-10 flex items-center gap-2">Initialize <i class="ph-bold ph-arrow-right"></i></span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <section class="relative pt-48 pb-32 lg:pt-64 lg:pb-40 px-6 min-h-screen flex items-center justify-center z-10">
+        <div class="max-w-5xl mx-auto text-center relative z-10 flex flex-col items-center">
+            
+            <div class="reveal inline-flex items-center gap-3 px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-[10px] font-mono uppercase tracking-widest mb-10 shadow-sm backdrop-blur-md">
+                <span class="flex h-2 w-2 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-cyan opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-brand-cyan"></span>
+                </span>
+                System Boot: Arix OS v4.2 Local
+            </div>
+            
+            <h1 class="reveal delay-100 text-5xl md:text-7xl lg:text-[7rem] font-extrabold text-textMain tracking-tighter mb-8 leading-[1.05]">
+                The Ultimate <br/>
+                <span class="bg-gradient-to-r from-brand-cyan via-brand-purple to-textMain text-gradient pb-2 inline-block">
+                    Autonomous Workspace.
+                </span>
+            </h1>
+            
+            <p class="reveal delay-200 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto mb-14 leading-relaxed font-light">
+                Collapse fragmented workflows into a single, high-performance OS. Command neural architectures, transpile complex logic, and architect applications within a strict, beautifully engineered sanctuary.
+            </p>
+            
+            <div class="reveal delay-300 flex flex-col sm:flex-row items-center justify-center gap-4 w-full">
+                <div class="magnetic-target" data-magnetic-strength="15">
+                    <a href="app.html" class="magnetic w-full sm:w-auto bg-textMain text-white px-10 py-4 rounded-full text-sm font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all flex items-center justify-center gap-3 group">
+                        <i class="ph-bold ph-terminal-window text-lg"></i> 
+                        <span>Launch Environment</span>
+                    </a>
+                </div>
+                <div class="magnetic-target" data-magnetic-strength="15">
+                    <a href="#engines" class="magnetic w-full sm:w-auto bg-white border border-slate-200 hover:border-slate-300 text-textMain px-10 py-4 rounded-full text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-3 hover:-translate-y-0.5">
+                        Read Whitepaper
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+
+    <section id="arix-school" class="school-bridge relative z-10 overflow-hidden py-24 lg:py-32 px-6 border-y border-slate-200/70">
+        <div class="max-w-7xl mx-auto relative z-10">
+            <div class="school-bridge-card grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center p-7 sm:p-10 lg:p-14 reveal">
+                <div class="relative z-10 py-2 lg:py-5">
+                    <div class="school-eyebrow mb-7">
+                        <i class="ph-fill ph-graduation-cap text-base"></i>
+                        Arix School
+                    </div>
+                    <h2 class="text-4xl sm:text-5xl lg:text-[3.55rem] font-extrabold text-slate-900 tracking-tight leading-[1.08] mb-6">
+                        A better-connected school starts here.
+                    </h2>
+                    <p class="text-base sm:text-lg text-slate-600 leading-relaxed font-light max-w-xl mb-8">
+                        A dedicated space where teachers, principals, and students can interact, collaborate, and make everyday school tasks easier.
+                    </p>
+                    <div class="school-roles mb-9" aria-label="Arix School community">
+                        <span class="school-role-chip"><i class="ph-fill ph-chalkboard-teacher text-cyan-600 text-base"></i> Teachers</span>
+                        <span class="school-role-chip"><i class="ph-fill ph-buildings text-violet-600 text-base"></i> Principals</span>
+                        <span class="school-role-chip"><i class="ph-fill ph-student text-blue-600 text-base"></i> Students</span>
+                    </div>
+                    <a href="https://arixai-school-iota.vercel.app/" target="_blank" rel="noopener noreferrer" class="school-cta">
+                        Explore Arix School
+                        <i class="ph-bold ph-arrow-up-right text-base"></i>
+                    </a>
+                    <!-- 1-Click APK Download Button -->
+<a href="/ArixSchool.apk" download="ArixSchool.apk" class="apk-download-btn">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style="vertical-align: middle; margin-right: 8px;">
+    <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 14.59V7a1 1 0 0 0-2 0v9.59l-2.29-2.3a1 1 0 0 0-1.42 1.42l4 4a1 1 0 0 0 1.42 0l4-4a1 1 0 0 0-1.42-1.42z"/>
+  </svg>
+  Download Android App (.APK)
+</a>
+
+<style>
+  .apk-download-btn {
+    display: inline-flex;
+    align-items: center;
+    background-color: #10b981; /* Green color */
+    color: #ffffff !important;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.2s ease, transform 0.1s ease;
+  }
+  .apk-download-btn:hover {
+    background-color: #059669;
+    transform: translateY(-1px);
+  }
+</style>
+                    <div class="flex items-center gap-2 mt-5 text-[10px] sm:text-xs text-slate-500 font-medium">
+                        <i class="ph-fill ph-sparkle text-cyan-600 text-sm"></i>
+                        One dedicated space for the school community
+                    </div>
+                </div>
+
+                <div class="school-visual" aria-hidden="true">
+                    <div class="school-orbit"><span class="school-orbit-dot"></span></div>
+                    <div class="school-dashboard">
+                        <div class="school-dashboard-top">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20">
+                                    <i class="ph-fill ph-graduation-cap text-xl"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-extrabold text-slate-900">Arix School</div>
+                                    <div class="text-[10px] text-slate-500 mt-0.5">A shared school space</div>
+                                </div>
+                            </div>
+                            <span class="school-status"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Connected</span>
+                        </div>
+
+                        <div class="school-dashboard-row">
+                            <div class="school-dashboard-icon bg-cyan-50 text-cyan-700"><i class="ph-fill ph-chalkboard-teacher"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-bold text-slate-800">Teacher workspace</div>
+                                <div class="text-[10px] text-slate-500 mt-1">Plan, prepare, and organize</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-up-right text-slate-400"></i>
+                        </div>
+
+                        <div class="school-dashboard-row">
+                            <div class="school-dashboard-icon bg-violet-50 text-violet-700"><i class="ph-fill ph-buildings"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-bold text-slate-800">Principal overview</div>
+                                <div class="text-[10px] text-slate-500 mt-1">Coordinate school activities</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-up-right text-slate-400"></i>
+                        </div>
+
+                        <div class="school-dashboard-row">
+                            <div class="school-dashboard-icon bg-blue-50 text-blue-700"><i class="ph-fill ph-student"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs font-bold text-slate-800">Student learning</div>
+                                <div class="text-[10px] text-slate-500 mt-1">Learn, ask, and participate</div>
+                            </div>
+                            <i class="ph-bold ph-arrow-up-right text-slate-400"></i>
+                        </div>
+                    </div>
+
+                    <div class="school-float-tag tag-top">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-cyan-50 text-cyan-700"><i class="ph-fill ph-users-three text-base"></i></span>
+                        <span>School community<br><span class="text-[9px] text-slate-500 font-medium">Made to work together</span></span>
+                    </div>
+                    <div class="school-float-tag tag-bottom">
+                        <span class="flex items-center justify-center w-8 h-8 rounded-xl bg-violet-50 text-violet-700"><i class="ph-fill ph-sparkle text-base"></i></span>
+                        <span>Everyday tasks, easier<br><span class="text-[9px] text-slate-500 font-medium">One focused destination</span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="models" class="py-32 bg-surface relative z-10 border-t border-slate-200/60">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="text-center mb-20 reveal">
+                <h2 class="text-3xl md:text-5xl font-bold text-textMain mb-6 tracking-tight">Five Cores. Absolute Control.</h2>
+                <p class="text-lg text-slate-600 max-w-2xl mx-auto font-light leading-relaxed">
+                    Intelligence decoupled from limitations. Seamlessly toggle between our hyper-connected cloud engines and our fully reshaped, sovereign offline models that live entirely in your browser.
+                </p>
+            </div>
+
+            <!-- Top Row: Cloud / Flagship Models -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch mb-6">
+                
+                <!-- Spark (Speed) -->
+                <div class="reveal premium-card p-10 flex flex-col group cursor-default">
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="w-12 h-12 rounded-full bg-brand-amber/10 border border-brand-amber/20 flex items-center justify-center text-brand-amber transition-transform group-hover:scale-110">
+                            <i class="ph-fill ph-lightning text-xl"></i>
+                        </div>
+                        <span class="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono text-slate-500 uppercase tracking-wider">Cloud Engine</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-textMain mb-1">Spark</h3>
+                    <p class="text-brand-amber text-[10px] font-mono uppercase tracking-widest mb-4">The Speed Engine</p>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6 flex-grow">
+                        Engineered for immediate time-to-first-token. Spark is your go-to for rapid syntax formatting, fast email drafting, and instantaneous query resolution.
+                    </p>
+                </div>
+
+                <!-- Oracle 2.0 (Flagship - Central Emphasis) -->
+                <div class="reveal delay-100 premium-card p-[2px] flex flex-col group cursor-default relative overflow-hidden" style="background: linear-gradient(135deg, rgba(126, 34, 206, 0.2), rgba(219, 39, 119, 0.2));">
+                    <div class="bg-white rounded-[22px] p-10 h-full flex flex-col relative z-10">
+                        <div class="absolute top-0 right-0 w-64 h-64 bg-brand-purple/5 blur-[80px] rounded-full pointer-events-none"></div>
+                        
+                        <div class="flex justify-between items-start mb-8">
+                            <div class="w-12 h-12 rounded-full bg-brand-purple/10 border border-brand-purple/20 flex items-center justify-center text-brand-purple shadow-sm transition-transform group-hover:rotate-12 group-hover:scale-110">
+                                <i class="ph-fill ph-hexagon text-xl"></i>
+                            </div>
+                            <span class="px-2.5 py-1 rounded bg-brand-purple/10 border border-brand-purple/20 text-[9px] font-mono text-brand-purple uppercase tracking-wider animate-pulse">Flagship</span>
+                        </div>
+                        <h3 class="text-2xl font-bold text-textMain mb-1">Oracle 2.0</h3>
+                        <p class="text-brand-purple text-[10px] font-mono uppercase tracking-widest mb-4">The Cognitive Juggernaut</p>
+                        <p class="text-slate-600 text-sm leading-relaxed flex-grow">
+                            Deep <strong>System 2 Chain-of-Thought reasoning</strong>. Oracle 2.0 builds an internal logic tree and mathematically deduces outputs before generating a single token. Unmatched accuracy.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Flux (Creative) -->
+                <div class="reveal delay-200 premium-card p-10 flex flex-col group cursor-default">
+                    <div class="flex justify-between items-start mb-8">
+                        <div class="w-12 h-12 rounded-full bg-brand-cyan/10 border border-brand-cyan/20 flex items-center justify-center text-brand-cyan transition-transform group-hover:scale-110">
+                            <i class="ph-fill ph-drop text-xl"></i>
+                        </div>
+                        <span class="px-2.5 py-1 rounded bg-slate-100 border border-slate-200 text-[9px] font-mono text-slate-500 uppercase tracking-wider">Cloud Engine</span>
+                    </div>
+                    <h3 class="text-2xl font-bold text-textMain mb-1">Flux</h3>
+                    <p class="text-brand-cyan text-[10px] font-mono uppercase tracking-widest mb-4">The Creative Core</p>
+                    <p class="text-slate-600 text-sm leading-relaxed mb-6 flex-grow">
+                        Expanded context window with heightened semantic nuance. Flux excels at maintaining persona, understanding subtle stylistic instructions, and generating long-form content.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Bottom Row: 100% Offline / Sovereign Models -->
+            <div class="mt-12 text-center reveal">
+                <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-emerald/10 border border-brand-emerald/20 text-brand-emerald text-[10px] font-mono uppercase tracking-widest mb-6">
+                    <i class="ph-fill ph-shield-check"></i> Sovereign Offline Architecture
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch max-w-5xl mx-auto">
+                <!-- SPARKer (Reshaped Offline Speed) -->
+                <div class="reveal premium-card p-8 flex flex-col group cursor-default border-l-4 border-l-brand-emerald/50">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-brand-emerald/10 flex items-center justify-center text-brand-emerald">
+                            <i class="ph-bold ph-lightning text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-textMain">SPARKer</h3>
+                            <p class="text-slate-500 text-[10px] font-mono uppercase tracking-widest">WASM Sandboxed Edge Speed</p>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="px-2 py-1 rounded bg-brand-emerald/10 text-[9px] font-bold text-brand-emerald uppercase tracking-wider">100% Offline</span>
+                        </div>
+                    </div>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Reshaped from our V3 architecture, SPARKer executes purely in your browser's IndexedDB. Bypassing cloud latency, it offers ultra-fast logic resolution without ever sending data over a network.
+                    </p>
+                </div>
+
+                <!-- FLiX (Reshaped Offline Creative) -->
+                <div class="reveal delay-100 premium-card p-8 flex flex-col group cursor-default border-l-4 border-l-brand-emerald/50">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-10 h-10 rounded-lg bg-brand-emerald/10 flex items-center justify-center text-brand-emerald">
+                            <i class="ph-bold ph-drop text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-textMain">FLiX</h3>
+                            <p class="text-slate-500 text-[10px] font-mono uppercase tracking-widest">Local Context Engine</p>
+                        </div>
+                        <div class="ml-auto">
+                            <span class="px-2 py-1 rounded bg-brand-emerald/10 text-[9px] font-bold text-brand-emerald uppercase tracking-wider">100% Offline</span>
+                        </div>
+                    </div>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Untethered ideation. FLiX retains deep semantic memory of your sessions via local storage. It learns your style and structure natively, offering private creative assistance that never phones home.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <section id="engines" class="py-40 bg-background relative z-10">
+        <div class="max-w-7xl mx-auto px-6">
+            
+            <div class="text-center mb-40 reveal">
+                <h2 class="text-4xl md:text-6xl font-bold text-textMain mb-8 tracking-tight">The Engine Architecture.</h2>
+                <p class="text-lg text-slate-600 max-w-3xl mx-auto font-light leading-relaxed">
+                    ArixAI intercepts natural language, parses intent, and mathematically routes execution to highly specialized, isolated neural engines designed to build and compute in real-time.
+                </p>
+            </div>
+
+            <div class="space-y-48">
+                
+                <!-- ENGINE 1: DEEP RESEARCH (Light mode macOS terminal look) -->
+                <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
+                    <div class="w-full lg:w-5/12 space-y-8 reveal">
+                        <div class="text-brand-cyan text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4">Engine 01</div>
+                        <h3 class="text-4xl font-bold text-textMain tracking-tight leading-tight">Autonomous <br/>Deep Research</h3>
+                        <p class="text-slate-600 text-base leading-relaxed font-light">
+                            Trigger a single query, and watch the built-in terminal spin up parallel search threads. It scrapes live DOM data, cross-references facts to prevent hallucinations, and outputs rigorously cited reports.
+                        </p>
+                        <ul class="space-y-3 mt-6">
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-cyan"></i> Real-time DOM Scraping</li>
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-cyan"></i> Anti-Hallucination Cross-Ref</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="w-full lg:w-7/12 mockup-container reveal delay-200">
+                        <div class="mockup-inner rounded-2xl h-[400px] flex flex-col overflow-hidden relative">
+                            <!-- macOS Light Title Bar -->
+                            <div class="bg-surface2 px-4 py-3 border-b border-slate-200 flex items-center gap-4">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+                                    <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+                                </div>
+                                <div class="text-[10px] font-mono text-slate-500 mx-auto">research_agent.sh</div>
+                            </div>
+                            <!-- Terminal Body (Light Theme) -->
+                            <div class="flex-1 p-6 font-mono text-xs overflow-hidden relative bg-white">
+                                <div class="space-y-3 text-slate-700 relative z-10">
+                                    <p><span class="text-brand-cyan font-bold">➜</span> <span class="font-bold text-slate-900">~/arix</span> <span class="text-brand-emerald">./init_research</span> "Solid-state battery logistics"</p>
+                                    <p class="text-slate-400">[System] Compiling semantic vectors...</p>
+                                    <div class="pl-4 border-l-2 border-slate-200 space-y-2 py-1">
+                                        <p class="text-slate-500"><i class="ph-bold ph-spinner animate-spin inline-block mr-2 text-brand-cyan"></i>Thread_1: Querying scientific journals...</p>
+                                        <p class="text-brand-emerald"><i class="ph-bold ph-check inline-block mr-2"></i>Thread_2: Live market data secured.</p>
+                                    </div>
+                                    <p class="text-brand-amber">> Notice: Conflicting payload detected. Initiating consensus check.</p>
+                                    <p class="text-brand-emerald font-bold">> Consensus Reached: Artifact generated.</p>
+                                </div>
+                                <!-- Floating Rendered Artifact (Light) -->
+                                <div class="absolute bottom-6 right-6 bg-white border border-slate-200 p-4 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] w-64 transform translate-y-2 hover:translate-y-0 transition-transform">
+                                    <div class="text-[8px] font-mono text-brand-cyan uppercase mb-2 font-bold">Markdown Rendered</div>
+                                    <h4 class="text-textMain font-bold text-sm mb-1">Solid-State Shift</h4>
+                                    <p class="text-slate-600 text-[10px] leading-tight">Supply chain weight reduced by 40% <span class="bg-brand-cyan/10 text-brand-cyan px-1 rounded inline-block font-bold">1</span>.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ENGINE 2: CARTESIAN MATHS -->
+                <div class="flex flex-col lg:flex-row-reverse items-center gap-16 lg:gap-24">
+                    <div class="w-full lg:w-5/12 space-y-8 reveal">
+                        <div class="text-brand-emerald text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4">Engine 02</div>
+                        <h3 class="text-4xl font-bold text-textMain tracking-tight leading-tight">Cartesian <br/>Graphing Core</h3>
+                        <p class="text-slate-600 text-base leading-relaxed font-light">
+                            Move beyond static PNGs and LaTeX limits. ArixAI dynamically transpiles natural language into pure JavaScript algebra to generate interactive, 60fps HTML5 graphical artifacts right in the DOM.
+                        </p>
+                        <ul class="space-y-3 mt-6">
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-emerald"></i> Parametric & Polar Support</li>
+                            <li class="flex items-center gap-3 text-sm text-slate-700 font-medium"><i class="ph-bold ph-check text-brand-emerald"></i> Auto-bound UI Sliders</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="w-full lg:w-7/12 mockup-container reveal delay-200">
+                        <div class="mockup-inner rounded-2xl h-[400px] flex overflow-hidden relative">
+                            <!-- UI Controls Sidebar (Light) -->
+                            <div class="w-1/3 bg-surface border-r border-slate-200 p-5 flex flex-col gap-6 relative z-10">
+                                <div class="text-[10px] font-mono text-brand-emerald uppercase tracking-widest font-bold">Controls</div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] text-slate-500 mb-2 font-medium"><span>Amplitude</span> <span class="text-textMain font-mono bg-white px-1 rounded border border-slate-200">4.2</span></div>
+                                    <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="w-[70%] h-full bg-brand-emerald"></div></div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between text-[10px] text-slate-500 mb-2 font-medium"><span>Damping</span> <span class="text-textMain font-mono bg-white px-1 rounded border border-slate-200">0.15</span></div>
+                                    <div class="w-full h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="w-[30%] h-full bg-brand-emerald"></div></div>
+                                </div>
+                            </div>
+                            <!-- Canvas Area (Light Grid) -->
+                            <div class="flex-1 relative flex items-center justify-center p-6 bg-white">
+                                <!-- Light mode grid background for canvas -->
+                                <div class="absolute inset-0" style="background-image: linear-gradient(to right, #f1f5f9 1px, transparent 1px), linear-gradient(to bottom, #f1f5f9 1px, transparent 1px); background-size: 20px 20px;"></div>
+                                
+                                <svg width="100%" height="100%" viewBox="0 0 200 100" class="overflow-visible relative z-10">
+                                    <line x1="0" y1="50" x2="200" y2="50" stroke="#cbd5e1" stroke-width="1" />
+                                    <line x1="10" y1="0" x2="10" y2="100" stroke="#cbd5e1" stroke-width="1" />
+                                    <!-- Animated Wave -->
+                                    <path d="M 10 50 Q 20 -20, 30 50 T 50 50 T 70 50 T 90 50 T 110 50 T 130 50 T 150 50 T 170 50 T 190 50" 
+                                          fill="none" stroke="#059669" stroke-width="2.5" class="animate-draw-line drop-shadow-sm"
+                                          style="stroke-dasharray: 500;" />
+                                </svg>
+                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur border border-slate-200 px-3 py-2 rounded text-[10px] font-mono text-brand-emerald shadow-sm font-bold">
+                                    y = e^(-γt)cos(ωt)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ENGINE 4: APP BUILDER -->
+                <div class="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
+                    <div class="w-full lg:w-5/12 space-y-8 reveal">
+                        <div class="text-brand-orange text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4">Engine 04</div>
+                        <h3 class="text-4xl font-bold text-textMain tracking-tight leading-tight">Interactive <br/>App Builder</h3>
+                        <p class="text-slate-600 text-base leading-relaxed font-light">
+                            Describe a functional tool, and ArixAI acts as your elite Frontend Engineer, coding it natively in a sandboxed iframe. If an error occurs, the engine reads the console and auto-patches the DOM.
+                        </p>
+                    </div>
+                    
+                    <div class="w-full lg:w-7/12 mockup-container reveal delay-200">
+                        <div class="mockup-inner rounded-2xl h-[400px] flex flex-col overflow-hidden relative">
+                            <!-- Browser Chrome (Light) -->
+                            <div class="bg-surface2 px-4 py-3 border-b border-slate-200 flex items-center gap-4">
+                                <div class="flex gap-2">
+                                    <div class="w-3 h-3 rounded-full bg-slate-300"></div>
+                                    <div class="w-3 h-3 rounded-full bg-slate-300"></div>
+                                    <div class="w-3 h-3 rounded-full bg-slate-300"></div>
+                                </div>
+                                <div class="bg-white border border-slate-200 rounded text-[10px] font-mono text-slate-500 px-3 py-1 flex-1 flex items-center gap-2 shadow-inner font-medium">
+                                    <i class="ph-fill ph-lock-key text-brand-emerald"></i> sandbox.arix.local/app_render
+                                </div>
+                            </div>
+                            
+                            <!-- Inside Iframe rendering an App (Light UI) -->
+                            <div class="flex-1 relative flex items-center justify-center p-6 bg-surface">
+                                <div class="bg-white border border-slate-200 p-6 rounded-2xl w-full max-w-[280px] transform hover:scale-105 transition-transform duration-500 shadow-[0_15px_30px_rgba(0,0,0,0.05)]">
+                                    <div class="flex items-center gap-3 mb-6">
+                                        <div class="w-10 h-10 rounded-full bg-brand-orange/10 flex items-center justify-center text-brand-orange">
+                                            <i class="ph-fill ph-calculator text-xl"></i>
+                                        </div>
+                                        <span class="text-textMain font-bold text-sm">SaaS ROI Cal</span>
+                                    </div>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label class="text-[9px] text-slate-400 uppercase font-bold tracking-wider">Monthly Spend</label>
+                                            <div class="bg-slate-50 rounded border border-slate-200 px-3 py-2 text-slate-800 font-mono text-sm mt-1 shadow-inner">$4,500</div>
+                                        </div>
+                                        <div class="w-full bg-brand-orange text-white text-center py-2.5 rounded text-xs font-bold shadow-md cursor-pointer hover:bg-orange-500 transition-colors">
+                                            Calculate
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Pseudo Code overlay -->
+                                <div class="absolute bottom-4 right-4 font-mono text-[9px] text-slate-400 text-right">
+                                    const calc = () => {<br/>
+                                    &nbsp;&nbsp;return spend * 1.2;<br/>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <section id="trust" class="py-40 bg-surface border-t border-slate-200/60 relative z-10 overflow-hidden">
+        <div class="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center gap-20 reveal">
+            <div class="w-full md:w-1/2">
+                <div class="text-slate-500 text-[10px] font-mono uppercase tracking-widest border-b border-slate-200 pb-4 mb-8 inline-block font-bold">Absolute Privacy</div>
+                <h2 class="text-4xl md:text-5xl font-bold text-textMain mb-6 tracking-tight">Total Data Sovereignty.</h2>
+                <p class="text-slate-600 text-lg leading-relaxed mb-6 font-light">
+                    We inverted the standard AI architecture. SPARKer and FLiX execute entirely locally in your browser. They do not phone home. Your sensitive documents, codebases, and intellectual property never leave your machine's local IndexedDB space.
+                </p>
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-brand-emerald/10 text-brand-emerald text-xs font-bold border border-brand-emerald/20 shadow-sm">
+                    <i class="ph-fill ph-shield-check text-lg"></i> Zero-Knowledge Architecture
+                </div>
+            </div>
+            
+            <div class="w-full md:w-1/2">
+                <div class="premium-card p-10 text-center relative h-64 flex items-center justify-center bg-white">
+                    <div class="flex items-center justify-between w-full px-8 relative z-10">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="w-14 h-14 bg-white border border-slate-200 rounded-xl flex items-center justify-center shadow-md"><i class="ph-fill ph-laptop text-2xl text-brand-emerald"></i></div>
+                            <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Local Device</span>
+                        </div>
+                        
+                        <div class="flex-1 h-[1px] bg-slate-200 relative mx-4 flex items-center justify-center">
+                            <div class="bg-white px-3 py-1 text-[9px] text-red-600 font-bold border border-red-200 rounded-full z-10 shadow-sm flex items-center"><i class="ph-bold ph-x mr-1"></i> Air-Gapped</div>
+                        </div>
+                        
+                        <div class="flex flex-col items-center gap-3 opacity-40 grayscale">
+                            <div class="w-14 h-14 bg-surface2 border border-slate-200 rounded-xl flex items-center justify-center"><i class="ph-fill ph-cloud text-2xl"></i></div>
+                            <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Cloud</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-40 relative overflow-hidden bg-background border-t border-slate-200/60 z-10">
+        <!-- Deep Radial Glow (Light Mode) -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] max-w-[800px] max-h-[800px] bg-brand-cyan/5 blur-[120px] rounded-full pointer-events-none z-0"></div>
+        
+        <div class="max-w-4xl mx-auto px-6 text-center relative z-10 reveal">
+            <h2 class="text-5xl md:text-7xl font-extrabold text-textMain mb-8 tracking-tighter leading-[1.05]">
+                Initialize Your <br/>
+                Next Evolution.
+            </h2>
+            <p class="text-lg text-slate-600 mb-12 max-w-2xl mx-auto font-light leading-relaxed">
+                Step into a unified, high-performance workspace. Unadulterated neural computation ready to execute natively in your browser.
+            </p>
+            
+            <div class="flex flex-col items-center gap-6">
+                <div class="magnetic-target" data-magnetic-strength="20">
+                    <a href="app.html" class="magnetic bg-textMain text-white px-12 py-5 rounded-full text-lg font-bold shadow-xl hover:shadow-2xl hover:scale-105 transition-all group flex items-center gap-3">
+                        Launch Arix OS
+                        <i class="ph-bold ph-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                </div>
+                <a href="https://lexis-ai-chatini.vercel.app/apikeys.html" target="_blank" class="text-[11px] font-bold text-slate-500 hover:text-brand-cyan transition-colors underline decoration-slate-300 underline-offset-4">
+                    Or secure developer API keys
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <footer class="border-t border-slate-200 bg-surface py-12 relative z-20">
+        <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="flex items-center gap-3">
+                <i class="ph-fill ph-hexagon text-brand-cyan text-lg"></i>
+                <span class="text-slate-800 font-bold tracking-tight text-sm">ArixAI Core</span>
+            </div>
+            
+            <div class="flex items-center gap-6 text-[10px] font-bold tracking-widest uppercase text-slate-500">
+                <a href="https://lexis-ai-chatini.vercel.app/terms&conditions.html" target="_blank" class="hover:text-textMain transition-colors">Terms & Conditions</a>
+                <span>© 2026 Engineered for total sovereignty.</span>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // 1. Premium Scroll Reveal (Mimics tracking peripheral motion)
+        document.addEventListener('DOMContentLoaded', () => {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('active');
+                    }
+                });
+            }, { root: null, rootMargin: '0px', threshold: 0.1 });
+
+            document.querySelectorAll('.reveal').forEach((el) => {
+                observer.observe(el);
+            });
+        });
+
+        // 2. Mouse Tracking for Premium Cards (Subtle dopamine trigger via visual feedback)
+        const cards = document.querySelectorAll('.premium-card');
+        document.addEventListener('mousemove', e => {
+            for(const card of cards) {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            }
+        });
+
+        // 3. Physics-based 3D Tilt for Mockups (Kinesthetic realism)
+        document.querySelectorAll('.mockup-container').forEach(container => {
+            const inner = container.querySelector('.mockup-inner');
+            
+            container.addEventListener('mousemove', (e) => {
+                container.classList.remove('reset');
+                const rect = container.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                // Very subtle rotation for light mode to avoid looking unnatural
+                const rotateX = ((y - centerY) / centerY) * -5; 
+                const rotateY = ((x - centerX) / centerX) * 5;
+
+                inner.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.01, 1.01, 1.01)`;
+            });
+
+            container.addEventListener('mouseleave', () => {
+                container.classList.add('reset');
+                inner.style.transform = `rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+            });
+        });
+
+        // 4. Magnetic Buttons (Tactile satisfaction / Safety in control)
+        const magneticTargets = document.querySelectorAll('.magnetic-target');
+        magneticTargets.forEach(target => {
+            const magneticEl = target.querySelector('.magnetic');
+            const strength = target.dataset.magneticStrength || 20;
+
+            target.addEventListener('mousemove', (e) => {
+                const rect = target.getBoundingClientRect();
+                const hx = rect.left + rect.width / 2;
+                const hy = rect.top + rect.height / 2;
+                const dx = e.clientX - hx;
+                const dy = e.clientY - hy;
+                
+                magneticEl.style.transform = `translate(${dx * (strength/100)}px, ${dy * (strength/100)}px)`;
+            });
+
+            target.addEventListener('mouseleave', () => {
+                magneticEl.style.transform = `translate(0px, 0px)`;
+            });
+        });
+
+        // 5. Scramble Text Effect on Hover (Curiosity & Information Gap)
+        const scrambleElements = document.querySelectorAll('.scramble-text');
+        const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        
+        scrambleElements.forEach(el => {
+            el.addEventListener('mouseover', () => {
+                let iterations = 0;
+                const originalText = el.dataset.original;
+                
+                clearInterval(el.interval);
+                
+                el.interval = setInterval(() => {
+                    el.innerText = originalText.split('')
+                        .map((char, index) => {
+                            if(index < iterations) return originalText[index];
+                            return characters[Math.floor(Math.random() * characters.length)];
+                        })
+                        .join('');
+                    
+                    if(iterations >= originalText.length) {
+                        clearInterval(el.interval);
+                    }
+                    iterations += 1 / 3; 
+                }, 30);
+            });
+        });
+
+        // 6. Navbar Blur on Scroll
+        const navbar = document.getElementById('navbar');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navbar.classList.add('shadow-sm');
+                navbar.style.background = 'rgba(255, 255, 255, 0.9)';
+            } else {
+                navbar.classList.remove('shadow-sm');
+                navbar.style.background = 'rgba(255, 255, 255, 0.7)';
+            }
+        });
+    </script>
+</body>
+</html>

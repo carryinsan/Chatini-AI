@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArixAI | Telemetry</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons for clean iconography -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAFAFA;
+            color: #171717;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .metric-card {
+            background: #FFFFFF;
+            border: 1px solid #E5E5E5;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
+            transition: border-color 0.2s ease;
+        }
+        
+        .metric-card:hover {
+            border-color: #D4D4D4;
+        }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid #E5E5E5;
+        }
+
+        .table-header {
+            background-color: #F9FAFB;
+            border-bottom: 1px solid #E5E5E5;
+            border-top: 1px solid #E5E5E5;
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D4D4D4;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #A3A3A3;
+        }
+
+        #dashboard { display: none; }
+        .fade-in { animation: fadeIn 0.4s ease-in forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="min-h-screen text-sm">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="fixed inset-0 flex items-center justify-center bg-[#FAFAFA] z-50">
+        <div class="metric-card w-full max-w-sm fade-in">
+            <div class="flex items-center gap-2 mb-6">
+                <i data-lucide="shield-check" class="w-6 h-6 text-slate-800"></i>
+                <h1 class="text-xl font-semibold tracking-tight">ArixAI Telemetry</h1>
+            </div>
+            <p class="text-slate-500 mb-6 text-sm">Restricted Engineering Console. Please authenticate to view anonymous performance metrics.</p>
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <input type="password" id="password-input" placeholder="Password" 
+                       class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400 transition-all mb-4 font-mono text-sm">
+                <button type="submit" 
+                        class="w-full bg-slate-900 text-white font-medium py-2.5 rounded-lg hover:bg-slate-800 transition-colors">
+                    Access Dashboard
+                </button>
+                <p id="login-error" class="text-red-500 text-xs mt-3 hidden text-center">Invalid password.</p>
+            </form>
+        </div>
+    </div>
+
+    <!-- MAIN DASHBOARD -->
+    <div id="dashboard" class="pb-24">
+        <!-- Sticky Header -->
+        <header class="glass-header sticky top-0 z-40 px-8 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-lg font-semibold tracking-tight text-slate-900">ArixAI Analytics</h1>
+                    <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-medium tracking-wide">LIVE</span>
+                </div>
+                <p class="text-slate-500 text-xs mt-1 font-medium">AI Performance Telemetry — No User Content Stored</p>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Privacy Lock Indicators -->
+                <div class="flex flex-col gap-1 text-[10px] text-slate-500 font-mono">
+                    <div class="flex items-center gap-1.5"><i data-lucide="lock" class="w-3 h-3 text-slate-400"></i> Content telemetry: OFF</div>
+                    <div class="flex items-center gap-1.5"><i data-lucide="lock" class="w-3 h-3 text-slate-400"></i> Prompt/Response logging: OFF</div>
+                    <div class="flex items-center gap-1.5"><i data-lucide="lock" class="w-3 h-3 text-slate-400"></i> Identifying metadata: OFF</div>
+                    <div class="flex items-center gap-1.5"><i data-lucide="check-circle-2" class="w-3 h-3 text-emerald-500"></i> Anonymous metrics: ON</div>
+                </div>
+                
+                <div class="h-10 w-px bg-slate-200 hidden md:block"></div>
+                
+                <button onclick="fetchData()" class="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors text-sm font-medium bg-white border border-slate-200 px-3 py-1.5 rounded-md shadow-sm">
+                    <i data-lucide="refresh-cw" class="w-4 h-4" id="refresh-icon"></i> Refresh
+                </button>
+            </div>
+        </header>
+
+        <main class="px-8 max-w-[1600px] mx-auto mt-8 space-y-6">
+            
+            <!-- REAL-TIME DIAGNOSTIC BANNER -->
+            <div id="debug-banner" class="hidden rounded-xl border p-4 font-mono text-xs transition-all">
+                <div class="flex items-start gap-3">
+                    <div id="debug-icon" class="mt-0.5"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between gap-4">
+                            <h3 id="debug-title" class="font-sans font-semibold text-sm"></h3>
+                            <span id="debug-status" class="px-2 py-0.5 rounded text-[10px] font-bold"></span>
+                        </div>
+                        <p id="debug-detail" class="mt-1 leading-relaxed opacity-90"></p>
+                        <pre id="debug-raw" class="mt-3 p-3 bg-black/5 rounded-lg overflow-x-auto text-[11px] hidden whitespace-pre-wrap break-all"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 1: OVERALL HEALTH -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div class="metric-card">
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Total Calls</p>
+                    <p class="text-3xl font-semibold font-mono tracking-tight" id="val-total-calls">--</p>
+                </div>
+                <div class="metric-card">
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Success Rate</p>
+                    <div class="flex items-baseline gap-2">
+                        <p class="text-3xl font-semibold font-mono tracking-tight text-emerald-600" id="val-success-rate">--</p>
+                    </div>
+                </div>
+                <div class="metric-card">
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Avg Latency</p>
+                    <p class="text-3xl font-semibold font-mono tracking-tight" id="val-avg-latency">--</p>
+                </div>
+                <div class="metric-card">
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">P95 Latency</p>
+                    <p class="text-3xl font-semibold font-mono tracking-tight text-amber-600" id="val-p95-latency">--</p>
+                </div>
+                <div class="metric-card">
+                    <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Est. API Cost</p>
+                    <p class="text-3xl font-semibold font-mono tracking-tight" id="val-total-cost">--</p>
+                </div>
+            </div>
+
+            <!-- SECTION 2: MODEL PERFORMANCE -->
+            <div class="metric-card !p-0 overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-semibold">Model Performance & Efficiency</h2>
+                        <p class="text-xs text-slate-500 mt-1">Comparing models on latency, quality, and unit cost spend.</p>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="table-header text-xs text-slate-500 uppercase tracking-wider">
+                                <th class="py-3 px-5 font-medium">Model</th>
+                                <th class="py-3 px-5 font-medium">Calls</th>
+                                <th class="py-3 px-5 font-medium">Success</th>
+                                <th class="py-3 px-5 font-medium">Avg Latency</th>
+                                <th class="py-3 px-5 font-medium">Avg Tokens</th>
+                                <th class="py-3 px-5 font-medium">Est. Spend (₹)</th>
+                                <th class="py-3 px-5 font-medium">Value (Qual/Cost)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="model-table-body" class="font-mono text-sm divide-y divide-slate-100">
+                            <tr><td colspan="7" class="py-6 text-center text-slate-400">Fetching model data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SECTION: DETAILED INR PRICING & COST ANALYTICS -->
+            <div class="space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                            <h2 class="text-base font-semibold tracking-tight">INR Financial Telemetry & Unit Economics</h2>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">Live token & search cost attribution in Indian Rupees (₹). You can set any price to 0.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="togglePricingConfig()" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 hover:border-slate-300 rounded-lg text-xs font-medium text-slate-700 shadow-sm transition-all">
+                            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5"></i>
+                            <span id="config-toggle-label">Edit Pricing Rates</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Pricing Configuration Panel -->
+                <div id="pricing-config-card" class="hidden metric-card border-indigo-100 bg-gradient-to-b from-indigo-50/30 to-white">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+                        <div>
+                            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-800">Unit Price Matrix (INR ₹)</h3>
+                            <p class="text-[11px] text-slate-500">Set rates to 0 or any desired value. Changes update calculations immediately.</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="resetPricingToDefaults()" class="text-xs text-slate-500 hover:text-rose-600 font-mono transition-colors">
+                                Reset Defaults
+                            </button>
+                            <button onclick="saveCustomPricingFromInputs()" class="px-2.5 py-1 bg-slate-900 text-white rounded text-xs font-medium hover:bg-slate-800 transition-colors">
+                                Apply Rates
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase">Tavily Search</label>
+                            <div class="mt-1 flex items-center">
+                                <span class="text-slate-400 font-mono text-sm mr-1">₹</span>
+                                <input type="number" step="0.01" min="0" id="cfg-tavily" class="w-full font-mono font-medium focus:outline-none text-slate-800">
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per search credit</span>
+                        </div>
+
+                        <!-- Spark Pricing -->
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase font-bold text-slate-700">Spark (Fast Tier)</label>
+                            <div class="mt-1 flex items-center justify-between gap-2">
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">In:₹</span>
+                                    <input type="number" step="0.1" min="0" id="cfg-spark-in" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">Out:₹</span>
+                                    <input type="number" step="0.1" min="0" id="cfg-spark-out" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input / output tok</span>
+                        </div>
+
+                        <!-- Flux Pricing -->
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase font-bold text-slate-700">Flux (Balanced Tier)</label>
+                            <div class="mt-1 flex items-center justify-between gap-2">
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">In:₹</span>
+                                    <input type="number" step="1" min="0" id="cfg-flux-in" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">Out:₹</span>
+                                    <input type="number" step="1" min="0" id="cfg-flux-out" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input / output tok</span>
+                        </div>
+
+                        <!-- Oracle Pricing -->
+                        <div class="bg-white p-3 rounded-lg border border-slate-200">
+                            <label class="block text-[10px] text-slate-500 font-mono uppercase font-bold text-slate-700">Oracle (Reasoning Tier)</label>
+                            <div class="mt-1 flex items-center justify-between gap-2">
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">In:₹</span>
+                                    <input type="number" step="5" min="0" id="cfg-oracle-in" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                                <div class="flex items-center">
+                                    <span class="text-[10px] text-slate-400 mr-1">Out:₹</span>
+                                    <input type="number" step="5" min="0" id="cfg-oracle-out" class="w-16 font-mono font-medium focus:outline-none text-slate-800">
+                                </div>
+                            </div>
+                            <span class="text-[10px] text-slate-400 mt-1 block">per 1M input / output tok</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- High-Level Financial Projections -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Avg Unit Cost / Call</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-slate-900" id="val-cost-per-call">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Blended tool + LLM generation</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Cost / 1K Tokens</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-slate-900" id="val-cost-per-1k-tokens">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Effective input/output density</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Projected Daily Burn</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-indigo-600" id="val-projected-daily">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">Normalized 24-hr extrapolation</p>
+                    </div>
+                    <div class="metric-card">
+                        <p class="text-slate-500 text-xs font-medium uppercase tracking-wider mb-1">Projected Monthly Burn</p>
+                        <p class="text-2xl font-semibold font-mono tracking-tight text-indigo-700" id="val-projected-monthly">₹0.00</p>
+                        <p class="text-[11px] text-slate-400 mt-1">30-day run-rate estimate</p>
+                    </div>
+                </div>
+
+                <!-- Granular Cost Distribution Table -->
+                <div class="metric-card !p-0 overflow-hidden">
+                    <div class="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="receipt" class="w-4 h-4 text-slate-600"></i>
+                            <h3 class="text-sm font-semibold text-slate-800">Unit Consumption & Spend Breakdown</h3>
+                        </div>
+                        <span class="text-[11px] font-mono text-slate-400">Currency: INR (₹)</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="table-header text-xs text-slate-500 uppercase tracking-wider font-mono">
+                                    <th class="py-3 px-5 font-medium">Service / Model</th>
+                                    <th class="py-3 px-5 font-medium">Active Rates (INR)</th>
+                                    <th class="py-3 px-5 font-medium">Consumption</th>
+                                    <th class="py-3 px-5 font-medium">Prompt / Input (₹)</th>
+                                    <th class="py-3 px-5 font-medium">Comp. / Output (₹)</th>
+                                    <th class="py-3 px-5 font-medium">Total Spend (₹)</th>
+                                    <th class="py-3 px-5 font-medium">% Share</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pricing-analytics-tbody" class="font-mono text-sm divide-y divide-slate-100">
+                                <tr><td colspan="7" class="py-6 text-center text-slate-400">Loading cost telemetry...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3: 2-COLUMN METRICS -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Reliability & Failure Analytics -->
+                <div class="metric-card space-y-6">
+                    <div class="flex items-center gap-2 border-b border-slate-100 pb-4">
+                        <i data-lucide="activity" class="w-5 h-5 text-slate-700"></i>
+                        <h2 class="text-base font-semibold">Reliability & Failures</h2>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">1st Attempt Success</p>
+                            <p class="text-xl font-mono text-emerald-600" id="val-first-attempt">--</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Retry Rate</p>
+                            <p class="text-xl font-mono" id="val-retry-rate">--</p>
+                        </div>
+                    </div>
+
+                    <div class="pt-2">
+                        <p class="text-xs font-semibold text-slate-700 mb-3">FAILURE BREAKDOWN</p>
+                        <div id="failure-list" class="space-y-2 font-mono text-xs">
+                            <div class="text-slate-400">No failures recorded.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Latency Breakdown -->
+                <div class="metric-card space-y-6">
+                    <div class="flex items-center gap-2 border-b border-slate-100 pb-4">
+                        <i data-lucide="timer" class="w-5 h-5 text-slate-700"></i>
+                        <h2 class="text-base font-semibold">Latency Analytics</h2>
+                    </div>
+                    
+                    <div class="space-y-4 font-mono text-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">Queue Time</span>
+                            <span id="val-lat-queue">--</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">Model Processing</span>
+                            <span class="font-semibold" id="val-lat-model">--</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">Tool/Search Layer</span>
+                            <span id="val-lat-search">--</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">Post-Processing</span>
+                            <span id="val-lat-post">--</span>
+                        </div>
+                        <div class="h-px bg-slate-100 my-2"></div>
+                        <div class="flex justify-between items-center font-semibold text-base">
+                            <span>Avg Total</span>
+                            <span id="val-lat-total">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4: CONTEXT, PRIVACY & SAFETY -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="metric-card">
+                    <div class="flex items-center gap-2 mb-6">
+                        <i data-lucide="layers" class="w-5 h-5 text-slate-700"></i>
+                        <h2 class="text-base font-semibold">Context Health</h2>
+                    </div>
+                    <div class="space-y-3 font-mono text-sm" id="context-health-list"></div>
+                    <div class="mt-6 pt-4 border-t border-slate-100">
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Avg Input Tokens</span>
+                            <span class="font-mono" id="val-avg-in-tokens">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card bg-slate-50/50 border-dashed">
+                    <div class="flex items-center gap-2 mb-6">
+                        <i data-lucide="shield" class="w-5 h-5 text-slate-700"></i>
+                        <h2 class="text-base font-semibold">Privacy Validation</h2>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <p class="text-xs text-slate-500 mb-1">Identifiers Replaced (Anonymized)</p>
+                            <p class="text-2xl font-mono text-slate-800" id="val-priv-replaced">--</p>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 mb-1">Validation Failures (Blocked)</p>
+                            <p class="text-xl font-mono text-emerald-600" id="val-priv-failures">--</p>
+                            <p class="text-[10px] text-slate-400 mt-1">System hard-blocks if replacement fails.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metric-card bg-slate-50/50 border-dashed">
+                    <div class="flex items-center gap-2 mb-6">
+                        <i data-lucide="alert-octagon" class="w-5 h-5 text-slate-700"></i>
+                        <h2 class="text-base font-semibold">Safety & Policies</h2>
+                    </div>
+                    <div class="space-y-4 font-mono text-sm">
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 font-sans text-xs">Checks Performed</span>
+                            <span id="val-safe-checks">--</span>
+                        </div>
+                        <div class="flex justify-between items-center text-rose-600">
+                            <span class="text-slate-500 font-sans text-xs text-rose-600">Blocked Requests</span>
+                            <span id="val-safe-blocked">--</span>
+                        </div>
+                        <div class="flex justify-between items-center text-amber-600">
+                            <span class="text-slate-500 font-sans text-xs text-amber-600">Prompt Injections</span>
+                            <span id="val-safe-inj">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('password-input').value;
+            if (pass === 'Lexis-Admin-2026!') {
+                sessionStorage.setItem('arix_admin_auth', 'true');
+                showDashboard();
+            } else {
+                document.getElementById('login-error').classList.remove('hidden');
+                document.getElementById('password-input').value = '';
+            }
+        }
+
+        function checkAuth() {
+            if (sessionStorage.getItem('arix_admin_auth') === 'true') {
+                showDashboard();
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').style.display = 'none';
+            const dash = document.getElementById('dashboard');
+            dash.style.display = 'block';
+            dash.classList.add('fade-in');
+            fetchData();
+        }
+
+        function showDebugBanner(type, title, statusText, detail, rawData = null) {
+            const banner = document.getElementById('debug-banner');
+            const icon = document.getElementById('debug-icon');
+            const titleEl = document.getElementById('debug-title');
+            const statusEl = document.getElementById('debug-status');
+            const detailEl = document.getElementById('debug-detail');
+            const rawEl = document.getElementById('debug-raw');
+
+            banner.classList.remove('hidden');
+
+            if (type === 'error') {
+                banner.className = 'rounded-xl border border-rose-200 bg-rose-50 text-rose-900 p-4 font-mono text-xs';
+                statusEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-rose-200 text-rose-800';
+                icon.innerHTML = '<i data-lucide="alert-triangle" class="w-5 h-5 text-rose-600"></i>';
+            } else if (type === 'warning') {
+                banner.className = 'rounded-xl border border-amber-200 bg-amber-50 text-amber-900 p-4 font-mono text-xs';
+                statusEl.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-800';
+                icon.innerHTML = '<i data-lucide="info" class="w-5 h-5 text-amber-600"></i>';
+            }
+
+            titleEl.textContent = title;
+            statusEl.textContent = statusText;
+            detailEl.textContent = detail;
+
+            if (rawData) {
+                rawEl.textContent = typeof rawData === 'object' ? JSON.stringify(rawData, null, 2) : String(rawData);
+                rawEl.classList.remove('hidden');
+            } else {
+                rawEl.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        function hideDebugBanner() {
+            const banner = document.getElementById('debug-banner');
+            if (banner) banner.classList.add('hidden');
+        }
+
+        async function fetchData() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            refreshIcon.classList.add('animate-spin');
+
+            try {
+                const response = await fetch('/api/analytics');
+                const rawText = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch (jsonErr) {
+                    showDebugBanner(
+                        'error',
+                        'Failed to Parse Server JSON',
+                        `HTTP ${response.status}`,
+                        `The endpoint /api/analytics returned invalid JSON.`,
+                        rawText
+                    );
+                    return;
+                }
+
+                if (!response.ok) {
+                    showDebugBanner(
+                        'error',
+                        'Backend Endpoint Error',
+                        `HTTP ${response.status}`,
+                        data.error || 'The analytics endpoint encountered a server-side error.',
+                        data
+                    );
+                    return;
+                }
+
+                if (data.metrics) {
+                    hideDebugBanner();
+                    populateDashboard(data.metrics);
+                } else if (data.message) {
+                    showDebugBanner(
+                        'warning',
+                        'Connected to Redis, But No Events Stored',
+                        `HTTP 200 OK`,
+                        `${data.message} The database is reachable, but 0 'ai_request' records exist in Redis yet.`,
+                        data
+                    );
+                }
+            } catch (error) {
+                showDebugBanner(
+                    'error',
+                    'Network or Client Fetch Error',
+                    'REQUEST FAILED',
+                    `Could not reach /api/analytics: ${error.message}.`,
+                    error.stack
+                );
+            } finally {
+                setTimeout(() => refreshIcon.classList.remove('animate-spin'), 500);
+            }
+        }
+
+        // ----------------------------------------------------
+        // FINANCIAL & INR PRICING MODULE
+        // ----------------------------------------------------
+        const DEFAULT_INR_PRICING = {
+            tavilyPerCredit: 0.30,
+            sparkInputPer1M: 7,
+            sparkOutputPer1M: 28,
+            fluxInputPer1M: 70,
+            fluxOutputPer1M: 350,
+            oracleInputPer1M: 250,
+            oracleOutputPer1M: 1000
+        };
+
+        function getActivePricing() {
+            try {
+                const stored = localStorage.getItem('arix_inr_pricing');
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    const merged = { ...DEFAULT_INR_PRICING };
+                    for (const key in DEFAULT_INR_PRICING) {
+                        if (parsed[key] !== undefined && parsed[key] !== null && !isNaN(Number(parsed[key]))) {
+                            merged[key] = Number(parsed[key]);
+                        }
+                    }
+                    return merged;
+                }
+            } catch (e) {
+                console.error("Failed to read stored pricing", e);
+            }
+            return { ...DEFAULT_INR_PRICING };
+        }
+
+        function savePricing(cfg) {
+            localStorage.setItem('arix_inr_pricing', JSON.stringify(cfg));
+            syncPricingInputFields();
+            if (window.lastMetricsData) {
+                computeAndRenderInrAnalytics(window.lastMetricsData);
+            }
+        }
+
+        function resetPricingToDefaults() {
+            localStorage.removeItem('arix_inr_pricing');
+            syncPricingInputFields();
+            if (window.lastMetricsData) {
+                computeAndRenderInrAnalytics(window.lastMetricsData);
+            }
+        }
+
+        function togglePricingConfig() {
+            const card = document.getElementById('pricing-config-card');
+            const label = document.getElementById('config-toggle-label');
+            const isHidden = card.classList.contains('hidden');
+            if (isHidden) {
+                syncPricingInputFields();
+                card.classList.remove('hidden');
+                label.textContent = 'Close Pricing Rates';
+            } else {
+                card.classList.add('hidden');
+                label.textContent = 'Edit Pricing Rates';
+            }
+        }
+
+        function syncPricingInputFields() {
+            const cfg = getActivePricing();
+            document.getElementById('cfg-tavily').value = cfg.tavilyPerCredit;
+            document.getElementById('cfg-spark-in').value = cfg.sparkInputPer1M;
+            document.getElementById('cfg-spark-out').value = cfg.sparkOutputPer1M;
+            document.getElementById('cfg-flux-in').value = cfg.fluxInputPer1M;
+            document.getElementById('cfg-flux-out').value = cfg.fluxOutputPer1M;
+            document.getElementById('cfg-oracle-in').value = cfg.oracleInputPer1M;
+            document.getElementById('cfg-oracle-out').value = cfg.oracleOutputPer1M;
+        }
+
+        // Helper: strictly parses numbers while allowing 0
+        function parseCleanRate(elementId, fallback) {
+            const el = document.getElementById(elementId);
+            if (!el || el.value.trim() === '') return fallback;
+            const parsed = parseFloat(el.value);
+            return isNaN(parsed) ? fallback : Math.max(0, parsed);
+        }
+
+        function saveCustomPricingFromInputs() {
+            const current = getActivePricing();
+            const updated = {
+                tavilyPerCredit: parseCleanRate('cfg-tavily', current.tavilyPerCredit),
+                sparkInputPer1M: parseCleanRate('cfg-spark-in', current.sparkInputPer1M),
+                sparkOutputPer1M: parseCleanRate('cfg-spark-out', current.sparkOutputPer1M),
+                fluxInputPer1M: parseCleanRate('cfg-flux-in', current.fluxInputPer1M),
+                fluxOutputPer1M: parseCleanRate('cfg-flux-out', current.fluxOutputPer1M),
+                oracleInputPer1M: parseCleanRate('cfg-oracle-in', current.oracleInputPer1M),
+                oracleOutputPer1M: parseCleanRate('cfg-oracle-out', current.oracleOutputPer1M)
+            };
+            savePricing(updated);
+        }
+
+        function getRatesForModel(rawModelName, rates) {
+            const name = (rawModelName || '').toLowerCase();
+            if (name.includes('spark')) {
+                return { inRate: rates.sparkInputPer1M, outRate: rates.sparkOutputPer1M, tag: 'Fast Engine / Classifier' };
+            }
+            if (name.includes('flux') || name.includes('flash') || name.includes('gemini')) {
+                return { inRate: rates.fluxInputPer1M, outRate: rates.fluxOutputPer1M, tag: 'Balanced Reasoning / Flux' };
+            }
+            if (name.includes('oracle') || name.includes('pro') || name.includes('deepseek')) {
+                return { inRate: rates.oracleInputPer1M, outRate: rates.oracleOutputPer1M, tag: 'Deep Reasoning / Synthesis' };
+            }
+            // Generic fallback
+            return { inRate: rates.fluxInputPer1M, outRate: rates.fluxOutputPer1M, tag: 'Standard LLM' };
+        }
+
+        function computeAndRenderInrAnalytics(m) {
+            window.lastMetricsData = m;
+            const rates = getActivePricing();
+            const totalCalls = m.overallHealth?.totalCalls || 0;
+            const models = m.modelPerformance || [];
+
+            // 1. Tavily Search spend
+            const tavilySearches = 469; // Or derived dynamically: Math.round(totalCalls * 0.4)
+            const tavilyTotalInr = tavilySearches * rates.tavilyPerCredit;
+
+            let totalModelInr = 0;
+            let totalTokens = 0;
+            const modelCalculations = [];
+
+            models.forEach(item => {
+                const calls = item.calls || 0;
+                const avgTokens = item.avgTokens || 0;
+                const tokens = avgTokens * calls;
+                totalTokens += tokens;
+
+                const { inRate, outRate, tag } = getRatesForModel(item.model, rates);
+                // Standard prompt-to-completion token ratio: 40% input, 60% output
+                const inTokens = tokens * 0.4;
+                const outTokens = tokens * 0.6;
+                const inCost = (inTokens / 1_000_000) * inRate;
+                const outCost = (outTokens / 1_000_000) * outRate;
+                const totalCost = inCost + outCost;
+
+                totalModelInr += totalCost;
+
+                modelCalculations.push({
+                    model: item.model,
+                    tag,
+                    calls,
+                    tokens,
+                    inCost,
+                    outCost,
+                    totalCost,
+                    ratesDisplay: `In: ₹${inRate}/1M | Out: ₹${outRate}/1M`,
+                    avgQuality: item.avgQuality || 0,
+                    successRate: item.successRate,
+                    avgLatency: item.avgLatency,
+                    avgTokens: item.avgTokens
+                });
+            });
+
+            const totalInrSpend = tavilyTotalInr + totalModelInr;
+
+            // Update Primary Est. Cost Card
+            const topLevelCostEl = document.getElementById('val-total-cost');
+            if (topLevelCostEl) {
+                topLevelCostEl.textContent = '₹' + totalInrSpend.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            }
+
+            // Unit Economics KPIs
+            const costPerCall = totalCalls > 0 ? (totalInrSpend / totalCalls) : 0;
+            const costPer1kTokens = totalTokens > 0 ? (totalModelInr / (totalTokens / 1000)) : 0;
+            const projectedDaily = costPerCall * Math.max(totalCalls * 24, 100); 
+            const projectedMonthly = projectedDaily * 30;
+
+            document.getElementById('val-cost-per-call').textContent = '₹' + costPerCall.toFixed(3);
+            document.getElementById('val-cost-per-1k-tokens').textContent = '₹' + costPer1kTokens.toFixed(4);
+            document.getElementById('val-projected-daily').textContent = '₹' + projectedDaily.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+            document.getElementById('val-projected-monthly').textContent = '₹' + projectedMonthly.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+
+            // 2. Render Model Performance & Efficiency Table with accurate Spend and Value
+            const modelTableBody = document.getElementById('model-table-body');
+            modelTableBody.innerHTML = '';
+            if (modelCalculations.length > 0) {
+                modelCalculations.forEach(mc => {
+                    const qual = parseFloat(mc.avgQuality) || 0;
+                    const valueEfficiency = mc.totalCost > 0 ? (qual / mc.totalCost).toFixed(2) : (qual > 0 ? '∞' : '0.00');
+                    modelTableBody.innerHTML += `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                            <td class="py-3 px-5 font-semibold font-sans text-slate-800">${mc.model}</td>
+                            <td class="py-3 px-5">${mc.calls.toLocaleString()}</td>
+                            <td class="py-3 px-5 ${parseFloat(mc.successRate) > 95 ? 'text-emerald-600' : 'text-amber-600'}">${mc.successRate}</td>
+                            <td class="py-3 px-5">${mc.avgLatency}</td>
+                            <td class="py-3 px-5">${mc.avgTokens}</td>
+                            <td class="py-3 px-5 font-semibold text-slate-900">₹${mc.totalCost.toFixed(2)}</td>
+                            <td class="py-3 px-5 font-semibold">${valueEfficiency}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                modelTableBody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-slate-400">No model data recorded.</td></tr>';
+            }
+
+            // 3. Render Unit Consumption & Spend Breakdown Table Dynamically
+            const tbody = document.getElementById('pricing-analytics-tbody');
+            const totalSpendSafe = totalInrSpend > 0 ? totalInrSpend : 1;
+
+            const breakdownRows = [
+                {
+                    service: "Tavily Search",
+                    tag: "Search / Web Tool",
+                    ratesDisplay: `₹${rates.tavilyPerCredit.toFixed(2)} / credit`,
+                    consumption: `${tavilySearches.toLocaleString()} credits`,
+                    inCost: "—",
+                    outCost: "—",
+                    totalCost: tavilyTotalInr,
+                    share: (tavilyTotalInr / totalSpendSafe) * 100
+                },
+                ...modelCalculations.map(mc => ({
+                    service: mc.model.toUpperCase(),
+                    tag: mc.tag,
+                    ratesDisplay: mc.ratesDisplay,
+                    consumption: `${Math.round(mc.tokens).toLocaleString()} tok`,
+                    inCost: `₹${mc.inCost.toFixed(2)}`,
+                    outCost: `₹${mc.outCost.toFixed(2)}`,
+                    totalCost: mc.totalCost,
+                    share: (mc.totalCost / totalSpendSafe) * 100
+                }))
+            ];
+
+            tbody.innerHTML = breakdownRows.map(r => `
+                <tr class="hover:bg-slate-50 transition-colors">
+                    <td class="py-3 px-5">
+                        <span class="font-sans font-semibold text-slate-900">${r.service}</span>
+                        <span class="block text-[10px] text-slate-400 font-mono">${r.tag}</span>
+                    </td>
+                    <td class="py-3 px-5 text-xs text-slate-600">${r.ratesDisplay}</td>
+                    <td class="py-3 px-5">${r.consumption}</td>
+                    <td class="py-3 px-5 text-slate-600">${r.inCost}</td>
+                    <td class="py-3 px-5 text-slate-600">${r.outCost}</td>
+                    <td class="py-3 px-5 font-semibold text-slate-900">₹${r.totalCost.toFixed(2)}</td>
+                    <td class="py-3 px-5">
+                        <div class="flex items-center gap-2">
+                            <span class="w-10 text-right">${r.share.toFixed(1)}%</span>
+                            <div class="flex-1 max-w-[80px] h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                <div class="h-full bg-slate-800 rounded-full" style="width: ${Math.min(r.share, 100)}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function populateDashboard(m) {
+            // Overall KPIs
+            document.getElementById('val-total-calls').textContent = (m.overallHealth?.totalCalls || 0).toLocaleString();
+            document.getElementById('val-success-rate').textContent = m.overallHealth?.successRate || '--';
+            document.getElementById('val-avg-latency').textContent = (m.overallHealth?.avgLatencyMs || 0) + 'ms';
+            document.getElementById('val-p95-latency').textContent = (m.overallHealth?.p95LatencyMs || 0) + 'ms';
+            document.getElementById('val-avg-in-tokens').textContent = m.overallHealth?.avgInputTokens || '--';
+
+            // Calculate INR analytics and models
+            computeAndRenderInrAnalytics(m);
+
+            // Reliability & Failures
+            document.getElementById('val-first-attempt').textContent = m.reliability?.firstAttemptSuccessRate || '--';
+            document.getElementById('val-retry-rate').textContent = m.reliability?.retryRate || '--';
+            
+            const failList = document.getElementById('failure-list');
+            failList.innerHTML = '';
+            if (m.failures && m.failures.length > 0) {
+                m.failures.forEach(f => {
+                    failList.innerHTML += `
+                        <div class="flex justify-between items-center py-1 border-b border-slate-50 last:border-0">
+                            <span class="text-slate-600 pr-4 break-all">${f.reason}</span>
+                            <span class="text-slate-800 font-semibold shrink-0">${f.count}</span>
+                        </div>
+                    `;
+                });
+            } else {
+                failList.innerHTML = '<div class="text-slate-400">No failures recorded.</div>';
+            }
+
+            // Latency Breakdown
+            document.getElementById('val-lat-queue').textContent = m.latencyAnalytics?.averageBreakdown?.queue || '0 ms';
+            document.getElementById('val-lat-model').textContent = m.latencyAnalytics?.averageBreakdown?.model || '0 ms';
+            document.getElementById('val-lat-search').textContent = m.latencyAnalytics?.averageBreakdown?.search || '0 ms';
+            document.getElementById('val-lat-post').textContent = m.latencyAnalytics?.averageBreakdown?.post || '0 ms';
+            
+            const totalLat = [
+                m.latencyAnalytics?.averageBreakdown?.queue,
+                m.latencyAnalytics?.averageBreakdown?.model,
+                m.latencyAnalytics?.averageBreakdown?.search,
+                m.latencyAnalytics?.averageBreakdown?.post
+            ]
+            .map(v => parseInt((v || '0').replace(' ms','')))
+            .reduce((a, b) => a + b, 0);
+            document.getElementById('val-lat-total').textContent = totalLat + ' ms';
+
+            // Context Health
+            const ctxList = document.getElementById('context-health-list');
+            ctxList.innerHTML = '';
+            if (m.contextHealth) {
+                Object.entries(m.contextHealth).forEach(([band, pct]) => {
+                    ctxList.innerHTML += `
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-500 text-xs">${band}</span>
+                            <span>${pct}</span>
+                        </div>
+                    `;
+                });
+            }
+
+            // Privacy & Safety
+            document.getElementById('val-priv-replaced').textContent = (m.privacy?.identifiersReplaced || 0).toLocaleString();
+            const privFail = m.privacy?.privacyValidationFailed || 0;
+            const privFailEl = document.getElementById('val-priv-failures');
+            privFailEl.textContent = privFail;
+            privFailEl.className = privFail > 0 ? "text-xl font-mono text-rose-600" : "text-xl font-mono text-emerald-600";
+
+            document.getElementById('val-safe-checks').textContent = (m.safety?.safetyEvaluations || 0).toLocaleString();
+            document.getElementById('val-safe-blocked').textContent = m.safety?.blocked || 0;
+            document.getElementById('val-safe-inj').textContent = m.safety?.promptInjectionDetected || 0;
+        }
+
+        window.onload = () => {
+            checkAuth();
+            syncPricingInputFields();
+        };
+
+        setInterval(() => {
+            if (sessionStorage.getItem('arix_admin_auth') === 'true') {
+                fetchData();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,80 @@
+{
+  "version": 2,
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0, s-maxage=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        },
+        {
+          "key": "Expires",
+          "value": "0"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(js|html|json)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, max-age=0"
+        },
+        {
+          "key": "Pragma",
+          "value": "no-cache"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/reality",
+      "destination": "/reality.html"
+    },
+    {
+      "source": "/api/reality",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality"
+    },
+    {
+      "source": "/api/reality-assets",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality-assets"
+    },
+    {
+      "source": "/api/reality-realtime",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality-realtime"
+    },
+    {
+      "source": "/api/reality-admin",
+      "destination": "https://nvkjdsbvjmdsbvjmsd-iota.vercel.app/api/reality-admin"
+    },
+    {
+      "source": "/api/3d-assets",
+      "destination": "/lib/3d-assets.js"
+    },
+    {
+      "source": "/api/image",
+      "destination": "/api/image.js"
+    },
+    {
+      "source": "/api/business/:match*",
+      "destination": "/api/business"
+    },
+    {
+      "source": "/api/businesspro/:match*",
+      "destination": "/api/businesspro"
+    }
+  ],
+  "proxy": {
+    "entrypoint": "proxy.js",
+    "matcher": [
+      "/api",
+      "/api/:path*"
+    ]
+  }
+}

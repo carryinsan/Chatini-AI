@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>hackandfail.html — Final Boss Security Validation Workbench</title>
+<meta name="description" content="Final-boss defensive security validation workbench with same-origin active checks, deep repository source analysis, evidence correlation, and honest risk scoring.">
+<style>
+:root{
+  color-scheme:dark;--bg:#050914;--panel:#0d1326;--panel2:#0a0f1d;--text:#e2e8f0;
+  --muted:#94a3b8;--line:#1e293b;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;
+  --info:#3b82f6;--accent:#8b5cf6;--accent2:#6366f1;--shadow:rgba(0,0,0,.4)
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:linear-gradient(180deg,#050914,#080d1f 55%,#050914);color:var(--text)}
+body{font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+button,input,select,textarea{font:inherit}
+button{border:0;border-radius:8px;padding:10px 14px;background:var(--accent2);color:#fff;font-weight:700;cursor:pointer;transition:all 0.15s ease;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover:not(:disabled){filter:brightness(1.15);transform:translateY(-1px);box-shadow:0 4px 12px rgba(99,102,241,0.3)}
+button:disabled{opacity:.4;cursor:not-allowed;transform:none}
+button.secondary{background:#1e293b}
+button.warn{background:#78350f;color:#fef3c7}
+button.danger{background:#7f1d1d;color:#fee2e2}
+button.ghost{background:transparent;border:1px solid var(--line)}
+button.ghost:hover{background:#1e293b}
+input,select,textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:#030712;color:var(--text);padding:10px 12px;outline:none;transition:border-color 0.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(139,92,246,0.2)}
+textarea{min-height:110px;resize:vertical;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:12px;line-height:1.5}
+label{display:block;font-size:12px;color:var(--muted);margin:14px 0 6px;font-weight:600}
+header{position:sticky;top:0;z-index:50;background:rgba(5,9,20,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--line)}
+.wrap{max-width:1600px;margin:0 auto;padding:0 20px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 0;flex-wrap:wrap}
+.brand h1{margin:0;font-size:24px;background:linear-gradient(to right,var(--accent),var(--info));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:900;letter-spacing:-0.5px}
+.brand p{margin:6px 0 0;color:var(--muted);font-size:13px}
+.state{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:999px;padding:8px 14px;font-size:12px;color:var(--text);background:#0f172a;box-shadow:0 2px 8px var(--shadow)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.dot.run{background:var(--info);box-shadow:0 0 8px var(--info);animation:pulse 1.5s infinite}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+@keyframes pulse{0%{opacity:.6;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}100%{opacity:.6;transform:scale(0.8)}}
+.tabs{display:flex;gap:8px;overflow-x:auto;padding-bottom:16px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;padding:10px 16px;border-radius:8px;background:#0f172a;color:var(--muted);border:1px solid var(--line);cursor:pointer;font-size:13px;font-weight:600;transition:all 0.2s}
+.tab:hover{background:#1e293b;color:var(--text)}
+.tab.active{background:var(--accent2);color:#fff;border-color:var(--accent);box-shadow:0 4px 12px rgba(99,102,241,0.25)}
+main{padding:24px 0 60px}
+.layout{display:grid;grid-template-columns:380px 1fr;gap:24px}
+@media(max-width:1024px){.layout{grid-template-columns:1fr}}
+.panel{background:rgba(13,19,38,.75);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 8px 32px var(--shadow);backdrop-filter:blur(10px)}
+.panel h2{font-size:17px;margin:0 0 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.panel h3{font-size:14px;margin:20px 0 10px;color:var(--text)}
+.small{font-size:12px;color:var(--muted);line-height:1.6}
+.notice{padding:12px 16px;border:1px solid var(--line);border-radius:8px;background:#1e293b;color:#f8fafc;font-size:13px;line-height:1.6;margin-bottom:16px}
+.notice.danger{background:#450a0a;border-color:#7f1d1d;color:#fecaca}
+.notice.ok{background:#064e3b;border-color:#047857;color:#d1fae5}
+.notice.warn{background:#451a03;border-color:#92400e;color:#fde68a}
+.section{margin-top:20px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:768px){.grid2,.grid3{grid-template-columns:1fr}}
+.metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+@media(max-width:1200px){.metrics{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.metric{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:16px;text-align:center;box-shadow:inset 0 2px 4px rgba(0,0,0,0.2)}
+.metric b{font-size:28px;display:block;margin-bottom:4px;font-weight:900}
+.metric span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;font-weight:700}
+.metric.fail b{color:var(--bad)}
+.metric.warn b{color:var(--warn)}
+.metric.pass b{color:var(--ok)}
+.toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:16px;margin-bottom:16px}
+.check{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.check:last-child{border-bottom:0}
+.check-title{font-size:13px;font-weight:700;color:var(--text)}
+.check-desc{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}
+.status{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);white-space:nowrap;font-weight:700;letter-spacing:0.5px;text-transform:uppercase}
+.status.ok{color:#34d399;background:#022c22;border-color:#059669}
+.status.warn{color:#fbbf24;background:#451a03;border-color:#d97706}
+.status.bad{color:#f87171;background:#450a0a;border-color:#dc2626}
+.status.info{color:#60a5fa;background:#172554;border-color:#2563eb}
+.status.na{color:#94a3b8;background:#0f172a;border-color:#334155}
+.finding{border:1px solid var(--line);max-width:100%;overflow:hidden;border-left:4px solid var(--info);border-radius:8px;padding:16px;margin:12px 0;background:#0f172a;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+.finding.high{border-left-color:var(--bad);background:linear-gradient(90deg,rgba(69,10,10,0.4),transparent)}
+.finding.medium{border-left-color:var(--warn);background:linear-gradient(90deg,rgba(69,26,3,0.4),transparent)}
+.finding.low{border-left-color:var(--info)}
+.finding .head{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:8px}
+.finding .head b{font-size:14px;color:var(--text)}
+.sev{font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:2px 8px;border-radius:4px;background:rgba(0,0,0,0.3);border:1px solid var(--line)}
+.high .sev{color:var(--bad);border-color:var(--bad)}
+.medium .sev{color:var(--warn);border-color:var(--warn)}
+pre,.code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{white-space:pre-wrap;word-break:break-word;background:#030712;padding:12px;border-radius:6px;border:1px solid var(--line);font-size:11px;color:#a5b4fc;overflow-x:auto}
+.log{height:350px;overflow:auto;overflow-wrap:anywhere;background:#030712;border:1px solid var(--line);border-radius:8px;padding:12px;font:11px/1.6 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;color:#94a3b8}
+.log .INFO{color:#60a5fa}
+.log .WARN{color:#fbbf24}
+.log .ERROR{color:#f87171}
+.log .SUCCESS{color:#34d399}
+table{width:100%;table-layout:fixed;border-collapse:collapse;font-size:12px}td,th{overflow-wrap:anywhere}
+th,td{text-align:left;padding:10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:700;background:#0f172a}
+td code{color:#a5b4fc;background:#1e293b;padding:2px 6px;border-radius:4px}
+details{border:1px solid var(--line);border-radius:6px;padding:10px;margin-top:12px;background:#0a0f1d}
+summary{cursor:pointer;font-size:12px;font-weight:600;color:var(--muted)}
+summary:hover{color:var(--text)}
+.tabpanel{display:none;animation:fadeIn 0.3s ease}
+.tabpanel.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.progress-wrap{background:#0f172a;border:1px solid var(--line);border-radius:999px;overflow:hidden;margin-bottom:8px;position:relative}
+.progress{height:12px;background:linear-gradient(90deg,var(--info),var(--accent));width:0%;transition:width 0.2s ease, background-color 0.3s}
+.progress-text{position:absolute;top:0;left:0;width:100%;text-align:center;font-size:9px;line-height:12px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.8);mix-blend-mode:difference}
+.toggle{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text);cursor:pointer}
+.toggle input{width:16px;height:16px;cursor:pointer;accent-color:var(--accent)}
+.pillrow{display:flex;flex-wrap:wrap;gap:8px}
+.pill{background:#1e293b;border:1px solid var(--line);padding:6px 12px;border-radius:999px;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;transition:all 0.2s}
+.pill:hover{background:#334155}
+.pill input{margin:0;width:14px;height:14px}
+.pill:has(input:checked){background:var(--accent2);border-color:var(--accent);color:#fff}
+.filelist{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#0a0f1d}
+.fileitem{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line)}
+.fileitem:last-child{border-bottom:0}
+footer{text-align:center;color:var(--muted);font-size:12px;line-height:1.6;padding-bottom:40px;border-top:1px solid var(--line);margin-top:20px;padding-top:20px}
+
+.finalBossBanner{border:1px solid #7f1d1d;background:linear-gradient(135deg,rgba(127,29,29,.5),rgba(30,41,59,.45));border-radius:10px;padding:14px 16px;margin-top:14px}
+.finalScore{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+.scoreCard{background:#030712;border:1px solid var(--line);border-radius:10px;padding:14px;text-align:center}
+.scoreCard b{display:block;font-size:24px}.scoreCard span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.finalVerdict{padding:16px;border:1px solid var(--line);border-radius:10px;background:#0a0f1d;margin-top:14px}
+.finalVerdict strong{font-size:18px}.tag{display:inline-block;padding:3px 8px;border-radius:999px;background:#1e293b;border:1px solid var(--line);font-size:10px;margin:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <h1>hackandfail.html</h1>
+        <p>Final-Boss Defensive Security Validation Workbench</p>
+      </div>
+      <div class="state" id="stateContainer">
+        <span class="dot" id="dot"></span>
+        <span id="stateText" style="font-weight:600">IDLE — System Ready</span>
+      </div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-tab="overview">Overview & Config</button>
+      <button class="tab" data-tab="fuzzing">Payloads & Tricks</button>
+      <button class="tab" data-tab="custom">Custom Requests</button>
+      <button class="tab" data-tab="files">Local Repo Scan</button>
+      <button class="tab" data-tab="network">Network Probes</button>
+      <button class="tab" data-tab="report">Results & Report</button>
+      <button class="tab" data-tab="boss">FINAL BOSS</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="layout">
+    <aside>
+      <!-- TAB 1: OVERVIEW & CONFIG -->
+      <section class="panel tabpanel active" data-panel="overview">
+        <h2>Target Configuration</h2>
+        <div class="notice warn">
+          <b>Rule of Engagement:</b> Only test authorized, same-origin deployments. This workbench performs deliberate, rate-limited, same-origin checks. It does not fabricate results and it does not execute destructive exploits.
+        </div>
+
+        <label>Base Origin (Must match deployment for CORS)</label>
+        <input id="origin" value="" placeholder="https://lexis-ai-chatini.vercel.app">
+        <div class="small" style="margin-top:4px">Leave default to scan the current deployment origin.</div>
+
+        <label>Seed Paths (Discovery starting points)</label>
+        <textarea id="paths" placeholder="/api/auth
+/api/users
+/api/data
+/admin"></textarea>
+        
+        <div class="grid2 section">
+          <div>
+            <label>Concurrency Limit</label>
+            <select id="concurrency">
+              <option value="2">2 (Gentle)</option>
+              <option value="5" selected>5 (Standard)</option>
+              <option value="10">10 (Aggressive)</option>
+              <option value="25">25 (Hyper-Aggressive)</option>
+            </select>
+          </div>
+          <div>
+            <label>Timeout (ms)</label>
+            <input id="timeout" type="number" min="1000" max="30000" step="1000" value="10000">
+          </div>
+        </div>
+
+        <div class="grid2 section">
+          <div>
+            <label>Scan Pace</label>
+            <select id="pace">
+              <option value="1200" selected>Careful — 1 request about every 1.2s</option>
+              <option value="700">Thorough — about 1 request / 0.7s</option>
+              <option value="350">Normal — about 1 request / 0.35s</option>
+            </select>
+          </div>
+          <div>
+            <label>Scan Depth</label>
+            <select id="depth">
+              <option value="basic">Basic — availability + headers</option>
+              <option value="deep" selected>Deep — methods + CORS + reflection</option>
+              <option value="complete">Complete — deep + repository source scan</option>
+            </select>
+          </div>
+        </div>
+
+        <h3 class="section">Fuzzing Intensity</h3>
+        <select id="intensity">
+          <option value="light">Light (Headers, CORS, Basic Status)</option>
+          <option value="standard" selected>Standard (Method Fuzzing, Reflection, Common Secrets)</option>
+          <option value="hyper">Hyper-Aggressive (SQLi/XSS/LFI payloads, Deep Discovery, Header Injection)</option>
+        </select>
+
+        <h3 class="section">Active Modules</h3>
+        <div class="pillrow">
+          <label class="pill"><input type="checkbox" class="mod" value="discovery" checked> Dir Discovery</label>
+          <label class="pill"><input type="checkbox" class="mod" value="headers" checked> Header Auth</label>
+          <label class="pill"><input type="checkbox" class="mod" value="methods" checked> Verb Fuzz</label>
+          <label class="pill"><input type="checkbox" class="mod" value="cors" checked> CORS Origin</label>
+          <label class="pill"><input type="checkbox" class="mod" value="xss" checked> XSS Reflection</label>
+          <label class="pill"><input type="checkbox" class="mod" value="sqli" checked> SQLi / DB Errors</label>
+          <label class="pill"><input type="checkbox" class="mod" value="lfi" checked> Path Traversal</label>
+          <label class="pill"><input type="checkbox" class="mod" value="ssti" checked> Template Injection</label>
+        </div>
+
+        <div class="row section" style="margin-top:24px">
+          <button id="startBtn" style="flex:1;font-size:14px;padding:14px">🔥 START DEEP SAFE SCAN</button>
+          <button id="stopBtn" class="danger" disabled>STOP</button>
+        </div>
+        <div class="row section">
+          <button id="clearBtn" class="ghost" style="flex:1">Clear State</button>
+        </div>
+      </section>
+
+      <!-- TAB 2: PAYLOADS & TRICKS -->
+      <section class="panel tabpanel" data-panel="fuzzing">
+        <h2>Custom Hacking Tricks</h2>
+        <div class="small" style="margin-bottom:16px">Define your own fuzzing dictionaries. The Hyper-Aggressive engine will append these to discovered endpoints and query parameters.</div>
+
+        <label>Custom Discovery Wordlist (Paths)</label>
+        <textarea id="customWordlist" placeholder="/.env
+/.git/config
+/wp-admin
+/api/v1/users
+/phpinfo.php
+/.aws/credentials
+/backup.sql"></textarea>
+        <div class="small">One path per line. These are appended to the origin and checked for 200/403/500 status.</div>
+
+        <label class="section">Custom Parameter Payloads (SQLi/XSS/Command)</label>
+        <textarea id="customPayloads" placeholder="' OR 1=1--
+&quot;&gt;&lt;svg/onload=alert(1)&gt;
+../../../../etc/passwd
+{{7*7}}
+| whoami"></textarea>
+        <div class="small">These strings are injected into known parameters and paths during reflection/error testing.</div>
+        
+        <div class="row section">
+          <button id="savePayloadsBtn">Save Custom Tricks</button>
+          <button id="resetPayloadsBtn" class="secondary">Load Defaults</button>
+        </div>
+      </section>
+
+      <!-- TAB 3: CUSTOM REQUESTS -->
+      <section class="panel tabpanel" data-panel="custom">
+        <h2>Custom Safe Requests</h2>
+        <div class="small">Craft specific manual probes to run alongside the automated scanner.</div>
+        <label>Test Name</label>
+        <input id="reqName" placeholder="E.g., GraphQL Introspection">
+        
+        <div class="grid2">
+          <div>
+            <label>Method</label>
+            <select id="reqMethod"><option>GET</option><option>POST</option><option>PUT</option><option>OPTIONS</option><option>DELETE</option></select>
+          </div>
+          <div>
+            <label>Path</label>
+            <input id="reqPath" placeholder="/graphql">
+          </div>
+        </div>
+
+        <label>Headers (JSON)</label>
+        <textarea id="reqHeaders" placeholder="{&quot;Content-Type&quot;:&quot;application/json&quot;, &quot;X-Custom-Bypass&quot;:&quot;127.0.0.1&quot;}" style="min-height:80px"></textarea>
+        
+        <label>Body (String/JSON)</label>
+        <textarea id="reqBody" placeholder="{&quot;query&quot;:&quot;{ __schema { types { name } } }&quot;}" style="min-height:80px"></textarea>
+        
+        <label class="toggle section"><input id="reqManual" type="checkbox"> I confirm this request is safe and non-destructive.</label>
+        
+        <div class="row section">
+          <button id="addReqBtn">Add to Queue</button>
+          <button id="runReqsBtn" class="secondary">Run Custom Now</button>
+          <button id="clearReqsBtn" class="ghost">Clear List</button>
+        </div>
+        
+        <div id="customList" class="section"></div>
+      </section>
+
+      <!-- TAB 4: FILES -->
+      <section class="panel tabpanel" data-panel="files">
+        <h2>Repository & Source Analysis</h2>
+        <div class="small">
+          Two real modes are supported: choose files directly from the repository on your computer, or enter deployed relative paths and let this page fetch them from the current origin. Findings are based on the bytes actually read; no synthetic findings are created.
+        </div>
+
+        <label>Local Repository Files</label>
+        <input id="fileInput" type="file" multiple webkitdirectory directory accept=".js,.mjs,.ts,.jsx,.tsx,.html,.css,.json,.env,.txt,.md,.py,.java,.go,.php">
+        <div class="row section">
+          <button id="scanFilesBtn">Analyze Selected Files</button>
+          <button id="clearFilesBtn" class="secondary">Clear</button>
+        </div>
+
+        <label class="section">Deployed Repository Paths</label>
+        <textarea id="repoPaths" style="min-height:240px" placeholder="public/index.html
+public/app.html
+api/chat.js
+lib/privacyEngine.js"></textarea>
+        <div class="small">Use paths that are actually reachable from the deployment. For example, <code>public/app.html</code> is often deployed as <code>/app.html</code>; source-only files such as <code>lib/privacyEngine.js</code> may not be publicly fetchable, in which case the scanner will report that honestly instead of inventing results.</div>
+        <div class="row section">
+          <button id="scanRepoBtn">Deep Scan Deployed Paths</button>
+          <button id="advancedSourceBtn" class="warn">Advanced JS/HTML Audit</button>
+          <button id="finalBossBtn" class="danger">FINAL BOSS AUDIT</button>
+          <button id="loadRepoBtn" class="secondary">Load My Repository List</button>
+        </div>
+        <div class="notice" style="margin-top:12px"><b>Advanced JS/HTML Audit:</b> analyzes every selected JavaScript/HTML file individually without executing it. It adds structural analysis, endpoint extraction, source/sink proximity checks, authentication-boundary heuristics, secret review, script/form analysis, and per-file evidence. Static matches are labeled for review rather than automatically treated as exploitable vulnerabilities.</div>
+
+        <div id="fileResults" class="section filelist">
+          <div class="notice">No files analyzed yet.</div>
+        </div>
+      </section>
+
+      <!-- TAB 5: NETWORK -->
+      <section class="panel tabpanel" data-panel="network">
+        <h2>Network & Headers Probe</h2>
+        <div class="small">Manually re-test specific endpoints for Security Headers and CORS misconfigurations.</div>
+        
+        <label>Endpoints to Probe</label>
+        <textarea id="netPaths" placeholder="/
+/api/chat"></textarea>
+        
+        <div class="row section">
+          <button id="probeNetBtn">Probe Specific Endpoints</button>
+          <button id="probeCurrentBtn" class="secondary">Check Current Page Headers</button>
+        </div>
+      </section>
+    </aside>
+
+    <section>
+      <!-- MAIN VIEW -->
+      <section class="panel">
+        <div class="toolbar">
+          <div>
+            <h2 id="tabTitle" style="border:0;padding:0;margin:0">Overview & Config</h2>
+            <div class="small" id="scopeDisplay">Ready to initialize.</div>
+          </div>
+          <div class="status info" id="overallStatus">STANDBY</div>
+        </div>
+        
+        <div class="progress-wrap">
+          <div class="progress" id="progressBar"></div>
+          <div class="progress-text" id="progressText">0%</div>
+        </div>
+        
+        <div class="metrics section">
+          <div class="metric"><b id="mTotal">0</b><span>Requests</span></div>
+          <div class="metric pass"><b id="mPass">0</b><span>Passed</span></div>
+          <div class="metric warn"><b id="mWarn">0</b><span>Warnings</span></div>
+          <div class="metric fail"><b id="mFail">0</b><span>Critical</span></div>
+          <div class="metric"><b id="mFind">0</b><span>Findings</span></div>
+          <div class="metric"><b id="mTime">0s</b><span>Elapsed</span></div>
+        </div>
+      </section>
+
+      <!-- RESULTS CONTENT -->
+      <div class="tabpanel active" data-panel="overview">
+        <div class="grid2 section">
+          <section class="panel">
+            <h2>Critical Findings</h2>
+            <div id="findingsView"><div class="notice ok">Awaiting scan...</div></div>
+          </section>
+          <section class="panel">
+            <h2>Live Activity Log</h2>
+            <div class="log" id="logView"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="tabpanel" data-panel="fuzzing">
+        <section class="panel section">
+          <h2>Fuzzing Dictionary Info</h2>
+          <div class="notice">
+            The scanner uses controlled, non-executing markers and response observations. It checks for:
+            <ul>
+              <li><b>SQLi:</b> Syntax errors, DB-specific tracebacks (MySQL, Postgres, Oracle, SQLite).</li>
+              <li><b>XSS:</b> Exact DOM reflection of unencoded payload markers.</li>
+              <li><b>LFI/RCE:</b> Linux root signatures, Windows boot loader strings, Python stack traces.</li>
+              <li><b>Header Injection:</b> Host overrides, X-Forwarded-For admin bypass attempts.</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <div class="tabpanel" data-panel="custom">
+        <section class="panel section">
+          <h2>Custom Request Results</h2>
+          <div id="customResultsView"><div class="notice">Run custom requests to see results here.</div></div>
+        </section>
+      </div>
+      
+      <div class="tabpanel" data-panel="network">
+        <section class="panel section">
+          <h2>Detailed Endpoint Analysis</h2>
+          <div style="overflow-x:auto">
+            <table id="endpointTable">
+              <thead><tr><th>Method</th><th>Path</th><th>Status</th><th>Type</th><th>Observation</th></tr></thead>
+              <tbody id="endpointTbody">
+                <tr><td colspan="5" style="text-align:center">No data yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      <div class="tabpanel" data-panel="report">
+        <section class="panel section">
+          <div class="toolbar">
+            <h2 style="border:0;padding:0;margin:0">Detailed Security Report</h2>
+            <div class="row">
+              <button id="dlJsonBtn" class="secondary">Download JSON</button>
+              <button id="dlHtmlBtn" class="secondary">Download HTML</button>
+            </div>
+          </div>
+          <textarea id="jsonOutput" spellcheck="false" style="min-height:500px" readonly placeholder="Run a scan to generate the report..."></textarea>
+        </section>
+        <section class="panel section">
+          <h2>All Security Checks</h2>
+          <div id="checksView"></div>
+        </section>
+      <div class="tabpanel" data-panel="boss">
+        <section class="panel section">
+          <div class="toolbar">
+            <div>
+              <h2 style="border:0;padding:0;margin:0">FINAL BOSS — Honest Security Level</h2>
+              <div class="small">Evidence-weighted conclusion from active same-origin validation plus actual JS/HTML source content. Static signals never become confirmed vulnerabilities without supporting evidence.</div>
+            </div>
+            <div class="status info" id="bossStatus">NOT RUN</div>
+          </div>
+          <div class="finalBossBanner">
+            <b>Scope lock:</b> same-origin only. The final-boss engine uses non-destructive GET/HEAD/OPTIONS checks, benign marker/canonicalization probes, response-difference analysis, and source review. It does not execute commands, drop files, brute-force credentials, or attempt destructive state changes.
+          </div>
+          <div id="bossVerdict" class="finalVerdict"><strong>Awaiting FINAL BOSS AUDIT</strong><div class="small" style="margin-top:6px">Run the final-boss audit after loading the repository paths and/or selecting your local repository folder.</div></div>
+          <div class="finalScore">
+            <div class="scoreCard"><b id="bossScore">—</b><span>Risk Score / 100</span></div>
+            <div class="scoreCard"><b id="bossConfirmed">0</b><span>Confirmed</span></div>
+            <div class="scoreCard"><b id="bossReview">0</b><span>High Review</span></div>
+            <div class="scoreCard"><b id="bossCoverage">0%</b><span>Coverage</span></div>
+          </div>
+          <section class="panel section">
+            <h2>Final-Boss Evidence Ledger</h2>
+            <div id="bossLedger"><div class="notice">No final-boss evidence yet.</div></div>
+          </section>
+          <section class="panel section">
+            <h2>High-Value Validation Results</h2>
+            <div id="bossTests"><div class="notice">No tests executed yet.</div></div>
+          </section>
+        </section>
+      </div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <b>Safety & Constraints:</b> This is a browser-based, same-origin defensive workbench. It makes deliberate requests to the selected deployment, uses rate limiting between requests, and reports only observations supported by actual responses or actual source files read in the browser.
+</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  const state = {
+    running:false, stop:false, startTime:null, timer:null, reqCount:0,
+    findings:[], checks:[], endpoints:[], customReqs:[], fileResults:[],
+    currentPhase:'IDLE', lastRequestAt:0, report:null
+  };
+
+  const $ = id => document.getElementById(id);
+  const $$ = selector => Array.from(document.querySelectorAll(selector));
+  const esc = str => String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const nowIso = () => new Date().toISOString();
+
+  const REPO_LIST = [
+    'api/accessibility.js','api/admin.js','api/agent.js','api/algorithm.js','api/analytics.js',
+    'api/app-builder.js','api/arixmail.js','api/auth.js','api/brain-map.js','api/business.js',
+    'api/businesspro.js','api/chat.js','api/chatshare.js','api/cron.js','api/diagram.js','api/drive.js',
+    'api/events.js','api/file.js','api/growth.js','api/image.js','api/keys.js','api/lab.js',
+    'api/legalscrape.js','api/maths.js','api/memory.js','api/multiplayer.js','api/permissions.js',
+    'api/podcast.js','api/presentation.js','api/project.js','api/repair.js','api/research.js',
+    'api/scrape.js','api/server.js','api/share.js','api/study-deck.js','api/subscription.js',
+    'api/task.js','api/taskplanner.js','api/track.js','api/twin.js','api/usertracker.js',
+    'lib/privacyEngine.js','public/.gitignore','public/README.md','public/admin.html',
+    'public/adminonlysubscription.html','public/adminuserfeaturetracker.html','public/adsformyapp.html',
+    'public/agent.html','public/ai.js','public/analytics.html','public/apiadmin123456.html',
+    'public/apikeys.html','public/app.html','public/app.js','public/app123.html','public/apptesting.html',
+    'public/apptesting2.html','public/arix_mail.html','public/arixhandlemail.html','public/arixlegal.html',
+    'public/betaversion.html','public/business.html','public/businesspro.html','public/case.html',
+    'public/case.js','public/code123code.html','public/dashboard.html','public/document.js','public/hackandfail.html',
+    'public/hackifyoucan.html','public/index.html','public/legal.js','public/legalapp.js','public/oldapp.html',
+    'public/package.json','public/plans.html','public/privacy.js','public/safety.js','public/security.js',
+    'public/security123impsecurity.html','public/sw.js','public/terms&conditions.html','public/trytohack.html',
+    'public/updates.html','public/vercel.json'
+  ];
+
+  const DEFAULT_SAFE_MARKERS = [
+    '__TTH_REFLECT_7A91__',
+    '__TTH_REFLECT_C42E__'
+  ];
+
+  const SECRET_RULES = [
+    ['Google API key', /AIza[0-9A-Za-z_-]{35}/g],
+    ['GitHub token', /\bgh[pousr]_[A-Za-z0-9]{30,}\b/g],
+    ['Slack token', /\bxox[baprs]-[A-Za-z0-9-]{20,}\b/g],
+    ['Private key', /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/g],
+    ['Generic secret assignment', /\b(?:secret|api[_-]?key|token|password)\s*[:=]\s*["'][^"']{8,}["']/gi]
+  ];
+
+  const SOURCE_RULES = [
+    ['Dynamic code execution', /\beval\s*\(/g, 'Review whether untrusted input can reach eval().'],
+    ['Function constructor', /\bnew\s+Function\s*\(/g, 'Dynamic code generation can turn data into executable code.'],
+    ['HTML injection sink', /\b(?:innerHTML|outerHTML)\s*=/g, 'Check whether assigned content is trusted or encoded.'],
+    ['DOM insertion sink', /\binsertAdjacentHTML\s*\(/g, 'Check whether inserted HTML is attacker-controlled.'],
+    ['Document write sink', /\bdocument\.write(?:ln)?\s*\(/g, 'Review whether attacker-controlled data can reach document.write().'],
+    ['Open redirect candidate', /\blocation\.(?:href|assign|replace)\s*=\s*[^;]+/g, 'Review whether destination is derived from untrusted input.'],
+    ['Shell command API', /\b(?:exec|execFile|spawn|spawnSync)\s*\(/g, 'Review command arguments and user-input boundaries.'],
+    ['Filesystem write', /\b(?:writeFile|writeFileSync|appendFile|appendFileSync|rm|unlink|unlinkSync)\s*\(/g, 'Review paths, authorization, and user-controlled filenames.'],
+    ['Filesystem read', /\b(?:readFile|readFileSync|createReadStream)\s*\(/g, 'Review whether user-controlled paths can reach filesystem reads.'],
+    ['Prototype mutation', /(?:__proto__|constructor\s*\.|prototype)\s*\[/g, 'Review dynamic property assignment for prototype pollution risk.'],
+    ['Weak random source', /\bMath\.random\s*\(/g, 'Do not use Math.random for security-sensitive tokens.'],
+    ['Insecure cookie setting', /document\.cookie\s*=\s*[^;]+/g, 'Review Secure, HttpOnly, SameSite, and sensitive-cookie exposure.'],
+    ['Potential hard-coded credential', /\b(?:api[_-]?key|secret|token|password|private[_-]?key)\s*[:=]\s*["\'`][^"\'`\r\n]{8,}["\'`]/gi, 'Verify the value is not a live credential and rotate it if exposed.']
+  ];
+
+  const ADVANCED_PATTERNS = [
+    ['Fetch/XHR call', /\b(?:fetch|XMLHttpRequest|axios\.(?:get|post|put|patch|delete|request))\s*\(/g],
+    ['API route declaration', /(?:export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)|module\.exports\s*=|exports\.(?:GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\s*=)/g],
+    ['Request body source', /(?:req|request)\.(?:body|query|params|headers|cookies)\b/g],
+    ['URL/query source', /(?:location\.(?:search|hash|href)|URLSearchParams|window\.location|document\.referrer)\b/g],
+    ['DOM input source', /(?:\.value\b|\.files\b|\.dataset\b|contenteditable|FormData\s*\()/g],
+    ['Auth/session signal', /(?:authorization|authenticate|isAuthenticated|session|cookies?|jwt|bearer|csrf|xsrf|role|permission|admin)\b/gi],
+    ['SQL/query execution', /(?:query|execute|raw|sequelize|prisma|knex|mongodb|mongoose)\s*\(/gi],
+    ['Error disclosure', /(?:res\.(?:send|json)|throw\s+new\s+Error|console\.(?:error|log)|\bstack\b)/g],
+    ['External script', /<script[^>]+src=["\'][^"\']+["\']/gi],
+    ['Form action', /<form[^>]+action=["\'][^"\']+["\']/gi],
+    ['PostMessage listener', /addEventListener\s*\(\s*["\']message["\']/g],
+    ['Message origin check', /(?:event|e|evt)\.origin/g],
+    ['CORS configuration', /access-control-allow-(?:origin|credentials|headers|methods)/gi]
+  ];
+
+  const FINAL_BOSS_RULES = [
+    {id:'SECRET_HIGH', label:'Likely hard-coded secret', rx:/\b(?:api[_-]?key|secret|token|password|private[_-]?key)\s*[:=]\s*["'`]([^"'`\r\n]{12,})["'`]/gi, severity:'HIGH_REVIEW'},
+    {id:'AUTH_BYPASS', label:'Authorization boundary review', rx:/\b(?:admin|isAdmin|role|permission|authorize|authorization|x-admin-password|adminPassword|adminSecret)\b/gi, severity:'REVIEW'},
+    {id:'SSRF', label:'Server-side URL fetch candidate', rx:/\b(?:fetch|axios|http\.(?:get|request)|https\.(?:get|request)|got|request)\s*\([^\n]{0,300}(?:url|uri|href|target|endpoint|callback|webhook)[^\n]{0,300}\)/gi, severity:'HIGH_REVIEW'},
+    {id:'PATH_TRAVERSAL', label:'Filesystem path flow candidate', rx:/\b(?:readFile|readFileSync|createReadStream|writeFile|writeFileSync|unlink|rm)\s*\([^\n]{0,220}(?:req|request|query|params|body|path|filename|file)[^\n]{0,220}\)/gi, severity:'HIGH_REVIEW'},
+    {id:'COMMAND_INJECTION', label:'Command execution input flow candidate', rx:/\b(?:exec|execFile|spawn|spawnSync)\s*\([^\n]{0,250}(?:req|request|query|params|body|input|command)[^\n]{0,250}\)/gi, severity:'HIGH_REVIEW'},
+    {id:'SQL_FLOW', label:'Database query input flow candidate', rx:/\b(?:query|execute|raw|findOne|findMany|aggregate)\s*\([^\n]{0,300}(?:req|request|query|params|body|input|search)[^\n]{0,300}\)/gi, severity:'HIGH_REVIEW'},
+    {id:'OPEN_REDIRECT', label:'Redirect input flow candidate', rx:/\b(?:location\.(?:href|assign|replace)|res\.(?:redirect|writeHead))\s*\([^\n]{0,260}(?:req|request|query|params|body|url|returnTo|redirect)[^\n]{0,260}\)/gi, severity:'HIGH_REVIEW'},
+    {id:'POSTMESSAGE', label:'Cross-window message trust boundary', rx:/addEventListener\s*\(\s*["']message["']/gi, severity:'REVIEW'},
+    {id:'CORS_WILDCARD', label:'CORS wildcard configuration', rx:/access-control-allow-origin[^\n]{0,80}[*][^\n]{0,80}/gi, severity:'REVIEW'},
+    {id:'JWT_WEAK', label:'JWT/auth token handling review', rx:/\b(?:jwt|jsonwebtoken|sign|verify|decode)\b/gi, severity:'REVIEW'},
+    {id:'UNSAFE_DESERIALIZE', label:'Dynamic deserialization review', rx:/\b(?:JSON\.parse|deserialize|unserialize|fromJSON)\s*\(/gi, severity:'REVIEW'}
+  ];
+
+  const FINAL_BOSS_STATE = {tests:[], verdict:null, coverage:{candidates:0, tested:0}, highReview:0, confirmed:0};
+
+
+  function normalizeOrigin(raw){
+    const u = new URL(raw || location.origin, location.href);
+    if (!/^https?:$/.test(u.protocol)) throw new Error('Origin must use http:// or https://');
+    return u.origin;
+  }
+
+  function normalizePath(raw){
+    let p = String(raw || '').trim();
+    if (!p) return '';
+    if (/^https?:\/\//i.test(p)) {
+      const u = new URL(p);
+      const base = new URL($('origin').value || location.origin, location.href);
+      if (u.origin !== base.origin) throw new Error('Cross-origin URL rejected: ' + p);
+      p = u.pathname + u.search;
+    }
+    if (!p.startsWith('/')) p = '/' + p;
+    return p;
+  }
+
+  function getLines(id){
+    const el = $(id); if (!el) return [];
+    return [...new Set(el.value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean))];
+  }
+
+  function getMods(){ return new Set($$('.mod:checked').map(e=>e.value)); }
+
+  function setStatus(text, type='info', dot='run'){
+    $('stateText').textContent = text;
+    $('overallStatus').textContent = text.split(' ')[0].toUpperCase();
+    $('overallStatus').className = `status ${type}`;
+    $('dot').className = `dot ${dot}`;
+  }
+
+  function log(msg, type='INFO'){
+    const line = document.createElement('div');
+    line.innerHTML = `<span style="color:#64748b">[${new Date().toLocaleTimeString()}]</span> <span class="${type}">[${esc(type)}]</span> ${esc(msg)}`;
+    $('logView').appendChild(line);
+    $('logView').scrollTop = $('logView').scrollHeight;
+  }
+
+  function updateMetrics(){
+    $('mTotal').textContent = state.reqCount;
+    $('mPass').textContent = state.checks.filter(x=>x.status==='PASS').length;
+    $('mWarn').textContent = state.checks.filter(x=>x.status==='WARN').length;
+    $('mFail').textContent = state.checks.filter(x=>x.status==='FAIL').length;
+    $('mFind').textContent = state.findings.length;
+  }
+
+  function addCheck(name,status,details,evidence={}){
+    state.checks.push({name,status,details,evidence,time:nowIso()});
+    updateMetrics(); renderChecks();
+  }
+
+  function addFinding(severity,title,detail,evidence={}){
+    const fingerprint = JSON.stringify([severity,title,detail,evidence]);
+    if (state.findings.some(f=>f.fingerprint===fingerprint)) return;
+    state.findings.push({severity,title,detail,evidence,time:nowIso(),fingerprint});
+    updateMetrics(); renderFindings();
+    log(`FINDING [${severity}] ${title}`, severity==='HIGH'?'ERROR':severity==='MEDIUM'?'WARN':'INFO');
+  }
+
+  function renderFindings(){
+    const h=$('findingsView');
+    if(!state.findings.length){ h.innerHTML='<div class="notice ok">No confirmed security findings yet.</div>'; return; }
+    const rank={HIGH:0,MEDIUM:1,LOW:2,INFO:3};
+    h.innerHTML=[...state.findings].sort((a,b)=>(rank[a.severity]??9)-(rank[b.severity]??9)).map(f=>`
+      <div class="finding ${esc(f.severity.toLowerCase())}">
+        <div class="head"><b>${esc(f.title)}</b><span class="sev">${esc(f.severity)}</span></div>
+        <div class="small">${esc(f.detail)}</div>
+        <details><summary>Evidence</summary><pre>${esc(JSON.stringify(f.evidence,null,2))}</pre></details>
+      </div>`).join('');
+  }
+
+  function renderChecks(){
+    $('checksView').innerHTML=state.checks.map(c=>{
+      const cls=c.status==='PASS'?'ok':c.status==='FAIL'?'bad':c.status==='WARN'?'warn':'na';
+      return `<div class="check"><div><div class="check-title">${esc(c.name)}</div><div class="check-desc">${esc(c.details)}</div></div><div class="status ${cls}">${esc(c.status)}</div></div>`;
+    }).join('') || '<div class="notice">No checks completed.</div>';
+  }
+
+  function renderEndpoints(){
+    const tb=$('endpointTbody');
+    if(!state.endpoints.length){ tb.innerHTML='<tr><td colspan="5" style="text-align:center">No endpoint observations yet.</td></tr>'; return; }
+    tb.innerHTML=state.endpoints.map(e=>{
+      const status=Number(e.status)||0;
+      const cls=status<300?'ok':status<400?'info':status<500?'warn':'bad';
+      return `<tr><td><code>${esc(e.method)}</code></td><td><code>${esc(e.path)}</code></td><td><span class="status ${cls}">${esc(status || '-')}</span></td><td>${esc(e.type||'-')}</td><td>${esc(e.obs||'')}</td></tr>`;
+    }).join('');
+  }
+
+  function updateProgress(done,total,label){
+    const pct=total?Math.min(100,(done/total)*100):0;
+    $('progressBar').style.width=pct.toFixed(1)+'%';
+    $('progressText').textContent=`${label}: ${done}/${total}`;
+  }
+
+  async function pace(){
+    const base=Math.max(0,parseInt($('pace').value,10)||700);
+    const since=Date.now()-state.lastRequestAt;
+    const spread=Math.min(250,Math.max(30,Math.floor(base*0.2))); const jitter=spread?((state.reqCount*73+17)%spread):0; const wait=Math.max(0,base-since)+jitter;
+    if(wait>0) await sleep(wait);
+    state.lastRequestAt=Date.now();
+  }
+
+  async function safeFetch(url, opts={}){
+    if(state.stop) throw new Error('STOP_REQUESTED');
+    const origin=new URL($('origin').value || location.origin, location.href).origin;
+    const u=new URL(url, origin);
+    if(u.origin!==origin) throw new Error('Cross-origin request blocked by scanner policy');
+    await pace();
+    state.reqCount++; updateMetrics();
+    const timeout=Math.min(30000,Math.max(1000,parseInt($('timeout').value,10)||10000));
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),timeout);
+    try{
+      const headers=new Headers(opts.headers||{});
+      headers.set('Cache-Control','no-cache');
+      const response=await fetch(u.href,{...opts,headers,cache:'no-store',redirect:'follow',credentials:'same-origin',signal:controller.signal});
+      const text=await response.text().catch(()=> '');
+      return {ok:true,res:response,text};
+    }catch(err){
+      return {ok:false,error:err.name==='AbortError'?'Timeout':err.message};
+    }finally{ clearTimeout(timer); }
+  }
+
+  function addEndpoint(method,path,res,obs){
+    state.endpoints.push({method,path,status:res?.status||0,type:res?.headers?.get('content-type')||'-',obs});
+    renderEndpoints();
+  }
+
+  async function baseline(origin){
+    state.currentPhase='BASELINE'; log('Phase 1/6: baseline and security headers');
+    const r=await safeFetch(origin+'/');
+    if(!r.ok){ addCheck('Application root','FAIL','The current deployment could not be fetched.',{error:r.error}); return false; }
+    addEndpoint('GET','/',r.res,'Baseline application response');
+    const h=r.res.headers;
+    const sec={
+      'content-security-policy':h.get('content-security-policy'),
+      'strict-transport-security':h.get('strict-transport-security'),
+      'x-frame-options':h.get('x-frame-options'),
+      'x-content-type-options':h.get('x-content-type-options'),
+      'referrer-policy':h.get('referrer-policy'),
+      'permissions-policy':h.get('permissions-policy')
+    };
+    const missing=Object.entries(sec).filter(([,v])=>!v).map(([k])=>k);
+    if(missing.length) addFinding('MEDIUM','Missing security response headers','One or more recommended browser security headers were not present on the baseline response.',{missing});
+    else addCheck('Security headers','PASS','Baseline response contained the reviewed security headers.',sec);
+    addCheck('HTTPS transport',origin.startsWith('https://')?'PASS':'WARN',origin.startsWith('https://')?'Deployment uses HTTPS.':'Deployment is using HTTP.',{origin});
+    return true;
+  }
+
+  async function checkWellKnown(origin){
+    state.currentPhase='STANDARD DISCOVERY';
+    log('Phase 2/6: checking standard metadata and explicitly supplied paths');
+    const standard=['/robots.txt','/sitemap.xml','/.well-known/security.txt'];
+    for(let i=0;i<standard.length;i++){
+      if(state.stop) break;
+      const p=standard[i]; const r=await safeFetch(origin+p);
+      if(r.ok){
+        addEndpoint('GET',p,r.res,'Standard metadata probe');
+        if(r.res.status<400) addCheck(`Standard path ${p}`, 'PASS','Reachable from the deployed origin.',{status:r.res.status});
+        else addCheck(`Standard path ${p}`,'WARN',`Returned HTTP ${r.res.status}.`,{});
+      } else addCheck(`Standard path ${p}`,'WARN','Request failed or timed out.',{error:r.error});
+      updateProgress(i+1,standard.length,'Metadata');
+    }
+  }
+
+  async function probePath(path,mods,deep=true){
+    const p=normalizePath(path); if(!p) return;
+    const r=await safeFetch($('origin').value+p);
+    if(!r.ok){
+      addEndpoint('GET',p,{},'Network error: '+r.error);
+      return {path,ok:false};
+    }
+    addEndpoint('GET',p,r.res,'Explicit target');
+    if(r.res.status>=500) addFinding('LOW','Server error response',`The endpoint ${p} returned HTTP ${r.res.status}.`,{path:p,status:r.res.status});
+
+    if(deep && mods.has('methods')){
+      const o=await safeFetch($('origin').value+p,{method:'OPTIONS'});
+      if(o.ok){
+        addEndpoint('OPTIONS',p,o.res,`Allow: ${o.res.headers.get('allow')||'not disclosed'}`);
+        const allow=o.res.headers.get('allow');
+        if(allow && /(PUT|PATCH|DELETE)/i.test(allow)) addCheck(`Method exposure ${p}`,'WARN','Endpoint advertises mutating HTTP methods. Confirm authorization and CSRF protections.',{allow});
+      }
+    }
+
+    if(deep && mods.has('cors')){
+      const c=await safeFetch($('origin').value+p,{headers:{Origin:'https://scanner.invalid'}});
+      if(c.ok){
+        const acao=c.res.headers.get('access-control-allow-origin');
+        const acac=c.res.headers.get('access-control-allow-credentials');
+        addEndpoint('GET',p,c.res,`CORS observation: ACAO=${acao||'-'} credentials=${acac||'-'}`);
+        if(acao==='https://scanner.invalid' || (acao==='*' && acac==='true')) addFinding('HIGH','Potentially unsafe CORS policy',`The endpoint ${p} accepted a cross-site Origin value in its response headers.`,{acao,acac});
+      }
+    }
+
+    if(deep && mods.has('xss')){
+      const marker=DEFAULT_SAFE_MARKERS[state.reqCount % DEFAULT_SAFE_MARKERS.length];
+      const sep=p.includes('?')?'&':'?';
+      const target=$('origin').value+p+sep+'tth_marker='+encodeURIComponent(marker);
+      const x=await safeFetch(target);
+      if(x.ok && x.text.includes(marker)) addFinding('MEDIUM','Unencoded reflection detected',`A controlled non-executing marker was reflected in the response from ${p}. Reflection is not by itself proof of XSS, but the output context should be reviewed.`,{marker,path:p});
+    }
+
+    return {path:p,ok:true,status:r.res.status};
+  }
+
+  async function scanEndpoints(paths,mods){
+    state.currentPhase='ENDPOINT ANALYSIS';
+    const unique=[...new Set(paths.map(normalizePath).filter(Boolean))];
+    log(`Phase 3/6: detailed endpoint analysis for ${unique.length} supplied paths`);
+    for(let i=0;i<unique.length && !state.stop;i++){
+      await probePath(unique[i],mods,true);
+      updateProgress(i+1,unique.length,'Endpoints');
+    }
+  }
+
+  async function deepDiscovery(paths,mods){
+    state.currentPhase='DISCOVERY';
+    const unique=[...new Set(paths.map(normalizePath).filter(Boolean))];
+    log(`Phase 4/6: slow discovery sweep of ${unique.length} paths`);
+    for(let i=0;i<unique.length && !state.stop;i++){
+      const p=unique[i];
+      const r=await safeFetch($('origin').value+p,{method:'GET'});
+      if(r.ok){
+        addEndpoint('GET',p,r.res,'Discovery sweep');
+        if(r.res.status===200 && /(?:\.env$|\.git\/|credentials|private|backup|secret)/i.test(p)) addFinding('HIGH','Potential sensitive resource exposed',`A suspicious path returned HTTP 200: ${p}`,{path:p,status:r.res.status});
+        if(r.res.status===403) addCheck(`Access control ${p}`,'PASS','Resource exists but returned 403.',{path:p});
+      }
+      updateProgress(i+1,unique.length,'Discovery');
+    }
+  }
+
+  function extractLines(text){
+    return [...new Set(String(text||'').split(/\r?\n/).filter(Boolean))].slice(0,3000);
+  }
+
+  function lineOf(text,index){ return text.slice(0,index).split(/\r?\n/).length; }
+  function snippetContext(text,index,radius=220){ return text.slice(Math.max(0,index-radius),Math.min(text.length,index+radius)); }
+  function sourceRisk(text,index){
+    const ctx=snippetContext(text,index,420);
+    const source=/(req|request)\.(body|query|params|headers|cookies)|location\.(search|hash|href)|URLSearchParams|\.value\b|FormData\s*\(|document\.referrer/i.test(ctx);
+    const sink=/(innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\s*\(|new\s+Function|location\.(?:href|assign|replace)\s*=|exec(?:File)?\s*\(|spawn(?:Sync)?\s*\(|writeFile(?:Sync)?\s*\()/i.test(ctx);
+    return source&&sink?'HIGH_REVIEW':'REVIEW';
+  }
+  function advancedSourceAudit(name,text){
+    const ext=(name.split('.').pop()||'').toLowerCase();
+    const isHtml=ext==='html', isJs=['js','mjs','ts','jsx','tsx'].includes(ext);
+    const out={file:name,extension:ext,lines:text.split(/\r?\n/).length,bytes:text.length,patterns:[],reviewItems:[],routeHints:[]};
+    if(!(isHtml||isJs)) return out;
+    for(const [label,rx] of ADVANCED_PATTERNS){ rx.lastIndex=0; let m,n=0; while((m=rx.exec(text))&&n<25){ out.patterns.push({type:label,line:lineOf(text,m.index),index:m.index,snippet:snippetContext(text,m.index)}); n++; } }
+    if(isJs){ const rr=/(?:export\s+(?:async\s+)?function\s+)(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b|(?:exports\.(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD))\s*=/g; let m; while((m=rr.exec(text))) out.routeHints.push({method:(m[1]||m[2]).toUpperCase(),line:lineOf(text,m.index)}); }
+    const sinks=out.patterns.filter(x=>['HTML injection sink','DOM insertion sink','Document write sink','Dynamic code execution','Function constructor','Shell command API','Filesystem write','Filesystem read','Open redirect candidate'].includes(x.type));
+    const sources=out.patterns.filter(x=>['Request body source','URL/query source','DOM input source'].includes(x.type));
+    const auth=out.patterns.filter(x=>x.type==='Auth/session signal').length;
+    if(sources.length&&sinks.length) for(const sink of sinks.slice(0,12)) out.reviewItems.push({type:sink.type,severity:sourceRisk(text,sink.index)==='HIGH_REVIEW'?'HIGH':'REVIEW',line:sink.line,detail:sourceRisk(text,sink.index)==='HIGH_REVIEW'?'An input/request source occurs near this sink; verify the actual data-flow path manually.':'Dangerous sink found, but this pass did not establish a direct input-to-sink flow.'});
+    if(isJs&&out.routeHints.length&&!auth) out.reviewItems.push({type:'Possible missing authorization boundary',severity:'REVIEW',detail:'An exported API handler was found without a nearby authentication/authorization signal. This is heuristic and not proof of a missing access control check.'});
+    if(isHtml){ const inline=[...text.matchAll(/<script(?![^>]*\bsrc=)[^>]*>/gi)].length; const forms=[...text.matchAll(/<form\b/gi)].length; if(inline) out.reviewItems.push({type:'Inline script',severity:'REVIEW',detail:`${inline} inline script block(s) found; review CSP nonce/hash strategy.`}); out.security={inlineScripts:inline,forms}; }
+    if(/https?:\/\//i.test(text)) out.reviewItems.push({type:'External URL reference',severity:'REVIEW',detail:'Review external destinations, secret leakage in URLs, and allowlists.'});
+    return out;
+  }
+
+  function scanSource(name,text){
+    const findings=[];
+    for(const [label,rx,advice] of SOURCE_RULES){
+      rx.lastIndex=0; const matches=[]; let m; while((m=rx.exec(text))&&matches.length<8) matches.push({index:m.index,line:lineOf(text,m.index),snippet:snippetContext(text,m.index,180),classification:sourceRisk(text,m.index)});
+      if(matches.length) findings.push({type:label,advice,matches});
+    }
+    for(const [label,rx] of SECRET_RULES){ rx.lastIndex=0; const matches=[]; let m; while((m=rx.exec(text))&&matches.length<5) matches.push({index:m.index,line:lineOf(text,m.index)}); if(matches.length) findings.push({type:label,severity:'HIGH_REVIEW',advice:'Verify whether the matched value is a live credential.',matches}); }
+    return {findings,advanced:advancedSourceAudit(name,text)};
+  }
+  async function renderSourceAuditResult(result,label){
+    const reviewCount=(result.findings?.length||0)+(result.advanced?.reviewItems?.length||0);
+    const box=document.createElement('div'); box.className='finding '+(reviewCount?'medium':'low');
+    box.innerHTML=`<div class="head"><b>${esc(label)}</b><span class="sev">${reviewCount?'REVIEW':'NO REVIEW ITEMS'}</span></div><div class="small">${esc(result.advanced?.lines||0)} lines · ${esc(result.advanced?.bytes||0)} bytes · ${esc(result.advanced?.patterns?.length||0)} structural matches · ${esc(result.advanced?.routeHints?.length||0)} API route hint(s)</div><details><summary>Detailed evidence</summary><pre>${esc(JSON.stringify(result,null,2))}</pre></details>`;
+    $('fileResults').appendChild(box);
+  }
+
+  async function scanLocalFiles(){
+    if(state.running) return;
+    const files=Array.from($('fileInput').files||[]).filter(f=>/\.(?:js|mjs|ts|jsx|tsx|html)$/i.test(f.name));
+    if(!files.length){ alert('Choose the repository folder/files first.'); return; }
+    $('fileResults').innerHTML=''; state.fileResults=[]; state.findings=[]; updateMetrics();
+    log(`Advanced source audit: ${files.length} actual JS/HTML files`,'INFO');
+    for(let i=0;i<files.length;i++){
+      if(state.stop) break; const f=files[i];
+      try{ const text=await f.text(); const audit=scanSource(f.webkitRelativePath||f.name,text); const record={file:f.webkitRelativePath||f.name,size:f.size,sourceReview:audit}; state.fileResults.push(record); await renderSourceAuditResult(audit,record.file); const n=(audit.findings?.length||0)+(audit.advanced?.reviewItems?.length||0); if(n) addFinding('MEDIUM',`Advanced source review: ${record.file}`,`${n} evidence-backed review item(s) found.`,record); }
+      catch(e){ $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice danger"><b>${esc(f.name)}</b><br>${esc(e.message)}</div>`); }
+      updateProgress(i+1,files.length,'Advanced source audit'); await sleep(20);
+    }
+    log('Advanced JS/HTML source audit completed','SUCCESS'); generateReport();
+  }
+
+  function pathToDeploymentPath(path){
+    let p=normalizePath(path);
+    // public/ is normally the deployment root on static hosting.
+    if(/^\/public\//i.test(p)) p=p.replace(/^\/public/i,'');
+    if(p==='/public') p='/';
+    return p;
+  }
+
+  async function scanDeployedRepo(embedded=false){
+    if(state.running && !embedded) return;
+    const paths=getLines('repoPaths').map(pathToDeploymentPath);
+    if(!paths.length){ alert('Enter deployed repository paths first.'); return; }
+    $('fileResults').innerHTML='';
+    state.fileResults=[];
+    setStatus('RUNNING REPOSITORY SCAN','info','run');
+    const manageState=!embedded;
+    if(manageState){ state.running=true; state.stop=false; $('scanRepoBtn').disabled=true; $('startBtn').disabled=true; $('stopBtn').disabled=false; }
+    log(`Repository scan: ${paths.length} real paths supplied`,'INFO');
+    for(let i=0;i<paths.length && !state.stop;i++){
+      const p=paths[i];
+      try{
+        const r=await safeFetch($('origin').value+p);
+        if(!r.ok){
+          const result={file:p,error:r.error}; state.fileResults.push(result);
+          $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice warn"><b>${esc(p)}</b><br>Not fetched: ${esc(r.error)}</div>`);
+        }else{
+          const ctype=r.res.headers.get('content-type')||'';
+          const looksSource=/javascript|json|html|text|css|xml/i.test(ctype) || /\.(?:js|mjs|ts|jsx|tsx|html|css|json|md|txt|env)$/i.test(p);
+          if(!looksSource){
+            $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice warn"><b>${esc(p)}</b><br>HTTP ${r.res.status}; content-type ${esc(ctype||'-')}. It was fetched, but it does not look like source text, so no source findings were invented.</div>`);
+          }else{
+            const issues=scanSource(p,r.text);
+            const result={file:p,httpStatus:r.res.status,contentType:ctype,size:r.text.length,issues}; state.fileResults.push(result);
+            $('fileResults').insertAdjacentHTML('beforeend',`<div class="finding ${issues.length?'medium':'low'}"><div class="head"><b>${esc(p)}</b><span class="sev">HTTP ${esc(r.res.status)} · ${issues.length?'REVIEW':'CLEAN'}</span></div><div class="small">${issues.length?esc(issues.map(x=>x.type).join(', ')):'Fetched successfully and no reviewed source patterns matched.'}</div><details><summary>Evidence</summary><pre>${esc(JSON.stringify({contentType:ctype,issues},null,2))}</pre></details></div>`);
+            if(issues.length) addFinding('MEDIUM',`Repository source review: ${p}`,`The deployed response matched ${issues.length} source-review pattern(s).`,{issues,contentType:ctype});
+          }
+        }
+      }catch(e){
+        $('fileResults').insertAdjacentHTML('beforeend',`<div class="notice danger"><b>${esc(p)}</b><br>${esc(e.message)}</div>`);
+      }
+      updateProgress(i+1,paths.length,'Repository');
+    }
+    if(manageState){ state.running=false; $('scanRepoBtn').disabled=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; setStatus(state.stop?'REPOSITORY SCAN STOPPED':'REPOSITORY SCAN COMPLETE',state.stop?'warn':'ok',state.stop?'warn':'ok'); generateReport(); }
+  }
+
+  async function runCustomRequests(){
+    if(state.running) return;
+    if(!state.customReqs.length){ alert('Queue at least one request first.'); return; }
+    state.running=true; state.stop=false; $('startBtn').disabled=true; $('stopBtn').disabled=false;
+    log(`Running ${state.customReqs.length} queued custom requests`,'INFO');
+    $('customResultsView').innerHTML='';
+    for(let i=0;i<state.customReqs.length && !state.stop;i++){
+      const r=state.customReqs[i];
+      const path=normalizePath(r.path);
+      const result=await safeFetch($('origin').value+path,{method:r.method,headers:r.headers,body:['GET','HEAD'].includes(r.method)?undefined:r.body||undefined});
+      if(result.ok){
+        addEndpoint(r.method,path,result.res,'Custom request');
+        $('customResultsView').insertAdjacentHTML('beforeend',`<div class="finding low"><div class="head"><b>${esc(r.name)}</b><span class="sev">HTTP ${result.res.status}</span></div><div class="small">${esc(path)}</div><details><summary>Response sample</summary><pre>${esc(result.text.slice(0,4000))}</pre></details></div>`);
+      }else $('customResultsView').insertAdjacentHTML('beforeend',`<div class="notice warn">${esc(r.name)}: ${esc(result.error)}</div>`);
+      updateProgress(i+1,state.customReqs.length,'Custom');
+    }
+    state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true;
+    generateReport();
+    setStatus(state.stop?'CUSTOM REQUESTS STOPPED':'CUSTOM REQUESTS COMPLETE',state.stop?'warn':'ok',state.stop?'warn':'ok');
+  }
+
+  function hashText(text){
+    let h=2166136261;
+    const sample=String(text||'').slice(0,200000);
+    for(let i=0;i<sample.length;i++){h^=sample.charCodeAt(i);h=Math.imul(h,16777619);} return (h>>>0).toString(16);
+  }
+
+  function addBossTest(name,status,detail,evidence={}){
+    FINAL_BOSS_STATE.tests.push({name,status,detail,evidence,time:nowIso()});
+    const box=document.createElement('div');
+    box.className='finding '+(status==='CONFIRMED'?'high':status==='REVIEW'?'medium':'low');
+    box.innerHTML=`<div class="head"><b>${esc(name)}</b><span class="sev">${esc(status)}</span></div><div class="small">${esc(detail)}</div><details><summary>Evidence</summary><pre>${esc(JSON.stringify(evidence,null,2))}</pre></details>`;
+    $('bossTests').appendChild(box);
+  }
+
+  function classifyStaticReview(file,audit){
+    let high=0, confirmed=0;
+    for(const f of (audit.findings||[])){
+      for(const m of (f.matches||[])) if(m.classification==='HIGH_REVIEW' || f.severity==='HIGH_REVIEW') high++;
+    }
+    for(const r of (audit.advanced?.reviewItems||[])) if(r.severity==='HIGH') high++;
+    const isScanner=/hackandfail\.html$|hackifyoucan\.html$/i.test(file);
+    if(isScanner) high=0;
+    return {high,confirmed};
+  }
+
+  async function finalBossStaticFile(fileName,text){
+    const audit=scanSource(fileName,text);
+    const isScanner=/hackandfail\.html$|hackifyoucan\.html$/i.test(fileName);
+    const correlated=[];
+    for(const rule of FINAL_BOSS_RULES){
+      rule.rx.lastIndex=0; let m,count=0;
+      while((m=rule.rx.exec(text))&&count<12){
+        const idx=m.index;
+        const ctx=snippetContext(text,idx,520);
+        const line=lineOf(text,idx);
+        const sourceNear=/(req|request)\.(body|query|params|headers|cookies)|location\.(search|hash|href)|URLSearchParams|\.value\b|FormData\s*\(|document\.referrer/i.test(ctx);
+        const sinkNear=/(innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\s*\(|new\s+Function|exec(?:File)?\s*\(|spawn(?:Sync)?\s*\(|readFile(?:Sync)?\s*\(|writeFile(?:Sync)?\s*\(|(?:res\.)?redirect\s*\()/i.test(ctx);
+        correlated.push({rule:rule.id,label:rule.label,line,index:idx,classification:isScanner?'SCANNER_SELF':'REVIEW',sourceNear,sinkNear,snippet:ctx});
+        count++;
+      }
+    }
+    const highReview=isScanner?0:correlated.filter(x=>x.classification!=='SCANNER_SELF' && x.sourceNear && x.sinkNear).length;
+    if(highReview) addBossTest(`Source-flow review: ${fileName}`,'REVIEW',`${highReview} high-signal source/sink proximity item(s) require manual confirmation.`,{file:fileName,items:correlated.filter(x=>x.sourceNear&&x.sinkNear).slice(0,20)});
+    const secrets=(audit.findings||[]).filter(x=>x.type==='Generic secret assignment' || x.type==='Private key' || x.type==='Google API key' || x.type==='GitHub token' || x.type==='Slack token');
+    if(secrets.length && !isScanner) addBossTest(`Credential review: ${fileName}`,'HIGH_REVIEW',`Potential credential material was matched in actual source. This is not confirmed to be live until verified outside the scanner.`,{file:fileName,findings:secrets});
+    if(/<script\b[^>]*\bsrc=/i.test(text) && /https?:\/\//i.test(text) && !isScanner) addBossTest(`Third-party script surface: ${fileName}`,'REVIEW','The file loads external scripts; verify integrity, trust, and CSP policy.',{file:fileName});
+    return {audit,correlated};
+  }
+
+  async function finalBossLocalFiles(){
+    if(state.running) return;
+    const files=Array.from($('fileInput').files||[]).filter(f=>/\.(?:js|mjs|ts|jsx|tsx|html)$/i.test(f.name));
+    if(!files.length){alert('Choose the repository folder/files first.');return;}
+    state.running=true; state.stop=false; FINAL_BOSS_STATE.tests=[]; FINAL_BOSS_STATE.highReview=0; FINAL_BOSS_STATE.confirmed=0; FINAL_BOSS_STATE.coverage={candidates:files.length,tested:0};
+    $('startBtn').disabled=true; $('scanRepoBtn').disabled=true; $('advancedSourceBtn').disabled=true; $('finalBossBtn').disabled=true; $('stopBtn').disabled=false;
+    $('bossTests').innerHTML=''; $('bossLedger').innerHTML=''; setStatus('RUNNING FINAL BOSS','info','run');
+    document.querySelector('.tab[data-tab="boss"]')?.click();
+    log(`FINAL BOSS: analyzing ${files.length} real JS/HTML files without executing them.`,'INFO');
+    for(let i=0;i<files.length && !state.stop;i++){
+      const f=files[i];
+      try{ const text=await f.text(); const result=await finalBossStaticFile(f.webkitRelativePath||f.name,text); FINAL_BOSS_STATE.coverage.tested++; const score=classifyStaticReview(f.name,result.audit); FINAL_BOSS_STATE.highReview+=score.high; }
+      catch(e){addBossTest(`File read: ${f.name}`,'ERROR','The file could not be read.',{error:e.message});}
+      updateProgress(i+1,files.length,'FINAL BOSS'); await sleep(15);
+    }
+    finalizeBoss(false);
+  }
+
+  async function finalBossProbePath(path){
+    const p=normalizePath(path); if(!p) return;
+    const base=await safeFetch($('origin').value+p);
+    if(!base.ok){addBossTest(`Reachability ${p}`,'REVIEW','The endpoint could not be reliably fetched.',{error:base.error});return;}
+    const baseHash=hashText(base.text);
+    addBossTest(`Baseline ${p}`,'PASS',`HTTP ${base.res.status}; baseline body fingerprint ${baseHash}.`,{status:base.res.status,type:base.res.headers.get('content-type')||'-'});
+
+    const hdr=base.res.headers;
+    const required=['content-security-policy','x-content-type-options','x-frame-options','referrer-policy','permissions-policy'];
+    const missing=required.filter(h=>!hdr.get(h));
+    if(missing.length) addBossTest(`Headers ${p}`,'REVIEW',`Missing ${missing.length} reviewed browser security header(s).`,{missing});
+
+    const options=await safeFetch($('origin').value+p,{method:'OPTIONS'});
+    if(options.ok){
+      const allow=options.res.headers.get('allow')||'';
+      if(/(?:PUT|PATCH|DELETE)/i.test(allow)) addBossTest(`Verb exposure ${p}`,'REVIEW','The server advertises state-changing verbs; authorization/CSRF controls should be verified.',{allow});
+      else addBossTest(`Verb exposure ${p}`,'PASS','No state-changing verbs were advertised by OPTIONS.',{allow});
+    }
+
+    const marker='__HAF_'+hashText(p+'|marker')+'__';
+    const sep=p.includes('?')?'&':'?';
+    const probe=await safeFetch($('origin').value+p+sep+'haf_probe='+encodeURIComponent(marker));
+    if(probe.ok){
+      const reflected=probe.text.includes(marker);
+      addBossTest(`Reflection ${p}`,reflected?'REVIEW':'PASS',reflected?'The inert marker was reflected; inspect its output context for real XSS risk.':'The inert marker was not reflected verbatim.',{reflected,marker,status:probe.res.status});
+    }
+
+    const dup=await safeFetch($('origin').value+p+sep+'haf_dup=one&haf_dup=two');
+    if(dup.ok && dup.res.status!==base.res.status) addBossTest(`Parameter differential ${p}`,'REVIEW','Duplicate benign parameters changed the HTTP status compared with baseline.',{baseline:base.res.status,duplicate:dup.res.status});
+
+    const canonVariants=[p.replace(/\/$/,'')+'/', p.replace(/\/+/g,'/')];
+    for(const v0 of canonVariants){
+      const v=v0||'/'; const r=await safeFetch($('origin').value+v); if(r.ok && r.res.status!==base.res.status) addBossTest(`Canonicalization ${p}`,'REVIEW','A benign path normalization variant produced a different HTTP status.',{variant:v,baseline:base.res.status,status:r.res.status});
+    }
+
+    const cors=await safeFetch($('origin').value+p,{headers:{Origin:'https://scanner.invalid'}});
+    if(cors.ok){const acao=cors.res.headers.get('access-control-allow-origin');const acac=cors.res.headers.get('access-control-allow-credentials');if(acao==='https://scanner.invalid' || (acao==='*'&&acac==='true')) addBossTest(`CORS ${p}`,'REVIEW','Cross-site Origin was reflected or combined with credentials.',{acao,acac});}
+
+    const trustHeaders=[['X-Forwarded-For','127.0.0.1'],['X-Original-URL','/'],['X-Rewrite-URL','/']];
+    for(const [k,v] of trustHeaders){
+      const r=await safeFetch($('origin').value+p,{headers:{[k]:v}});
+      if(r.ok && (r.status!==undefined || r.res.status!==base.res.status || hashText(r.text)!==baseHash)){
+        const changed=r.res.status!==base.res.status || hashText(r.text)!==baseHash;
+        if(changed) addBossTest(`Trusted-header differential ${p}`,'REVIEW',`${k} changed the response relative to baseline.`,{header:k,baseline:{status:base.res.status,hash:baseHash},observed:{status:r.res.status,hash:hashText(r.text)}});
+      }
+    }
+  }
+
+  async function finalBossDeployed(){
+    if(state.running) return;
+    let origin; try{origin=normalizeOrigin($('origin').value);$('origin').value=origin;}catch(e){alert(e.message);return;}
+    const paths=[...new Set(getLines('repoPaths').map(pathToDeploymentPath).filter(Boolean))];
+    state.running=true; state.stop=false; FINAL_BOSS_STATE.tests=[]; FINAL_BOSS_STATE.highReview=0; FINAL_BOSS_STATE.confirmed=0; FINAL_BOSS_STATE.coverage={candidates:paths.length,tested:0}; state.startTime=Date.now(); state.lastRequestAt=0;
+    $('startBtn').disabled=true; $('scanRepoBtn').disabled=true; $('advancedSourceBtn').disabled=true; $('finalBossBtn').disabled=true; $('stopBtn').disabled=false; $('bossTests').innerHTML='';$('bossLedger').innerHTML='';
+    document.querySelector('.tab[data-tab="boss"]')?.click(); setStatus('RUNNING FINAL BOSS','info','run');
+    log(`FINAL BOSS: ${paths.length} repository/deployment paths in scope.`,'INFO');
+    for(let i=0;i<paths.length && !state.stop;i++){
+      const p=paths[i];
+      try{
+        const r=await safeFetch(origin+p);
+        if(r.ok && /(?:javascript|html|text|css|json)/i.test(r.res.headers.get('content-type')||'')){
+          const x=await finalBossStaticFile(p,r.text); const score=classifyStaticReview(p,x.audit); FINAL_BOSS_STATE.highReview+=score.high;
+        }
+        if(r.ok && (/\.(?:html|js|mjs|ts|jsx|tsx)$/i.test(p)||/^\/api\//i.test(p))){await finalBossProbePath(p);} 
+      }catch(e){addBossTest(`Path ${p}`,'REVIEW','The path raised an exception during defensive validation.',{error:e.message});}
+      FINAL_BOSS_STATE.coverage.tested++; updateProgress(i+1,paths.length,'FINAL BOSS');
+    }
+    finalizeBoss(true);
+  }
+
+  function finalizeBoss(deployed){
+    state.running=false; $('startBtn').disabled=false; $('scanRepoBtn').disabled=false; $('advancedSourceBtn').disabled=false; $('finalBossBtn').disabled=false; $('stopBtn').disabled=true;
+    const confirmed=state.findings.filter(f=>f.severity==='HIGH').length;
+    const review=FINAL_BOSS_STATE.tests.filter(t=>t.status==='HIGH_REVIEW'||t.status==='REVIEW').length;
+    FINAL_BOSS_STATE.confirmed=confirmed; FINAL_BOSS_STATE.highReview=Math.max(FINAL_BOSS_STATE.highReview,review);
+    const coverage=FINAL_BOSS_STATE.coverage.candidates?Math.round((FINAL_BOSS_STATE.coverage.tested/FINAL_BOSS_STATE.coverage.candidates)*100):0;
+    let score=0;
+    if(confirmed) score+=Math.min(60,confirmed*20);
+    if(review) score+=Math.min(25,review*3);
+    if(FINAL_BOSS_STATE.coverage.candidates && coverage<100) score+=Math.min(15,Math.ceil((100-coverage)/10));
+    if(deployed && state.endpoints.some(e=>Number(e.status)>=500)) score+=5;
+    score=Math.min(100,score);
+    let level='LOW / INCONCLUSIVE', color='ok';
+    if(confirmed>=1) { level='HIGH RISK — CONFIRMED HIGH-SEVERITY EVIDENCE'; color='bad'; }
+    else if(score>=60) { level='HIGH REVIEW REQUIRED'; color='bad'; }
+    else if(score>=30) { level='MODERATE RISK / HARDENING REQUIRED'; color='warn'; }
+    else if(review>0 || coverage<100) { level='REVIEW REQUIRED — NOT PROVEN SECURE'; color='warn'; }
+    $('bossScore').textContent=score; $('bossConfirmed').textContent=confirmed; $('bossReview').textContent=review; $('bossCoverage').textContent=coverage+'%'; $('bossStatus').textContent=level.split(' ')[0]; $('bossStatus').className=`status ${color}`;
+    const verdict=`<strong>${esc(level)}</strong><div class="small" style="margin-top:8px">This is an evidence-weighted security posture statement, not a guarantee. A browser scanner cannot prove absence of vulnerabilities, cannot inspect server-side code that is not actually returned to it, and cannot establish that a matched credential is live without independent verification. ${deployed?'The deployed surface was actively validated using same-origin, non-destructive requests.':'The conclusion is based on actual local source files selected in the browser.'}</div>`;
+    $('bossVerdict').innerHTML=verdict;
+    $('bossLedger').innerHTML=`<div class="notice ${color}"><b>Final statement:</b> ${esc(level)}. Confirmed high-severity findings: ${confirmed}. High-signal review items: ${review}. Coverage: ${coverage}% of candidates. The scanner did not execute destructive exploits.</div>`;
+    const tags=FINAL_BOSS_STATE.tests.slice(0,80).map(t=>`<span class="tag">${esc(t.status)} · ${esc(t.name)}</span>`).join(''); $('bossLedger').insertAdjacentHTML('beforeend',`<div style="margin-top:10px">${tags||'<span class="small">No evidence entries.</span>'}</div>`);
+    setStatus(state.stop?'FINAL BOSS STOPPED':'FINAL BOSS COMPLETE',state.stop?'warn':color,state.stop?'warn':color); generateReport(); log(`FINAL BOSS complete: ${FINAL_BOSS_STATE.coverage.tested}/${FINAL_BOSS_STATE.coverage.candidates} candidates, ${review} review items.`, 'SUCCESS');
+  }
+
+  function generateReport(){
+    const report={meta:{tool:'hackandfail.html',version:'6.0-final-boss',date:nowIso(),origin:$('origin').value,paceMs:Number($('pace').value),depth:$('depth').value,safety:'same-origin non-destructive'},stats:{totalRequests:state.reqCount,findings:state.findings.length,checks:state.checks.length,endpoints:state.endpoints.length,files:state.fileResults.length,finalBoss:{confirmed:FINAL_BOSS_STATE.confirmed,highReview:FINAL_BOSS_STATE.highReview,coverage:FINAL_BOSS_STATE.coverage,tests:FINAL_BOSS_STATE.tests.length}},findings:state.findings,checks:state.checks,endpoints:state.endpoints,fileResults:state.fileResults,finalBoss:{verdict:FINAL_BOSS_STATE.verdict,tests:FINAL_BOSS_STATE.tests,coverage:FINAL_BOSS_STATE.coverage}};
+    state.report=report; $('jsonOutput').value=JSON.stringify(report,null,2); return $('jsonOutput').value;
+  }
+
+  function download(filename,text,type){
+    const blob=new Blob([text],{type}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+
+  async function startEngine(){
+    if(state.running) return;
+    let origin;
+    try{ origin=normalizeOrigin($('origin').value); $('origin').value=origin; }catch(e){ alert(e.message); return; }
+    const paths=getLines('paths').map(normalizePath).filter(Boolean);
+    const wordlist=getLines('customWordlist').map(normalizePath).filter(Boolean);
+    const mods=getMods();
+    const depth=$('depth').value;
+    const targetPaths=[...new Set([...paths,...wordlist])];
+    if(!targetPaths.length) targetPaths.push('/');
+
+    state.running=true; state.stop=false; state.reqCount=0; state.findings=[]; state.checks=[]; state.endpoints=[]; state.fileResults=[]; state.startTime=Date.now(); state.lastRequestAt=0;
+    $('startBtn').disabled=true; $('stopBtn').disabled=false; $('scanRepoBtn').disabled=true;
+    $('logView').innerHTML=''; $('checksView').innerHTML=''; $('findingsView').innerHTML='<div class="notice">Scan started.</div>'; $('endpointTbody').innerHTML='';
+    $('scopeDisplay').textContent=`${origin} · ${targetPaths.length} endpoint/path targets · ${$('pace').options[$('pace').selectedIndex].text}`;
+    setStatus('RUNNING DEEP SAFE SCAN','info','run');
+    state.timer=setInterval(()=>{$('mTime').textContent=Math.floor((Date.now()-state.startTime)/1000)+'s';},1000);
+
+    try{
+      const ok=await baseline(origin);
+      if(ok && !state.stop){ await checkWellKnown(origin); }
+      if(ok && !state.stop){ await scanEndpoints(targetPaths,mods); }
+      if(ok && !state.stop && depth!=='basic'){ await deepDiscovery(targetPaths,mods); }
+      if(ok && !state.stop && depth==='complete'){ await scanDeployedRepo(true); }
+    }catch(e){
+      if(e.message!=='STOP_REQUESTED'){ log(`Engine error: ${e.message}`,'ERROR'); addFinding('MEDIUM','Scanner exception','The scanner itself encountered an exception.',{error:e.message}); }
+    }finally{
+      clearInterval(state.timer); state.running=false; $('startBtn').disabled=false; $('stopBtn').disabled=true; $('scanRepoBtn').disabled=false; updateMetrics(); renderEndpoints(); generateReport();
+      $('progressBar').style.width='100%'; $('progressText').textContent=state.stop?'STOPPED':'100% COMPLETE';
+      const bad=state.findings.some(f=>f.severity==='HIGH');
+      const medium=state.findings.some(f=>f.severity==='MEDIUM');
+      setStatus(state.stop?'STOPPED':bad?'COMPLETED - HIGH RISK FOUND':medium?'COMPLETED - REVIEW NEEDED':'COMPLETED - NO CONFIRMED HIGH RISK',state.stop?'warn':bad?'bad':medium?'warn':'ok',state.stop?'warn':bad?'bad':medium?'warn':'ok');
+      log(`Scan finished. ${state.reqCount} real requests were made.`,'SUCCESS');
+    }
+  }
+
+  // Initialization: current deployment by default; no fabricated findings/results.
+  $('origin').value=location.origin;
+  $('paths').value='';
+  $('customWordlist').value='';
+  $('customPayloads').value=DEFAULT_SAFE_MARKERS.join('\n');
+  $('repoPaths').value=REPO_LIST.join('\n');
+  renderChecks(); renderEndpoints(); updateMetrics();
+
+  // Tabs
+  $$('.tab').forEach(b=>b.addEventListener('click',()=>{
+    $$('.tab').forEach(x=>x.classList.remove('active')); $$('.tabpanel').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); const panel=document.querySelector(`[data-panel="${CSS.escape(b.dataset.tab)}"]`); if(panel) panel.classList.add('active'); $('tabTitle').textContent=b.textContent;
+  }));
+
+  $('startBtn').addEventListener('click',startEngine);
+  $('stopBtn').addEventListener('click',()=>{ state.stop=true; log('Stop requested. Current request will finish, then the scanner will halt.','WARN'); setStatus('STOP REQUESTED','warn','warn'); });
+  $('clearBtn').addEventListener('click',()=>{ if(state.running){alert('Stop the scan before clearing state.');return;} location.reload(); });
+
+  $('addReqBtn').addEventListener('click',()=>{
+    if(!$('reqManual').checked){alert('Confirm that the request is safe and non-destructive.');return;}
+    let headers={};
+    try{headers=$('reqHeaders').value.trim()?JSON.parse($('reqHeaders').value):{};}catch(e){alert('Headers must be valid JSON.');return;}
+    const path=$('reqPath').value.trim(); if(!path){alert('Enter a request path.');return;}
+    try{normalizePath(path);}catch(e){alert(e.message);return;}
+    const req={name:$('reqName').value.trim()||'Unnamed request',method:$('reqMethod').value,path,headers,body:$('reqBody').value};
+    state.customReqs.push(req);
+    $('customList').insertAdjacentHTML('beforeend',`<div class="notice ok">Added: <code>${esc(req.method)}</code> ${esc(req.path)}</div>`);
+    $('reqManual').checked=false;
+  });
+  $('clearReqsBtn').addEventListener('click',()=>{state.customReqs=[];$('customList').innerHTML='';});
+  $('runReqsBtn').addEventListener('click',runCustomRequests);
+
+  $('savePayloadsBtn').addEventListener('click',()=>{localStorage.setItem('tth_wordlist',$('customWordlist').value);localStorage.setItem('tth_markers',$('customPayloads').value);alert('Your current wordlist and safe marker list were saved locally.');});
+  $('resetPayloadsBtn').addEventListener('click',()=>{localStorage.removeItem('tth_wordlist');localStorage.removeItem('tth_markers');$('customWordlist').value='';$('customPayloads').value=DEFAULT_SAFE_MARKERS.join('\n');});
+  const savedWords=localStorage.getItem('tth_wordlist'); const savedMarkers=localStorage.getItem('tth_markers'); if(savedWords!==null)$('customWordlist').value=savedWords; if(savedMarkers!==null)$('customPayloads').value=savedMarkers;
+
+  $('scanFilesBtn').addEventListener('click',scanLocalFiles);
+  $('clearFilesBtn').addEventListener('click',()=>{$('fileResults').innerHTML='<div class="notice">Cleared.</div>';$('fileInput').value='';state.fileResults=[];});
+  $('advancedSourceBtn').addEventListener('click',scanLocalFiles);
+  $('loadRepoBtn').addEventListener('click',()=>{$('repoPaths').value=REPO_LIST.join('\n');log(`Loaded ${REPO_LIST.length} repository paths supplied for this project.`,'INFO');});
+  $('scanRepoBtn').addEventListener('click',scanDeployedRepo);
+  $('finalBossBtn').addEventListener('click',async()=>{
+    if(state.running) return;
+    const useLocal=Array.from($('fileInput').files||[]).some(f=>/\.(?:js|mjs|ts|jsx|tsx|html)$/i.test(f.name));
+    if(useLocal){ await finalBossLocalFiles(); } else { await finalBossDeployed(); }
+  });
+
+  $('probeNetBtn').addEventListener('click',async()=>{
+    $('paths').value=getLines('netPaths').join('\n'); $('depth').value='deep'; $('intensity').value='light'; await startEngine();
+  });
+  $('probeCurrentBtn').addEventListener('click',async()=>{$('paths').value='/';$('depth').value='basic';$('intensity').value='light';await startEngine();});
+
+  $('dlJsonBtn').addEventListener('click',()=>download('trytohack-report.json',generateReport(),'application/json;charset=utf-8'));
+  $('dlHtmlBtn').addEventListener('click',()=>{const body=`<!doctype html><meta charset="utf-8"><title>trytohack report</title><body><h1>trytohack security report</h1><pre>${esc(generateReport())}</pre></body>`;download('trytohack-report.html',body,'text/html;charset=utf-8');});
+
+  window.addEventListener('beforeunload',e=>{if(state.running){e.preventDefault();e.returnValue='';}});
+})();
+</script>
+</body>
+</html>
