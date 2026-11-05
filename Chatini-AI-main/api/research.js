@@ -33,10 +33,10 @@ export const config = {
 const HARD_FUNCTION_BUDGET_MS = 290_000;
 const DEFAULT_REQUEST_BUDGET_MS = 255_000;
 
-const MAX_INITIAL_QUERIES = 24;
-const MAX_FOLLOW_UP_QUERIES = 16;
+const MAX_INITIAL_QUERIES = 48;
+const MAX_FOLLOW_UP_QUERIES = 26;
 const MAX_SEARCH_RESULTS_PER_QUERY = 90;
-const MAX_INITIAL_SEARCHES = 44;
+const MAX_INITIAL_SEARCHES = 50;
 const MAX_FOLLOW_UP_ROUNDS = 3;
 const MAX_REPORT_SOURCES = 220;
 const MAX_SOURCE_TEXT_CHARS = 26_000;
@@ -252,20 +252,16 @@ function balancedSourceSelection(results, limit) {
 }
 
 function sourceToEvidencePacket(source) {
-  const raw = source.raw_content || source.content || '';
-  const content = clampText(raw, MAX_EVIDENCE_CHARS_PER_SOURCE);
   return {
-    source_id: `S${Math.abs(hashString(source.url))}`,
+    source_id: `S\${Math.abs(hashString(source.url))}`,
     title: source.title,
     url: source.url,
     hostname: source.hostname,
     source_type: source.type,
     published_date: source.published_date,
     quality: source.quality,
-    content,
   };
 }
-
 function hashString(value) {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -503,12 +499,10 @@ function sendThought(controller, chunk) {
 async function planResearch({ query, groqKeys, geminiKeys, deadline }) {
   const system = `
 You are ArixAI's Research Planner.
-Your job is to convert one user research question into a rigorous evidence plan.
+Your job is to convert one user research question into a comprehensive, high-density evidence discovery plan.
 Return JSON only.
 Do not answer the topic yourself.
 Do not invent facts, sources, dates, laws, entities, statistics, URLs, or conclusions.
-Plan search questions that could actually retrieve evidence for the user's request.
-Prefer primary-source discovery, independent corroboration, counter-evidence, and time-specific verification.
 
 Required JSON shape:
 {
@@ -524,12 +518,16 @@ Required JSON shape:
   "risk_notes": ["..."]
 }
 
-Rules:
-- search_queries: 12 to 24 concise web-search queries, each under ~350 characters.
-- counter_queries: 4 to 8 adversarial queries intended to find evidence against likely conclusions.
-- primary_source_targets: source classes/domains, not fabricated URLs.
-- recency_requirement must reflect the question, not your memory.
-- Make queries complementary: definitions, primary documents, empirical data, independent analyses, counterarguments, and recent changes when relevant.
+CRITICAL QUERY GENERATION RULES (MAXIMIZE YIELD, ZERO JUNK):
+1. search_queries: Produce 36 to 48 highly specific, keyword-dense search queries (under 160 characters each).
+2. counter_queries: Produce 8 to 12 adversarial queries to uncover counter-evidence, limitations, disputes, or debunking.
+3. Every query must be orthogonal. STRICTLY FORBIDDEN: synonyms, conversational prompts ("what is", "tell me about"), or repeating the core question with minor variations.
+4. Distribute queries across these mandatory facets:
+   - Primary & Official: Statutes, regulatory codes, filings, whitepapers, official documentation.
+   - Quantitative & Empirical: Datasets, benchmark figures, audit metrics, pricing, statistical tables.
+   - Technical Specifications: API methods, architecture definitions, protocols, schema parameters.
+   - Critical & Adversarial: Vulnerabilities, known failure modes, litigation, dissenting opinions, independent audits.
+   - Temporal & Recency: Version-specific changes (2025/2026), latest changelogs, deprecations, revisions.
 `;
 
   const user = clampText(`USER QUESTION:\n${query}`, MAX_PLANNER_CHARS);
@@ -730,14 +728,17 @@ async function queryArixIntelligence(searchQuery, maxPages = 40, onStatus = null
 }
 
 function buildSearchQueries(plan) {
-  const base = dedupeStrings([
-    ...(plan?.search_queries || []),
-    ...(plan?.subquestions || []),
-    ...(plan?.primary_source_targets || []).map((x) => `${plan.core_question} ${x}`),
-  ], MAX_INITIAL_QUERIES * 2);
+  const searchQueries = plan?.search_queries || [];
+  const counterQueries = plan?.counter_queries || [];
+  const targets = (plan?.primary_source_targets || []).map((t) => `${plan.core_question} ${t}`);
+  const subquestions = plan?.subquestions || [];
 
-  const counter = dedupeStrings(plan?.counter_queries || [], MAX_INITIAL_QUERIES);
-  return dedupeStrings([...base.slice(0, MAX_INITIAL_QUERIES), ...counter.slice(0, 6)], MAX_INITIAL_QUERIES);
+  return dedupeStrings([
+    ...searchQueries,
+    ...counterQueries,
+    ...targets,
+    ...subquestions,
+  ], MAX_INITIAL_QUERIES);
 }
 function createEvidencePacket(sources) {
   return sources
@@ -758,26 +759,25 @@ async function extractEvidence({ query, sources, geminiKeys, groqKeys, deadline 
 
   const packets = createEvidencePacket(sources);
   const evidenceText = packets.map((p) => [
-    `SOURCE_ID: ${p.source_id}`,
-    `TITLE: ${p.title}`,
-    `URL: ${p.url}`,
-    `TYPE: ${p.source_type}`,
-    `PUBLISHED: ${p.published_date || 'unknown'}`,
-    `QUALITY: ${JSON.stringify(p.quality)}`,
-    `CONTENT:\n${p.content}`,
+    `SOURCE_ID: \${p.source_id}`,
+    `TITLE: \${p.title}`,
+    `URL: \${p.url}`,
+    `TYPE: \${p.source_type}`,
+    `PUBLISHED: \${p.published_date || 'unknown'}`,
+    `QUALITY: \${JSON.stringify(p.quality)}`,
   ].join('\n')).join('\n\n---\n\n');
 
   const system = `
 You are ArixAI's Evidence Extraction Engine.
 You are NOT writing the final answer.
-Use ONLY the supplied source packets.
-Do not use outside knowledge to fill gaps.
+Evaluate relevance, signals, and claims strictly based on the supplied source titles, URLs, and metadata.
+Do not assume full page contents.
 Return JSON only.
 
-For every material factual claim you identify:
-- quote or tightly paraphrase the supporting passage from a supplied source;
+For every relevant source / title:
+- summarize the core premise suggested by the complete title and URL;
 - attach exact SOURCE_ID(s);
-- classify support as direct, partial, contradiction, context_only, or unsupported;
+- classify support as direct, partial, contradiction, context_only, or unresolved;
 - note date/version sensitivity when relevant;
 - distinguish source statements from your own synthesis.
 
@@ -916,22 +916,23 @@ function mergeResearchRounds(rounds) {
 function deriveGapQueries(dossier, query) {
   const unresolved = (dossier.claims || [])
     .filter((c) => ['unresolved', 'contradicted', 'partial'].includes(c.support_status))
-    .slice(0, 8)
-    .map((c) => `Verify or challenge this claim with primary or independent evidence: ${c.claim}`);
+    .slice(0, 10)
+    .map((c) => `${c.claim.slice(0, 140)} official documentation evidence`);
 
   const contradictionQueries = (dossier.contradictions || [])
-    .slice(0, 4)
-    .map((c) => `Resolve conflicting evidence about ${c.topic}: ${c.claim_a} versus ${c.claim_b}`);
+    .slice(0, 6)
+    .map((c) => `${c.topic} ${c.claim_a.slice(0, 60)} vs ${c.claim_b.slice(0, 60)}`);
 
   const gapQueries = (dossier.gaps || [])
-    .slice(0, 6)
-    .map((g) => `Find evidence that addresses this research gap: ${g}`);
+    .slice(0, 8)
+    .map((g) => `${query} ${g.slice(0, 100)}`);
 
   return dedupeStrings([
     ...unresolved,
     ...contradictionQueries,
     ...gapQueries,
-    `independent analysis and counter-evidence for: ${query}`,
+    `${query} primary official source data`,
+    `${query} audit report limitations`,
   ], MAX_FOLLOW_UP_QUERIES);
 }
 
@@ -1096,13 +1097,7 @@ RECOMMENDED STRUCTURE
 # Practical Implications
 # Limitations and Unresolved Questions
 # Final Assessment
-# Sources
 
-SOURCE CITATION FORMAT
-Use the exact source IDs and URLs from the dossier's Source Registry. You may format the final source list as:
-- [S123] Title — URL
-
-Do not add sources that are not in the dossier.
 
 The report must be useful even when the answer is "the evidence is insufficient". In that case, explain exactly what is known, what is disputed, what is missing, and what evidence would be needed to resolve it.
 `;
@@ -1428,11 +1423,17 @@ export default async function handler(req) {
         sendThought(controller, `Research dossier assembled with ${dossier.claims.length} claims, ${dossier.sources.length} retained sources, and ${dossier.contradictions.length} contradiction records.`);
 
         if (remainingBudget(deadline) < 35_000) {
+          const fallbackSources = JSON.stringify(dossier.sources.map(s => ({
+            title: s.title || s.hostname || s.url,
+            url: s.url,
+            source_id: s.source_id
+          })));
           return done({
             complete: false,
             partial: true,
             query,
-            report: buildDossierText(dossier),
+            report: `${buildDossierText(dossier)}\n\n<sources>${fallbackSources}</sources>`,
+            context: `${buildDossierText(dossier)}\n\n<sources>${fallbackSources}</sources>`,
             sources: dossier.sources,
             coverage: dossier.coverage_score,
             warning: 'Execution budget ended before the long-form synthesis pass. The returned dossier contains only retrieved evidence and explicitly recorded uncertainty; no unsupported report was fabricated.',
@@ -1513,15 +1514,21 @@ Prefer precision over confident prose.
 
         report = buildFinalReportWithAudit(report, audit, dossier);
 
-        // Surface a transparent footer containing the real registry. This is not
-        // pre-written topical content; it is assembled directly from retrieved URLs.
+        // Surface algorithmic metadata and human-readable registry
         report += `\n\n---\n\n## Research Engine Metadata\n\n`;
         report += `**Evidence coverage:** ${Math.round(dossier.coverage_score * 100)}%\n\n`;
         report += `**Retained sources:** ${dossier.sources.length}\n\n`;
         report += `**Research rounds:** ${dossier.rounds.length}\n\n`;
-        report += `**Audit status:** ${audit.pass ? 'passed' : 'warnings detected'}${audit.quality_score ? ` (${audit.quality_score}/100)` : ''}\n\n`;
-        report += `**Source registry:**\n`;
-        for (const s of dossier.sources) report += `- [${s.source_id}] ${s.title} — ${s.url}\n`;
+        report += `**Audit status:** ${audit.pass ? 'passed' : 'warnings detected'}${audit.quality_score ? ` (\${audit.quality_score}/100)` : ''}\n\n`;
+
+        // Format raw source JSON for app.html's parseRichText parser
+        const sourcesJson = JSON.stringify(dossier.sources.map(s => ({
+          title: s.title || s.hostname || s.url,
+          url: s.url,
+          source_id: s.source_id,
+          snippet: s.title
+        })));
+        report += `\n\n<sources>${sourcesJson}</sources>\n`;
 
         sendThought(controller, 'Report generation complete. Streaming the verified research report to the client.');
         streamTextInChunks(controller, report);

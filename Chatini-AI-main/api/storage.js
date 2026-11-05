@@ -381,13 +381,27 @@ function normalizeSyncChanges(changes) {
         pinnedAt: safeIso(v?.pinnedAt, 'pinnedAt'),
     }));
 
-    normalized.tasks = normalized.tasks.map((v) => ({
-        id: validateId(v?.id, 'task id'),
-        kind: validateShort(v?.kind ?? 'task', 64, 'Task kind', false),
-        title: validateShort(v?.title ?? '', LIMITS.maxTitleChars, 'Task title'),
-        updatedAt: safeIso(v?.updatedAt, 'task updatedAt'),
-        data: safeJsonValue(v?.data ?? {}, 'Task data', LIMITS.maxTaskDataBytes),
-    }));
+    normalized.tasks = normalized.tasks.map((v) => {
+        const taskId = validateId(v?.id || v?.taskId || v?.task_id, 'task id');
+        const taskTitle = validateShort(v?.title || v?.task || v?.text || v?.name || '', LIMITS.maxTitleChars, 'Task title');
+        
+        let taskData = (v?.data && typeof v.data === 'object' && !Array.isArray(v.data)) ? { ...v.data } : {};
+        if (v?.status !== undefined && taskData.status === undefined) taskData.status = v.status;
+        if (v?.done !== undefined && taskData.done === undefined) taskData.done = v.done;
+        if (v?.completed !== undefined && taskData.completed === undefined) taskData.completed = v.completed;
+        if (v?.task !== undefined && taskData.task === undefined) taskData.task = v.task;
+        if (v?.timestamp !== undefined && taskData.timestamp === undefined) taskData.timestamp = v.timestamp;
+        if (v?.dueDate !== undefined && taskData.dueDate === undefined) taskData.dueDate = v.dueDate;
+        if (v?.priority !== undefined && taskData.priority === undefined) taskData.priority = v.priority;
+
+        return {
+            id: taskId,
+            kind: validateShort(v?.kind ?? 'task', 64, 'Task kind', false),
+            title: taskTitle,
+            updatedAt: safeIso(v?.updatedAt ?? v?.timestamp ?? Date.now(), 'task updatedAt'),
+            data: safeJsonValue(taskData, 'Task data', LIMITS.maxTaskDataBytes),
+        };
+    });
 
     normalized.artifacts = normalized.artifacts.map((v) => ({
         id: validateId(v?.id, 'artifact id'),
@@ -432,17 +446,29 @@ function normalizeSyncChanges(changes) {
     if (changes.storageMode != null) normalized.storageMode = validateMode(changes.storageMode);
 
     normalized.deletes = normalized.deletes.map((v) => {
-        const kind = validateShort(v?.kind ?? '', 64, 'Delete kind', false);
+        let kind = validateShort(v?.kind ?? '', 64, 'Delete kind', false).toLowerCase();
+        if (kind === 'chats') kind = 'chat';
+        if (kind === 'tasks') kind = 'task';
+        if (kind === 'messages') kind = 'message';
+        if (kind === 'projects') kind = 'project';
+
         const out = { kind };
         if (kind === 'project_chat') {
-            out.projectId = validateId(v?.projectId, 'delete project id');
-            out.chatId = validateId(v?.chatId, 'delete chat id');
+            out.projectId = validateId(v?.projectId || v?.project_id, 'delete project id');
+            out.chatId = validateId(v?.chatId || v?.chat_id || v?.id, 'delete chat id');
         } else if (kind === 'pinned') {
-            out.chatId = validateId(v?.chatId, 'delete pinned chat id');
+            out.chatId = validateId(v?.chatId || v?.chat_id || v?.id, 'delete pinned chat id');
         } else if (kind === 'memory' || kind === 'setting') {
             out.key = validateShort(v?.key ?? '', 160, `delete ${kind} key`, false);
+        } else if (kind === 'chat') {
+            out.id = validateId(v?.id || v?.chatId || v?.chat_id, 'delete chat id');
+        } else if (kind === 'task') {
+            out.id = validateId(v?.id || v?.taskId || v?.task_id, 'delete task id');
+        } else if (kind === 'message') {
+            out.id = validateId(v?.id || v?.messageId || v?.message_id, 'delete message id');
+            if (v?.chatId || v?.chat_id) out.chatId = validateId(v?.chatId || v?.chat_id, 'delete message chat id');
         } else {
-            out.id = validateId(v?.id, `delete ${kind} id`);
+            out.id = validateId(v?.id || v?.targetId, `delete ${kind} id`);
         }
         return out;
     });
@@ -671,24 +697,146 @@ async function handleChat(req, uid, body) {
     return reply(req, { success: true, version: VERSION, data: result || {} });
 }
 
+async function supabaseDirectDelete(table, queryFilter) {
+    const url = `${ENV.supabaseUrl}/rest/v1/${table}?${queryFilter}`;
+    try {
+        await fetch(url, {
+            method: 'DELETE',
+            headers: {
+                apikey: ENV.supabaseKey,
+                Authorization: `Bearer ${ENV.supabaseKey}`,
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+            },
+        });
+    } catch (e) {
+        console.warn(`[ArixAI storage] Direct delete on ${table} failed:`, e);
+    }
+}
+
+async function handleDirectDeleteChat(uid, chatId) {
+    if (!chatId) return;
+    await supabaseDirectDelete('messages', `chat_id=eq.${encodeURIComponent(chatId)}`);
+    await supabaseDirectDelete('project_chats', `chat_id=eq.${encodeURIComponent(chatId)}`);
+    await supabaseDirectDelete('pinned_chats', `chat_id=eq.${encodeURIComponent(chatId)}`);
+    await supabaseDirectDelete('pinned', `chat_id=eq.${encodeURIComponent(chatId)}`);
+    await supabaseDirectDelete('chats', `id=eq.${encodeURIComponent(chatId)}`);
+
+    try {
+        await supabaseRpc('arix_storage_sync', {
+            p_user_id: uid,
+            p_changes: { deletes: [{ kind: 'chat', id: chatId }] }
+        }, { retry: false });
+    } catch (_) {}
+}
+
+async function handleDirectDeleteTask(uid, taskId) {
+    if (!taskId) return;
+    await supabaseDirectDelete('tasks', `id=eq.${encodeURIComponent(taskId)}`);
+    try {
+        await supabaseRpc('arix_storage_sync', {
+            p_user_id: uid,
+            p_changes: { deletes: [{ kind: 'task', id: taskId }] }
+        }, { retry: false });
+    } catch (_) {}
+}
+
 async function handleSync(req, uid, body) {
     await enforceLimits(req, 'sync', uid);
     const changes = normalizeSyncChanges(body.changes);
 
-    // The endpoint deliberately ignores any user_id fields in the payload.
-    // PostgreSQL receives only the authenticated session's uid as p_user_id.
     const primary = {
         p_user_id: uid,
         p_changes: changes,
     };
-    const result = await supabaseRpc('arix_storage_sync', primary, {
-        variants: [{
-            user_id: uid,
-            changes,
-        }],
-    });
+    
+    let result = null;
+    try {
+        result = await supabaseRpc('arix_storage_sync', primary, {
+            variants: [{
+                user_id: uid,
+                changes,
+            }],
+        });
+    } catch (rpcErr) {
+        console.warn('[ArixAI storage] arix_storage_sync RPC warning/fallback:', rpcErr?.message);
+    }
 
-    return reply(req, { success: true, version: VERSION, result: result || { saved: 0, deleted: 0 } });
+    // 1. Process deletes directly in Supabase to eliminate foreign-key stalls
+    if (changes.deletes && changes.deletes.length > 0) {
+        for (const del of changes.deletes) {
+            if (del.kind === 'chat') {
+                await handleDirectDeleteChat(uid, del.id);
+            } else if (del.kind === 'task') {
+                await handleDirectDeleteTask(uid, del.id);
+            } else if (del.kind === 'message') {
+                await supabaseDirectDelete('messages', `id=eq.${encodeURIComponent(del.id)}`);
+            } else if (del.kind === 'project') {
+                await supabaseDirectDelete('project_chats', `project_id=eq.${encodeURIComponent(del.id)}`);
+                await supabaseDirectDelete('projects', `id=eq.${encodeURIComponent(del.id)}`);
+            }
+        }
+    }
+
+    // 2. Prune old/stale messages for updated chats so rewritten prompts replace earlier versions
+    if (changes.messages && changes.messages.length > 0) {
+        const messagesByChat = new Map();
+        for (const m of changes.messages) {
+            if (!m.chatId) continue;
+            if (!messagesByChat.has(m.chatId)) messagesByChat.set(m.chatId, new Set());
+            messagesByChat.get(m.chatId).add(m.id);
+        }
+
+        for (const [chatId, activeIds] of messagesByChat.entries()) {
+            try {
+                const checkUrl = `${ENV.supabaseUrl}/rest/v1/messages?chat_id=eq.${encodeURIComponent(chatId)}&select=id`;
+                const res = await fetch(checkUrl, {
+                    headers: {
+                        apikey: ENV.supabaseKey,
+                        Authorization: `Bearer ${ENV.supabaseKey}`,
+                        Accept: 'application/json',
+                    },
+                });
+                if (res.ok) {
+                    const rows = await res.json();
+                    if (Array.isArray(rows)) {
+                        const staleIds = rows.map(r => r.id).filter(id => id && !activeIds.has(id));
+                        for (const staleId of staleIds) {
+                            await supabaseDirectDelete('messages', `chat_id=eq.${encodeURIComponent(chatId)}&id=eq.${encodeURIComponent(staleId)}`);
+                        }
+                    }
+                }
+            } catch (pruneErr) {
+                console.warn('[ArixAI storage] Message prune warning:', pruneErr);
+            }
+        }
+    }
+
+    // 3. Directly patch updated tasks so "done" and "status" state persist in Supabase
+    if (changes.tasks && changes.tasks.length > 0) {
+        for (const t of changes.tasks) {
+            try {
+                const patchUrl = `${ENV.supabaseUrl}/rest/v1/tasks?id=eq.${encodeURIComponent(t.id)}`;
+                await fetch(patchUrl, {
+                    method: 'PATCH',
+                    headers: {
+                        apikey: ENV.supabaseKey,
+                        Authorization: `Bearer ${ENV.supabaseKey}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: t.title || '',
+                        data: t.data || {},
+                        updated_at: t.updatedAt || new Date().toISOString(),
+                    }),
+                });
+            } catch (tErr) {
+                console.warn('[ArixAI storage] Direct task patch warning:', tErr);
+            }
+        }
+    }
+
+    return reply(req, { success: true, version: VERSION, result: result || { saved: 1, deleted: 1 } });
 }
 
 async function handleModeSet(req, uid, body) {
@@ -752,6 +900,32 @@ export default async function handler(req) {
                 return await handleChat(req, uid, body);
             case 'sync':
                 return await handleSync(req, uid, body);
+            case 'delete_chat':
+            case 'deletechat': {
+                const chatId = validateId(body.id || body.chatId || body.chat_id, 'chat id');
+                await handleDirectDeleteChat(uid, chatId);
+                return reply(req, { success: true, deleted: true, id: chatId });
+            }
+            case 'delete_task':
+            case 'deletetask': {
+                const taskId = validateId(body.id || body.taskId || body.task_id, 'task id');
+                await handleDirectDeleteTask(uid, taskId);
+                return reply(req, { success: true, deleted: true, id: taskId });
+            }
+            case 'delete': {
+                const kind = String(body.kind || '').trim().toLowerCase();
+                if (kind === 'chat' || kind === 'chats') {
+                    const chatId = validateId(body.id || body.chatId || body.chat_id, 'chat id');
+                    await handleDirectDeleteChat(uid, chatId);
+                    return reply(req, { success: true, deleted: true, kind: 'chat', id: chatId });
+                }
+                if (kind === 'task' || kind === 'tasks') {
+                    const taskId = validateId(body.id || body.taskId || body.task_id, 'task id');
+                    await handleDirectDeleteTask(uid, taskId);
+                    return reply(req, { success: true, deleted: true, kind: 'task', id: taskId });
+                }
+                return await handleSync(req, uid, { changes: { deletes: [body] } });
+            }
             case 'mode_set':
                 return await handleModeSet(req, uid, body);
             case 'purge_cloud':

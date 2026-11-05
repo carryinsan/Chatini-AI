@@ -1,6 +1,7 @@
 import { verifyAndLimit } from './auth.js';
 import { PrivacyEngine } from '../lib/privacyEngine.js';
 import { processTask } from '../features/tasks.js';
+//import { protectRequest } from '../lib/arix-shield/next.js';//
 
 export const config = { runtime: 'edge' };
 
@@ -952,6 +953,20 @@ export default async function handler(req) {
   if (url.searchParams.get('security') === '1') return securityControl(req);
   if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization' } });
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+
+  // --- ArixShield Gatekeeper (WAF Inspection & Distributed Token Bucket) ---
+  const arixDecision = await protectRequest(req, {
+    endpoint: process.env.ARIX_ENDPOINT,
+    serverKey: process.env.ARIX_SECRET_KEY,
+    mode: 'ENFORCE',
+    rateLimitPerMinute: 120,
+    globalRateLimit: true,
+    failopen: true
+  });
+
+  if (!arixDecision.allowed) {
+    return arixDecision.response;
+  }
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
