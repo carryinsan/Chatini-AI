@@ -10,7 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f7f8fc">
 <meta name="description" content="ArixChat — simple, thoughtful conversations. Share a room link and chat in real time.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: blob: mediastream:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: blob: mediastream:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; form-action 'self'">
 <title>ArixChat — Conversations, made simple</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 
@@ -144,6 +144,7 @@ const STORE_PROFILE = 'arixchat.profile.v1';
 const STORE_SESSION_HINT = 'arixchat.session-hint.v1';
 const MAX_TEXT = 4000;
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const TUS_THRESHOLD_BYTES = 6 * 1024 * 1024;
 const TUS_RETRY_DELAYS = [1000, 2000, 5000, 10000, 15000];
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1019,6 +1020,58 @@ const error = new Error('Could not start the resumable upload (' + response.stat
 }
 return normalizeTusLocation(response.headers.get('Location'), upload.tusEndpoint);
 }
+function signedStorageObjectUrl(upload) {
+if (!upload?.tusEndpoint || !upload?.bucket || !upload?.objectPath || !upload?.token) {
+throw new Error('The server returned an incomplete signed-upload ticket.');
+}
+const endpoint = new URL(upload.tusEndpoint);
+const storageApiPath = endpoint.pathname.replace(/\/upload\/resumable\/?$/, '');
+if (!storageApiPath || storageApiPath === endpoint.pathname) {
+throw new Error('The server returned an invalid Storage upload endpoint.');
+}
+const encodedPath = String(upload.objectPath).split('/').map(part => encodeURIComponent(part)).join('/');
+const url = new URL(storageApiPath + '/object/upload/sign/' + encodeURIComponent(upload.bucket) + '/' + encodedPath, endpoint.origin);
+url.searchParams.set('token', upload.token);
+return url.href;
+}
+async function uploadFileSignedStandard(file, upload) {
+// Supabase's standard signed upload endpoint is simpler and more reliable for
+// smaller files; the signed URL is scoped to this one object and expires.
+const url = signedStorageObjectUrl(upload);
+const mime = String(upload.mime || file.type || 'application/octet-stream').split(';')[0].trim().toLowerCase() || 'application/octet-stream';
+updateUploadProgress(0, 'Uploading ' + file.name);
+let response;
+try {
+response = await fetch(url, {
+method: 'PUT',
+headers: { 'Content-Type': mime, 'cache-control': 'max-age=31536000' },
+body: file,
+cache: 'no-store',
+credentials: 'omit',
+});
+} catch (cause) {
+const error = new Error('Could not reach secure file storage. Check your connection and Supabase Storage CORS settings.');
+error.cause = cause;
+throw error;
+}
+if (!response.ok) {
+let detail = '';
+try {
+const raw = await response.text();
+if (raw) {
+  try {
+    const body = JSON.parse(raw);
+    detail = body.message || body.error || body.statusCode || raw;
+  } catch { detail = raw; }
+}
+} catch {}
+const error = new Error('Secure file upload failed (' + response.status + ')' + (detail ? ': ' + String(detail).slice(0, 220) : '.'));
+error.status = response.status;
+throw error;
+}
+updateUploadProgress(100, 'Upload complete');
+return { objectPath: upload.objectPath, size: file.size };
+}
 async function uploadFileTus(file, upload, clientMessageId) {
 if (!upload || !upload.tusEndpoint || !upload.objectPath || !upload.metadata || !upload.headers?.['x-signature']) throw new Error('The server returned an incomplete upload ticket.');
 if (!Number.isSafeInteger(file.size) || file.size < 1 || file.size > MAX_FILE_BYTES) throw new Error('Files must be between 1 byte and 50 MB.');
@@ -1095,7 +1148,9 @@ if (!upload?.objectPath || !upload?.tusEndpoint || !upload?.token) throw new Err
 state.pendingUploadTickets.set(message.clientMessageId, upload);
 }
 try {
-const result = await uploadFileTus(file, upload, message.clientMessageId);
+const result = file.size < TUS_THRESHOLD_BYTES
+? await uploadFileSignedStandard(file, upload)
+: await uploadFileTus(file, upload, message.clientMessageId);
 attachment.objectPath = result.objectPath;
 attachment.size = result.size;
 attachment.storage = { bucket: upload.bucket || 'arixchat-attachments', key: result.objectPath, size: result.size };
@@ -1165,8 +1220,8 @@ if (message.status === 'sending') message.status = 'sent';
 persist(); renderMessages(false); await flushQueuedReactions(message);
 if (message.attachment && state.activeRoomId === roomId) { pollRoom(); }
 } catch (error) {
-message.status = 'failed'; message.error = String(error.message || 'Send failed').slice(0, 180); persist(); renderMessages(false);
-if (navigator.onLine) toast('Message could not be sent: ' + message.error.slice(0, 110) + '. Tap retry to continue.');
+message.status = 'failed'; message.error = String(error.message || 'Send failed').slice(0, 240); persist(); renderMessages(false);
+if (navigator.onLine) toast('Message could not be sent: ' + message.error.slice(0, 190) + '. Tap retry to continue.');
 else toast('Offline. This file remains selected in this tab; reconnect and retry.');
 } finally { state.sending = false; $('send-btn').disabled = false; $('attach-btn').disabled = false; clearUploadProgress(); input.focus(); }
 }
