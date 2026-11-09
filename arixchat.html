@@ -2,6 +2,7 @@
 
 
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -9,7 +10,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#f7f8fc">
 <meta name="description" content="ArixChat — simple, thoughtful conversations. Share a room link and chat in real time.">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; media-src 'self' https: blob: mediastream:; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <title>ArixChat — Conversations, made simple</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 
@@ -19,7 +20,7 @@
 
 <style>
 :root{color-scheme:light;--ink:#182230;--muted:#758094;--line:#e8ebf1;--panel:#fff;--canvas:#f7f8fc;--accent:#6657e8;--accent-dark:#5142cf;--accent-soft:#efedff;--green:#16a878;--shadow:0 18px 55px rgba(25,35,60,.08);--radius:18px}
-*{box-sizing:border-box}[hidden]{display:none!important}html,body{height:100%;margin:0}body{font-family:'DM Sans',system-ui,sans-serif;background:var(--canvas);color:var(--ink);overflow:hidden}button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #c9c3ff;outline-offset:2px}button:disabled{cursor:not-allowed;opacity:.45}.app{height:100dvh;display:grid;grid-template-columns:340px minmax(0,1fr);padding:14px;gap:14px}.sidebar,.chat{border:1px solid rgba(225,229,239,.95);background:var(--panel);border-radius:24px;min-width:0;overflow:hidden}.sidebar{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.03)}.brandbar{padding:20px 20px 16px;display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,#887cff,#5a49dd);display:grid;place-items:center;color:#fff;box-shadow:0 9px 18px rgba(102,87,232,.25);flex:0 0 auto}.brandmark svg{width:24px;height:24px}.brandtext{font-family:Manrope,sans-serif;font-weight:800;font-size:18px;letter-spacing:-.7px}.brandtext span{color:var(--accent)}.brand-sub{font-size:11px;color:var(--muted);margin-top:2px}.sidebar-top-actions{margin-left:auto;display:flex;gap:7px}.icon-btn{border:1px solid var(--line);background:#fff;color:#667085;width:38px;height:38px;border-radius:13px;display:inline-grid;place-items:center;transition:.2s}.icon-btn:hover{background:#f5f4ff;color:var(--accent);border-color:#dcd8ff;transform:translateY(-1px)}.icon-btn svg{width:18px;height:18px}.primary-btn{border:0;background:var(--accent);color:#fff;border-radius:13px;padding:11px 14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 7px 15px rgba(102,87,232,.18);transition:.2s}.primary-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.primary-btn svg{width:17px;height:17px}.sidebar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 15px}.sidebar-actions button{font-size:12px;padding:10px 8px;box-shadow:none}.secondary-btn{border:1px solid var(--line);background:#fff;color:#475467;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.2s}.secondary-btn:hover{background:#f8f8ff;border-color:#d7d3ff;color:var(--accent)}.secondary-btn svg{width:16px;height:16px}.side-search{padding:0 16px 14px;position:relative}.side-search svg{position:absolute;left:29px;top:13px;width:16px;color:#98a2b3}.side-search input{width:100%;border:1px solid #eceef4;background:#f8f9fc;border-radius:13px;padding:11px 12px 11px 38px;font-size:12px;outline:none;color:var(--ink)}.side-search input:focus{background:#fff;border-color:#c8c2ff}.section-label{padding:7px 20px 9px;display:flex;justify-content:space-between;align-items:center;color:#98a2b3;font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase}.room-list{overflow:auto;min-height:0;flex:1;padding:0 9px 10px}.room-item{display:flex;align-items:center;gap:11px;padding:11px;border-radius:15px;cursor:pointer;transition:.18s;border:1px solid transparent;margin-bottom:3px;min-width:0}.room-item:hover{background:#f8f9fc}.room-item.active{background:#f1efff;border-color:#e7e3ff}.avatar{width:43px;height:43px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;font-family:Manrope,sans-serif;font-weight:800;font-size:15px;color:#584bd7;background:linear-gradient(140deg,#f0edff,#e2e0ff);position:relative;overflow:hidden}.avatar.green{background:linear-gradient(140deg,#e2f8f0,#c8f0e2);color:#07845a}.avatar.blue{background:linear-gradient(140deg,#e6f2ff,#d5e6ff);color:#2864ba}.avatar.amber{background:linear-gradient(140deg,#fff2d9,#ffdfad);color:#9a6200}.room-copy{min-width:0;flex:1}.room-title-row{display:flex;align-items:center;gap:6px;min-width:0}.room-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.room-time{font-size:10px;color:#9aa3b2;margin-left:auto;white-space:nowrap}.room-preview{font-size:11px;color:#8a94a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px}.tiny-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:0 0 auto}.room-count{font-size:10px;font-weight:800;color:#fff;background:var(--accent);border-radius:20px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 5px}.sidebar-footer{padding:14px 16px;display:flex;align-items:center;gap:11px;border-top:1px solid #f0f1f6}.profile-avatar{width:37px;height:37px;border-radius:13px;background:#1f2937;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;flex:0 0 auto}.profile-copy{min-width:0;flex:1}.profile-name{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-note{font-size:10px;color:#98a2b3;margin-top:3px}.chat{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.025);position:relative}.chat-header{height:82px;border-bottom:1px solid #eff0f5;display:flex;align-items:center;padding:0 24px;gap:13px;flex:0 0 auto;background:rgba(255,255,255,.92)}.room-head-info{min-width:0;flex:1}.room-head-title{font-family:Manrope,sans-serif;font-size:16px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room-head-sub{display:flex;align-items:center;gap:7px;font-size:11px;color:#929aaa;margin-top:5px}.status-dot{height:7px;width:7px;border-radius:50%;background:#a6adbb}.status-dot.connected{background:#1bb786;box-shadow:0 0 0 3px #e7f8f2}.header-actions{display:flex;gap:8px;align-items:center}.header-actions .icon-btn{width:39px;height:39px}.mobile-back{display:none}.messages-wrap{flex:1;min-height:0;overflow:auto;padding:25px clamp(16px,4vw,56px) 16px;scroll-behavior:smooth;background:radial-gradient(ellipse at 50% 0%,rgba(245,243,255,.44),transparent 50%),#fff}.history-toolbar{display:flex;justify-content:center;padding:0 0 16px}.history-toolbar button{font-size:11px;padding:8px 12px}.day-divider{text-align:center;margin:4px auto 26px;font-size:10px;color:#9aa2b2;display:flex;align-items:center;gap:12px;justify-content:center}.day-divider:before,.day-divider:after{content:'';height:1px;width:45px;background:#eceef4}.message-row{display:flex;gap:10px;align-items:flex-end;margin:0 0 18px;animation:messageIn .22s ease-out;max-width:min(840px,100%)}.message-row.mine{margin-left:auto;flex-direction:row-reverse}.message-avatar{width:30px;height:30px;border-radius:11px;background:#edf0f7;display:grid;place-items:center;font-size:10px;font-weight:800;color:#647084;flex:0 0 auto}.message-row.mine .message-avatar{background:#e9e5ff;color:#594bd7}.message-stack{max-width:min(76%,680px);min-width:100px}.message-row.mine .message-stack{align-items:flex-end;display:flex;flex-direction:column}.sender-line{display:flex;align-items:center;gap:7px;margin:0 0 6px 4px;font-size:10px;font-weight:800;color:#8790a0}.message-row.mine .sender-line{margin:0 4px 6px 0;justify-content:flex-end}.message-bubble{background:#f5f6fa;border:1px solid #edf0f5;border-radius:17px 17px 17px 5px;padding:12px 14px;color:#344054;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(20,30,50,.02);position:relative}.message-row.mine .message-bubble{background:#6254df;border-color:#6254df;color:#fff;border-radius:17px 17px 5px 17px;box-shadow:0 6px 15px rgba(98,84,223,.12)}.message-bubble.deleted{font-style:italic;color:#98a2b3;background:#f8f9fc;border-style:dashed}.message-row.mine .message-bubble.deleted{color:#edeaff;background:#7b70e8;border-color:#7b70e8}.quoted{display:block;border-left:3px solid #b9b1ff;background:rgba(255,255,255,.65);border-radius:7px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#667085;max-width:100%;overflow:hidden}.message-row.mine .quoted{background:rgba(255,255,255,.15);color:#f0eeff;border-left-color:#d4ceff}.quoted strong{display:block;font-size:10px;margin-bottom:2px}.attachment-card{display:flex;align-items:center;gap:9px;padding:9px;border-radius:11px;background:rgba(255,255,255,.68);margin-top:8px;border:1px solid rgba(180,185,202,.28);color:#384152;max-width:270px}.attachment-card .file-symbol{width:31px;height:34px;border-radius:8px;background:#fff;display:grid;place-items:center;color:#7163dc;font-weight:800;flex:0 0 auto}.attachment-card a{color:inherit;text-decoration:none;font-size:11px;font-weight:700;overflow-wrap:anywhere}.attachment-card img{max-width:180px;max-height:140px;object-fit:contain;border-radius:7px}.message-meta{display:flex;align-items:center;gap:6px;color:#a2aab7;font-size:9px;margin-top:5px;padding:0 3px}.message-row.mine .message-meta{justify-content:flex-end}.message-status{color:#9d95ff;font-weight:800}.message-actions{display:flex;gap:4px;margin-top:6px;opacity:0;transition:opacity .16s}.message-row:hover .message-actions,.message-row:focus-within .message-actions{opacity:1}.message-row.mine .message-actions{justify-content:flex-end}.message-action{border:1px solid #e8eaf0;background:#fff;color:#7b8496;border-radius:9px;padding:5px 7px;font-size:10px;font-weight:700}.message-action:hover{color:var(--accent);background:#f5f3ff;border-color:#dcd7ff}.message-row.mine .message-action{border-color:#e2defd}.reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.reaction{border:1px solid #e4e6ee;background:#fff;border-radius:12px;padding:4px 7px;font-size:11px;color:#5e687a}.reaction.mine{background:#efedff;border-color:#d8d2ff;color:#5142cf}.empty-state{height:100%;min-height:300px;display:grid;place-items:center;text-align:center;padding:30px}.empty-art{width:90px;height:90px;margin:0 auto 22px;border-radius:28px;background:linear-gradient(145deg,#f0edff,#fff);border:1px solid #e7e3ff;display:grid;place-items:center;box-shadow:0 15px 40px rgba(102,87,232,.1)}.empty-art svg{width:40px;height:40px;color:#7668ea}.empty-state h2{font-family:Manrope,sans-serif;font-size:23px;letter-spacing:-.8px;margin:0 0 9px}.empty-state p{font-size:13px;line-height:1.7;color:#8790a0;max-width:370px;margin:0 auto 22px}.feature-pills{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}.feature-pills span{border:1px solid #e9eaf2;background:#fff;border-radius:100px;padding:7px 10px;font-size:10px;color:#6f7889;font-weight:700}.composer-area{padding:11px clamp(12px,3vw,38px) 17px;background:#fff;border-top:1px solid #eff0f5;flex:0 0 auto}.reply-preview{display:flex;align-items:center;gap:10px;border:1px solid #e7e3ff;background:#f8f7ff;border-radius:12px;padding:8px 10px;margin-bottom:9px;font-size:11px;color:#5e6474}.reply-preview-copy{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reply-preview strong{display:block;color:#5b4ddd;margin-bottom:2px}.reply-preview button{border:0;background:transparent;color:#858ca0;font-size:17px}.composer-box{border:1px solid #e4e7ef;border-radius:20px;padding:9px 10px 8px 14px;box-shadow:0 5px 19px rgba(30,40,70,.035);transition:.2s}.composer-box:focus-within{border-color:#c9c2ff;box-shadow:0 5px 22px rgba(102,87,232,.09)}.composer-main{display:flex;align-items:flex-end;gap:9px}.composer-main textarea{flex:1;min-width:0;resize:none;border:0;outline:0!important;background:transparent;font-size:13px;line-height:1.55;max-height:130px;min-height:27px;padding:6px 2px;color:var(--ink)}.composer-main textarea::placeholder{color:#a1a8b6}.send-btn{height:39px;width:42px;border-radius:13px;border:0;display:grid;place-items:center;color:#fff;background:var(--accent);box-shadow:0 5px 12px rgba(102,87,232,.2);transition:.2s;flex:0 0 auto}.send-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.send-btn svg{width:18px;height:18px}.composer-tools{display:flex;align-items:center;gap:5px;padding-top:7px}.tool-btn{border:0;background:transparent;color:#98a1b1;border-radius:9px;padding:6px 8px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700}.tool-btn:hover{background:#f5f4ff;color:var(--accent)}.tool-btn svg{width:15px;height:15px}.composer-hint{margin-left:auto;font-size:9px;color:#abb2bf;padding-right:4px}.privacy-note{font-size:9px;color:#a1a8b5;text-align:center;margin-top:9px}.toast{position:fixed;top:20px;left:50%;transform:translate(-50%,-10px);z-index:50;background:#20283a;color:#fff;padding:11px 15px;border-radius:13px;font-size:12px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.22s}.toast.show{opacity:1;transform:translate(-50%,0)}.modal-backdrop{position:fixed;inset:0;background:rgba(22,28,45,.35);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:18px;z-index:40}.modal-backdrop.show{display:flex}.modal{background:#fff;border:1px solid #edf0f5;border-radius:24px;box-shadow:0 25px 90px rgba(25,35,60,.18);padding:24px;max-width:440px;width:100%;animation:modalIn .2s ease-out}.modal h2{font-family:Manrope,sans-serif;margin:0 0 8px;font-size:20px;letter-spacing:-.6px}.modal p{color:#7d8697;font-size:12px;line-height:1.7;margin:0 0 19px}.field-label{display:block;font-size:11px;font-weight:800;color:#667085;margin-bottom:7px}.field{width:100%;border:1px solid #e2e6ee;background:#fbfcfe;border-radius:12px;padding:12px;font-size:13px;outline:none;color:var(--ink);margin-bottom:14px}.field:focus{border-color:#c8c1ff;background:#fff}.modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:8px}.modal-actions button{min-width:92px}.modal-close{float:right;border:0;background:#f4f5f8;width:31px;height:31px;border-radius:10px;color:#687284}.security-card{background:#f8f9fc;border:1px solid #edf0f5;border-radius:14px;padding:13px;margin:12px 0;color:#7d8697;font-size:11px;line-height:1.65}.security-card strong{color:#344054}.mobile-overlay{display:none}
+*{box-sizing:border-box}[hidden]{display:none!important}html,body{height:100%;margin:0}body{font-family:'DM Sans',system-ui,sans-serif;background:var(--canvas);color:var(--ink);overflow:hidden}button,input,textarea{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid #c9c3ff;outline-offset:2px}button:disabled{cursor:not-allowed;opacity:.45}.app{height:100dvh;display:grid;grid-template-columns:340px minmax(0,1fr);padding:14px;gap:14px}.sidebar,.chat{border:1px solid rgba(225,229,239,.95);background:var(--panel);border-radius:24px;min-width:0;overflow:hidden}.sidebar{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.03)}.brandbar{padding:20px 20px 16px;display:flex;align-items:center;gap:12px}.brandmark{width:42px;height:42px;border-radius:15px;background:linear-gradient(145deg,#887cff,#5a49dd);display:grid;place-items:center;color:#fff;box-shadow:0 9px 18px rgba(102,87,232,.25);flex:0 0 auto}.brandmark svg{width:24px;height:24px}.brandtext{font-family:Manrope,sans-serif;font-weight:800;font-size:18px;letter-spacing:-.7px}.brandtext span{color:var(--accent)}.brand-sub{font-size:11px;color:var(--muted);margin-top:2px}.sidebar-top-actions{margin-left:auto;display:flex;gap:7px}.icon-btn{border:1px solid var(--line);background:#fff;color:#667085;width:38px;height:38px;border-radius:13px;display:inline-grid;place-items:center;transition:.2s}.icon-btn:hover{background:#f5f4ff;color:var(--accent);border-color:#dcd8ff;transform:translateY(-1px)}.icon-btn svg{width:18px;height:18px}.primary-btn{border:0;background:var(--accent);color:#fff;border-radius:13px;padding:11px 14px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 7px 15px rgba(102,87,232,.18);transition:.2s}.primary-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.primary-btn svg{width:17px;height:17px}.sidebar-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 16px 15px}.sidebar-actions button{font-size:12px;padding:10px 8px;box-shadow:none}.secondary-btn{border:1px solid var(--line);background:#fff;color:#475467;border-radius:12px;padding:10px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.2s}.secondary-btn:hover{background:#f8f8ff;border-color:#d7d3ff;color:var(--accent)}.secondary-btn svg{width:16px;height:16px}.side-search{padding:0 16px 14px;position:relative}.side-search svg{position:absolute;left:29px;top:13px;width:16px;color:#98a2b3}.side-search input{width:100%;border:1px solid #eceef4;background:#f8f9fc;border-radius:13px;padding:11px 12px 11px 38px;font-size:12px;outline:none;color:var(--ink)}.side-search input:focus{background:#fff;border-color:#c8c2ff}.section-label{padding:7px 20px 9px;display:flex;justify-content:space-between;align-items:center;color:#98a2b3;font-size:10px;font-weight:800;letter-spacing:1.3px;text-transform:uppercase}.room-list{overflow:auto;min-height:0;flex:1;padding:0 9px 10px}.room-item{display:flex;align-items:center;gap:11px;padding:11px;border-radius:15px;cursor:pointer;transition:.18s;border:1px solid transparent;margin-bottom:3px;min-width:0}.room-item:hover{background:#f8f9fc}.room-item.active{background:#f1efff;border-color:#e7e3ff}.avatar{width:43px;height:43px;border-radius:15px;flex:0 0 auto;display:grid;place-items:center;font-family:Manrope,sans-serif;font-weight:800;font-size:15px;color:#584bd7;background:linear-gradient(140deg,#f0edff,#e2e0ff);position:relative;overflow:hidden}.avatar.green{background:linear-gradient(140deg,#e2f8f0,#c8f0e2);color:#07845a}.avatar.blue{background:linear-gradient(140deg,#e6f2ff,#d5e6ff);color:#2864ba}.avatar.amber{background:linear-gradient(140deg,#fff2d9,#ffdfad);color:#9a6200}.room-copy{min-width:0;flex:1}.room-title-row{display:flex;align-items:center;gap:6px;min-width:0}.room-title{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}.room-time{font-size:10px;color:#9aa3b2;margin-left:auto;white-space:nowrap}.room-preview{font-size:11px;color:#8a94a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:5px}.tiny-dot{width:7px;height:7px;border-radius:50%;background:var(--green);flex:0 0 auto}.room-count{font-size:10px;font-weight:800;color:#fff;background:var(--accent);border-radius:20px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 5px}.sidebar-footer{padding:14px 16px;display:flex;align-items:center;gap:11px;border-top:1px solid #f0f1f6}.profile-avatar{width:37px;height:37px;border-radius:13px;background:#1f2937;color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px;flex:0 0 auto}.profile-copy{min-width:0;flex:1}.profile-name{font-size:12px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-note{font-size:10px;color:#98a2b3;margin-top:3px}.chat{display:flex;flex-direction:column;box-shadow:0 6px 25px rgba(25,35,60,.025);position:relative}.chat-header{height:82px;border-bottom:1px solid #eff0f5;display:flex;align-items:center;padding:0 24px;gap:13px;flex:0 0 auto;background:rgba(255,255,255,.92)}.room-head-info{min-width:0;flex:1}.room-head-title{font-family:Manrope,sans-serif;font-size:16px;font-weight:800;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.room-head-sub{display:flex;align-items:center;gap:7px;font-size:11px;color:#929aaa;margin-top:5px}.status-dot{height:7px;width:7px;border-radius:50%;background:#a6adbb}.status-dot.connected{background:#1bb786;box-shadow:0 0 0 3px #e7f8f2}.header-actions{display:flex;gap:8px;align-items:center}.header-actions .icon-btn{width:39px;height:39px}.mobile-back{display:none}.messages-wrap{flex:1;min-height:0;overflow:auto;padding:25px clamp(16px,4vw,56px) 16px;scroll-behavior:smooth;background:radial-gradient(ellipse at 50% 0%,rgba(245,243,255,.44),transparent 50%),#fff}.history-toolbar{display:flex;justify-content:center;padding:0 0 16px}.history-toolbar button{font-size:11px;padding:8px 12px}.day-divider{text-align:center;margin:4px auto 26px;font-size:10px;color:#9aa2b2;display:flex;align-items:center;gap:12px;justify-content:center}.day-divider:before,.day-divider:after{content:'';height:1px;width:45px;background:#eceef4}.message-row{display:flex;gap:10px;align-items:flex-end;margin:0 0 18px;animation:messageIn .22s ease-out;max-width:min(840px,100%)}.message-row.mine{margin-left:auto;flex-direction:row-reverse}.message-avatar{width:30px;height:30px;border-radius:11px;background:#edf0f7;display:grid;place-items:center;font-size:10px;font-weight:800;color:#647084;flex:0 0 auto}.message-row.mine .message-avatar{background:#e9e5ff;color:#594bd7}.message-stack{max-width:min(76%,680px);min-width:100px}.message-row.mine .message-stack{align-items:flex-end;display:flex;flex-direction:column}.sender-line{display:flex;align-items:center;gap:7px;margin:0 0 6px 4px;font-size:10px;font-weight:800;color:#8790a0}.message-row.mine .sender-line{margin:0 4px 6px 0;justify-content:flex-end}.message-bubble{background:#f5f6fa;border:1px solid #edf0f5;border-radius:17px 17px 17px 5px;padding:12px 14px;color:#344054;font-size:13px;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere;box-shadow:0 2px 6px rgba(20,30,50,.02);position:relative}.message-row.mine .message-bubble{background:#6254df;border-color:#6254df;color:#fff;border-radius:17px 17px 5px 17px;box-shadow:0 6px 15px rgba(98,84,223,.12)}.message-bubble.deleted{font-style:italic;color:#98a2b3;background:#f8f9fc;border-style:dashed}.message-row.mine .message-bubble.deleted{color:#edeaff;background:#7b70e8;border-color:#7b70e8}.quoted{display:block;border-left:3px solid #b9b1ff;background:rgba(255,255,255,.65);border-radius:7px;padding:6px 8px;margin-bottom:8px;font-size:11px;color:#667085;max-width:100%;overflow:hidden}.message-row.mine .quoted{background:rgba(255,255,255,.15);color:#f0eeff;border-left-color:#d4ceff}.quoted strong{display:block;font-size:10px;margin-bottom:2px}.attachment-card{display:flex;align-items:center;gap:9px;padding:9px;border-radius:11px;background:rgba(255,255,255,.68);margin-top:8px;border:1px solid rgba(180,185,202,.28);color:#384152;max-width:270px}.attachment-card .file-symbol{width:31px;height:34px;border-radius:8px;background:#fff;display:grid;place-items:center;color:#7163dc;font-weight:800;flex:0 0 auto}.attachment-card a{color:inherit;text-decoration:none;font-size:11px;font-weight:700;overflow-wrap:anywhere}.attachment-card img{max-width:180px;max-height:140px;object-fit:contain;border-radius:7px}.attachment-card video{display:block;width:min(260px,100%);max-height:190px;border-radius:8px;background:#111}.attachment-card audio{display:block;width:min(260px,100%);max-width:100%}.attachment-card .attachment-details{min-width:0;overflow-wrap:anywhere}.attachment-card .attachment-size{display:block;color:#8a94a6;font-size:10px;font-weight:500;margin-top:3px}.message-meta{display:flex;align-items:center;gap:6px;color:#a2aab7;font-size:9px;margin-top:5px;padding:0 3px}.message-row.mine .message-meta{justify-content:flex-end}.message-status{color:#9d95ff;font-weight:800}.message-actions{display:flex;gap:4px;margin-top:6px;opacity:0;transition:opacity .16s}.message-row:hover .message-actions,.message-row:focus-within .message-actions{opacity:1}.message-row.mine .message-actions{justify-content:flex-end}.message-action{border:1px solid #e8eaf0;background:#fff;color:#7b8496;border-radius:9px;padding:5px 7px;font-size:10px;font-weight:700}.message-action:hover{color:var(--accent);background:#f5f3ff;border-color:#dcd7ff}.message-row.mine .message-action{border-color:#e2defd}.reactions{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}.reaction{border:1px solid #e4e6ee;background:#fff;border-radius:12px;padding:4px 7px;font-size:11px;color:#5e687a}.reaction.mine{background:#efedff;border-color:#d8d2ff;color:#5142cf}.empty-state{height:100%;min-height:300px;display:grid;place-items:center;text-align:center;padding:30px}.empty-art{width:90px;height:90px;margin:0 auto 22px;border-radius:28px;background:linear-gradient(145deg,#f0edff,#fff);border:1px solid #e7e3ff;display:grid;place-items:center;box-shadow:0 15px 40px rgba(102,87,232,.1)}.empty-art svg{width:40px;height:40px;color:#7668ea}.empty-state h2{font-family:Manrope,sans-serif;font-size:23px;letter-spacing:-.8px;margin:0 0 9px}.empty-state p{font-size:13px;line-height:1.7;color:#8790a0;max-width:370px;margin:0 auto 22px}.feature-pills{display:flex;gap:7px;justify-content:center;flex-wrap:wrap}.feature-pills span{border:1px solid #e9eaf2;background:#fff;border-radius:100px;padding:7px 10px;font-size:10px;color:#6f7889;font-weight:700}.composer-area{padding:11px clamp(12px,3vw,38px) 17px;background:#fff;border-top:1px solid #eff0f5;flex:0 0 auto}.reply-preview{display:flex;align-items:center;gap:10px;border:1px solid #e7e3ff;background:#f8f7ff;border-radius:12px;padding:8px 10px;margin-bottom:9px;font-size:11px;color:#5e6474}.reply-preview-copy{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.reply-preview strong{display:block;color:#5b4ddd;margin-bottom:2px}.reply-preview button{border:0;background:transparent;color:#858ca0;font-size:17px}.composer-box{border:1px solid #e4e7ef;border-radius:20px;padding:9px 10px 8px 14px;box-shadow:0 5px 19px rgba(30,40,70,.035);transition:.2s}.composer-box:focus-within{border-color:#c9c2ff;box-shadow:0 5px 22px rgba(102,87,232,.09)}.composer-main{display:flex;align-items:flex-end;gap:9px}.composer-main textarea{flex:1;min-width:0;resize:none;border:0;outline:0!important;background:transparent;font-size:13px;line-height:1.55;max-height:130px;min-height:27px;padding:6px 2px;color:var(--ink)}.composer-main textarea::placeholder{color:#a1a8b6}.send-btn{height:39px;width:42px;border-radius:13px;border:0;display:grid;place-items:center;color:#fff;background:var(--accent);box-shadow:0 5px 12px rgba(102,87,232,.2);transition:.2s;flex:0 0 auto}.send-btn:hover{background:var(--accent-dark);transform:translateY(-1px)}.send-btn svg{width:18px;height:18px}.composer-tools{display:flex;align-items:center;gap:5px;padding-top:7px}.tool-btn{border:0;background:transparent;color:#98a1b1;border-radius:9px;padding:6px 8px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700}.tool-btn:hover{background:#f5f4ff;color:var(--accent)}.tool-btn svg{width:15px;height:15px}.composer-hint{margin-left:auto;font-size:9px;color:#abb2bf;padding-right:4px}.privacy-note{font-size:9px;color:#a1a8b5;text-align:center;margin-top:9px}.toast{position:fixed;top:20px;left:50%;transform:translate(-50%,-10px);z-index:50;background:#20283a;color:#fff;padding:11px 15px;border-radius:13px;font-size:12px;font-weight:700;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.22s}.toast.show{opacity:1;transform:translate(-50%,0)}.modal-backdrop{position:fixed;inset:0;background:rgba(22,28,45,.35);backdrop-filter:blur(7px);display:none;align-items:center;justify-content:center;padding:18px;z-index:40}.modal-backdrop.show{display:flex}.modal{background:#fff;border:1px solid #edf0f5;border-radius:24px;box-shadow:0 25px 90px rgba(25,35,60,.18);padding:24px;max-width:440px;width:100%;animation:modalIn .2s ease-out}.modal h2{font-family:Manrope,sans-serif;margin:0 0 8px;font-size:20px;letter-spacing:-.6px}.modal p{color:#7d8697;font-size:12px;line-height:1.7;margin:0 0 19px}.field-label{display:block;font-size:11px;font-weight:800;color:#667085;margin-bottom:7px}.field{width:100%;border:1px solid #e2e6ee;background:#fbfcfe;border-radius:12px;padding:12px;font-size:13px;outline:none;color:var(--ink);margin-bottom:14px}.field:focus{border-color:#c8c1ff;background:#fff}.modal-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:8px}.modal-actions button{min-width:92px}.modal-close{float:right;border:0;background:#f4f5f8;width:31px;height:31px;border-radius:10px;color:#687284}.security-card{background:#f8f9fc;border:1px solid #edf0f5;border-radius:14px;padding:13px;margin:12px 0;color:#7d8697;font-size:11px;line-height:1.65}.security-card strong{color:#344054}.mobile-overlay{display:none}
 @keyframes messageIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}@keyframes modalIn{from{opacity:0;transform:translateY(7px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
 @media(max-width:860px){.app{grid-template-columns:292px minmax(0,1fr);padding:9px;gap:9px}.chat-header{padding:0 15px}.messages-wrap{padding:21px 15px 12px}.message-stack{max-width:84%}.room-time{display:none}}
 @media(max-width:650px){body{background:#fff}.app{display:block;padding:0;height:100dvh}.sidebar,.chat{height:100dvh;border:0;border-radius:0;box-shadow:none}.sidebar{position:fixed;inset:0;z-index:20;transform:translateX(0);transition:transform .25s ease;width:100%;background:#fff}.app.chat-open .sidebar{transform:translateX(-102%)}.chat{display:none}.app.chat-open .chat{display:flex}.brandbar{padding:18px 17px 15px}.sidebar-actions{padding:0 14px 13px}.side-search{padding:0 14px 12px}.room-list{padding:0 8px 10px}.sidebar-footer{padding:13px 17px}.chat-header{height:72px;padding:0 12px;gap:9px}.mobile-back{display:inline-grid;width:34px;height:34px;border-radius:11px}.chat-header .avatar{width:38px;height:38px;border-radius:13px}.room-head-title{font-size:14px}.room-head-sub{font-size:10px}.header-actions{gap:5px}.header-actions .icon-btn{width:34px;height:34px;border-radius:11px}.header-actions .optional-action{display:none}.messages-wrap{padding:18px 11px 11px}.message-row{gap:7px;margin-bottom:15px}.message-avatar{width:27px;height:27px;border-radius:9px}.message-stack{max-width:86%}.message-bubble{font-size:12px;padding:10px 12px}.composer-area{padding:9px 10px calc(10px + env(safe-area-inset-bottom))}.composer-box{border-radius:17px;padding:8px 8px 7px 11px}.composer-main textarea{font-size:12px}.composer-hint{display:none}.tool-btn{padding:6px}.privacy-note{font-size:8px}.empty-state h2{font-size:20px}.empty-state p{font-size:12px}.message-actions{opacity:1}.mobile-overlay{display:block;position:fixed;inset:0;background:rgba(22,28,45,.25);z-index:19;opacity:0;pointer-events:none;transition:.2s}.app.chat-open .mobile-overlay{opacity:1;pointer-events:auto}}
@@ -93,8 +94,8 @@
 </section>
 <section class="composer-area" id="composer-area" hidden>
 <div class="reply-preview" id="reply-preview" hidden><div class="reply-preview-copy"><strong id="reply-author">Replying</strong><span id="reply-text"></span></div><button id="cancel-reply" aria-label="Cancel reply">×</button></div>
-<div class="composer-box"><div class="composer-main"><button class="icon-btn" id="attach-btn" title="Attach a small image or file" aria-label="Attach a file" style="width:34px;height:34px;flex:0 0 auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m8 12.5 6.9-6.9a3 3 0 0 1 4.2 4.2l-8.6 8.6A5 5 0 0 1 3.4 11.3L12 2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input type="file" id="file-input" hidden accept="image/jpeg,image/png,image/gif,image/webp,application/pdf,text/plain"><textarea id="message-input" rows="1" maxlength="4000" placeholder="Write a message… (Enter to send, Shift + Enter for a new line)" aria-label="Write a message"></textarea><button class="send-btn" id="send-btn" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m21 3-7.2 18-3.8-7.8L2 9.5 21 3Z" stroke-linejoin="round"/><path d="M10 13 21 3" stroke-linecap="round"/></svg></button></div><div class="composer-tools"><button class="tool-btn" id="emoji-btn"><span style="font-size:15px">☺</span> Emoji</button><button class="tool-btn" id="export-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-4-4 4 4 4-4M5 17v3h14v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>Export chat</button><span class="composer-hint" id="composer-character-count">0 / 4000</span></div></div>
-<div class="privacy-note">Messages are stored in your Supabase project. Invite links grant room access; avoid sharing passwords or sensitive data.</div>
+<div class="composer-box"><div class="composer-main"><button class="icon-btn" id="attach-btn" title="Attach a file, image or video up to 50 MB" aria-label="Attach a file" style="width:34px;height:34px;flex:0 0 auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m8 12.5 6.9-6.9a3 3 0 0 1 4.2 4.2l-8.6 8.6A5 5 0 0 1 3.4 11.3L12 2.7" stroke-linecap="round" stroke-linejoin="round"/></svg></button><input type="file" id="file-input" hidden accept="*/*"><textarea id="message-input" rows="1" maxlength="4000" placeholder="Write a message… (Enter to send, Shift + Enter for a new line)" aria-label="Write a message"></textarea><button class="send-btn" id="send-btn" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="m21 3-7.2 18-3.8-7.8L2 9.5 21 3Z" stroke-linejoin="round"/><path d="M10 13 21 3" stroke-linecap="round"/></svg></button></div><div class="composer-tools"><button class="tool-btn" id="emoji-btn"><span style="font-size:15px">☺</span> Emoji</button><button class="tool-btn" id="export-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12m-4-4 4 4 4-4M5 17v3h14v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>Export chat</button><span class="composer-hint" id="upload-progress" role="status" aria-live="polite" hidden></span><span class="composer-hint" id="composer-character-count">0 / 4000</span></div></div>
+<div class="privacy-note">Messages and shared files are stored in your Supabase project. Files up to 50 MB upload directly in resumable chunks; recipients can download them later even when the sender is offline.</div>
 </section>
 </main>
 </div>
@@ -142,7 +143,8 @@ const STORE_MESSAGES = 'arixchat.messages.v1';
 const STORE_PROFILE = 'arixchat.profile.v1';
 const STORE_SESSION_HINT = 'arixchat.session-hint.v1';
 const MAX_TEXT = 4000;
-const MAX_FILE_BYTES = 100 * 1024;
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
+const TUS_RETRY_DELAYS = [1000, 2000, 5000, 10000, 15000];
 const $ = (id) => document.getElementById(id);
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const safeJson = (value, fallback) => { try { const parsed = JSON.parse(value); return parsed ?? fallback; } catch { return fallback; } };
@@ -158,6 +160,12 @@ sending: false, lastToast: 0, rateWindow: [], pendingEvents: [], authGateOpen: f
 };
 if (!Array.isArray(state.rooms)) state.rooms = [];
 if (!state.allMessages || typeof state.allMessages !== 'object' || Array.isArray(state.allMessages)) state.allMessages = {};
+// Large File objects and short-lived upload credentials stay in memory only; message cache stores metadata and object paths.
+state.pendingAttachmentFiles = new Map();
+state.pendingUploadTickets = new Map();
+state.pendingTusLocations = new Map();
+state.retryAttachmentMessage = null;
+state.refreshingAttachmentIds = new Set();
 state.profile.name = cleanName(state.profile.name || '');
 
 let callEventSource = null;
@@ -193,7 +201,7 @@ return 'legacy_' + hashText(String(Number(raw?.ts) || 0) + '\u001f' + cleanName(
 }
 function messageSignature(msg) {
 const signature = JSON.stringify([msg.sender, msg.senderId, msg.text, msg.time, msg.status, msg.edited, msg.deleted,
-msg.replyTo, msg.attachment ? [msg.attachment.name, msg.attachment.mime, msg.attachment.data] : null,
+msg.replyTo, msg.attachment ? [msg.attachment.name, msg.attachment.mime, msg.attachment.storage?.key || msg.attachment.objectPath || msg.attachment.data, !!safeAttachmentUrl(msg.attachment.data || msg.attachment.url || '')] : null,
 (msg.reactions || []).map(r => [r.emoji, r.by]), msg.serverId, msg.error]);
 return hashText(signature);
 }
@@ -301,7 +309,24 @@ const preview = room.lastMessage || ('Invite link · ' + room.id.slice(0, 9) + '
 return `<div class="room-item ${selected ? 'active' : ''}" role="button" tabindex="0" data-room="${esc(room.id)}" title="${esc(roomTitle(room))}" aria-current="${selected ? 'page' : 'false'}"><div class="avatar ${color}">${esc(roomTitle(room).charAt(0).toUpperCase())}</div><div class="room-copy"><div class="room-title-row"><span class="room-title">${esc(roomTitle(room))}</span>${room.pinned ? '<span title="Pinned chat" aria-label="Pinned">★</span>' : ''}<span class="room-time">${shortTime(room.updatedAt || room.createdAt)}</span></div><div class="room-preview">${esc(preview)}</div></div>${selected ? '<span class="tiny-dot"></span>' : ''}</div>`;
 }).join('');
 }
-function formatMessageText(text) { return esc(text).replace(/\n/g, '<br>'); }
+function safeAttachmentUrl(value) {
+const raw = String(value || '');
+if (/^data:(image\/(jpeg|png|gif|webp|avif)|application\/pdf|text\/plain);base64,/i.test(raw)) return raw.length <= 180000 ? raw : '';
+try {
+const url = new URL(raw, location.origin);
+if (url.protocol !== 'https:' || url.username || url.password) return '';
+// The server returns private signed URLs for this bucket only.
+if (!/\/storage\/v1\/object\/sign\/arixchat-attachments\//.test(url.pathname)) return '';
+return url.href;
+} catch { return ''; }
+}
+function formatFileSize(bytes) {
+const n = Number(bytes) || 0;
+if (n < 1024) return n + ' B';
+if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+return (n / (1024 * 1024)).toFixed(n >= 10 * 1024 * 1024 ? 0 : 1) + ' MB';
+}
+function formatMessageText(text) { return esc(text).replace(/\\n/g, '<br>'); }
 function messageBodyHtml(msg) {
 if (msg.deleted) return '<div class="message-bubble deleted">This message was deleted</div>';
 let quote = '';
@@ -309,11 +334,24 @@ if (msg.replyTo) quote = `<div class="quoted"><strong>${esc(msg.replyTo.sender |
 let attachment = '';
 if (msg.attachment && typeof msg.attachment === 'object') {
 const a = msg.attachment;
-if (a.data && /^data:image\/(jpeg|png|gif|webp);base64,/i.test(a.data)) {
-attachment = `<div class="attachment-card"><a href="${esc(a.data)}" target="_blank" rel="noopener noreferrer"><img src="${esc(a.data)}" alt="${esc(a.name || 'Shared image')}"></a></div>`;
-} else if (a.data && /^(data:application\/pdf;base64,|data:text\/plain;base64,)/i.test(a.data)) {
-attachment = `<div class="attachment-card"><span class="file-symbol">${a.mime === 'application/pdf' ? 'PDF' : 'TXT'}</span><a href="${esc(a.data)}" download="${esc(a.name || 'attachment')}">${esc(a.name || 'Download file')}<small style="display:block;color:#8a94a6;font-weight:500;margin-top:3px">Open attachment</small></a></div>`;
-} else attachment = `<div class="attachment-card"><span class="file-symbol">FILE</span><span>${esc(a.name || 'Attachment')}</span></div>`;
+const url = safeAttachmentUrl(a.data || a.url || '');
+const mime = String(a.mime || 'application/octet-stream').toLowerCase();
+const name = esc(a.name || 'Attachment');
+const size = Number(a.size || a.storage?.size || 0);
+const sizeLabel = size ? `<span class="attachment-size">${formatFileSize(size)}</span>` : '';
+if (url && mime.startsWith('image/')) {
+attachment = `<div class="attachment-card"><a data-attachment-download data-attachment-url href="${esc(url)}" target="_blank" rel="noopener noreferrer"><img data-attachment-url src="${esc(url)}" alt="${name}" loading="lazy"></a><span class="attachment-details">${name}${sizeLabel}<a data-attachment-download data-attachment-url href="${esc(url)}" download="${name}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:4px">Open image</a></span></div>`;
+} else if (url && mime.startsWith('video/')) {
+attachment = `<div class="attachment-card" style="display:block"><video controls playsinline preload="metadata" controlslist="nodownload"><source data-attachment-url src="${esc(url)}" type="${esc(mime)}"></video><span class="attachment-details">${name}${sizeLabel}<a data-attachment-download data-attachment-url href="${esc(url)}" download="${name}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:5px">Download video</a></span></div>`;
+} else if (url && mime.startsWith('audio/')) {
+attachment = `<div class="attachment-card" style="display:block"><audio controls preload="none"><source data-attachment-url src="${esc(url)}" type="${esc(mime)}"></audio><span class="attachment-details">${name}${sizeLabel}<a data-attachment-download data-attachment-url href="${esc(url)}" download="${name}" target="_blank" rel="noopener noreferrer" style="display:block;margin-top:5px">Download audio</a></span></div>`;
+} else if (url) {
+const symbol = mime === 'application/pdf' ? 'PDF' : (mime.startsWith('text/') ? 'TXT' : 'FILE');
+attachment = `<div class="attachment-card"><span class="file-symbol">${symbol}</span><span class="attachment-details"><a data-attachment-download data-attachment-url href="${esc(url)}" download="${name}" target="_blank" rel="noopener noreferrer">${name}</a>${sizeLabel}<small style="display:block;color:#8a94a6;font-weight:500;margin-top:3px">Download attachment</small></span></div>`;
+} else {
+const note = msg.status === 'sending' ? 'Uploading…' : (a.storage || a.objectPath ? 'Preparing secure download…' : 'Attachment not uploaded');
+attachment = `<div class="attachment-card"><span class="file-symbol">FILE</span><span class="attachment-details">${name}${sizeLabel}<small class="attachment-size">${note}</small></span></div>`;
+}
 }
 return `${quote}<div class="message-bubble">${formatMessageText(msg.text || '')}${attachment}</div>`;
 }
@@ -325,6 +363,16 @@ const reactionsHtml = Object.entries(reactions).map(([emoji,count]) => `<button 
 const status = mine ? (msg.status === 'failed' ? `<span class="message-status" role="button" tabindex="0" data-action="retry" data-id="${esc(msg.id)}" title="Tap to retry">Not sent · retry</span>` : msg.status === 'delivered' ? '<span class="message-status" title="Delivered">✓✓</span>' : msg.status === 'sent' ? '<span class="message-status" title="Sent">✓</span>' : '<span class="message-status" title="Sending">…</span>') : '';
 const rowKey = messageSignature(msg);
 return `<article class="message-row ${mine ? 'mine' : ''}" data-message-row="${esc(msg.id)}" data-render-key="${rowKey}"><div class="message-avatar">${esc(initial)}</div><div class="message-stack"><div class="sender-line"><span>${esc(msg.sender || 'Guest')}</span>${msg.edited ? '<span>· edited</span>' : ''}</div>${messageBodyHtml(msg)}${reactionsHtml ? `<div class="reactions">${reactionsHtml}</div>` : ''}<div class="message-meta"><span>${shortTime(msg.time)}</span>${status}</div><div class="message-actions"><button class="message-action" data-action="reply" data-id="${esc(msg.id)}">Reply</button><button class="message-action" data-action="react-picker" data-id="${esc(msg.id)}">React</button><button class="message-action" data-action="copy" data-id="${esc(msg.id)}">Copy</button>${mine && !msg.deleted && msg.serverId ? `<button class="message-action" data-action="edit" data-id="${esc(msg.id)}">Edit</button><button class="message-action" data-action="delete" data-id="${esc(msg.id)}">Delete</button>` : ''}</div></div></article>`;
+}
+function refreshAttachmentLinks(row, msg) {
+const url = safeAttachmentUrl(msg?.attachment?.data || msg?.attachment?.url || '');
+if (!url || !row) return;
+let mediaChanged = false;
+for (const node of row.querySelectorAll('[data-attachment-url]')) {
+if (node.getAttribute('href') !== null && node.getAttribute('href') !== url) node.setAttribute('href', url);
+if (node.getAttribute('src') !== null && node.getAttribute('src') !== url) { node.setAttribute('src', url); mediaChanged = true; }
+}
+if (mediaChanged) for (const media of row.querySelectorAll('video,audio')) { try { media.load(); } catch {} }
 }
 function renderMessages(shouldScroll = true) {
 const host = $('message-list'); if (!state.activeRoomId) return;
@@ -344,7 +392,8 @@ const key = String(msg.id);
 const oldRow = existingRows.get(key);
 const signature = messageSignature(msg);
 if (oldRow && oldRow.getAttribute('data-render-key') === signature) {
-// Preserve this element and its hover/focus state. No blinking/re-animation on ordinary polls.
+// Preserve the row; refresh signed attachment URLs without re-animating the message.
+refreshAttachmentLinks(oldRow, msg);
 existingRows.delete(key);
 continue;
 }
@@ -899,13 +948,192 @@ async function switchCallCamera() {
   catch { toast('This device/browser cannot switch cameras during the call.'); }
 }
 
+function reserveSendRate() {
+const nowTs = now(); state.rateWindow = state.rateWindow.filter(t => nowTs - t < 60000);
+if (state.rateWindow.length >= 35) throw new Error('You are sending messages too quickly. Please wait a moment.');
+state.rateWindow.push(nowTs);
+}
 function sendEnvelope(envelope) {
 if (!state.activeRoomId) return Promise.reject(new Error('No room selected'));
 if (!state.authenticated && !(state.offlineCached && !navigator.onLine)) return Promise.reject(new Error('Your ArixAI session is not active. Open the main app to authenticate.'));
-const nowTs = now(); state.rateWindow = state.rateWindow.filter(t => nowTs - t < 60000);
-if (state.rateWindow.length >= 35) return Promise.reject(new Error('You are sending messages too quickly. Please wait a moment.'));
-state.rateWindow.push(nowTs);
+try { reserveSendRate(); } catch (error) { return Promise.reject(error); }
 return apiRequest({ roomId: state.activeRoomId, action: 'send', message: PREFIX + JSON.stringify(envelope) });
+}
+function tusBase64(value) {
+const bytes = new TextEncoder().encode(String(value));
+let binary = '';
+for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+return btoa(binary);
+}
+function tusMetadataHeader(metadata) {
+return Object.entries(metadata || {}).map(([key, value]) => key + ' ' + tusBase64(value)).join(',');
+}
+function updateUploadProgress(percent, label) {
+const node = $('upload-progress');
+if (!node) return;
+node.hidden = false;
+node.textContent = (label || 'Uploading') + ' · ' + Math.max(0, Math.min(100, Math.round(percent))) + '%';
+}
+function clearUploadProgress() {
+const node = $('upload-progress');
+if (node) { node.hidden = true; node.textContent = ''; }
+}
+async function tusFetch(url, method, headers, body) {
+return fetch(url, { method, headers: { ...headers, 'Tus-Resumable': '1.0.0' }, body, cache: 'no-store', credentials: 'omit' });
+}
+function normalizeTusLocation(locationValue, endpoint) {
+if (!locationValue) throw new Error('Storage did not return a resumable upload location. Check Supabase Storage CORS settings.');
+const base = new URL(endpoint);
+const url = new URL(locationValue, base);
+if (url.protocol !== 'https:' || url.origin !== base.origin) throw new Error('Storage returned an invalid upload location.');
+return url.href;
+}
+async function tusHeadOffset(location, headers, expectedSize) {
+const response = await tusFetch(location, 'HEAD', headers);
+if (response.status === 404 || response.status === 410) return null;
+if (!response.ok) {
+const error = new Error('Could not resume the secure upload (' + response.status + ').'); error.status = response.status; throw error;
+}
+const rawOffset = response.headers.get('Upload-Offset');
+if (rawOffset === null) throw new Error('Storage did not expose the resumable upload offset. Check Supabase Storage CORS response headers.');
+const offset = Number(rawOffset);
+const rawLength = response.headers.get('Upload-Length');
+const length = rawLength === null ? NaN : Number(rawLength);
+if (!Number.isSafeInteger(offset) || offset < 0 || offset > expectedSize || (Number.isFinite(length) && length !== expectedSize)) {
+throw new Error('Storage returned an invalid resumable upload offset.');
+}
+return offset;
+}
+async function createTusSession(file, upload) {
+const headers = {
+...upload.headers,
+'Tus-Resumable': '1.0.0',
+'Upload-Length': String(file.size),
+'Upload-Metadata': tusMetadataHeader(upload.metadata),
+};
+const response = await tusFetch(upload.tusEndpoint, 'POST', headers);
+if (response.status !== 201 && response.status !== 204) {
+let detail = '';
+try { detail = await response.text(); } catch {}
+const error = new Error('Could not start the resumable upload (' + response.status + '). ' + detail.slice(0, 180)); error.status = response.status; throw error;
+}
+return normalizeTusLocation(response.headers.get('Location'), upload.tusEndpoint);
+}
+async function uploadFileTus(file, upload, clientMessageId) {
+if (!upload || !upload.tusEndpoint || !upload.objectPath || !upload.metadata || !upload.headers?.['x-signature']) throw new Error('The server returned an incomplete upload ticket.');
+if (!Number.isSafeInteger(file.size) || file.size < 1 || file.size > MAX_FILE_BYTES) throw new Error('Files must be between 1 byte and 50 MB.');
+const headers = { ...upload.headers };
+let location = state.pendingTusLocations.get(clientMessageId) || '';
+let offset = 0;
+if (location) {
+try { offset = await tusHeadOffset(location, headers, file.size); }
+catch (error) {
+if (error.status === 401 || error.status === 403 || error.status === 404 || error.status === 410) { location = ''; state.pendingTusLocations.delete(clientMessageId); }
+else throw error;
+}
+if (offset === null) { location = ''; state.pendingTusLocations.delete(clientMessageId); }
+}
+if (!location) {
+location = await createTusSession(file, upload);
+state.pendingTusLocations.set(clientMessageId, location);
+offset = 0;
+}
+const chunkSize = Math.max(256 * 1024, Math.min(Number(upload.chunkSize) || (6 * 1024 * 1024), 8 * 1024 * 1024));
+let consecutiveFailures = 0;
+while (offset < file.size) {
+const end = Math.min(offset + chunkSize, file.size);
+const chunk = file.slice(offset, end);
+try {
+const response = await tusFetch(location, 'PATCH', { ...headers, 'Content-Type': 'application/offset+octet-stream', 'Upload-Offset': String(offset) }, chunk);
+if (response.status === 204) {
+const rawReported = response.headers.get('Upload-Offset');
+const reported = rawReported === null ? NaN : Number(rawReported);
+offset = Number.isSafeInteger(reported) && reported >= 0 ? reported : end;
+if (offset > file.size) throw new Error('Storage reported an upload offset beyond the file size.');
+consecutiveFailures = 0;
+updateUploadProgress((offset / file.size) * 100, 'Uploading ' + file.name);
+continue;
+}
+if (response.status === 409) {
+const actual = await tusHeadOffset(location, headers, file.size);
+if (actual === null) throw new Error('The resumable upload session expired. Please retry the attachment.');
+offset = actual; consecutiveFailures = 0; continue;
+}
+const error = new Error('File upload failed (' + response.status + ').'); error.status = response.status;
+if (response.status >= 400 && response.status < 500) throw error;
+throw error;
+} catch (error) {
+if (error.status >= 400 && error.status < 500) throw error;
+consecutiveFailures++;
+if (consecutiveFailures > TUS_RETRY_DELAYS.length) throw new Error('Upload paused after repeated network errors. Tap retry to resume this file.');
+updateUploadProgress((offset / file.size) * 100, 'Reconnecting');
+await new Promise(resolve => setTimeout(resolve, TUS_RETRY_DELAYS[consecutiveFailures - 1]));
+const actual = await tusHeadOffset(location, headers, file.size);
+if (actual === null) { state.pendingTusLocations.delete(clientMessageId); throw new Error('The resumable upload session expired. Tap retry to start a fresh upload.'); }
+offset = actual;
+}
+}
+state.pendingTusLocations.delete(clientMessageId);
+updateUploadProgress(100, 'Upload complete');
+return { objectPath: upload.objectPath, size: file.size };
+}
+async function sendAttachmentMessage(message, roomId) {
+if (!state.authenticated || !navigator.onLine) throw new Error('Connect to the internet and open your ArixAI session before uploading an attachment.');
+reserveSendRate();
+const attachment = message.attachment;
+if (!attachment) throw new Error('Attachment details are missing.');
+if (!attachment.objectPath) {
+const file = state.pendingAttachmentFiles.get(message.clientMessageId);
+if (!(file instanceof File)) throw new Error('Select the original file again to resume this attachment.');
+let upload = state.pendingUploadTickets.get(message.clientMessageId);
+let uploaded = false;
+for (let attempt = 0; attempt < 2 && !uploaded; attempt++) {
+if (!upload) {
+const prepared = await apiRequest({ action: 'attachment_prepare', roomId, name: attachment.name, mime: attachment.mime, size: file.size });
+upload = prepared.upload;
+if (!upload?.objectPath || !upload?.tusEndpoint || !upload?.token) throw new Error('The server returned an incomplete upload ticket.');
+state.pendingUploadTickets.set(message.clientMessageId, upload);
+}
+try {
+const result = await uploadFileTus(file, upload, message.clientMessageId);
+attachment.objectPath = result.objectPath;
+attachment.size = result.size;
+attachment.storage = { bucket: upload.bucket || 'arixchat-attachments', key: result.objectPath, size: result.size };
+state.pendingAttachmentFiles.delete(message.clientMessageId);
+state.pendingUploadTickets.delete(message.clientMessageId);
+uploaded = true;
+} catch (error) {
+if ((error.status === 401 || error.status === 403) && attempt === 0) {
+state.pendingUploadTickets.delete(message.clientMessageId);
+state.pendingTusLocations.delete(message.clientMessageId);
+upload = null;
+continue;
+}
+throw error;
+}
+}
+if (!uploaded) throw new Error('Could not upload this attachment. Please retry.');
+persist();
+}
+const result = await apiRequest({
+action: 'attachment_complete', roomId,
+objectPath: attachment.objectPath,
+size: attachment.size || attachment.storage?.size,
+name: attachment.name,
+mime: attachment.mime,
+clientMessageId: message.clientMessageId,
+sentAt: message.time,
+text: message.text || '',
+replyTo: message.replyTo || null,
+});
+return result;
+}
+async function deliverMessage(message, roomId) {
+if (message.attachment && String(message.attachment.data || '').startsWith('data:')) {
+return sendEnvelope({ type:'message', clientMessageId:message.clientMessageId, text:message.text || '', sentAt:message.time, replyTo:message.replyTo || null, attachment:message.attachment });
+}
+if (message.attachment) return sendAttachmentMessage(message, roomId || state.activeRoomId);
+return sendEnvelope({ type:'message', clientMessageId:message.clientMessageId, text:message.text || '', sentAt:message.time, replyTo:message.replyTo || null, attachment:null });
 }
 async function sendMessage() {
 if (state.sending || !state.activeRoomId) return;
@@ -914,17 +1142,20 @@ if (!text && !state.stagedAttachment) return;
 if (text.length > MAX_TEXT) return toast('Message is too long.');
 if (!state.profile.name) return openProfileModal(true);
 if (!state.authenticated && !state.offlineCached) return requireMainAppAuth('login', 'Open the main ArixAI app to authenticate.');
-state.sending = true; $('send-btn').disabled = true;
+const roomId = state.activeRoomId;
+const staged = state.stagedAttachment;
+const attachment = staged ? { name: staged.name, mime: staged.mime, size: staged.size, data: '' } : null;
+state.sending = true; $('send-btn').disabled = true; $('attach-btn').disabled = true;
 const localId = 'local_' + makeRoomId();
 const clientMessageId = makeRoomId();
-const message = { id: localId, clientMessageId, serverId: null, senderId: state.user?.id || null, type: 'message', sender: state.profile.name, text, time: now(), status: 'sending', replyTo: state.pendingReply ? { id: state.pendingReply.id, serverId: state.pendingReply.serverId || null, sender: state.pendingReply.sender, text: state.pendingReply.text } : null, attachment: state.stagedAttachment, reactions: [], queuedReactions: [], event: false };
-state.activeMessages.push(message); state.allMessages[state.activeRoomId] = state.activeMessages;
+if (staged?.file) state.pendingAttachmentFiles.set(clientMessageId, staged.file);
+const message = { id: localId, clientMessageId, roomId, serverId: null, senderId: state.user?.id || null, type: 'message', sender: state.profile.name, text, time: now(), status: 'sending', replyTo: state.pendingReply ? { id: state.pendingReply.id, serverId: state.pendingReply.serverId || null, sender: state.pendingReply.sender, text: state.pendingReply.text } : null, attachment, reactions: [], queuedReactions: [], event: false };
+state.activeMessages.push(message); state.allMessages[roomId] = state.activeMessages;
 input.value = ''; input.style.height = 'auto'; $('composer-character-count').textContent = '0 / ' + MAX_TEXT; saveDraftForActiveRoom();
 state.pendingReply = null; state.stagedAttachment = null; $('reply-preview').hidden = true; $('file-input').value = '';
-persist(); renderMessages(); updateRoomSummary(state.activeRoomId, message);
-const envelope = { type: 'message', clientMessageId, text, sentAt: message.time, replyTo: message.replyTo, attachment: message.attachment };
+persist(); renderMessages(); updateRoomSummary(roomId, message);
 try {
-const result = await sendEnvelope(envelope);
+const result = await deliverMessage(message, roomId);
 if (result && result.id) {
 message.serverId = String(result.id); message.recordKey = String(result.id);
 message.serverCreatedAt = result.created_at || null; message.serverUpdatedAt = result.updated_at || result.created_at || null; message.serverTs = Number(result.ts) || message.time; message.time = message.serverTs;
@@ -932,25 +1163,34 @@ state.seenServerIds.add(String(result.id)); state.seenRecordKeys.add(String(resu
 }
 if (message.status === 'sending') message.status = 'sent';
 persist(); renderMessages(false); await flushQueuedReactions(message);
+if (message.attachment && state.activeRoomId === roomId) { pollRoom(); }
 } catch (error) {
 message.status = 'failed'; message.error = String(error.message || 'Send failed').slice(0, 180); persist(); renderMessages(false);
-if (navigator.onLine) toast('Message could not be sent. It is saved here; tap retry or check your main-app session.');
-else toast('Offline. Your message is saved on this device and will retry when connection returns.');
-} finally { state.sending = false; $('send-btn').disabled = false; input.focus(); }
+if (navigator.onLine) toast('Message could not be sent: ' + message.error.slice(0, 110) + '. Tap retry to continue.');
+else toast('Offline. This file remains selected in this tab; reconnect and retry.');
+} finally { state.sending = false; $('send-btn').disabled = false; $('attach-btn').disabled = false; clearUploadProgress(); input.focus(); }
 }
 async function retryMessage(message) {
 if (!message || message.status !== 'failed' || !message.clientMessageId || message.retrying) return;
 if (message.senderId && state.user?.id && message.senderId !== state.user.id) return toast('This queued message belongs to a different account.');
+if (message.attachment && !message.attachment.objectPath && !state.pendingAttachmentFiles.has(message.clientMessageId)) {
+state.retryAttachmentMessage = message;
+$('file-input').value = '';
+toast('Choose the original file to resume this upload.');
+$('file-input').click();
+return;
+}
 message.retrying = true; message.status = 'sending'; renderMessages(false); persist();
 try {
-const result = await sendEnvelope({ type:'message', clientMessageId:message.clientMessageId, text:message.text || '', sentAt:message.time, replyTo:message.replyTo || null, attachment:message.attachment || null });
+const result = await deliverMessage(message, message.roomId || state.activeRoomId);
 if (result && result.id) {
 message.serverId = String(result.id); message.recordKey = String(result.id); message.serverCreatedAt = result.created_at || null; message.serverUpdatedAt = result.updated_at || result.created_at || null; message.serverTs = Number(result.ts) || message.time; message.time = message.serverTs;
 state.seenServerIds.add(String(result.id)); state.seenRecordKeys.add(String(result.id));
 }
 if (message.status === 'sending') message.status = 'sent'; message.error = ''; toast('Message synced'); await flushQueuedReactions(message);
+if (message.attachment && state.activeRoomId === (message.roomId || state.activeRoomId)) pollRoom();
 } catch (error) { message.status = 'failed'; message.error = String(error.message || 'Retry failed').slice(0, 180); if (navigator.onLine) toast('Still unable to sync: ' + message.error.slice(0,80)); }
-finally { message.retrying = false; persist(); renderMessages(false); }
+finally { message.retrying = false; persist(); renderMessages(false); clearUploadProgress(); }
 }
 async function retryFailedMessages() {
 if (!state.authenticated || !navigator.onLine || state.sending) return;
@@ -1026,15 +1266,19 @@ const known = state.activeMessages.find(m => String(m.serverId || m.recordKey ||
 const remoteVersion = Date.parse(raw.updated_at || raw.created_at || '');
 const knownVersion = Date.parse(known?.serverUpdatedAt || known?.serverCreatedAt || '');
 const isUpdatedKnown = !!known && Number.isFinite(remoteVersion) && (!Number.isFinite(knownVersion) || remoteVersion > knownVersion);
-if (state.seenRecordKeys.has(recordKey) && !isUpdatedKnown) continue;
-const sid = recordKey;
 const payload = decodeServerMessage(raw);
+const oldAttachmentUrl = safeAttachmentUrl(known?.attachment?.data || known?.attachment?.url || '');
+const oldAttachmentExpiry = oldAttachmentUrl ? signedAttachmentExpiry(oldAttachmentUrl) : 0;
+const needsAttachmentUrl = !!known?.attachment?.storage?.key && payload.type === 'message' && payload.attachment?.storage?.key === known.attachment.storage.key && (!oldAttachmentUrl || !oldAttachmentExpiry || oldAttachmentExpiry <= now() + 5 * 60 * 1000);
+if (state.seenRecordKeys.has(recordKey) && !isUpdatedKnown && !needsAttachmentUrl) continue;
+const sid = recordKey;
 if (payload.type === 'message') {
 const normalizedTime = Number(raw.ts || payload.sentAt) || now();
 const normalizedSender = cleanName(raw.nickname || 'Guest') || 'Guest';
 const existing = (payload.clientMessageId ? state.activeMessages.find(m => m.clientMessageId === payload.clientMessageId) : null) || known;
 if (existing) {
 const previousSignature = messageSignature(existing);
+const previousAttachmentUrl = existing.attachment?.data || '';
 existing.serverId = sid || existing.serverId; existing.recordKey = recordKey;
 existing.senderId = String(raw.sender_id || existing.senderId || '') || null;
 existing.sender = normalizedSender;
@@ -1045,10 +1289,10 @@ existing.deleted = !!payload.deleted;
 existing.edited = !!payload.edited;
 existing.updatedAt = payload.updatedAt ? Date.parse(payload.updatedAt) || Number(raw.ts) || now() : Number(raw.ts) || now();
 existing.replyTo = payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null;
-existing.attachment = payload.deleted ? null : sanitizeAttachment(payload.attachment);
+existing.attachment = payload.deleted ? null : retainFreshAttachmentUrl(sanitizeAttachment(payload.attachment), existing.attachment);
 if (existing.senderId && state.user?.id && existing.senderId === state.user.id) existing.status = 'delivered';
 else if (!existing.status || ['sending','sent'].includes(existing.status)) existing.status = 'received';
-if (messageSignature(existing) !== previousSignature || isUpdatedKnown) changed = true;
+if (messageSignature(existing) !== previousSignature || isUpdatedKnown || (existing.attachment?.data || '') !== previousAttachmentUrl) changed = true;
 state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); continue;
 }
 // Reconcile legacy cache entries created before server IDs were persisted.
@@ -1058,7 +1302,7 @@ oldDuplicate.serverId = sid; oldDuplicate.recordKey = recordKey; oldDuplicate.se
 oldDuplicate.serverCreatedAt = raw.created_at || null; oldDuplicate.serverTs = Number(raw.ts) || normalizedTime; oldDuplicate.serverUpdatedAt = raw.updated_at || raw.created_at || null;
 state.seenServerIds.add(sid); state.seenRecordKeys.add(recordKey); changed = true; continue;
 }
-const msg = { id: sid || ('remote_' + makeRoomId()), serverId: sid || null, recordKey, clientMessageId: payload.clientMessageId || raw.client_message_id || null, senderId: String(raw.sender_id || '') || null, type:'message', sender: normalizedSender, text: payload.deleted ? '' : String(payload.text || '').slice(0, MAX_TEXT), time: normalizedTime, serverTs:Number(raw.ts) || normalizedTime, status:'received', replyTo: payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment: payload.deleted ? null : sanitizeAttachment(payload.attachment), reactions: [], deleted: !!payload.deleted, edited: !!payload.edited, serverCreatedAt: raw.created_at || null, serverUpdatedAt: raw.updated_at || raw.created_at || null, event:false };
+const msg = { id: sid || ('remote_' + makeRoomId()), roomId, serverId: sid || null, recordKey, clientMessageId: payload.clientMessageId || raw.client_message_id || null, senderId: String(raw.sender_id || '') || null, type:'message', sender: normalizedSender, text: payload.deleted ? '' : String(payload.text || '').slice(0, MAX_TEXT), time: normalizedTime, serverTs:Number(raw.ts) || normalizedTime, status:'received', replyTo: payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment: payload.deleted ? null : sanitizeAttachment(payload.attachment), reactions: [], deleted: !!payload.deleted, edited: !!payload.edited, serverCreatedAt: raw.created_at || null, serverUpdatedAt: raw.updated_at || raw.created_at || null, event:false };
 state.activeMessages.push(msg); changed = true; updateRoomSummary(roomId, msg, false);
 } else if (['edit','delete','reaction'].includes(payload.type)) {
 if (processEvent(payload, raw)) changed = true;
@@ -1108,7 +1352,7 @@ if (payload.type === 'message') {
 const normalizedSender = cleanName(raw.nickname || 'Guest') || 'Guest';
 const duplicate = state.activeMessages.find(m => String(m.serverId || m.recordKey || '') === key || (payload.clientMessageId && m.clientMessageId === payload.clientMessageId));
 if (!duplicate) {
-const msg = { id:key, serverId:key, recordKey:key, clientMessageId:payload.clientMessageId || raw.client_message_id || null, senderId:String(raw.sender_id || '') || null, type:'message', sender:normalizedSender, text:payload.deleted ? '' : String(payload.text || '').slice(0,MAX_TEXT), time:Number(raw.ts || payload.sentAt) || now(), serverTs:Number(raw.ts)||now(), status:'received', replyTo:payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment:payload.deleted ? null : sanitizeAttachment(payload.attachment), reactions:[], deleted:!!payload.deleted, edited:!!payload.edited, serverCreatedAt:raw.created_at || null, serverUpdatedAt:raw.updated_at || raw.created_at || null, event:false };
+const msg = { id:key, roomId, serverId:key, recordKey:key, clientMessageId:payload.clientMessageId || raw.client_message_id || null, senderId:String(raw.sender_id || '') || null, type:'message', sender:normalizedSender, text:payload.deleted ? '' : String(payload.text || '').slice(0,MAX_TEXT), time:Number(raw.ts || payload.sentAt) || now(), serverTs:Number(raw.ts)||now(), status:'received', replyTo:payload.replyTo && typeof payload.replyTo === 'object' ? payload.replyTo : null, attachment:payload.deleted ? null : sanitizeAttachment(payload.attachment), reactions:[], deleted:!!payload.deleted, edited:!!payload.edited, serverCreatedAt:raw.created_at || null, serverUpdatedAt:raw.updated_at || raw.created_at || null, event:false };
 state.activeMessages.push(msg); inserted.push(msg);
 }
 } else if (['edit','delete','reaction'].includes(payload.type)) {
@@ -1137,14 +1381,80 @@ $('history-toolbar').hidden = !state.hasOlderMessages;
 } catch (error) { if (navigator.onLine) toast(String(error.message || 'Could not load earlier messages.')); else toast('Reconnect to load earlier messages.'); }
 finally { state.loadingOlder = false; if ($('load-older-btn')) { $('load-older-btn').disabled = false; $('load-older-btn').textContent = 'Load earlier messages'; } }
 }
+async function refreshAttachmentForMessage(message) {
+if (!message || !message.attachment || !state.authenticated || !navigator.onLine) { toast('Reconnect to refresh this download link.'); return false; }
+const key = String(message.serverId || message.clientMessageId || message.id || '');
+if (state.refreshingAttachmentIds.has(key)) return false;
+const createdAt = Date.parse(message.serverCreatedAt || message.serverUpdatedAt || '');
+if (!Number.isFinite(createdAt)) { toast('This file link cannot be refreshed from the current message cache.'); return false; }
+state.refreshingAttachmentIds.add(key);
+try {
+const roomId = message.roomId || state.activeRoomId;
+const data = await apiRequest({ action: 'history', roomId, before: new Date(createdAt + 1500).toISOString() });
+const raw = (data.messages || []).find(item => {
+if (!item || typeof item !== 'object') return false;
+if (message.serverId && String(item.id || '') === String(message.serverId)) return true;
+if (message.clientMessageId && String(item.client_message_id || '') === String(message.clientMessageId)) return true;
+return decodeServerMessage(item).clientMessageId === message.clientMessageId;
+});
+if (!raw) { toast('Could not refresh this file link. Load the message history and try again.'); return false; }
+const payload = decodeServerMessage(raw);
+const next = sanitizeAttachment(payload.attachment);
+if (!next) { toast('The server no longer has this attachment reference.'); return false; }
+message.attachment = retainFreshAttachmentUrl(next, message.attachment);
+message.serverCreatedAt = raw.created_at || message.serverCreatedAt;
+message.serverUpdatedAt = raw.updated_at || raw.created_at || message.serverUpdatedAt;
+persist(); renderMessages(false);
+if (!safeAttachmentUrl(message.attachment.data)) { toast('The download link could not be renewed.'); return false; }
+toast('Download link refreshed. Select the attachment again.');
+return true;
+} catch (error) { toast(error.message || 'Could not refresh the download link.'); return false; }
+finally { state.refreshingAttachmentIds.delete(key); }
+}
+function handleAttachmentLinkClick(event) {
+const link = event.target.closest('a[data-attachment-download]');
+if (!link) return;
+const row = link.closest('[data-message-row]');
+const message = row ? findMessage(row.getAttribute('data-message-row')) : null;
+if (!message?.attachment) return;
+const url = safeAttachmentUrl(message.attachment.data || message.attachment.url || '');
+const expiry = url ? signedAttachmentExpiry(url) : 0;
+if (url && expiry > now() + 90 * 1000) return;
+event.preventDefault();
+refreshAttachmentForMessage(message);
+}
+function signedAttachmentExpiry(value) {
+try {
+const token = new URL(value).searchParams.get('token') || '';
+const payload = token.split('.')[1];
+if (!payload) return 0;
+const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+const decoded = atob(normalized + '='.repeat((4 - normalized.length % 4) % 4));
+const data = JSON.parse(decoded);
+return Number(data.exp || 0) * 1000;
+} catch { return 0; }
+}
+function retainFreshAttachmentUrl(next, previous) {
+if (!next || !previous || !next.storage?.key || next.storage.key !== previous.storage?.key) return next;
+const oldUrl = safeAttachmentUrl(previous.data || previous.url || '');
+if (oldUrl && signedAttachmentExpiry(oldUrl) > now() + 5 * 60 * 1000) { next.data = oldUrl; next.url = oldUrl; }
+return next;
+}
 function sanitizeAttachment(input) {
 if (!input || typeof input !== 'object') return null;
-const name = String(input.name || 'attachment').replace(/[\\/\u0000-\u001f]/g,'_').slice(0,120);
-const mime = String(input.mime || '').toLowerCase();
-const data = typeof input.data === 'string' && input.data.length < 180000 ? input.data : '';
-if (!data) return { name, mime: '', data: '' };
-if (!/^data:(image\/(jpeg|png|gif|webp)|application\/pdf|text\/plain);base64,[a-z0-9+/=\r\n]+$/i.test(data)) return { name, mime:'', data:'' };
-return { name, mime, data };
+const name = String(input.name || 'attachment').replace(/[\\/\u0000-\u001f\u007f]/g,'_').slice(0,120);
+const mime = String(input.mime || 'application/octet-stream').toLowerCase().slice(0,120);
+const raw = typeof input.data === 'string' && input.data.length < 180000 ? input.data : (typeof input.url === 'string' ? input.url : '');
+let data = '';
+if (raw.startsWith('data:')) data = safeAttachmentUrl(raw);
+else if (raw) data = safeAttachmentUrl(raw);
+const storageInput = input.storage && typeof input.storage === 'object' ? input.storage : null;
+let storage = null;
+if (storageInput && typeof storageInput.key === 'string' && storageInput.key.length <= 512 && !storageInput.key.includes('..')) {
+storage = { bucket: 'arixchat-attachments', key: storageInput.key, size: Number(storageInput.size || input.size) || 0 };
+}
+const size = Number(input.size || storage?.size) || 0;
+return { name, mime, data, url: data, size, storage, objectPath: typeof input.objectPath === 'string' ? input.objectPath.slice(0,512) : '' };
 }
 function stopPolling() { if (state.pollTimer) clearInterval(state.pollTimer); state.pollTimer = null; state.pollGeneration++; if (state.pollController) state.pollController.abort(); state.pollController = null; state.pollBusy = false; }
 async function sendControlEvent(event) {
@@ -1336,15 +1646,26 @@ document.querySelectorAll('[data-insert-emoji]').forEach(btn => btn.addEventList
 }
 async function stageAttachment(file) {
 if (!file) return;
-const allowed = new Set(['image/jpeg','image/png','image/gif','image/webp','application/pdf','text/plain']);
-if (!allowed.has(file.type)) { toast('Allowed files: JPG, PNG, GIF, WebP, PDF, or TXT.'); $('file-input').value = ''; return; }
-if (file.size > MAX_FILE_BYTES) { toast('File must be 100 KB or smaller for this existing service.'); $('file-input').value = ''; return; }
-try {
-const data = await new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '')); reader.onerror = () => reject(new Error('Could not read file')); reader.readAsDataURL(file); });
-if (!/^data:(image\/(jpeg|png|gif|webp)|application\/pdf|text\/plain);base64,/i.test(data)) throw new Error('Unsupported file content');
-state.stagedAttachment = { name:String(file.name || 'attachment').replace(/[\\/\u0000-\u001f]/g,'_').slice(0,120), mime:file.type, data };
-toast('Attachment ready to send');
-} catch (e) { toast(e.message || 'Could not attach file'); }
+if (!Number.isSafeInteger(file.size) || file.size < 1) { toast('This file is empty or cannot be read.'); $('file-input').value = ''; return; }
+if (file.size > MAX_FILE_BYTES) { toast('File must be 50 MB or smaller.'); $('file-input').value = ''; return; }
+const name = String(file.name || 'attachment').replace(/[\\/\u0000-\u001f\u007f]/g,'_').slice(0,120);
+const mime = String(file.type || 'application/octet-stream').toLowerCase().slice(0,120);
+const retryTarget = state.retryAttachmentMessage;
+if (retryTarget) {
+state.retryAttachmentMessage = null;
+if (retryTarget.attachment && (retryTarget.attachment.name !== name || Number(retryTarget.attachment.size) !== file.size)) {
+toast('Choose the same file name and size to resume this message.'); $('file-input').value = ''; return;
+}
+state.pendingAttachmentFiles.set(retryTarget.clientMessageId, file);
+retryTarget.attachment.name = name; retryTarget.attachment.mime = mime; retryTarget.attachment.size = file.size;
+$('file-input').value = '';
+retryMessage(retryTarget);
+return;
+}
+state.stagedAttachment = { file, name, mime, size: file.size };
+$('upload-progress').hidden = false;
+$('upload-progress').textContent = 'Ready · ' + formatFileSize(file.size);
+toast('Attachment ready · ' + formatFileSize(file.size));
 $('file-input').value = '';
 }
 function handleMessageClick(event) {
@@ -1394,7 +1715,7 @@ $('room-list').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.ke
 $('send-btn').addEventListener('click', sendMessage);
 $('message-input').addEventListener('input', e => { e.currentTarget.style.height='auto'; e.currentTarget.style.height=Math.min(e.currentTarget.scrollHeight,130)+'px'; $('composer-character-count').textContent=e.currentTarget.value.length+' / '+MAX_TEXT; saveDraftForActiveRoom(); });
 $('message-input').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); sendMessage(); } });
-$('messages-wrap').addEventListener('click', handleMessageClick); $('messages-wrap').addEventListener('click', handleStatusClick);
+$('messages-wrap').addEventListener('click', handleMessageClick); $('messages-wrap').addEventListener('click', handleStatusClick); $('messages-wrap').addEventListener('click', handleAttachmentLinkClick);
 $('messages-wrap').addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.closest('.message-status[role="button"]')) { e.preventDefault(); handleMessageClick(e); } });
 $('cancel-reply').addEventListener('click', () => { state.pendingReply = null; $('reply-preview').hidden = true; });
 $('emoji-btn').addEventListener('click', toggleEmojiTray); $('attach-btn').addEventListener('click', () => $('file-input').click()); $('file-input').addEventListener('change', e => stageAttachment(e.target.files?.[0]));
