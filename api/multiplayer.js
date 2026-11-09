@@ -3,16 +3,27 @@ import { authenticateArixSession } from './otp.js';
 export const config = { runtime: 'edge' };
 
 const PREFIX = 'ARIXCHAT1:';
-const MAX_REQUEST_CHARS = 220000;
+const MAX_REQUEST_CHARS = 4000000; // Keep legacy JSON uploads below Vercel's 4.5 MB function-body ceiling.
 const MAX_STORED_MESSAGE_CHARS = 190000;
 const MAX_TEXT_CHARS = 4000;
-const MAX_ATTACHMENT_DATA_CHARS = 150000;
+const MAX_ATTACHMENT_DATA_CHARS = 3650000; // Base64 legacy path only; 50 MB files use direct resumable Storage uploads.
+const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
+const LEGACY_ATTACHMENT_MAX_BYTES = 2700000;
+const STORAGE_BUCKET = 'arixchat-attachments';
+const STORAGE_SIGNED_URL_TTL_SECONDS = 3600;
+const TUS_CHUNK_BYTES = 6 * 1024 * 1024;
 const MAX_ACTIONS_PER_ROOM_PER_MINUTE = 80;
 const ROOM_ID_RE = /^[a-zA-Z0-9_-]{24,80}$/;
 const IDEM_RE = /^[a-zA-Z0-9_-]{8,128}$/;
 const ALLOWED_ATTACHMENT_MIMES = new Set([
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-  'application/pdf', 'text/plain',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif',
+  'video/mp4', 'video/webm', 'video/quicktime', 'video/3gpp', 'video/x-matroska', 'video/x-msvideo',
+  'audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac',
+  'application/pdf', 'text/plain', 'text/csv', 'text/markdown', 'application/json', 'application/zip', 'application/octet-stream',
+  'application/msword', 'application/vnd.ms-excel', 'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 ]);
 const CHAT_SESSION_COOKIE = 'arixchat_session';
 const CHAT_SESSION_TTL_SECONDS = 8 * 60 * 60;
@@ -235,7 +246,7 @@ async function validateMainAppSession(req, parentFingerprint, displayNameHint) {
 function runtimeRedisEnv() {
   const env = typeof process !== 'undefined' && process.env ? process.env : {};
   const url = String(env.UPSTASH_REDIS_REST_URL || "https://immortal-eagle-36171.upstash.io" || '').trim().replace(/\/+$/, '');
-  const token = String(env.UPSTASH_REDIS_REST_TOKEN || "AY1LAAIgcDE5MjFiMmNkNGQ4M2M0ODQ2YWNhYjU0YmFmMzlhNjliNw" || '').trim();
+  const token = String(env.UPSTASH_REDIS_REST_TOKEN || '').trim();
   if (!url || !token) return null;
   try {
     const parsed = new URL(url);
@@ -617,19 +628,19 @@ function validateInputEnvelope(envelope, nickname) {
     if (envelope.attachment) {
       const a = envelope.attachment;
       if (!a || typeof a !== 'object') throw new Error('Invalid attachment.');
-      const mime = String(a.mime || '').toLowerCase();
+      const sourceMime = String(a.mime || '').toLowerCase().split(';')[0].trim();
+      if (!/^[a-z0-9][a-z0-9!#$&^_.+-]*\/[a-z0-9][a-z0-9!#$&^_.+-]*$/.test(sourceMime)) throw new Error('Attachment type is invalid.');
+      const mime = safeAttachmentMime(sourceMime);
       const data = typeof a.data === 'string' ? a.data : '';
-      if (!ALLOWED_ATTACHMENT_MIMES.has(mime)) throw new Error('This attachment type is not supported.');
-      if (!data || data.length > MAX_ATTACHMENT_DATA_CHARS) throw new Error('Attachment is too large.');
-      const expectedPrefix = `data:${mime};base64,`;
-      if (!data.toLowerCase().startsWith(expectedPrefix) || !/^[a-z0-9+/=\r\n]+$/i.test(data.slice(expectedPrefix.length))) {
+      if (!data || data.length > MAX_ATTACHMENT_DATA_CHARS) throw new Error('Attachment is too large for the legacy upload path.');
+      const expectedPrefix = `data:${sourceMime};base64,`;
+      if (!data.toLowerCase().startsWith(expectedPrefix) || !/^[a-z0-9+/=\r\n\t ]+$/i.test(data.slice(expectedPrefix.length))) {
         throw new Error('Attachment data is invalid.');
       }
-      payload.attachment = {
-        name: String(a.name || 'attachment').replace(/[\\/\u0000-\u001f]/g, '_').slice(0, 120),
-        mime,
-        data,
-      };
+      const encodedLength = data.slice(expectedPrefix.length).replace(/[\r\n\t ]/g, '').length;
+      const approximateBytes = Math.floor(encodedLength * 3 / 4);
+      if (!approximateBytes || approximateBytes > LEGACY_ATTACHMENT_MAX_BYTES) throw new Error('Use the resumable upload flow for files larger than 2.7 MB.');
+      payload.attachment = { name: safeAttachmentName(a.name), mime, sourceMime, data };
     }
     return { payload, idempotencyKey: clientMessageId };
   }
@@ -665,6 +676,234 @@ function serviceHeaders(cfg, jsonBody = false) {
   };
   if (jsonBody) out['content-type'] = 'application/json';
   return out;
+}
+
+function storagePath(path) {
+  return String(path).split('/').map(segment => encodeURIComponent(segment)).join('/');
+}
+function safeAttachmentName(value) {
+  return String(value || 'attachment').replace(/[\\/\u0000-\u001f\u007f]/g, '_').trim().slice(0, 120) || 'attachment';
+}
+function safeAttachmentMime(value) {
+  const candidate = String(value || '').toLowerCase().split(';')[0].trim();
+  return ALLOWED_ATTACHMENT_MIMES.has(candidate) ? candidate : 'application/octet-stream';
+}
+function attachmentExtension(name) {
+  const match = /\.([a-z0-9]{1,10})$/i.exec(String(name || ''));
+  return match ? match[1].toLowerCase() : 'bin';
+}
+async function sha256BytesHex(bytes) {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, b => b.toString(16).padStart(2, '0')).join('');
+}
+async function storageRequest(cfg, path, options = {}) {
+  return fetch(`${cfg.url}/storage/v1${path}`, {
+    ...options,
+    headers: { ...serviceHeaders(cfg, options.body != null), ...(options.headers || {}) },
+    cache: 'no-store',
+  });
+}
+async function storageObjectInfo(cfg, bucket, path) {
+  return storageRequest(cfg, `/object/info/${encodeURIComponent(bucket)}/${storagePath(path)}`, { method: 'HEAD' });
+}
+async function ensureAttachmentBucket(cfg) {
+  const bucketUrl = `${cfg.url}/storage/v1/bucket/${encodeURIComponent(STORAGE_BUCKET)}`;
+  let response = await fetch(bucketUrl, { headers: serviceHeaders(cfg), cache: 'no-store' });
+  if (response.ok) {
+    const bucket = await readJsonResponse(response);
+    const currentLimit = Number(bucket?.file_size_limit || 0);
+    if (currentLimit >= MAX_ATTACHMENT_BYTES) return;
+    response = await fetch(bucketUrl, {
+      method: 'PUT',
+      headers: serviceHeaders(cfg, true),
+      body: JSON.stringify({ public: false, file_size_limit: MAX_ATTACHMENT_BYTES, allowed_mime_types: null }),
+      cache: 'no-store',
+    });
+    if (response.ok) return;
+    throw callFail('ArixChat storage bucket must allow files up to 50 MB. Check the Supabase Storage bucket settings.', 503);
+  }
+  const created = await fetch(`${cfg.url}/storage/v1/bucket`, {
+    method: 'POST',
+    headers: serviceHeaders(cfg, true),
+    body: JSON.stringify({ id: STORAGE_BUCKET, name: STORAGE_BUCKET, public: false, file_size_limit: MAX_ATTACHMENT_BYTES, allowed_mime_types: null }),
+    cache: 'no-store',
+  });
+  if (created.ok) return;
+  // A concurrent request may have created the bucket after the first GET.
+  const verify = await fetch(bucketUrl, { headers: serviceHeaders(cfg), cache: 'no-store' });
+  if (verify.ok) {
+    const bucket = await readJsonResponse(verify);
+    if (Number(bucket?.file_size_limit || 0) >= MAX_ATTACHMENT_BYTES) return;
+  }
+  throw callFail('Could not initialize the private ArixChat attachment bucket. Check the Supabase service-role Storage permissions and the project-wide 50 MB file limit.', 503);
+}
+async function uploadLegacyAttachment(cfg, roomId, userId, attachment) {
+  const prefix = `data:${attachment.sourceMime || attachment.mime};base64,`;
+  const encoded = attachment.data.slice(prefix.length).replace(/[\r\n\t ]/g, '');
+  let binary;
+  try { binary = atob(encoded); } catch { throw callFail('Attachment encoding is invalid. Please select the file again.'); }
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  if (!bytes.byteLength || bytes.byteLength > LEGACY_ATTACHMENT_MAX_BYTES) {
+    throw callFail('This upload route supports legacy files up to 2.7 MB. Use the resumable upload flow for files up to 50 MB.', 413);
+  }
+  await ensureAttachmentBucket(cfg);
+  const digest = await sha256BytesHex(bytes);
+  const name = safeAttachmentName(attachment.name);
+  const mime = safeAttachmentMime(attachment.mime);
+  const typedDigest = await sha256Hex(`${digest}:${mime}`);
+  // Room-scoped content addressing deduplicates identical files inside a room
+  // without revealing whether another room/user has uploaded the same content.
+  // The MIME type is part of the digest so an identically-byte-sized object
+  // cannot inherit a different content type from an earlier upload.
+  const path = `${roomId}/shared/${typedDigest}.${attachmentExtension(name)}`;
+  const url = `${cfg.url}/storage/v1/object/${encodeURIComponent(STORAGE_BUCKET)}/${storagePath(path)}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { ...serviceHeaders(cfg), 'content-type': mime, 'cache-control': 'max-age=31536000', 'x-upsert': 'false' },
+    body: bytes,
+    cache: 'no-store',
+  });
+  if (!response.ok) {
+    const info = await storageObjectInfo(cfg, STORAGE_BUCKET, path);
+    if (!(response.status === 400 || response.status === 409) || !info.ok) {
+      const detail = await readJsonResponse(response);
+      if (/size|limit|payload/i.test(String(detail?.message || detail?.error || ''))) {
+        throw callFail('Supabase rejected this attachment. Confirm the project-wide Storage file-size limit is at least 50 MB.', 413);
+      }
+      throw callFail('Attachment storage is temporarily unavailable. Please retry.', 503);
+    }
+  }
+  return { name, mime, data: '', storage: { bucket: STORAGE_BUCKET, key: path, size: bytes.byteLength } };
+}
+async function createAttachmentUploadTicket(cfg, roomId, userId, input) {
+  const size = Number(input.size);
+  if (!Number.isSafeInteger(size) || size < 1 || size > MAX_ATTACHMENT_BYTES) {
+    throw callFail('Files must be between 1 byte and 50 MB.', 413);
+  }
+  await ensureAttachmentBucket(cfg);
+  const name = safeAttachmentName(input.name);
+  const mime = safeAttachmentMime(input.mime);
+  const path = `${roomId}/${userId}/${createId()}.${attachmentExtension(name)}`;
+  const signedResponse = await storageRequest(cfg, `/object/upload/sign/${encodeURIComponent(STORAGE_BUCKET)}/${storagePath(path)}`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  const signed = await readJsonResponse(signedResponse);
+  const signedUrlValue = signed?.signedURL || signed?.signedUrl || signed?.url || '';
+  let uploadToken = String(signed?.token || '');
+  if (!uploadToken && signedUrlValue) {
+    try { uploadToken = new URL(signedUrlValue, `${cfg.url}/storage/v1`).searchParams.get('token') || ''; } catch { uploadToken = ''; }
+  }
+  if (!signedResponse.ok || !uploadToken) throw callFail('Could not create a secure resumable upload ticket. Please retry.', 503);
+  let host = new URL(cfg.url).hostname;
+  if (host.endsWith('.supabase.co')) host = host.replace(/\.supabase\.co$/i, '.storage.supabase.co');
+  const tusEndpoint = `https://${host}/storage/v1/upload/resumable`;
+  return {
+    success: true,
+    upload: {
+      bucket: STORAGE_BUCKET,
+      objectPath: path,
+      token: uploadToken,
+      tusEndpoint,
+      headers: { 'x-signature': uploadToken },
+      metadata: { bucketName: STORAGE_BUCKET, objectName: path, contentType: mime, cacheControl: '31536000' },
+      chunkSize: TUS_CHUNK_BYTES,
+      maxBytes: MAX_ATTACHMENT_BYTES,
+      expiresIn: 7200,
+      name,
+      mime,
+    },
+  };
+}
+async function signAttachmentPaths(cfg, paths) {
+  if (!paths.length) return new Map();
+  const response = await storageRequest(cfg, `/object/sign/${encodeURIComponent(STORAGE_BUCKET)}`, {
+    method: 'POST',
+    body: JSON.stringify({ expiresIn: STORAGE_SIGNED_URL_TTL_SECONDS, paths }),
+  });
+  const data = await readJsonResponse(response);
+  if (!response.ok || !Array.isArray(data)) return new Map();
+  const signed = new Map();
+  for (const item of data) {
+    if (!item?.path || !item?.signedURL) continue;
+    const url = /^https:\/\//i.test(item.signedURL) ? item.signedURL : `${cfg.url}/storage/v1${item.signedURL}`;
+    signed.set(item.path, url);
+  }
+  return signed;
+}
+async function decorateAttachmentMessages(rows, cfg) {
+  if (!Array.isArray(rows) || !rows.length) return rows || [];
+  const parsed = rows.map(row => ({ row, envelope: parseEnvelope(row?.message) }));
+  const paths = [...new Set(parsed.map(item => item.envelope?.attachment?.storage?.key)
+    .filter(path => typeof path === 'string' && path.length < 512 && !path.includes('..')))];
+  if (!paths.length) return rows;
+  const signed = await signAttachmentPaths(cfg, paths);
+  for (const item of parsed) {
+    const attachment = item.envelope?.attachment;
+    const key = attachment?.storage?.key;
+    if (!key) continue;
+    const url = signed.get(key) || '';
+    attachment.data = url;
+    attachment.url = url;
+    attachment.unavailable = !url;
+    item.row.message = PREFIX + JSON.stringify(item.envelope);
+  }
+  return rows;
+}
+async function roomMemberExists(cfg, roomId, userId) {
+  const memberUrl = new URL(`${cfg.url}/rest/v1/arixchat_room_members`);
+  memberUrl.searchParams.set('select', 'room_id');
+  memberUrl.searchParams.set('room_id', `eq.${roomId}`);
+  memberUrl.searchParams.set('user_id', `eq.${userId}`);
+  memberUrl.searchParams.set('limit', '1');
+  const response = await fetch(memberUrl.toString(), { headers: serviceHeaders(cfg), cache: 'no-store' });
+  const rows = await readJsonResponse(response);
+  return response.ok && Array.isArray(rows) && rows.length > 0;
+}
+async function finalizeDirectAttachment(cfg, user, nickname, input, roomId) {
+  const clientMessageId = validIdempotencyId(input.clientMessageId);
+  if (!clientMessageId) throw callFail('Message is missing a valid retry identifier.');
+  const path = String(input.objectPath || '');
+  const ownPrefix = `${roomId}/${user.id}/`;
+  if (!path.startsWith(ownPrefix) || !/^[a-f0-9]{64}\.[a-z0-9]{1,10}$/i.test(path.slice(ownPrefix.length)) || path.includes('..')) {
+    throw callFail('The uploaded attachment reference is invalid.', 403);
+  }
+  const info = await storageObjectInfo(cfg, STORAGE_BUCKET, path);
+  if (!info.ok) throw callFail('The upload is not complete yet. Finish the upload and retry.', 409);
+  const actualSize = Number(info.headers.get('content-length') || 0);
+  if (!Number.isSafeInteger(actualSize) || actualSize < 1 || actualSize > MAX_ATTACHMENT_BYTES) {
+    throw callFail('The uploaded file is empty or exceeds the 50 MB limit.', 413);
+  }
+  if (Number.isFinite(Number(input.size)) && Number(input.size) !== actualSize) {
+    throw callFail('The uploaded file size does not match the prepared upload.', 409);
+  }
+  const name = safeAttachmentName(input.name);
+  const storedMime = String(info.headers.get('content-type') || 'application/octet-stream').toLowerCase().split(';')[0].trim();
+  if (!ALLOWED_ATTACHMENT_MIMES.has(storedMime)) throw callFail('This file type is not supported for secure sharing.', 415);
+  const mime = storedMime;
+  const text = typeof input.text === 'string' ? input.text : '';
+  if (text.length > MAX_TEXT_CHARS) throw callFail('Message text is too long.');
+  if (!text.trim() && !name) throw callFail('A message needs text or an attachment.');
+  const payload = {
+    type: 'message', clientMessageId, text,
+    sentAt: Number.isFinite(Number(input.sentAt)) ? Number(input.sentAt) : Date.now(),
+    replyTo: null,
+    attachment: { name, mime, data: '', storage: { bucket: STORAGE_BUCKET, key: path, size: actualSize } },
+  };
+  if (input.replyTo && typeof input.replyTo === 'object') {
+    payload.replyTo = {
+      id: String(input.replyTo.id || '').slice(0, 128),
+      serverId: String(input.replyTo.serverId || '').slice(0, 128) || null,
+      sender: cleanName(input.replyTo.sender || 'Message'),
+      text: String(input.replyTo.text || '').slice(0, 180),
+    };
+  }
+  const result = await rpc(cfg, 'arixchat_send_message', {
+    p_room_id: roomId, p_user_id: user.id, p_nickname: nickname,
+    p_message: PREFIX + JSON.stringify(payload), p_idempotency_key: clientMessageId,
+  });
+  return { success: true, id: String(result.id), ts: Number(result.ts), created_at: result.created_at, updated_at: result.updated_at, duplicate: !!result.duplicate };
 }
 async function rpc(cfg, name, args) {
   const response = await fetch(`${cfg.url}/rest/v1/rpc/${name}`, {
@@ -718,7 +957,7 @@ export default async function handler(req) {
   } catch { return json({ success: false, error: 'Invalid JSON body.' }, 400); }
 
   const action = String(input.action || '');
-  if (!['session', 'logout', 'create_room', 'join_room', 'send', 'poll', 'history', 'call_presence', 'call_lookup', 'call_invite', 'call_signal'].includes(action)) {
+  if (!['session', 'logout', 'create_room', 'join_room', 'send', 'poll', 'history', 'attachment_prepare', 'attachment_complete', 'call_presence', 'call_lookup', 'call_invite', 'call_signal'].includes(action)) {
     return json({ success: false, error: 'Invalid action.' }, 400);
   }
   const cfg = runtimeEnv();
@@ -742,6 +981,20 @@ export default async function handler(req) {
     if (!auth.user?.id) return json({ success: false, error: 'Open the main ArixAI app and authenticate there before using ArixChat.', code: 'AUTH_REQUIRED' }, 401, {}, cookies);
     const user = auth.user;
     const nickname = cleanName(input.displayName) || user.displayName || 'ArixAI user';
+
+    if (action === 'attachment_prepare' || action === 'attachment_complete') {
+      const uploadRoomId = input.roomId;
+      if (typeof uploadRoomId !== 'string' || !ROOM_ID_RE.test(uploadRoomId)) return json({ success: false, error: 'Invalid room ID.' }, 400, {}, cookies);
+      if (!(await roomMemberExists(cfg, uploadRoomId, user.id))) return json({ success: false, error: 'Join this room with its invite link before sharing attachments.' }, 403, {}, cookies);
+      try {
+        if (action === 'attachment_prepare') {
+          return json(await createAttachmentUploadTicket(cfg, uploadRoomId, user.id, input), 200, {}, cookies);
+        }
+        return json(await finalizeDirectAttachment(cfg, user, nickname, input, uploadRoomId), 200, {}, cookies);
+      } catch (error) {
+        return json({ success: false, error: error.message || 'Attachment upload failed.' }, error.status || 503, {}, cookies);
+      }
+    }
 
     if (action === 'call_presence') {
       try {
@@ -904,12 +1157,22 @@ export default async function handler(req) {
     }
 
     if (action === 'send') {
-      if (typeof input.message !== 'string' || input.message.length > MAX_STORED_MESSAGE_CHARS) return json({ success: false, error: 'Message is invalid or too large.' }, 400, {}, cookies);
+      if (typeof input.message !== 'string' || input.message.length > MAX_REQUEST_CHARS - 1000) return json({ success: false, error: 'Message is invalid or too large.' }, 413, {}, cookies);
       const envelope = parseEnvelope(input.message);
       if (!envelope) return json({ success: false, error: 'Unsupported message format. Refresh ArixChat and try again.' }, 400, {}, cookies);
       let normalized;
       try { normalized = validateInputEnvelope(envelope, nickname); }
       catch (error) { return json({ success: false, error: String(error.message || 'Invalid message.') }, 400, {}, cookies); }
+      try {
+        if (normalized.payload.attachment?.data) {
+          if (!(await roomMemberExists(cfg, roomId, user.id))) {
+            return json({ success: false, error: 'Join this room with its invite link before sharing attachments.' }, 403, {}, cookies);
+          }
+          normalized.payload.attachment = await uploadLegacyAttachment(cfg, roomId, user.id, normalized.payload.attachment);
+        }
+      } catch (error) {
+        return json({ success: false, error: error.message || 'Attachment storage is temporarily unavailable.' }, error.status || 503, {}, cookies);
+      }
       const normalizedMessage = PREFIX + JSON.stringify(normalized.payload);
       if (normalizedMessage.length > MAX_STORED_MESSAGE_CHARS) return json({ success: false, error: 'Message or attachment is too large.' }, 413, {}, cookies);
       try {
@@ -955,6 +1218,7 @@ export default async function handler(req) {
       if (!historyResponse.ok || !Array.isArray(historyRows)) return json({ success: false, error: 'Earlier messages are temporarily unavailable.' }, 502, {}, cookies);
       const hasMore = historyRows.length > 100;
       const page = historyRows.slice(0, 100).reverse();
+      await decorateAttachmentMessages(page, cfg);
       return json({ success: true, messages: page, hasMore }, 200, {}, cookies);
     }
     const cursor = typeof input.after === 'string' ? Date.parse(input.after) : NaN;
@@ -975,6 +1239,7 @@ export default async function handler(req) {
       hasMore = rows.length > 200;
       rows = rows.slice(0, 200).reverse();
     }
+    await decorateAttachmentMessages(rows, cfg);
     return json({ success: true, messages: rows, hasMore }, 200, {}, cookies);
   } catch (error) {
     console.error('[ArixChat API]', String(error?.code || 'UNEXPECTED'), String(error?.message || 'request failed'));
