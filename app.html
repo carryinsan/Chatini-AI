@@ -1,5 +1,6 @@
 
 
+
 <!DOCTYPE html>
 <html lang="en" class="light">
 <head>
@@ -3053,6 +3054,7 @@ function showToast(msg) {
 }
 
 async function copyToClipboard(msgId) {
+    if (String(msgId) === 'init') return;
     const msg = messages.find(m => m.id === msgId);
     if (!msg) return;
 
@@ -3146,6 +3148,7 @@ async function copyToClipboard(msgId) {
 }
 
 function openPdfModal(msgId) { 
+    if (String(msgId) === 'init') return;
     currentPdfMsgId = msgId;
     document.getElementById('pdf-modal').classList.remove('hidden'); 
 }
@@ -3947,7 +3950,13 @@ function updateUIState() {
 }
 
 // ====== DYNAMIC MESSAGE PARSING & FORMATTING ======
+function isArixBusinessWelcomeMessage(msgId, content) {
+    if (String(msgId) !== 'init' || typeof content !== 'string') return false;
+    return /Have a business or want to start\?\s*Visit\s*<a\b[^>]*href=["']https:\/\/lexis-ai-chatini\.vercel\.app\/business\.html["'][^>]*>\s*Business\s*<\/a>/i.test(content);
+}
+
 function parseRichText(content, isStreaming = false, msgId = null) {
+    const isBusinessWelcome = isArixBusinessWelcomeMessage(msgId, content);
     // Bypass Markdown parsing for Pixazo Visual Engine HTML widgets
     if (typeof content === 'string' && content.includes('bg-gray-900/60 border border-white/10')) {
         return content;
@@ -4996,7 +5005,7 @@ ${marked.parse(unclosedContent.trim())}
         return "";
     });
 
-    const actionBarHtml = (!isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? 
+    const actionBarHtml = (!isBusinessWelcome && !isStreaming && (markdownContent.trim().length > 0 || extractedHtml.length > 0) && msgId) ? 
         `<div class="action-bar flex items-center gap-3 mt-4 pt-3 border-t border-gray-50/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <button onclick="copyToClipboard('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-gray-900 shadow-sm"><i class="ph-bold ph-copy text-sm"></i> Copy Text</button>
             <button onclick="openPdfModal('${msgId}')" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors text-[12px] font-medium text-gray-600 hover:text-red-600 shadow-sm"><i class="ph-bold ph-file-pdf text-sm text-red-500"></i> Export PDF</button>
@@ -5015,7 +5024,7 @@ ${marked.parse(unclosedContent.trim())}
         renderedProse = renderedProse.replace(regex, () => widgetHtml);
     });
 
-    return `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group">${renderedProse}</div>${extractedHtml}${actionBarHtml}`;
+    return `<div class="prose prose-sm md:prose-base max-w-none text-gray-800 leading-relaxed group${isBusinessWelcome ? ' arix-business-welcome' : ''}">${renderedProse}</div>${extractedHtml}${actionBarHtml}`;
 }
 
 // ====== APPEND MESSAGES (TARGET UI CHAT BUBBLES) ======
@@ -5030,6 +5039,7 @@ function appendMessage(role, content, modelId, specificId = null, attachmentsMet
         return { container: existing.querySelector('.msg-content') || existing, id: String(msgId), duplicate: true };
     }
     const div = document.createElement('div');
+    const isBusinessWelcome = isArixBusinessWelcomeMessage(msgId, content);
     
     div.id = 'msg-wrapper-' + msgId;
     
@@ -5055,7 +5065,7 @@ function appendMessage(role, content, modelId, specificId = null, attachmentsMet
                 ${senderName ? senderName.charAt(0) : 'U'}
             </div>`;
     } else {
-        div.className = `flex gap-4 sm:gap-5 max-w-3xl animate-fade-in-up mb-8`;
+        div.className = `flex gap-4 sm:gap-5 max-w-3xl animate-fade-in-up mb-8${isBusinessWelcome ? ' arix-business-welcome-row' : ''}`;
         const model = CONFIG.models[modelId] || CONFIG.models.oracle;
         
         let nameStr = senderName === 'ArixAI' ? `<div class="text-[10px] text-theme-500 mb-2 font-bold uppercase tracking-widest flex items-center gap-1"><i class="ph-fill ph-check-circle"></i> ArixAI</div>` : "";
@@ -11551,5 +11561,802 @@ window.downloadWorkspaceZip = async function() {
 })();
 
 </script>
+
+<!-- ==================== ARIXAI DIWALI VISUAL LAYER V2 ==================== -->
+<style id="arix-diwali-styles">
+    /* Diwali V2: Indian festive details, soft light and motion; visual-only and fully scoped. */
+    #chat-canvas {
+        background-color: #fffefa;
+        background-image:
+            radial-gradient(ellipse at 7% 1%, rgba(237, 166, 65, .105), transparent 33%),
+            radial-gradient(ellipse at 96% 5%, rgba(219, 139, 55, .085), transparent 31%),
+            radial-gradient(ellipse at 50% 100%, rgba(255, 218, 151, .075), transparent 43%),
+            radial-gradient(circle at 50% 12%, rgba(255,255,255,.72), transparent 54%);
+        transition: background-color .5s ease, background-image .5s ease;
+    }
+    html[data-arix-diwali="soft"] #chat-canvas {
+        background-image:
+            radial-gradient(ellipse at 7% 1%, rgba(237, 166, 65, .052), transparent 33%),
+            radial-gradient(ellipse at 96% 5%, rgba(219, 139, 55, .042), transparent 31%);
+    }
+    html[data-arix-diwali="off"] #chat-canvas { background-image: none; }
+
+    main > header {
+        border-bottom-color: rgba(210, 155, 75, .25) !important;
+        box-shadow: inset 0 -1px 0 rgba(255, 248, 229, .9), 0 3px 18px rgba(153, 99, 25, .025);
+    }
+    main > header::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 1px;
+        pointer-events: none;
+        background: linear-gradient(90deg, transparent, rgba(217,119,6,.20) 16%, rgba(251,191,36,.58) 50%, rgba(217,119,6,.20) 84%, transparent);
+    }
+    #chat-input:focus { caret-color: #bd791f; }
+    .arix-diwali-input-active {
+        border-color: rgba(199, 139, 47, .38) !important;
+        box-shadow: 0 8px 30px rgba(180, 112, 20, .075), 0 0 0 3px rgba(245, 185, 75, .065) !important;
+    }
+    #send-btn:not(.cursor-not-allowed):hover {
+        box-shadow: 0 0 0 3px rgba(245, 185, 75, .11), 0 7px 22px rgba(180, 112, 20, .13) !important;
+        transform: translateY(-1px);
+    }
+    .arix-widget-shell:hover {
+        box-shadow: 0 16px 40px -8px rgba(180, 112, 20, .09), 0 0 0 1px rgba(245, 185, 75, .09) !important;
+    }
+
+    /* One pointer-transparent layer keeps every existing control clickable. */
+    #arix-diwali-decoration {
+        position: fixed;
+        inset: 0;
+        z-index: 39;
+        overflow: hidden;
+        pointer-events: none;
+        isolation: isolate;
+    }
+    #arix-diwali-decoration * { box-sizing: border-box; }
+    #arix-diwali-canvas {
+        position: fixed;
+        inset: 72px 0 0;
+        width: 100%;
+        height: calc(100% - 72px);
+        z-index: 1;
+        pointer-events: none;
+        opacity: .62;
+    }
+
+    /* Soft pools of light, not a full-screen tint. */
+    .arix-diwali-glow {
+        position: fixed;
+        z-index: 0;
+        width: 290px;
+        height: 220px;
+        border-radius: 50%;
+        filter: blur(34px);
+        opacity: .15;
+        background: radial-gradient(ellipse, rgba(255, 194, 94, .78), rgba(255, 221, 163, .12) 55%, transparent 76%);
+        animation: arixDiwaliGlow 10s ease-in-out infinite alternate;
+    }
+    .arix-diwali-glow.one { top: 70px; left: 24%; }
+    .arix-diwali-glow.two { right: -115px; bottom: 145px; width: 330px; height: 260px; opacity: .13; animation-delay: -4s; }
+    .arix-diwali-glow.three { left: 285px; bottom: 165px; width: 210px; height: 170px; opacity: .10; animation-delay: -7s; }
+    @keyframes arixDiwaliGlow {
+        from { transform: translate3d(0, 0, 0) scale(.96); }
+        to { transform: translate3d(0, -7px, 0) scale(1.045); }
+    }
+
+    /* Marigold toran: a fine curved thread with small flower clusters. */
+    .arix-diwali-toran {
+        position: fixed;
+        top: 69px;
+        left: clamp(310px, 25vw, 430px);
+        right: 26px;
+        height: 47px;
+        z-index: 3;
+        opacity: .68;
+    }
+    .arix-diwali-toran .thread {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -8px;
+        height: 29px;
+        border-bottom: 1px solid rgba(181, 126, 48, .38);
+        border-radius: 0 0 52% 52%;
+        transform: rotate(.25deg);
+    }
+    .arix-diwali-flower {
+        position: absolute;
+        top: 12px;
+        width: 17px;
+        height: 17px;
+        border-radius: 50%;
+        background:
+            radial-gradient(circle at 50% 50%, #fff4d2 0 14%, transparent 17%),
+            radial-gradient(circle at 50% 16%, #eeb24f 0 22%, transparent 25%),
+            radial-gradient(circle at 84% 46%, #d98c2e 0 22%, transparent 25%),
+            radial-gradient(circle at 66% 82%, #f3c76f 0 22%, transparent 25%),
+            radial-gradient(circle at 19% 68%, #d98c2e 0 22%, transparent 25%),
+            radial-gradient(circle at 18% 31%, #f3c76f 0 22%, transparent 25%);
+        filter: drop-shadow(0 2px 3px rgba(151, 93, 23, .16));
+    }
+    .arix-diwali-flower::after {
+        content: "";
+        position: absolute;
+        left: 6px;
+        top: 13px;
+        width: 5px;
+        height: 12px;
+        border-radius: 0 0 5px 5px;
+        background: linear-gradient(#b8a15b, #78936a);
+        opacity: .75;
+    }
+    .arix-diwali-leaf {
+        position: absolute;
+        top: 27px;
+        width: 9px;
+        height: 15px;
+        border-radius: 90% 0 90% 0;
+        background: linear-gradient(135deg, #9ca66c, #c3b77a);
+        opacity: .63;
+        transform: rotate(35deg);
+    }
+    .arix-diwali-leaf.alt { transform: rotate(125deg); }
+
+    /* Fine hanging lanterns, with a warm paper glow. */
+    .arix-diwali-lantern {
+        position: fixed;
+        top: 91px;
+        width: 28px;
+        height: 57px;
+        z-index: 2;
+        opacity: .65;
+        transform-origin: 50% 0;
+        animation: arixDiwaliSway 8.8s ease-in-out infinite;
+        filter: drop-shadow(0 5px 12px rgba(190, 119, 20, .13));
+    }
+    .arix-diwali-lantern.left { left: clamp(310px, 27vw, 440px); animation-delay: -2s; }
+    .arix-diwali-lantern.right { right: 42px; animation-delay: -5s; transform: scale(.88); }
+    .arix-diwali-lantern .cord { position: absolute; top: -20px; left: 13px; width: 1px; height: 22px; background: linear-gradient(#d6a34b, #f2d18a); }
+    .arix-diwali-lantern .cap {
+        position: absolute; top: 1px; left: 5px; width: 18px; height: 6px;
+        border-radius: 5px 5px 2px 2px; background: linear-gradient(90deg, #b7791f, #f6d28a, #b7791f);
+    }
+    .arix-diwali-lantern .body {
+        position: absolute; top: 6px; left: 3px; width: 22px; height: 34px;
+        overflow: hidden; border: 1px solid rgba(190, 128, 36, .52);
+        border-radius: 8px 8px 9px 9px;
+        background: linear-gradient(105deg, rgba(255,255,255,.91), rgba(255,230,173,.70) 44%, rgba(222,155,54,.54));
+        box-shadow: inset 0 0 10px rgba(255,255,255,.8), 0 0 15px rgba(245,185,75,.23);
+    }
+    .arix-diwali-lantern .body::before,
+    .arix-diwali-lantern .body::after {
+        content: ""; position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(178, 119, 34, .32);
+    }
+    .arix-diwali-lantern .body::before { left: 7px; }
+    .arix-diwali-lantern .body::after { right: 7px; }
+    .arix-diwali-lantern .base {
+        position: absolute; top: 39px; left: 6px; width: 16px; height: 5px;
+        border-radius: 0 0 5px 5px; background: linear-gradient(90deg, #bd8128, #f1ce82, #bd8128);
+    }
+    @keyframes arixDiwaliSway {
+        0%, 100% { transform: rotate(-1.8deg) translateY(0); }
+        50% { transform: rotate(2deg) translateY(3px); }
+    }
+
+    /* Little hand-painted rangoli medallions, deliberately kept to the margins. */
+    .arix-diwali-rangoli {
+        position: fixed;
+        z-index: 2;
+        width: 116px;
+        height: 116px;
+        border-radius: 50%;
+        opacity: .23;
+        background:
+            radial-gradient(circle, rgba(255,248,225,.98) 0 3%, transparent 4%),
+            repeating-conic-gradient(from 11deg, rgba(205,146,58,.72) 0deg 2deg, transparent 2deg 15deg),
+            radial-gradient(circle, transparent 0 19%, rgba(210,153,68,.72) 20% 21%, transparent 22% 34%, rgba(210,153,68,.66) 35% 36%, transparent 37% 53%, rgba(210,153,68,.52) 54% 55%, transparent 56%);
+        -webkit-mask-image: radial-gradient(circle, #000 0 68%, transparent 72%);
+        mask-image: radial-gradient(circle, #000 0 68%, transparent 72%);
+        filter: drop-shadow(0 3px 10px rgba(182,124,42,.10));
+        animation: arixDiwaliRangoli 28s linear infinite;
+    }
+    .arix-diwali-rangoli::before,
+    .arix-diwali-rangoli::after {
+        content: "";
+        position: absolute;
+        inset: 17px;
+        border: 1px solid rgba(202,145,60,.64);
+        border-radius: 50%;
+        transform: rotate(22.5deg) scaleX(.72);
+        box-shadow: 0 0 0 8px rgba(220,164,82,.045), inset 0 0 0 8px rgba(220,164,82,.045);
+    }
+    .arix-diwali-rangoli::after { transform: rotate(67.5deg) scaleX(.72); }
+    .arix-diwali-rangoli.left { left: clamp(300px, 23vw, 390px); bottom: 166px; }
+    .arix-diwali-rangoli.right { right: 18px; bottom: 166px; width: 94px; height: 94px; opacity: .19; }
+    @keyframes arixDiwaliRangoli { to { transform: rotate(360deg); } }
+
+    /* Diyas: layered clay bowl, oil rim, wick and a quiet living flame. */
+    .arix-diwali-diya {
+        position: fixed;
+        z-index: 4;
+        bottom: 177px;
+        width: 62px;
+        height: 53px;
+        opacity: .76;
+        filter: drop-shadow(0 6px 11px rgba(160, 91, 20, .13));
+    }
+    .arix-diwali-diya.left { left: clamp(302px, 24vw, 400px); transform: scale(.93); }
+    .arix-diwali-diya.right { right: 26px; transform: scale(.82); }
+    .arix-diwali-diya .halo {
+        position: absolute; left: 1px; bottom: -7px; width: 58px; height: 24px;
+        border-radius: 50%; background: radial-gradient(ellipse, rgba(255,196,91,.48), rgba(255,218,151,.10) 62%, transparent 76%);
+        filter: blur(5px);
+    }
+    .arix-diwali-diya .flame {
+        position: absolute; z-index: 3; left: 27px; top: 0; width: 10px; height: 20px;
+        border-radius: 85% 10% 75% 55%; transform: rotate(42deg);
+        transform-origin: 50% 90%;
+        background: radial-gradient(ellipse at 65% 72%, #fffbea 0 12%, #ffe08a 32%, #efa33b 72%, rgba(233,154,44,0) 100%);
+        box-shadow: 0 0 9px rgba(255,190,74,.62), 0 0 19px rgba(255,172,57,.28);
+        animation: arixDiwaliFlame 2.5s ease-in-out infinite alternate;
+    }
+    .arix-diwali-diya .wick {
+        position: absolute; z-index: 2; left: 30px; top: 16px; width: 3px; height: 8px;
+        border-radius: 3px; background: #68452b; transform: rotate(12deg);
+    }
+    .arix-diwali-diya .bowl {
+        position: absolute; left: 8px; bottom: 7px; width: 46px; height: 19px;
+        border-radius: 5px 5px 22px 22px;
+        border: 1px solid rgba(180,105,28,.55);
+        background: linear-gradient(180deg, #f5d18a 0%, #d99a42 47%, #a96025 100%);
+        box-shadow: inset 0 2px 3px rgba(255,255,255,.72), 0 3px 7px rgba(151,91,23,.16);
+    }
+    .arix-diwali-diya .rim {
+        position: absolute; z-index: 2; left: 7px; bottom: 21px; width: 48px; height: 7px;
+        border-radius: 50%; border: 1px solid rgba(174,116,38,.68);
+        background: linear-gradient(90deg, #c98832, #fff0c3 48%, #c98832);
+    }
+    @keyframes arixDiwaliFlame {
+        from { transform: rotate(39deg) scale(.94, .96); opacity: .88; }
+        to { transform: rotate(46deg) scale(1.04, 1.07); opacity: 1; }
+    }
+
+    /* The one festive control cycles through Festive → Soft → Off. */
+    #arix-diwali-spark-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        flex: 0 0 auto;
+        min-width: 36px;
+        height: 34px;
+        padding: 0 11px;
+        border-radius: 999px;
+        border: 1px solid rgba(217,164,75,.35);
+        color: #95601d;
+        background: linear-gradient(135deg, rgba(255,252,242,.98), rgba(255,245,217,.94));
+        box-shadow: 0 2px 10px rgba(180,112,20,.055), inset 0 1px 0 rgba(255,255,255,.96);
+        font: 700 11px/1 Inter, sans-serif;
+        letter-spacing: .015em;
+        cursor: pointer;
+        transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
+        -webkit-tap-highlight-color: transparent;
+    }
+    #arix-diwali-spark-button i {
+        font-size: 15px;
+        color: #d18a22;
+        filter: drop-shadow(0 0 5px rgba(245,185,75,.42));
+    }
+    #arix-diwali-spark-button .diwali-state-dot {
+        width: 5px; height: 5px; border-radius: 50%; background: #d99a42;
+        box-shadow: 0 0 0 2px rgba(217,154,66,.12);
+    }
+    #arix-diwali-spark-button.is-soft { background: #fffdfa; border-color: rgba(190,160,111,.28); color: #8a765a; }
+    #arix-diwali-spark-button.is-soft .diwali-state-dot { background: #c2a675; box-shadow: none; }
+    #arix-diwali-spark-button.is-off { background: #f8fafc; border-color: #e5e7eb; color: #64748b; box-shadow: none; }
+    #arix-diwali-spark-button.is-off i { color: #94a3b8; filter: none; }
+    #arix-diwali-spark-button.is-off .diwali-state-dot { background: #cbd5e1; box-shadow: none; }
+    #arix-diwali-spark-button:hover,
+    #arix-diwali-spark-button:focus-visible {
+        outline: none;
+        transform: translateY(-1px);
+        border-color: rgba(195,132,38,.56);
+        box-shadow: 0 0 0 3px rgba(245,185,75,.10), 0 5px 18px rgba(180,112,20,.13);
+    }
+    #arix-diwali-spark-button:active { transform: scale(.97); }
+
+    html[data-arix-diwali="soft"] #arix-diwali-decoration .arix-diwali-glow { opacity: .055; animation: none; }
+    html[data-arix-diwali="soft"] #arix-diwali-decoration .arix-diwali-toran,
+    html[data-arix-diwali="soft"] #arix-diwali-decoration .arix-diwali-lantern,
+    html[data-arix-diwali="soft"] #arix-diwali-decoration .arix-diwali-diya,
+    html[data-arix-diwali="soft"] #arix-diwali-decoration .arix-diwali-rangoli { opacity: .32; }
+    html[data-arix-diwali="soft"] #arix-diwali-canvas { opacity: .22; }
+    html[data-arix-diwali="off"] #arix-diwali-decoration { display: none; }
+
+    @media (max-width: 1023px) {
+        .arix-diwali-toran { left: 305px; right: 18px; opacity: .49; }
+        .arix-diwali-lantern.left { left: 310px; }
+        .arix-diwali-lantern.right { right: 12px; opacity: .43; transform: scale(.76); }
+        .arix-diwali-rangoli { width: 82px; height: 82px; }
+        .arix-diwali-rangoli.left { left: 300px; }
+        .arix-diwali-diya.left { left: 306px; transform: scale(.75); }
+    }
+    @media (max-width: 700px) {
+        .arix-diwali-toran { left: 18px; right: 18px; top: 70px; height: 22px; opacity: .25; }
+        .arix-diwali-toran .thread { top: -12px; }
+        .arix-diwali-toran .arix-diwali-flower { transform: scale(.72); top: 2px; }
+        .arix-diwali-lantern { display: none; }
+        .arix-diwali-rangoli.left { display: none; }
+        .arix-diwali-rangoli.right { width: 64px; height: 64px; right: 6px; bottom: 190px; opacity: .12; }
+        .arix-diwali-diya.left { display: none; }
+        .arix-diwali-diya.right { right: 4px; bottom: 184px; transform: scale(.56); opacity: .42; }
+        .arix-diwali-glow { width: 150px; height: 120px; filter: blur(28px); opacity: .08; }
+        #arix-diwali-spark-button { width: 34px; padding: 0; gap: 0; }
+        #arix-diwali-spark-button .diwali-label,
+        #arix-diwali-spark-button .diwali-state-dot { display: none; }
+        #arix-diwali-canvas { opacity: .35; }
+    }
+    @media (max-width: 380px) {
+        #arix-diwali-spark-button { width: 32px; height: 32px; }
+        .arix-diwali-toran { opacity: .17; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .arix-diwali-glow, .arix-diwali-lantern, .arix-diwali-rangoli,
+        .arix-diwali-diya .flame { animation: none !important; }
+        #arix-diwali-spark-button { transition: none !important; }
+    }
+
+
+    /* Welcome note: visually quiet, centered, and intentionally non-interactive
+       except for its single Business link. This selector is only attached to msgId="init". */
+    .arix-business-welcome-row {
+        width: 100% !important;
+        max-width: 100% !important;
+        justify-content: center !important;
+        align-items: center !important;
+        gap: 0 !important;
+        margin: 10px auto 22px !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+    }
+    .arix-business-welcome-row > .w-10.h-10 { display: none !important; }
+    .arix-business-welcome-row > .flex-1 {
+        width: 100% !important;
+        max-width: 100% !important;
+        align-items: center !important;
+        text-align: center !important;
+    }
+    .arix-business-welcome-row > .flex-1 > .text-\[10px\] {
+        align-self: center !important;
+        justify-content: center !important;
+        margin: 0 0 5px !important;
+        font-size: 9px !important;
+        letter-spacing: .19em !important;
+        opacity: .82;
+    }
+    .arix-business-welcome-row .msg-content { width: 100% !important; }
+    .arix-business-welcome {
+        width: 100% !important;
+        margin: 0 auto !important;
+        text-align: center !important;
+        font-size: 11px !important;
+        line-height: 1.55 !important;
+        color: #98866b !important;
+        pointer-events: none !important;
+        user-select: none !important;
+        -webkit-user-select: none !important;
+    }
+    .arix-business-welcome > p {
+        margin: 0 !important;
+        text-align: center !important;
+        font-size: inherit !important;
+        line-height: inherit !important;
+        color: inherit !important;
+    }
+    .arix-business-welcome a {
+        display: inline-block;
+        margin-left: 2px;
+        color: #9a641c !important;
+        font-weight: 800 !important;
+        text-decoration: underline !important;
+        text-decoration-color: rgba(190, 135, 49, .48) !important;
+        text-underline-offset: 3px;
+        pointer-events: auto !important;
+        user-select: text !important;
+        -webkit-user-select: text !important;
+        cursor: pointer !important;
+        transition: color .18s ease, text-decoration-color .18s ease, text-shadow .18s ease;
+    }
+    .arix-business-welcome a:hover {
+        color: #70450f !important;
+        text-decoration-color: rgba(190, 135, 49, .95) !important;
+        text-shadow: 0 0 12px rgba(236, 183, 93, .24);
+    }
+    .arix-business-welcome a:focus-visible {
+        outline: 2px solid rgba(190, 135, 49, .75);
+        outline-offset: 3px;
+        border-radius: 3px;
+    }
+
+    /* A low-key pool of warm light follows a mouse on capable desktop devices. */
+    #arix-diwali-cursor-glow {
+        position: fixed;
+        z-index: 0;
+        left: 50%;
+        top: 50%;
+        width: 250px;
+        height: 250px;
+        border-radius: 50%;
+        pointer-events: none;
+        opacity: 0;
+        transform: translate(-50%, -50%);
+        background: radial-gradient(circle, rgba(255, 210, 130, .16) 0%, rgba(255, 222, 164, .075) 34%, transparent 72%);
+        filter: blur(9px);
+        transition: opacity .35s ease;
+        will-change: left, top;
+    }
+    #arix-diwali-cursor-glow.is-active { opacity: .72; }
+    html[data-arix-diwali="soft"] #arix-diwali-cursor-glow.is-active { opacity: .28; }
+    html[data-arix-diwali-focus="true"] #arix-diwali-canvas { opacity: .20; }
+    html[data-arix-diwali-focus="true"] #arix-diwali-cursor-glow { opacity: 0 !important; }
+    html[data-arix-diwali-device="calm"] #arix-diwali-cursor-glow { display: none; }
+    html[data-arix-diwali-device="calm"] #arix-diwali-canvas { opacity: .34; }
+    @media (hover: none), (max-width: 700px), (prefers-reduced-motion: reduce) {
+        #arix-diwali-cursor-glow { display: none !important; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .arix-business-welcome a { transition: none !important; }
+    }
+
+</style>
+
+<div id="arix-diwali-decoration" aria-hidden="true">
+    <div class="arix-diwali-glow one"></div>
+    <div class="arix-diwali-glow two"></div>
+    <div class="arix-diwali-glow three"></div>
+    <canvas id="arix-diwali-canvas"></canvas>
+    <div id="arix-diwali-cursor-glow"></div>
+
+    <div class="arix-diwali-toran">
+        <span class="thread"></span>
+        <span class="arix-diwali-flower" style="left:3%"></span>
+        <span class="arix-diwali-flower" style="left:18%;top:17px;transform:scale(.82)"></span>
+        <span class="arix-diwali-flower" style="left:34%"></span>
+        <span class="arix-diwali-flower" style="left:50%;top:16px;transform:scale(.9)"></span>
+        <span class="arix-diwali-flower" style="left:66%"></span>
+        <span class="arix-diwali-flower" style="left:82%;top:17px;transform:scale(.82)"></span>
+        <span class="arix-diwali-flower" style="left:97%"></span>
+        <span class="arix-diwali-leaf" style="left:10%"></span>
+        <span class="arix-diwali-leaf alt" style="left:26%;top:28px"></span>
+        <span class="arix-diwali-leaf" style="left:42%"></span>
+        <span class="arix-diwali-leaf alt" style="left:58%;top:28px"></span>
+        <span class="arix-diwali-leaf" style="left:74%"></span>
+        <span class="arix-diwali-leaf alt" style="left:90%;top:28px"></span>
+    </div>
+
+    <div class="arix-diwali-lantern left"><span class="cord"></span><span class="cap"></span><span class="body"></span><span class="base"></span></div>
+    <div class="arix-diwali-lantern right"><span class="cord"></span><span class="cap"></span><span class="body"></span><span class="base"></span></div>
+
+    <div class="arix-diwali-rangoli left"></div>
+    <div class="arix-diwali-rangoli right"></div>
+
+    <div class="arix-diwali-diya left"><span class="halo"></span><span class="flame"></span><span class="wick"></span><span class="bowl"></span><span class="rim"></span></div>
+    <div class="arix-diwali-diya right"><span class="halo"></span><span class="flame"></span><span class="wick"></span><span class="bowl"></span><span class="rim"></span></div>
+</div>
+
+<script id="arix-diwali-script">
+/* ARIX_DIWALI_UI_LAYER_V2 — isolated, optional visual layer; no app state or network calls. */
+(function initArixDiwaliLayerV2() {
+    'use strict';
+    try {
+        if (window.__arixDiwaliLayerV2Ready) return;
+        window.__arixDiwaliLayerV2Ready = true;
+
+        const root = document.documentElement;
+        const STORAGE_KEY = 'Arix_diwali_ambience_v2';
+        const modes = ['festive', 'soft', 'off'];
+        const modeNames = { festive: 'Festive', soft: 'Soft', off: 'Off' };
+        const reducedMotionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+        let reducedMotion = !!reducedMotionQuery?.matches;
+        let mode = 'festive';
+        try {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (modes.includes(saved)) mode = saved;
+        } catch (_) {}
+        root.dataset.arixDiwali = mode;
+
+        const canvas = document.getElementById('arix-diwali-canvas');
+        let ctx = null;
+        try { ctx = canvas?.getContext?.('2d', { alpha: true }) || null; } catch (_) {}
+
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+        const lowPowerDevice = !!(
+            (Number.isFinite(navigator.hardwareConcurrency) && navigator.hardwareConcurrency <= 4) ||
+            (Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory <= 4) ||
+            connection?.saveData ||
+            ['slow-2g', '2g'].includes(connection?.effectiveType)
+        );
+        const palette = ['#E9AE4D', '#F5CE7A', '#FFECC0', '#D99A42', '#E8B96C'];
+        const particles = [];
+        let motes = [];
+        let width = 0, height = 0, dpr = 1, rafId = 0, lastFrame = 0, lastPointerSpark = 0, running = false;
+
+        function resize() {
+            if (!canvas || !ctx) return;
+            dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+            width = Math.max(1, window.innerWidth);
+            height = Math.max(1, window.innerHeight - 72);
+            canvas.width = Math.round(width * dpr);
+            canvas.height = Math.round(height * dpr);
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            const desiredCount = width < 700 ? 6 : (mode === 'soft' ? 8 : 15);
+            const count = lowPowerDevice ? Math.max(3, Math.round(desiredCount * .55)) : desiredCount;
+            motes = Array.from({ length: count }, () => ({
+                x: Math.random() * width,
+                y: Math.random() * height,
+                r: .5 + Math.random() * .9,
+                speed: .055 + Math.random() * .13,
+                drift: (Math.random() - .5) * .09,
+                phase: Math.random() * Math.PI * 2,
+                alpha: .09 + Math.random() * .15
+            }));
+        }
+
+        function drawStar(x, y, radius, color, alpha) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(0, -radius);
+            ctx.quadraticCurveTo(radius * .13, -radius * .13, radius, 0);
+            ctx.quadraticCurveTo(radius * .13, radius * .13, 0, radius);
+            ctx.quadraticCurveTo(-radius * .13, radius * .13, -radius, 0);
+            ctx.quadraticCurveTo(-radius * .13, -radius * .13, 0, -radius);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function burst(x, y, strength) {
+            if (!ctx || reducedMotion || mode !== 'festive' || !Number.isFinite(x) || !Number.isFinite(y)) return;
+            const amount = Math.min(26, Math.max(12, Math.round(17 * (strength || 1))));
+            for (let i = 0; i < amount; i++) {
+                const angle = (Math.PI * 2 * i / amount) + (Math.random() - .5) * .3;
+                const speed = (.65 + Math.random() * 1.7) * (strength || 1);
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed - .22,
+                    life: 28 + Math.random() * 19,
+                    maxLife: 47,
+                    size: .8 + Math.random() * 1.35,
+                    color: palette[(Math.random() * palette.length) | 0],
+                    gravity: .02 + Math.random() * .02,
+                    star: Math.random() > .52
+                });
+            }
+            if (particles.length > 112) particles.splice(0, particles.length - 112);
+            start();
+        }
+
+        function draw(now) {
+            if (!running || !ctx) return;
+            rafId = window.requestAnimationFrame(draw);
+            if (now - lastFrame < (lowPowerDevice ? 56 : 42)) return;
+            lastFrame = now;
+            ctx.clearRect(0, 0, width, height);
+
+            if (mode !== 'off' && !reducedMotion) {
+                for (const mote of motes) {
+                    mote.y -= mote.speed;
+                    mote.x += mote.drift + Math.sin(now * .00032 + mote.phase) * .055;
+                    if (mote.y < -4) { mote.y = height + 4; mote.x = Math.random() * width; }
+                    if (mote.x < -4) mote.x = width + 4;
+                    if (mote.x > width + 4) mote.x = -4;
+                    const pulse = .78 + Math.sin(now * .0008 + mote.phase) * .22;
+                    ctx.globalAlpha = mote.alpha * pulse;
+                    ctx.fillStyle = '#D99A42';
+                    ctx.beginPath();
+                    ctx.arc(mote.x, mote.y, mote.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy;
+                p.vx *= .986; p.vy = p.vy * .986 + p.gravity;
+                p.life -= 1;
+                if (p.life <= 0) { particles.splice(i, 1); continue; }
+                const alpha = Math.max(0, p.life / p.maxLife) * .78;
+                if (p.star) drawStar(p.x, p.y, p.size * 1.8, p.color, alpha);
+                else {
+                    ctx.globalAlpha = alpha;
+                    ctx.fillStyle = p.color;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function start() {
+            if (!ctx || running || document.hidden || mode === 'off' || reducedMotion) return;
+            running = true;
+            rafId = window.requestAnimationFrame(draw);
+        }
+        function stop() {
+            running = false;
+            if (rafId) window.cancelAnimationFrame(rafId);
+            rafId = 0;
+        }
+
+        const toolbar = document.querySelector('#model-selector')?.parentElement;
+        let button = document.getElementById('arix-diwali-spark-button');
+        if (toolbar && !button) {
+            button = document.createElement('button');
+            button.type = 'button';
+            button.id = 'arix-diwali-spark-button';
+            button.className = 'is-festive';
+            const proButton = toolbar.querySelector('button');
+            if (proButton) toolbar.insertBefore(button, proButton);
+            else toolbar.appendChild(button);
+        }
+
+        function updateButton() {
+            if (!button) return;
+            button.classList.toggle('is-festive', mode === 'festive');
+            button.classList.toggle('is-soft', mode === 'soft');
+            button.classList.toggle('is-off', mode === 'off');
+            button.setAttribute('aria-label', 'Diwali ambience: ' + modeNames[mode] + '. Activate to change ambience.');
+            button.setAttribute('aria-pressed', mode !== 'off' ? 'true' : 'false');
+            button.title = 'Diwali ambience: ' + modeNames[mode] + ' · Click to cycle Festive, Soft and Off';
+            button.innerHTML = '<i class="ph-fill ' + (mode === 'off' ? 'ph-moon' : 'ph-sparkle') + '" aria-hidden="true"></i><span class="diwali-label">Diwali</span><span class="diwali-state-dot" aria-hidden="true"></span>';
+        }
+
+        function applyMode(nextMode, persist) {
+            if (!modes.includes(nextMode)) return;
+            mode = nextMode;
+            root.dataset.arixDiwali = mode;
+            if (persist) {
+                try { localStorage.setItem(STORAGE_KEY, mode); } catch (_) {}
+            }
+            updateButton();
+            particles.length = 0;
+            if (mode === 'off' || reducedMotion) stop();
+            else {
+                resize();
+                start();
+            }
+        }
+
+        if (button) {
+            updateButton();
+            button.addEventListener('click', function () {
+                const next = modes[(modes.indexOf(mode) + 1) % modes.length];
+                applyMode(next, true);
+                if (next === 'festive' && canvas) {
+                    const rect = button.getBoundingClientRect();
+                    burst(rect.left + rect.width / 2, rect.top + rect.height / 2 - 72, .9);
+                }
+            });
+        }
+
+        const input = document.getElementById('chat-input');
+        const inputShell = input && input.closest('.group');
+        if (input && inputShell) {
+            input.addEventListener('focus', () => inputShell.classList.add('arix-diwali-input-active'));
+            input.addEventListener('blur', () => inputShell.classList.remove('arix-diwali-input-active'));
+        }
+
+        const chatCanvas = document.getElementById('chat-canvas');
+        if (chatCanvas && ctx && !reducedMotion) {
+            chatCanvas.addEventListener('click', function (event) {
+                if (mode !== 'festive') return;
+                const target = event.target;
+                if (target && target.closest && target.closest('button, a, input, textarea, select, [contenteditable="true"], [role="button"]')) return;
+                const now = Date.now();
+                if (now - lastPointerSpark < 650) return;
+                lastPointerSpark = now;
+                burst(event.clientX, event.clientY - 72, .42);
+            }, { passive: true });
+        }
+
+        resize();
+        if (mode !== 'off' && !reducedMotion) start();
+        window.addEventListener('resize', resize, { passive: true });
+        document.addEventListener('visibilitychange', function () {
+            if (document.hidden) stop();
+            else if (mode !== 'off' && !reducedMotion) start();
+        });
+        if (reducedMotionQuery?.addEventListener) {
+            reducedMotionQuery.addEventListener('change', function (event) {
+                reducedMotion = !!event.matches;
+                particles.length = 0;
+                if (reducedMotion) stop();
+                else if (mode !== 'off') { resize(); start(); }
+            });
+        }
+        window.addEventListener('pagehide', stop, { once: true });
+    } catch (error) {
+        /* Diwali visuals fail closed; the application itself remains independent. */
+        console.warn('[ArixAI Diwali] Visual layer skipped safely:', error);
+    }
+})();
+</script>
+<!-- ================== END ARIXAI DIWALI VISUAL LAYER V2 ================== -->
+<!-- ================== ARIXAI DIWALI ADAPTIVE INTERACTIONS V3 ================== -->
+<script id="arix-diwali-adaptive-script">
+/* V3 adds device-aware ambience and a restrained pointer light; no chat or network hooks. */
+(function initArixDiwaliAdaptiveLayerV3() {
+    'use strict';
+    try {
+        if (window.__arixDiwaliAdaptiveV3Ready) return;
+        window.__arixDiwaliAdaptiveV3Ready = true;
+
+        const root = document.documentElement;
+        const glow = document.getElementById('arix-diwali-cursor-glow');
+        const input = document.getElementById('chat-input');
+        const finePointer = !!(window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches);
+        const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection || null;
+        const lowPower = window.innerWidth <= 700 || !!(
+            (Number.isFinite(navigator.hardwareConcurrency) && navigator.hardwareConcurrency <= 4) ||
+            (Number.isFinite(navigator.deviceMemory) && navigator.deviceMemory <= 4) ||
+            connection?.saveData ||
+            ['slow-2g', '2g'].includes(connection?.effectiveType)
+        );
+        root.dataset.arixDiwaliDevice = lowPower ? 'calm' : 'full';
+
+        if (input) {
+            const setInputFocus = (active) => {
+                if (active) root.dataset.arixDiwaliFocus = 'true';
+                else delete root.dataset.arixDiwaliFocus;
+            };
+            input.addEventListener('focus', () => setInputFocus(true), { passive: true });
+            input.addEventListener('blur', () => setInputFocus(false), { passive: true });
+        }
+
+        if (!glow || !finePointer || lowPower || reducedMotion) return;
+        let queued = false;
+        let pointerX = 0;
+        let pointerY = 0;
+        const moveGlow = (event) => {
+            if (event.pointerType && event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
+            if (root.dataset.arixDiwali === 'off' || document.hidden) {
+                glow.classList.remove('is-active');
+                return;
+            }
+            pointerX = event.clientX;
+            pointerY = event.clientY;
+            if (queued) return;
+            queued = true;
+            window.requestAnimationFrame(() => {
+                queued = false;
+                glow.style.left = pointerX + 'px';
+                glow.style.top = pointerY + 'px';
+                glow.classList.add('is-active');
+            });
+        };
+        window.addEventListener('pointermove', moveGlow, { passive: true });
+        document.addEventListener('pointerleave', () => glow.classList.remove('is-active'));
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) glow.classList.remove('is-active');
+        });
+    } catch (error) {
+        console.warn('[ArixAI Diwali Adaptive] Optional interaction skipped safely:', error);
+    }
+})();
+</script>
+<!-- ================== END ARIXAI DIWALI ADAPTIVE INTERACTIONS V3 ================== -->
+
 </body>
 </html>
